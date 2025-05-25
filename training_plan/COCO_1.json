@@ -1,0 +1,9 @@
+{
+    "warmup": 50,
+    "batch_size": 32,
+    "lr": 1e-4,
+    "wd": 0.1,
+    "epochs": 3,
+    "workers": 1,
+    "model": "RN50"
+}

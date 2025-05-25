@@ -1,0 +1,2 @@
+/users/PAS2912/yusenpeng/.conda/envs/Fast-CLIP/lib/python3.11/site-packages/PIL/Image.py:1043: UserWarning: Palette images with Transparency expressed in bytes should be converted to RGBA images
+  warnings.warn(
