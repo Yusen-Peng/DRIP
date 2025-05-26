@@ -59,7 +59,7 @@ def train_runner(
 
 def main():
     # dataset parameters
-    dataset_name = "COCO"  # Options: "COCO", "LAION"
+    dataset_name = "LAION"  # Options: "COCO", "LAION"
 
     if dataset_name == "COCO":
         # COCO dataset
@@ -71,16 +71,32 @@ def main():
     elif dataset_name == "LAION":
         # LAION dataset
         use_webdataset = True
-        train_data_path = "pipe:dataset/laion_shards/laion-{000000..000099}.tar"
-        val_data_path = "pipe:dataset/laion_val/laion-val-{000000..000004}.tar"
-        train_num_samples = 10000000
+        train_data_path = "::".join([f"dataset/laion_shards/laion-{i:06d}.tar" for i in range(8)])
+
+        train_data_path = ""
+        for i in range(7):
+            train_data_path += f"dataset/laion_shards/laion-00000{i}.tar::"
+        train_data_path += f"dataset/laion_shards/laion-000007.tar"
+
+
+        val_data_path = ""
+        for i in range(20):
+            val_data_path += f"dataset/laion_shards/laion-00000{i}.tar::"
+        val_data_path += f"dataset/laion_shards/laion-000020.tar"
+
+        train_num_samples = 80_000 # only used if webdataset is True
+
+
+    print(f"training datapath: {train_data_path}")
+    print(f"validation datapath: {val_data_path}")
+
     
     # training parameters
     warmup = 50
     batch_size = 32
     lr = 1e-4
     wd = 0.1
-    epochs = 30
+    epochs = 30 # 1, 10, 30
     workers = 1
     model = "RN50"
 
@@ -102,4 +118,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main() 

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=COCO_CLIP                        # Job name
 #SBATCH --output=COCO_CLIP.txt                      # Output file
-#SBATCH --time=12:00:00                             # 12 hours
+#SBATCH --time=8:00:00                              # 8 hours
 #SBATCH --nodes=1                                   # Number of nodes
 #SBATCH --ntasks=1                                  # Total number of tasks (processes)
 #SBATCH --account=PAS2836

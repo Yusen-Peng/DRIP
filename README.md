@@ -4,20 +4,14 @@ use dynamic token pooling for image and text encoders in CLIP to boost efficienc
 
 ## train a CLIP from scratch
 
-```bash
-python src/train_CLIP.py
-```
-
-### CLIP training
-
 | pretraining dataset | zero-shot dataset | image encoder | text encoder | # epochs | zero-shot top-1 | zero-shot top-5 | more HPs |
 | ------------ | ------------- | ------------------- | ----------------- | -------- | --------------- | --------------- | -------- |
 | COCO (2014), 82k train, 40k val | ImageNet (2012), 50k val | RN50 | transformer | 1 | 0.94% | 3.38% | [HPs](training_plan/COCO_0.json) |
 | COCO (2014), 82k train, 40k val | ImageNet (2012), 50k val | RN50 | transformer | 10 | 1.50% | 4.94% | [HPs](training_plan/COCO_2.json) |
 | COCO (2014), 82k train, 40k val | ImageNet (2012), 50k val | RN50 | transformer | 30 | 1.75% | 5.41% | [HPs](training_plan/COCO_3.json) |
-| LAION-400M (2021), 80k train, 20k val | ImageNet (2012), 50k val | RN50 | transformer | 1 | pending | pending | [HPs](training_plan/COCO_1.json) |
-| LAION-400M (2021), 80k train, 20k val | ImageNet (2012), 50k val | RN50 | transformer | 10 | pending | pending | [HPs](training_plan/COCO_2.json) |
-| LAION-400M (2021), 80k train, 20k val | ImageNet (2012), 50k val | RN50 | transformer | 30 | pending | pending | [HPs](training_plan/COCO_3.json) |
+| LAION-400M (2021), 80k train, 20k val | ImageNet (2012), 50k val | RN50 | transformer | 1 | 0.27% | 1.29% | [HPs](training_plan/COCO_1.json) |
+| LAION-400M (2021), 80k train, 20k val | ImageNet (2012), 50k val | RN50 | transformer | 10 | 0.40% | 1.95% | [HPs](training_plan/COCO_2.json) |
+| LAION-400M (2021), 80k train, 20k val | ImageNet (2012), 50k val | RN50 | transformer | 30 | 0.50% | 2.09% | [HPs](training_plan/COCO_3.json) |
 
 
 ### DTP training
@@ -52,30 +46,30 @@ python -m pip install pdbpp
 
 OSC-specific commands:
 
-before enabling the conda envioronment, load conda first:
-
-```bash
-module load miniconda3
-conda activate Fast-CLIP
-```
-
 schedule a job from the project **PAS2836**:
 
-Debugging (in interactive mode, schedule 5 mins):
+Debugging (in interactive mode, schedule 10 mins):
 
 ```bash
-salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:05:00
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:20:00
+module load miniconda3
+conda deactivate
+conda activate Fast-CLIP
+python src/train_CLIP.py
+
 ```
 
 Running Experiments:
 
 ```bash
+module load miniconda3
 conda deactivate
 sbatch ./real_run.sh
 ```
 
 or
 ```bash
+module load miniconda3
 conda deactivate
 sbatch ./dtp_run.sh
 ```
