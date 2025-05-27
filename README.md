@@ -92,6 +92,10 @@ SF (average Shortening Factor) and reduction in GPU memory and Training step tim
 
 ![alt text](docs/efficiency.png)
 
+## PROPOSAL: continual pretraining with DTP inserted?
+
+![alt text](docs/proposal.jpg)
+
 ## Commands to run experiment
 
 Evaluating a pretrained CLIP:
