@@ -32,30 +32,30 @@ python src/unit_inference_CLIP.py
 ### model architecture
 
 ```txt
-[ input sequence ]
+input sequence
      ↓
-[ embedding (dropout) ]
+embedding (dropout)
      ↓
-[ pre-layers (# is a HP) ]
+pre-layers (# is a HP)
      ↓
-[ boundary predictor (MLP) ]
+boundary predictor (MLP)
      ↓
-[ downsampling ] 
+downsampling 
      ↓
-[ shortened-layers (# is a HP) ]
+shortened-layers (# is a HP)
      ↓
-[ upsampling ]
+upsampling
      ↓
-[ post-layers (# is a HP) ]
+post-layers (# is a HP)
      ↓
-[ final dense ]
+final dense
 ```
 
 ### Training Objective:
 
 Language Model Loss: cross-entropy
 
-Boundary Loss: pick one from below
+Boundary Loss: pick one from below:
 
 | loss type | illustration | supervised? |
 | --------- | ------------ | ----------- |
