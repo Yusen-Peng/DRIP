@@ -29,7 +29,39 @@ python src/unit_inference_CLIP.py
 
 ## Dynamic Token Pooling
 
-TBD
+### model architecture
+
+```txt
+[ input sequence ]
+     ↓
+[ embedding (dropout) ]
+     ↓
+[ pre-layers (# is a HP) ]
+     ↓
+[ boundary predictor (MLP) ]
+     ↓
+[ downsampling ] 
+     ↓
+[ shortened-layers (# is a HP) ]
+     ↓
+[ upsampling ]
+     ↓
+[ post-layers (# is a HP) ]
+     ↓
+[ final dense ]
+```
+
+### Training Objective:
+
+Language Model Loss: cross-entropy
+
+Boundary Loss: pick one from below
+
+| loss type | illustration | supervised? |
+| --------- | ------------ | ----------- |
+| entropy spikes | ![alt text](docs/entropy_spike.png) | yes |
+| unigram tokenizer | omitted | yes | 
+| Gumbel Sigmoid | ![alt text](docs/GumbelSigmoid.png) | no |
 
 ## Environment Setup
 
