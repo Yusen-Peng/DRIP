@@ -18,7 +18,8 @@ use dynamic token pooling for image and text encoders in CLIP to boost efficienc
 
 | dataset | training target length | training max step | Bits-per-character (BPC) |
 | ------- | ---------------------- | ----------------- | ------------------------ |
-| text8 | 512 | 10000 | 1.46513 |
+| text8 | 512 | 10,000 | 1.46513 |
+| text8 | 512 | 100,000 | 1.22651 |
 
 ## Unit inference
 

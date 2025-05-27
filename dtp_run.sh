@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=text8_DTP                        # Job name
 #SBATCH --output=text8_DTP.txt                      # Output file
-#SBATCH --time=8:00:00                              # 1 hour
+#SBATCH --time=12:00:00                             # 12 hours 
 #SBATCH --nodes=1                                   # Number of nodes
 #SBATCH --ntasks=1                                  # Total number of tasks (processes)
 #SBATCH --account=PAS2836

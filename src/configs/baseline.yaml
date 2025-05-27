@@ -44,7 +44,7 @@ optim: &optim
 
 train: &train
    cuda: true
-   max_step: 10000 # originally 200000
+   max_step: 100000 # originally 200000
    tgt_len: 512 # originally 2048
    batch_size: 8
    batch_chunk: 1
