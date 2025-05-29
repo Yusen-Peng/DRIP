@@ -5,8 +5,11 @@ import requests
 from PIL import Image
 from datasets import load_dataset
 import webdataset as wds
+import sys
 
-if __name__ == "__main__":
+
+
+def main():
     # Output directories
     TRAIN_DIR = "dataset/laion_shards"
     VAL_DIR = "dataset/laion_val"
@@ -14,17 +17,16 @@ if __name__ == "__main__":
     os.makedirs(VAL_DIR, exist_ok=True)
 
     # Sharding config
-    TOTAL_SAMPLES = 1_000_000 # 1M samples
+    
+    # now do 1M samples
+    TOTAL_SAMPLES = 1_000_000 # 1M
 
-    # FIXME: debugging - let's do 100k first
-    TOTAL_SAMPLES = 100_000
     print("=" * 50)
-    print(f"we are loading {TOTAL_SAMPLES} samples...")
+    print(f"we are loading {TOTAL_SAMPLES} samples")
     print("=" * 50)
-
 
     SAMPLES_PER_SHARD = 10_000
-    VAL_RATIO = 0.2  # 80% train, 20% val: 80k train, 20k val
+    VAL_RATIO = 0.2  # 80% train, 20% val: 0.8M train, 0.2M val
     train_writer = wds.ShardWriter(os.path.join(TRAIN_DIR, "laion-%06d.tar"), maxcount=SAMPLES_PER_SHARD)
     val_writer = wds.ShardWriter(os.path.join(VAL_DIR, "laion-val-%06d.tar"), maxcount=1000)
 
@@ -76,8 +78,8 @@ if __name__ == "__main__":
             train_writer.write(sample)
 
         sample_count += 1
-        if sample_count % 1000 == 0:
-            print(f"✅ Processed {sample_count} samples...")
+        if sample_count % 100 == 0:
+            print(f"✅ Processed {sample_count} samples!...")
 
         if sample_count >= TOTAL_SAMPLES:
             break
@@ -85,3 +87,9 @@ if __name__ == "__main__":
     train_writer.close()
     val_writer.close()
     print(f"\n🎉 Finished: {sample_count} samples written (train + val).")
+
+
+if __name__ == "__main__":
+    main()
+    print("✅ Done creating WebDataset shards for LAION-400M.")
+    print("You can now use these shards with WebDataset loaders.")

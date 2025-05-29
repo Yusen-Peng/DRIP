@@ -20,12 +20,19 @@ python -m pip install pdbpp
 
 | pretraining dataset | zero-shot dataset | image encoder | text encoder | # epochs | zero-shot top-1 | zero-shot top-5 | more HPs |
 | ------------ | ------------- | ------------------- | ----------------- | -------- | --------------- | --------------- | -------- |
+| <tr><td colspan="8" align="center"> Toy experiments </td></tr> |
 | COCO (2014), 82k train, 40k val | ImageNet (2012), 50k val | RN50 | transformer | 1 | 0.94% | 3.38% | [HPs](training_plan/COCO_0.json) |
 | COCO (2014), 82k train, 40k val | ImageNet (2012), 50k val | RN50 | transformer | 10 | 1.50% | 4.94% | [HPs](training_plan/COCO_2.json) |
 | COCO (2014), 82k train, 40k val | ImageNet (2012), 50k val | RN50 | transformer | 30 | 1.75% | 5.41% | [HPs](training_plan/COCO_3.json) |
 | LAION-400M (2021), 80k train, 20k val | ImageNet (2012), 50k val | RN50 | transformer | 1 | 0.27% | 1.29% | [HPs](training_plan/COCO_1.json) |
 | LAION-400M (2021), 80k train, 20k val | ImageNet (2012), 50k val | RN50 | transformer | 10 | 0.40% | 1.95% | [HPs](training_plan/COCO_2.json) |
 | LAION-400M (2021), 80k train, 20k val | ImageNet (2012), 50k val | RN50 | transformer | 30 | 0.50% | 2.09% | [HPs](training_plan/COCO_3.json) |
+| <tr><td colspan="8" align="center"> Small experiments </td></tr> |
+| LAION-400M (2021), 0.8M train, 0.2M val | ImageNet (2012), 50k val | ViT-B-32 | transformer | 1 | TBD | TBD | [HPs](training_plan/COCO_1.json) |
+| LAION-400M (2021), 0.8M train, 0.2M val | ImageNet (2012), 50k val | ViT-B-32 | transformer | 10 | TBD | TBD | [HPs](training_plan/COCO_1.json) |
+| LAION-400M (2021), 0.8M train, 0.2M val | ImageNet (2012), 50k val | ViT-B-32 | transformer | 30 | TBD | TBD | [HPs](training_plan/COCO_1.json) |
+| <tr><td colspan="8" align="center"> Real experiments </td></tr> |
+| <tr><td colspan="8" align="center"> TBD </td></tr> |
 
 
 ## evaluate a pretrained CLIP
