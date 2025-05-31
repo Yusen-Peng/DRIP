@@ -5,7 +5,7 @@
 #SBATCH --nodes=1                                   # Number of nodes
 #SBATCH --ntasks=1                                  # Total number of tasks (processes)
 #SBATCH --account=PAS2836
-#SBATCH --gres=gpu:1                                # Number of GPUs if needed
+#SBATCH --gres=gpu:2                                # Number of GPUs if needed
 #SBATCH --cpus-per-task=16                          # Number of CPU cores per task
 #SBATCH --mem=128G                                  # Total memory limit
 

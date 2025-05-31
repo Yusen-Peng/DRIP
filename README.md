@@ -16,6 +16,16 @@ python -m pip install tensorboard
 python -m pip install pdbpp
 ```
 
+## ViT computing resource exploration ✅ or ❌
+
+| model | batch size | # GPUs | effective batch size | cluster | fit? |
+| ----- | ---------- | ------ | ---------------------| ------- | ---- |
+| ViT-B-32 | 32 | 1 | 32 | pitzer | ✅ |
+| ViT-B-32 | 256 | 1 | 256 | pitzer | ✅ |
+| ViT-B-32 | 256 | 1 | 512 | pitzer | ❌ |
+| ViT-B-32 | 256 | 2 | 256*2=512 | pitzer | ? |
+
+
 ## train a CLIP from scratch
 
 | pretraining dataset | zero-shot dataset | image encoder | text encoder | # epochs | zero-shot top-1 | zero-shot top-5 | more HPs |

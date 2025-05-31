@@ -93,12 +93,15 @@ def main():
     
     # training parameters
     warmup = 50
-    batch_size = 32
+
+    # experiment with batch size
+    # 512
+    batch_size = 512
     lr = 1e-4
     wd = 0.1
-    epochs = 30 # 1, 10, 30
+    epochs = 1 # 1, 10, 30
     workers = 1
-    model = "RN50"
+    model = "ViT-B-32"
 
     # train CLIP
     train_runner(
