@@ -18,12 +18,26 @@ python -m pip install pdbpp
 
 ## ViT computing resource exploration ✅ or ❌
 
-| model | batch size | # GPUs | effective batch size | cluster | fit? |
+| model | batch size | # nodes | # GPUs per node | effective batch size | cluster | fit? |
 | ----- | ---------- | ------ | ---------------------| ------- | ---- |
-| ViT-B-32 | 32 | 1 | 32 | pitzer | ✅ |
-| ViT-B-32 | 256 | 1 | 256 | pitzer | ✅ |
-| ViT-B-32 | 512 | 1 | 512 | pitzer | ❌ |
-| ViT-B-32 | 256 | 2 | 256*2=512 | pitzer | ? |
+| <tr><td colspan="7" align="center"> single-GPU </td></tr> |
+| ViT-B-32 (88M) | **256** | 1 | 1 | 256 | pitzer | ✅ |
+| ViT-B-32 (88M) | 512 | 1 | 1 | 512 | pitzer | ❌ (OOM) |
+| ViT-B-16 (86M) | 256 | 1 | 1 | 256 | pitzer | ✅ |
+| ViT-B-16 (86M) | 512 | 1 | 1 | 512 | pitzer | ❌ (OOM) |
+| ViT-L-14 (307M) | **32** | 1 | 1 | 32 | pitzer | ✅ |
+| ViT-L-14 (307M) | 64 | 1 | 1 | 64 | pitzer | ❌ (OOM) |
+| ViT-H-14 (632M) | <tr><td colspan="6" align="center"> ALWAYS OOM </td></tr> |
+| <tr><td colspan="7" align="center"> multi-GPU </td></tr> |
+| ViT-B-32 (88M) | 256 | 1 | 2 | 512 | pitzer | ✅ |
+| ViT-B-32 (88M) | 256 | 1 | 4 | 1024 | pitzer | ✅ |
+| ViT-B-32 (88M) | 256 | 1 | 8 | 2048 | pitzer | ❌ (exceed limit) |
+| ViT-B-16 (86M) | 256 | 1 | 2 | 512 | pitzer | ✅ |
+| ViT-B-16 (86M) | 256 | 1 | 4 | 1024 | pitzer | ✅ |
+| ViT-B-16 (86M) | 256 | 1 | 8 | 2048 | pitzer | ❌ (exceed limit) |
+| ViT-L-14 (307M) | ***20*** | 1 | 2 | 40 | pitzer | ✅ |
+| ViT-L-14 (307M) | 32 | 1 | 2 | 64 | pitzer | ❌ (**OOM, kinda weird?!**) |
+| <tr><td colspan="7" align="center"> multi-node </td></tr> |
 
 
 ## train a CLIP from scratch
@@ -50,42 +64,58 @@ python -m pip install pdbpp
 | pretrained vision encoder | corresponding dataset | zero-shot dataset | zero-shot top-1 | zero-shot top-5 |
 | ------------------------- | --------------------- | ----------------- | --------------- | --------------- |
 | RN50x16 | openai | ImageNet (2012), 50k val | 70.14% | 92.41% |
-| ViT-B-32 | laion2b_s34b_b79k | ImageNet (2012), 50k val | 66.53% | 89.89% |
-| ViT-B-16 | laion2b_s34b_b88k | ImageNet (2012), 50k val | 70.21% | 91.76% |
-| ViT-L-14 | laion2b_s32b_b82k | ImageNet (2012), 50k val | 75.26% | 94.25% | 
+| ViT-B-32 (88M) | laion2b_s34b_b79k | ImageNet (2012), 50k val | 66.53% | 89.89% |
+| ViT-B-16 (86M) | laion2b_s34b_b88k | ImageNet (2012), 50k val | 70.21% | 91.76% |
+| ViT-L-14 (307M) | laion2b_s32b_b82k | ImageNet (2012), 50k val | 75.26% | 94.25% | 
 
-## Dynamic Token Pooling
 
-### DTP training
 
-| dataset | training target length | training max step | Bits-per-character (BPC) |
-| ------- | ---------------------- | ----------------- | ------------------------ |
-| text8 | 512 | 10,000 | 1.46513 |
-| text8 | 512 | 100,000 | 1.22651 |
-
-### model architecture
+## Baseline: DynamicViT
 
 ```txt
 input sequence
      ↓
-embedding (dropout)
+ViT backbone
      ↓
-pre-layers (# is a HP)
-     ↓
-boundary predictor (MLP)
-     ↓
-downsampling 
-     ↓
-shortened-layers (# is a HP)
-     ↓
-upsampling
+binary decision mask 
+goal: prune less-informative tokens
+end-to-end training: Gumbel-Softmax
+pruning: 
      ↓
 post-layers (# is a HP)
      ↓
 final dense
 ```
 
+
+
+## Another Baseline: ?
+
+
+
+## Our approach: DTP-ViT
+
+```txt
+input sequence
+     ↓
+embedding (dropout)
+     ↓
+pre-layers (# is a HP, 2 from the paper)
+     ↓
+boundary predictor (MLP)
+     ↓
+downsampling 
+     ↓
+shortened-layers (# is a HP, 8 from the paper)
+     ↓
+upsampling
+     ↓
+post-layers (# is a HP, 2 from the paper)
+     ↓
+final dense
+
 Note: the layer split from the paper is **2** (pre) + **8** (shortened) + **2** (post)
+```
 
 ### Training Objective
 
@@ -98,6 +128,13 @@ Boundary Loss: pick one from below:
 | entropy spikes | ![alt text](docs/entropy_spike.png) | yes |
 | unigram tokenizer | omitted | yes | 
 | Gumbel Sigmoid | ![alt text](docs/GumbelSigmoid.png) | no |
+
+### DTP training (text/language)
+
+| dataset | training target length | training max step | Bits-per-character (BPC) |
+| ------- | ---------------------- | ----------------- | ------------------------ |
+| text8 | 512 | 10,000 | 1.46513 |
+| text8 | 512 | 100,000 | 1.22651 |
 
 ## DTP results
 

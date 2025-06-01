@@ -1,3 +1,6 @@
+import torch
+import torch.distributed as dist
+import os
 from open_clip_train_local.main import main as train_function
 
 def train_runner(
@@ -59,7 +62,7 @@ def train_runner(
 
 def main():
     # dataset parameters
-    dataset_name = "LAION"  # Options: "COCO", "LAION"
+    dataset_name = "COCO"  # Options: "COCO", "LAION"
 
     if dataset_name == "COCO":
         # COCO dataset
@@ -71,8 +74,6 @@ def main():
     elif dataset_name == "LAION":
         # LAION dataset
         use_webdataset = True
-        train_data_path = "::".join([f"dataset/laion_shards/laion-{i:06d}.tar" for i in range(8)])
-
         train_data_path = ""
         for i in range(7):
             train_data_path += f"dataset/laion_shards/laion-00000{i}.tar::"
@@ -95,12 +96,11 @@ def main():
     warmup = 50
 
     # experiment with batch size
-    # 512
-    batch_size = 512
+    batch_size = 256
     lr = 1e-4
     wd = 0.1
-    epochs = 1 # 1, 10, 30
-    workers = 1
+    epochs = 1        # 1, 10, 30
+    workers = 8       # CPU utilization
     model = "ViT-B-32"
 
     # train CLIP
@@ -117,6 +117,9 @@ def main():
         model=model,
         train_num_samples=train_num_samples,
     )
+
+    if dist.is_initialized():
+        dist.destroy_process_group()
     print("Training completed.")
 
 
