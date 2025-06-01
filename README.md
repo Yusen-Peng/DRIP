@@ -19,7 +19,7 @@ python -m pip install pdbpp
 ## ViT computing resource exploration ✅ or ❌
 
 | model | batch size | # nodes | # GPUs per node | effective batch size | cluster | fit? |
-| ----- | ---------- | ------ | ---------------------| ------- | ---- |
+| ----- | ---------- | ------ | ---------------------| ------- | ---- | --- |
 | <tr><td colspan="7" align="center"> single-GPU </td></tr> |
 | ViT-B-32 (88M) | **256** | 1 | 1 | 256 | pitzer | ✅ |
 | ViT-B-32 (88M) | 512 | 1 | 1 | 512 | pitzer | ❌ (OOM) |
