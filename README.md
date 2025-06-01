@@ -27,7 +27,7 @@ python -m pip install pdbpp
 | ViT-B-16 (86M) | 512 | 1 | 1 | 512 | pitzer | ❌ (OOM) |
 | ViT-L-14 (307M) | **32** | 1 | 1 | 32 | pitzer | ✅ |
 | ViT-L-14 (307M) | 64 | 1 | 1 | 64 | pitzer | ❌ (OOM) |
-| ViT-H-14 (632M) | <tr><td colspan="6" align="center"> ALWAYS OOM </td></tr> |
+| <tr><td colspan="7" align="center"> ViT-H-14 (632M) ALWAYS OOM </td></tr> |
 | <tr><td colspan="7" align="center"> multi-GPU </td></tr> |
 | ViT-B-32 (88M) | 256 | 1 | 2 | 512 | pitzer | ✅ |
 | ViT-B-32 (88M) | 256 | 1 | 4 | 1024 | pitzer | ✅ |
