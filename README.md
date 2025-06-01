@@ -68,25 +68,39 @@ python -m pip install pdbpp
 | ViT-B-16 (86M) | laion2b_s34b_b88k | ImageNet (2012), 50k val | 70.21% | 91.76% |
 | ViT-L-14 (307M) | laion2b_s32b_b82k | ImageNet (2012), 50k val | 75.26% | 94.25% | 
 
-
-
 ## Baseline: DynamicViT
+
+motivation: Dynamic Token Sparsification > Structural Downsampling
+results: good trade-offs between model complexity (FLOPs) and top-1 accuracy on ImageNet
 
 ```txt
 input sequence
      ↓
-ViT backbone
+-----------------------------------
+basic transformer layer
      ↓
 binary decision mask 
-goal: prune less-informative tokens
-end-to-end training: Gumbel-Softmax
-pruning: 
+     goal: prune less-informative tokens
+     end-to-end training: Gumbel-Softmax
+     pruning: attention masking by constructing a graph
+-----------------------------------
      ↓
-post-layers (# is a HP)
+    ... (repeat)
      ↓
-final dense
+    ...
 ```
 
+Note: G(ij) = 1 means the j-th token will contribute to the update of the i-th token:
+
+![alt text](docs/attention_masking.png)
+
+### Training Objective
+
+![training](docs/training_objective.png)
+
+1. classification loss: cross entropy
+2. distillation loss (token alignment) + KL divergence Loss (prediction alignment): teacher-student setup
+3. prune ratio regularization:  constrain the ratio of the kept tokens to a **predefined** value
 
 
 ## Another Baseline: ?
