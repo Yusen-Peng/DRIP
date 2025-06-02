@@ -19,7 +19,7 @@ python -m pip install pdbpp
 ## ViT computing resource exploration ✅ or ❌
 
 | model | batch size | # nodes | # GPUs per node | effective batch size | cluster | fit? |
-| ----- | ---------- | ------ | ---------------------| ------- | ---- | --- |
+| ------------ | ---------- | ------ | ---------------------| ------- | ---- | --- |
 | <tr><td colspan="7" align="center"> single-GPU </td></tr> |
 | ViT-B-32 (88M) | **256** | 1 | 1 | 256 | pitzer | ✅ |
 | ViT-B-32 (88M) | 512 | 1 | 1 | 512 | pitzer | ❌ (OOM) |
@@ -36,8 +36,12 @@ python -m pip install pdbpp
 | ViT-B-16 (86M) | 256 | 1 | 4 | 1024 | pitzer | ✅ |
 | ViT-B-16 (86M) | 256 | 1 | 8 | 2048 | pitzer | ❌ (exceed limit) |
 | ViT-L-14 (307M) | ***20*** | 1 | 2 | 40 | pitzer | ✅ |
-| ViT-L-14 (307M) | 32 | 1 | 2 | 64 | pitzer | ❌ (**OOM, kinda weird?!**) |
+| ViT-L-14 (307M) | 32 | 1 | 2 | 64 | pitzer | ❌ (**OOM, weird...**) |
 | <tr><td colspan="7" align="center"> multi-node </td></tr> |
+| ViT-B-32 (88M) | 256 | 2 | 2 | 1024 | pitzer | ✅ |
+| ViT-B-32 (88M) | 256 | 2 | 4 | 2048 | pitzer | ✅ |
+| ViT-B-32 (88M) | 256 | 4 | 2 | 2048 | pitzer | ✅ |
+| ViT-B-32 (88M) | 256 | 4 | 4 | 4096 | pitzer | ❌ (Node count) |
 
 
 ## train a CLIP from scratch
@@ -71,7 +75,7 @@ python -m pip install pdbpp
 ## Baseline: DynamicViT
 
 motivation: Dynamic Token Sparsification > Structural Downsampling
-results: good trade-offs between model complexity (FLOPs) and top-1 accuracy on ImageNet
+results: good **trade-offs** between model complexity (FLOPs) and top-1 accuracy on ImageNet
 
 ```txt
 input sequence
@@ -100,12 +104,29 @@ Note: G(ij) = 1 means the j-th token will contribute to the update of the i-th t
 
 1. classification loss: cross entropy
 2. distillation loss (token alignment) + KL divergence Loss (prediction alignment): teacher-student setup
-3. prune ratio regularization:  constrain the ratio of the kept tokens to a **predefined** value
+3. prune ratio regularization: constrain the ratio of the kept tokens to a **predefined** value
 
+## Another Baseline: Native Segmentation ViT
 
-## Another Baseline: ?
+motivation: content-aware **spatial grouping layer** > uniform downsampling
 
-
+```txt
+input sequence
+     ↓
+patch embedding
+     ↓
+-------------------------------
+local grouping layer (repeat 2 times)
+     a differentiable (soft) Kmeans-like clustering
+     initialize "centroids" (output tokens) with a strided convolution over the input tokens
+     "local": each output token only attends to a 3x3 local window of input tokens
+-------------------------------
+     ↓
+-------------------------------
+dense grouping layer
+     "dense": every output token attends to all input tokens
+-------------------------------
+```
 
 ## Our approach: DTP-ViT
 
@@ -160,9 +181,15 @@ SF (average Shortening Factor) and reduction in GPU memory and Training step tim
 
 ![alt text](docs/efficiency.png)
 
-## PROPOSAL: continual pretraining with DTP inserted?
+## Design summary: DTP-ViT v.s. baselines
 
-![alt text](docs/proposal.jpg)
+| design | approach summary |
+| ------ | -------------------------- |
+| DynamicViT | a binary decision mask to prune tokens at each transformer layer |
+| NativeSegViT | kmeans-like clustering to dynamically group/pool tokens repeatedly |
+| DTP-ViT (entropy-spikes) | a boundary predictor supervised by entropy spikes |
+| DTP-ViT (tokenizer) | a boundary predictor supervised by an off-the-shelf image tokenizer |
+| DTP-ViT (Gumbel-Sigmoid) | a boundary predictor using Gumbel-Sigmoid |
 
 ## Commands to run experiment
 
