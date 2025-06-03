@@ -44,6 +44,19 @@ python -m pip install pdbpp
 | ViT-B-32 (88M) | 256 | 4 | 4 | 4096 | pitzer | gpuparallel-48core | ❌ (Node count) |
 
 
+## Design summary: DTP-ViT v.s. baselines
+
+| design | approach summary |
+| ------ | -------------------------- |
+| <tr><td colspan="2" align="center"> baseline/existing work </td></tr> |
+| DynamicViT | a binary decision mask to **PRUNE** tokens at each transformer layer |
+| NativeSegViT | kmeans-like clustering to dynamically **GROUP** tokens repeatedly |
+| TokenLearner | a spatial attention module inserted in ViT to **LEARN** tokens |  
+| <tr><td colspan="2" align="center"> DTP-ViT </td></tr> |
+| DTP-ViT (entropy-spikes) | a boundary predictor supervised by entropy spikes |
+| DTP-ViT (tokenizer) | a boundary predictor supervised by an off-the-shelf image tokenizer |
+| DTP-ViT (Gumbel-Sigmoid) | a boundary predictor using Gumbel-Sigmoid |
+
 ## train a CLIP from scratch
 
 | pretraining dataset | zero-shot dataset | image encoder | text encoder | # epochs | zero-shot top-1 | zero-shot top-5 | more HPs |
@@ -128,6 +141,34 @@ dense grouping layer
 -------------------------------
 ```
 
+## Another Baseline: TokenLearner
+
+motivation: adaptive tokenization + reduces the total number of tokens
+
+```txt
+input sequence
+     ↓
+transformer layer
+     ↓
+----------------------------------
+spatial attention (see below)
+     ↓
+learned tokens (significantly less)
+----------------------------------
+     ↓
+transformer layer
+     ↓
+transformer layer
+     ↓
+    ... (proceed with ViT)
+```
+
+![alt text](docs/spatial_attn.png)
+
+1. Xt: a frame
+2. alpha: convolution/MLP
+3. rho: spatial global average pooling
+
 ## Our approach: DTP-ViT
 
 ```txt
@@ -180,16 +221,6 @@ BPC (Bits Per Character) and SF (average Shortening Factor):
 SF (average Shortening Factor) and reduction in GPU memory and Training step time:
 
 ![alt text](docs/efficiency.png)
-
-## Design summary: DTP-ViT v.s. baselines
-
-| design | approach summary |
-| ------ | -------------------------- |
-| DynamicViT | a binary decision mask to prune tokens at each transformer layer |
-| NativeSegViT | kmeans-like clustering to dynamically group/pool tokens repeatedly |
-| DTP-ViT (entropy-spikes) | a boundary predictor supervised by entropy spikes |
-| DTP-ViT (tokenizer) | a boundary predictor supervised by an off-the-shelf image tokenizer |
-| DTP-ViT (Gumbel-Sigmoid) | a boundary predictor using Gumbel-Sigmoid |
 
 ## Commands to run experiment
 
