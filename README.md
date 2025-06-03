@@ -1,26 +1,10 @@
-# Fast-CLIP: Efficient Contrastive Pretraining with Dynamic Token Pooling
+# DTP-ViT: Dynamic Token Pooling Vision Transformer
 
-use dynamic token pooling for image and text encoders in CLIP to boost efficiency (potentially we combine it with *mini-techniques* like quantization, pruning, or distillation, etc.)
-
-## Environment Setup
-
-```bash
-conda create -n Fast-CLIP python=3.11
-conda activate Fast-CLIP
-python -m pip install open_clip_torch
-python -m pip install 'open_clip_torch[training]'
-conda install -c conda-forge sentencepiece
-python -m pip install braceexpand
-python -m pip install webdataset
-python -m pip install tensorboard
-python -m pip install pdbpp
-```
-
-## ViT computing resource exploration
+## computing resource exploration
 
 | model | batch size | # nodes | # GPUs per node | effective batch size | cluster | partition | fit? |
 | ------------ | ---------- | ------ | ---------------------| ------- | ---- | ---- | --- |
-| <tr><td colspan="8" align="center"> single-GPU </td></tr> |
+| <tr><td colspan="8" align="center"> **single**-GPU </td></tr> |
 | ViT-B-32 (88M) | **256** | 1 | 1 | 256 | pitzer | gpuserial | ✅ |
 | ViT-B-32 (88M) | 512 | 1 | 1 | 512 | pitzer | gpuserial | ❌ (OOM) |
 | ViT-B-16 (86M) | 256 | 1 | 1 | 256 | pitzer | gpuserial | ✅ |
@@ -28,7 +12,7 @@ python -m pip install pdbpp
 | ViT-L-14 (307M) | **32** | 1 | 1 | 32 | pitzer | gpuserial | ✅ |
 | ViT-L-14 (307M) | 64 | 1 | 1 | 64 | pitzer | gpuserial | ❌ (OMM) |
 | <tr><td colspan="8" align="center"> ViT-H-14 (632M) ALWAYS OOM </td></tr> |
-| <tr><td colspan="8" align="center"> multi-GPU </td></tr> |
+| <tr><td colspan="8" align="center"> **multi**-GPU </td></tr> |
 | ViT-B-32 (88M) | 256 | 1 | 2 | 512 | pitzer | gpuserial | ✅ |
 | ViT-B-32 (88M) | 256 | 1 | 4 | 1024 | pitzer | gpuserial | ✅ |
 | ViT-B-32 (88M) | 256 | 1 | 8 | 2048 | pitzer | gpuserial | ❌ (exceed limit) |
@@ -37,7 +21,7 @@ python -m pip install pdbpp
 | ViT-B-16 (86M) | 256 | 1 | 8 | 2048 | pitzer | gpuserial | ❌ (exceed limit) |
 | ViT-L-14 (307M) | ***20*** | 1 | 2 | 40 | pitzer | gpuserial | ✅ |
 | ViT-L-14 (307M) | 32 | 1 | 2 | 64 | pitzer | gpuserial | ❌ (**OOM, weird...**) |
-| <tr><td colspan="7" align="center"> multi-node </td></tr> |
+| <tr><td colspan="8" align="center"> multi-**node** </td></tr> |
 | ViT-B-32 (88M) | 256 | 2 | 2 | 1024 | pitzer | gpuparallel-48core | ✅ |
 | ViT-B-32 (88M) | 256 | 2 | 4 | 2048 | pitzer | gpuparallel-48core | ✅ |
 | ViT-B-32 (88M) | 256 | 4 | 2 | 2048 | pitzer | gpuparallel-48core | ✅ |
@@ -282,4 +266,18 @@ sinfo -o "%P"
 
 ```bash
 unzip filename.zip -x "__MACOSX/*" "*.DS_Store"
+```
+
+## Environment Setup
+
+```bash
+conda create -n Fast-CLIP python=3.11
+conda activate Fast-CLIP
+python -m pip install open_clip_torch
+python -m pip install 'open_clip_torch[training]'
+conda install -c conda-forge sentencepiece
+python -m pip install braceexpand
+python -m pip install webdataset
+python -m pip install tensorboard
+python -m pip install pdbpp
 ```
