@@ -16,32 +16,32 @@ python -m pip install tensorboard
 python -m pip install pdbpp
 ```
 
-## ViT computing resource exploration ✅ or ❌
+## ViT computing resource exploration
 
-| model | batch size | # nodes | # GPUs per node | effective batch size | cluster | fit? |
-| ------------ | ---------- | ------ | ---------------------| ------- | ---- | --- |
-| <tr><td colspan="7" align="center"> single-GPU </td></tr> |
-| ViT-B-32 (88M) | **256** | 1 | 1 | 256 | pitzer | ✅ |
-| ViT-B-32 (88M) | 512 | 1 | 1 | 512 | pitzer | ❌ (OOM) |
-| ViT-B-16 (86M) | 256 | 1 | 1 | 256 | pitzer | ✅ |
-| ViT-B-16 (86M) | 512 | 1 | 1 | 512 | pitzer | ❌ (OOM) |
-| ViT-L-14 (307M) | **32** | 1 | 1 | 32 | pitzer | ✅ |
-| ViT-L-14 (307M) | 64 | 1 | 1 | 64 | pitzer | ❌ (OOM) |
-| <tr><td colspan="7" align="center"> ViT-H-14 (632M) ALWAYS OOM </td></tr> |
-| <tr><td colspan="7" align="center"> multi-GPU </td></tr> |
-| ViT-B-32 (88M) | 256 | 1 | 2 | 512 | pitzer | ✅ |
-| ViT-B-32 (88M) | 256 | 1 | 4 | 1024 | pitzer | ✅ |
-| ViT-B-32 (88M) | 256 | 1 | 8 | 2048 | pitzer | ❌ (exceed limit) |
-| ViT-B-16 (86M) | 256 | 1 | 2 | 512 | pitzer | ✅ |
-| ViT-B-16 (86M) | 256 | 1 | 4 | 1024 | pitzer | ✅ |
-| ViT-B-16 (86M) | 256 | 1 | 8 | 2048 | pitzer | ❌ (exceed limit) |
-| ViT-L-14 (307M) | ***20*** | 1 | 2 | 40 | pitzer | ✅ |
-| ViT-L-14 (307M) | 32 | 1 | 2 | 64 | pitzer | ❌ (**OOM, weird...**) |
+| model | batch size | # nodes | # GPUs per node | effective batch size | cluster | partition | fit? |
+| ------------ | ---------- | ------ | ---------------------| ------- | ---- | ---- | --- |
+| <tr><td colspan="8" align="center"> single-GPU </td></tr> |
+| ViT-B-32 (88M) | **256** | 1 | 1 | 256 | pitzer | gpuserial | ✅ |
+| ViT-B-32 (88M) | 512 | 1 | 1 | 512 | pitzer | gpuserial | ❌ (OOM) |
+| ViT-B-16 (86M) | 256 | 1 | 1 | 256 | pitzer | gpuserial | ✅ |
+| ViT-B-16 (86M) | 512 | 1 | 1 | 512 | pitzer | gpuserial | ❌ (OOM) |
+| ViT-L-14 (307M) | **32** | 1 | 1 | 32 | pitzer | gpuserial | ✅ |
+| ViT-L-14 (307M) | 64 | 1 | 1 | 64 | pitzer | gpuserial | ❌ (OMM) |
+| <tr><td colspan="8" align="center"> ViT-H-14 (632M) ALWAYS OOM </td></tr> |
+| <tr><td colspan="8" align="center"> multi-GPU </td></tr> |
+| ViT-B-32 (88M) | 256 | 1 | 2 | 512 | pitzer | gpuserial | ✅ |
+| ViT-B-32 (88M) | 256 | 1 | 4 | 1024 | pitzer | gpuserial | ✅ |
+| ViT-B-32 (88M) | 256 | 1 | 8 | 2048 | pitzer | gpuserial | ❌ (exceed limit) |
+| ViT-B-16 (86M) | 256 | 1 | 2 | 512 | pitzer | gpuserial | ✅ |
+| ViT-B-16 (86M) | 256 | 1 | 4 | 1024 | pitzer | gpuserial | ✅ |
+| ViT-B-16 (86M) | 256 | 1 | 8 | 2048 | pitzer | gpuserial | ❌ (exceed limit) |
+| ViT-L-14 (307M) | ***20*** | 1 | 2 | 40 | pitzer | gpuserial | ✅ |
+| ViT-L-14 (307M) | 32 | 1 | 2 | 64 | pitzer | gpuserial | ❌ (**OOM, weird...**) |
 | <tr><td colspan="7" align="center"> multi-node </td></tr> |
-| ViT-B-32 (88M) | 256 | 2 | 2 | 1024 | pitzer | ✅ |
-| ViT-B-32 (88M) | 256 | 2 | 4 | 2048 | pitzer | ✅ |
-| ViT-B-32 (88M) | 256 | 4 | 2 | 2048 | pitzer | ✅ |
-| ViT-B-32 (88M) | 256 | 4 | 4 | 4096 | pitzer | ❌ (Node count) |
+| ViT-B-32 (88M) | 256 | 2 | 2 | 1024 | pitzer | gpuparallel-48core | ✅ |
+| ViT-B-32 (88M) | 256 | 2 | 4 | 2048 | pitzer | gpuparallel-48core | ✅ |
+| ViT-B-32 (88M) | 256 | 4 | 2 | 2048 | pitzer | gpuparallel-48core | ✅ |
+| ViT-B-32 (88M) | 256 | 4 | 4 | 4096 | pitzer | gpuparallel-48core | ❌ (Node count) |
 
 
 ## train a CLIP from scratch
@@ -228,11 +228,24 @@ Monitor my jobs:
 squeue -u yusenpeng
 ```
 
+More details:
+
+```bash
+scontrol show job [JOB_ID]
+```
+
 to early cancel a job (something is already wrong)
 
 ```bash
 scancel [JOB_ID]
 ```
+
+look up all partitions on a cluster
+
+```bash
+sinfo -o "%P"
+```
+
 
 ## unzip datasets
 
