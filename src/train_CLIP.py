@@ -96,7 +96,7 @@ def main():
     warmup = 50
 
     # experiment with batch size
-    batch_size = 256
+    batch_size = 2048
     lr = 1e-4
     wd = 0.1
     epochs = 1        # 1, 10, 30
