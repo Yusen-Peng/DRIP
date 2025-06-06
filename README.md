@@ -225,7 +225,7 @@ Evaluating a pretrained CLIP:
 
 ```bash
 salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00
-module load miniconda3
+module load miniconda3/24.1.2-py310
 conda deactivate
 conda activate Fast-CLIP
 python src/eval_CLIP.py

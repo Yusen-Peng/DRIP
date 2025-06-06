@@ -4,6 +4,7 @@ import os
 from open_clip_train_local.main import main as train_function
 
 def train_runner(
+        DTP: bool,
         use_webdataset: bool = False,
         train_data_path: str = "dataset/coco_train_subset.csv",
         val_data_path: str = "dataset/coco_val_subset.csv",
@@ -55,14 +56,16 @@ def train_runner(
             "--wd", str(wd),
             "--epochs", str(epochs),
             "--workers", str(workers),
-            "--model", model
+            "--model", model,
         ]
 
+    if DTP:
+        args_list.append("--DTP")
     train_function(args_list)
 
 def main():
     # dataset parameters
-    dataset_name = "COCO"  # Options: "COCO", "LAION"
+    dataset_name = "COCO"
 
     if dataset_name == "COCO":
         # COCO dataset
@@ -96,7 +99,8 @@ def main():
     warmup = 50
 
     # experiment with batch size
-    batch_size = 2048
+    use_DTP = True
+    batch_size = 512
     lr = 1e-4
     wd = 0.1
     epochs = 1        # 1, 10, 30
@@ -105,6 +109,7 @@ def main():
 
     # train CLIP
     train_runner(
+        DTP=use_DTP,
         use_webdataset=use_webdataset,
         train_data_path=train_data_path,
         val_data_path=val_data_path,

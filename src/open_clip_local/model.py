@@ -20,6 +20,7 @@ from .modified_resnet import ModifiedResNet
 from .timm_model import TimmModel
 from .transformer import LayerNormFp32, LayerNorm, QuickGELU, Attention, VisionTransformer, TextTransformer,\
     text_global_pool
+from .DTP_ViT import DTPViT
 from .utils import to_2tuple
 
 
@@ -106,7 +107,8 @@ def _build_vision_tower(
         embed_dim: int,
         vision_cfg: CLIPVisionCfg,
         quick_gelu: bool = False,
-        cast_dtype: Optional[torch.dtype] = None
+        cast_dtype: Optional[torch.dtype] = None,
+        DTP_ViT: bool = False,
 ):
     if isinstance(vision_cfg, dict):
         vision_cfg = CLIPVisionCfg(**vision_cfg)
@@ -146,27 +148,46 @@ def _build_vision_tower(
         if vision_cfg.act_kwargs is not None:
             act_layer = partial(act_layer, **vision_cfg.act_kwargs)
 
-        visual = VisionTransformer(
-            image_size=vision_cfg.image_size,
-            patch_size=vision_cfg.patch_size,
-            width=vision_cfg.width,
-            layers=vision_cfg.layers,
-            heads=vision_heads,
-            mlp_ratio=vision_cfg.mlp_ratio,
-            ls_init_value=vision_cfg.ls_init_value,
-            patch_dropout=vision_cfg.patch_dropout,
-            attentional_pool=vision_cfg.attentional_pool,
-            attn_pooler_queries=vision_cfg.attn_pooler_queries,
-            attn_pooler_heads=vision_cfg.attn_pooler_heads,
-            pos_embed_type=vision_cfg.pos_embed_type,
-            no_ln_pre=vision_cfg.no_ln_pre,
-            final_ln_after_pool=vision_cfg.final_ln_after_pool,
-            pool_type=vision_cfg.pool_type,
-            output_tokens=vision_cfg.output_tokens,
-            output_dim=embed_dim,
-            act_layer=act_layer,
-            norm_layer=norm_layer,
-        )
+        if DTP_ViT:
+            visual = DTPViT(
+                image_size=vision_cfg.image_size,
+                patch_size=vision_cfg.patch_size,
+                in_chans=3,
+                embed_dim=vision_cfg.width,
+                depth=(2, 8, 2),
+                num_heads=vision_heads,
+                mlp_ratio=vision_cfg.mlp_ratio,
+                drop_rate=vision_cfg.patch_dropout,
+                attn_drop_rate=0.1,
+                temp=0.5,
+                compression_rate=0.1,
+                threshold=0.5,
+                activation_function="gelu",
+                num_classes=embed_dim,
+            )
+
+        else:
+            visual = VisionTransformer(
+                image_size=vision_cfg.image_size,
+                patch_size=vision_cfg.patch_size,
+                width=vision_cfg.width,
+                layers=vision_cfg.layers,
+                heads=vision_heads,
+                mlp_ratio=vision_cfg.mlp_ratio,
+                ls_init_value=vision_cfg.ls_init_value,
+                patch_dropout=vision_cfg.patch_dropout,
+                attentional_pool=vision_cfg.attentional_pool,
+                attn_pooler_queries=vision_cfg.attn_pooler_queries,
+                attn_pooler_heads=vision_cfg.attn_pooler_heads,
+                pos_embed_type=vision_cfg.pos_embed_type,
+                no_ln_pre=vision_cfg.no_ln_pre,
+                final_ln_after_pool=vision_cfg.final_ln_after_pool,
+                pool_type=vision_cfg.pool_type,
+                output_tokens=vision_cfg.output_tokens,
+                output_dim=embed_dim,
+                act_layer=act_layer,
+                norm_layer=norm_layer,
+            )
 
     return visual
 
@@ -227,6 +248,7 @@ class CLIP(nn.Module):
             embed_dim: int,
             vision_cfg: CLIPVisionCfg,
             text_cfg: CLIPTextCfg,
+            DTP_ViT: bool,
             quick_gelu: bool = False,
             init_logit_scale: float = np.log(1 / 0.07),
             init_logit_bias: Optional[float] = None,
@@ -237,7 +259,7 @@ class CLIP(nn.Module):
         super().__init__()
         self.output_dict = output_dict
 
-        self.visual = _build_vision_tower(embed_dim, vision_cfg, quick_gelu, cast_dtype)
+        self.visual = _build_vision_tower(embed_dim, vision_cfg, quick_gelu, cast_dtype, DTP_ViT=DTP_ViT)
 
         text = _build_text_tower(embed_dim, text_cfg, quick_gelu, cast_dtype)
         self.transformer = text.transformer

@@ -223,6 +223,7 @@ def load_checkpoint(
 
 def create_model(
         model_name: str,
+        DTP_ViT: bool,
         pretrained: Optional[str] = None,
         precision: str = 'fp32',
         device: Union[str, torch.device] = 'cpu',
@@ -349,7 +350,7 @@ def create_model(
         else:
             model = CustomTextCLIP(**model_cfg, cast_dtype=cast_dtype)
     else:
-        model = CLIP(**model_cfg, cast_dtype=cast_dtype)
+        model = CLIP(**model_cfg, cast_dtype=cast_dtype, DTP_ViT=DTP_ViT)
 
     if precision in ("fp16", "bf16"):
         dtype = torch.float16 if 'fp16' in precision else torch.bfloat16
@@ -471,6 +472,7 @@ def create_loss(args):
 
 def create_model_and_transforms(
         model_name: str,
+        DTP_ViT: bool,
         pretrained: Optional[str] = None,
         precision: str = 'fp32',
         device: Union[str, torch.device] = 'cpu',
@@ -501,6 +503,7 @@ def create_model_and_transforms(
 
     model = create_model(
         model_name,
+        DTP_ViT,
         pretrained,
         precision=precision,
         device=device,

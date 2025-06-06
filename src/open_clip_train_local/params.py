@@ -209,6 +209,13 @@ def parse_args(args):
         default="RN50",
         help="Name of the vision backbone to use.",
     )
+
+    parser.add_argument(
+        "--DTP",
+        action='store_true',
+        help="Use DTP (Dynamic Token Pooling) for image encoder.",
+    )
+    
     parser.add_argument(
         "--pretrained",
         default='',

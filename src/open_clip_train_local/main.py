@@ -69,9 +69,6 @@ def get_latest_checkpoint(path: str, remote : bool):
 
 
 def main(args):
-    print("=" * 100)
-    print("[INFO] running our own copy of OpenCLIP!" )
-    print("=" * 100)
 
     args = parse_args(args)
 
@@ -224,8 +221,11 @@ def main(args):
     if args.siglip:
         model_kwargs['init_logit_scale'] = np.log(10)  # different from CLIP
         model_kwargs['init_logit_bias'] = -10
+
+    DTP_ViT = True if args.DTP else False
     model, preprocess_train, preprocess_val = create_model_and_transforms(
         args.model,
+        DTP_ViT,
         args.pretrained,
         precision=args.precision,
         device=device,
