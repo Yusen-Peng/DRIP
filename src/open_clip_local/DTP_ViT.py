@@ -1,3 +1,6 @@
+# Adapted from: 
+# https://github.com/PiotrNawrot/dynamic-pooling/blob/main/hourglass.py
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -101,15 +104,21 @@ def upsample(boundaries, shortened_hidden):
 
     return torch.einsum('sbd,bls->lbd', shortened_hidden, bar)
 
-
 class BoundaryPredictor(nn.Module):
     def __init__(self, d_model, d_inner, activation_function,
-                 temp, prior, bp_type, threshold=0.5):
+                 temp, prior, bp_type, threshold=0.5,
+                 image_size=None, patch_size=None, embed_dim=None):
         super().__init__()
         self.temp = temp
         self.prior = prior
         self.bp_type = bp_type
         self.threshold = threshold
+        self.compression_rate = prior
+        self.embed_dim = embed_dim
+        if image_size is not None and patch_size is not None:
+            self.image_size = image_size
+            self.patch_size = patch_size
+            self.num_patches = (image_size // patch_size) ** 2
 
         if activation_function == 'relu':
             activation_fn = nn.ReLU(inplace=True)
@@ -124,16 +133,10 @@ class BoundaryPredictor(nn.Module):
 
         self.loss = nn.BCEWithLogitsLoss()
 
-    def forward(self, hidden, flop_mode=False):
+    def forward(self, hidden):
         # Hidden is of shape [seq_len x bs x d_model]
         # Boundaries we return are [bs x seq_len]
         boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
-
-        if flop_mode:
-            _ = self.loss(boundary_logits, torch.zeros_like(boundary_logits))  # dummy call
-            return boundary_logits.new_ones(boundary_logits.shape), boundary_logits.new_ones(boundary_logits.shape)
-
-
         boundary_probs = torch.sigmoid(boundary_logits)
 
         if self.bp_type == 'gumbel':
@@ -295,8 +298,11 @@ class DTPViT(nn.Module):
         threshold: float = 0.5,   # the cutoff used to decide whether a patch token should be kept or dropped
         activation_function: str = 'gelu',
         num_classes: int = 1000,
+        flop_measure: bool = False,  # whether to measure FLOPs
     ):
         super(DTPViT, self).__init__()
+        self.flop_measure = flop_measure
+        self.compression_rate = compression_rate
 
         # patch embeddings
         self.patch_embed = PatchEmbedding(image_size, patch_size, in_chans, embed_dim)
@@ -329,6 +335,9 @@ class DTPViT(nn.Module):
             prior=compression_rate,
             bp_type="gumbel",
             threshold=threshold,
+            image_size=image_size,
+            patch_size=patch_size,
+            embed_dim=embed_dim
         )
 
         self.norm = nn.LayerNorm(embed_dim)
@@ -344,7 +353,7 @@ class DTPViT(nn.Module):
         print("=" * 70)
 
 
-    def forward(self, x: torch.Tensor, flop_mode: bool = False) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Input: [B, 3, H, W]
         B = x.size(0)
         x = self.patch_embed(x)
@@ -356,7 +365,20 @@ class DTPViT(nn.Module):
         x = self.pre_blocks(x)
 
         residual = x
-        soft_boundaries, hard_boundaries = self.boundary_predictor(x, flop_mode=flop_mode)
+
+        # NOTE: we simulate the boundaries, like DynamicViT folks did.
+        # https://github.com/raoyongming/DynamicViT/blob/master/models/dylvvit.py
+        if self.flop_measure:
+            print("=" * 80)
+            print("[INFO] FLOP measurement mode: simulating fake boundaries to satisfy the compression rate.")
+            print("=" * 80)
+            L = x.shape[0]
+            interval = max(1, int(1 / self.compression_rate))
+            hard_boundaries = torch.zeros(B, L, device=x.device)
+            hard_boundaries[:, ::interval] = 1
+        else:
+            _, hard_boundaries = self.boundary_predictor(x)
+
         x = downsample(hard_boundaries, x, self.null_group)
         x = self.norm(x)
 

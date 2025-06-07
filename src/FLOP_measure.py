@@ -1,73 +1,101 @@
-import torch
-import contextlib
-import io
+# Adapted from:
+# https://github.com/raoyongming/DynamicViT/blob/master/calc_flops.py
+
+import warnings
 import time
+import torch
+from numbers import Number
+from typing import Any, Callable, List, Optional, Union
+from numpy import prod
+import numpy as np
 from fvcore.nn import FlopCountAnalysis
 from open_clip_local.DTP_ViT import DTPViT
 from open_clip_local.model import CLIPVisionCfg
 from open_clip_local.transformer import VisionTransformer
 
-def register_custom_flop_handlers(fca):
+def register_elemwise_flop_handlers(fca: FlopCountAnalysis):
     def elemwise(i, o):
-        shape = i[0].type().sizes()
-        if shape is None:
+        try:
+            return int(torch.prod(torch.tensor(o[0].shape)).item())
+        except:
             return 0
-        return int(torch.prod(torch.tensor(shape)))
+    def native_mha_flops(inputs, outputs):
+        q_shape = inputs[0].type().sizes()
+        if not q_shape or None in q_shape or len(q_shape) != 3:
+            return 0
 
-    fca.set_op_handle("aten::add", elemwise)
-    fca.set_op_handle("aten::sub", elemwise)
-    fca.set_op_handle("aten::sub_", elemwise)
-    fca.set_op_handle("aten::rsub", elemwise)
-    fca.set_op_handle("aten::mul", elemwise)
-    fca.set_op_handle("aten::div", elemwise)
-    fca.set_op_handle("aten::sigmoid", elemwise)
-    fca.set_op_handle("aten::gelu", elemwise)
-    fca.set_op_handle("aten::softmax", lambda i, o: 5 * elemwise(i, o))
-    fca.set_op_handle("aten::sum", elemwise)
-    fca.set_op_handle("aten::mean", elemwise)
-    fca.set_op_handle("aten::log", elemwise)
-    fca.set_op_handle("aten::log1p", elemwise)
-    fca.set_op_handle("aten::ne", elemwise)
-    fca.set_op_handle("aten::clone", elemwise)
-    fca.set_op_handle("aten::cumsum", elemwise)
-    fca.set_op_handle("aten::repeat", elemwise)
-    fca.set_op_handle("aten::rand", elemwise)
-    fca.set_op_handle("aten::new_ones", lambda i, o: 0)
-    
+        seq_len, batch_size, embed_dim = q_shape
+        num_heads = 12  # You can make this dynamic if needed
 
-class FLOPWrapper(torch.nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.model = model
+        # FLOPs for QK^T and AV
+        flops_qk = 2 * batch_size * num_heads * seq_len * seq_len
+        flops_av = 2 * batch_size * num_heads * seq_len * embed_dim
 
-    def forward(self, x):
-        return self.model(x, flop_mode=True)
+        return flops_qk + flops_av
+
+
+    # Fallback for common ops
+    ops = [
+        "aten::add", "aten::sub", "aten::sub_", "aten::rsub", "aten::mul",
+        "aten::div", "aten::sigmoid", "aten::gelu", "aten::softmax",
+        "aten::sum", "aten::mean", "aten::log", "aten::log1p", "aten::ne",
+        "aten::clone", "aten::cumsum", "aten::repeat", "aten::rand",
+        "aten::broadcast_tensors", "aten::fill_"
+    ]
+    for op in ops:
+        fca.set_op_handle(op, elemwise)
+    fca.set_op_handle("aten::softmax", lambda i, o: 5 * elemwise(i, o))  # heuristic
+    fca.set_op_handle("aten::_native_multi_head_attention", native_mha_flops)
 
 
 @torch.no_grad()
-def calc_flops(model, img_size=224, compression_rate=None, show_details=True):
-    seed = 42
-    torch.manual_seed(seed)
-    dummy_input = torch.randn(1, 3, img_size, img_size)
+def calc_flops(model: DTPViT | VisionTransformer, img_size: int = 224, show_details: bool = False) -> float:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device).eval()
+    dummy_input = torch.randn(1, 3, img_size, img_size).to(device)
 
     fca = FlopCountAnalysis(model, dummy_input)
-    register_custom_flop_handlers(fca)
-    with contextlib.redirect_stdout(io.StringIO()):
-        flops = fca.total()
+    register_elemwise_flop_handlers(fca)
+
+    total_flops = fca.total()
+
+    print("==================================================")
+    print(f"[INFO] Input shape: {tuple(dummy_input.shape)}")
+    if isinstance(model, DTPViT):
+        ratios = model.compression_rate
+        print(f"[INFO] Compression ratio: {ratios}")
+    print(f"[INFO] Total GFLOPs: {total_flops / 1e9:.2f}")
+    print("==================================================")
 
     if show_details:
         print("FLOPs by module:")
         print(fca.by_module())
 
-    if compression_rate is not None:
-        print(f"\n[SUMMARY] Compression Rate: {compression_rate}")
-        print(f"GFLOPs: {flops / 1e9:.2f}")
-    else:
-        print(f"\n[SUMMARY] GFLOPs: {flops / 1e9:.2f}")
-    return flops / 1e9
+    return total_flops / 1e9
+
+def throughput(images, model):
+    model.eval()
+
+    images = images.cuda(non_blocking=True)
+    batch_size = images.shape[0]
+    for i in range(50):
+        model(images)
+    torch.cuda.synchronize()
+    print(f"throughput averaged with 30 times")
+    tic1 = time.time()
+    for i in range(30):
+        model(images)
+    torch.cuda.synchronize()
+    tic2 = time.time()
+    print(f"batch_size {batch_size} throughput {30 * batch_size / (tic2 - tic1)}")
+    MB = 1024.0 * 1024.0
+    print('memory:', torch.cuda.max_memory_allocated() / MB)
 
 
-def build_dtpvit():
+
+# Example usage with a dummy model
+if __name__ == "__main__":
+
     cfg = CLIPVisionCfg(
         image_size=224,
         patch_size=32,
@@ -75,6 +103,8 @@ def build_dtpvit():
         mlp_ratio=4.0,
         patch_dropout=0.1,
     )
+
+    COMPRESSION_RATE = 0.1
 
     model = DTPViT(
         image_size=cfg.image_size,
@@ -87,77 +117,34 @@ def build_dtpvit():
         drop_rate=cfg.patch_dropout,
         attn_drop_rate=0.1,
         temp=0.5,
-        compression_rate=0.1,
+        compression_rate=COMPRESSION_RATE,
         threshold=0.5,
         activation_function="gelu",
         num_classes=cfg.width,
+        flop_measure=True,
     )
 
-    wrapped_model = FLOPWrapper(model.eval())
-    return wrapped_model
+    # Run FLOP measurement
+    calc_flops(model, img_size=224, show_details=False)
 
-
-if __name__ == "__main__":
-    model = build_dtpvit()
-    img_size = 224
-    compression_rate = 0.1
-    calc_flops(
-        model=model,
-        img_size=img_size,
-        compression_rate=compression_rate,
-        show_details=False
-    )
-
-    # now compare with the original ViT
-    # ViT-B-32
-    vision_cfg = CLIPVisionCfg(
+    vit_model = VisionTransformer(
         image_size=224,
         patch_size=32,
         width=768,
         layers=12,
+        heads=12,
         mlp_ratio=4.0,
-        ls_init_value=None,
+        ls_init_value=1.0,
         patch_dropout=0.1,
         attentional_pool=False,
-        attn_pooler_queries=0,
-        attn_pooler_heads=0,
+        attn_pooler_queries=None,
+        attn_pooler_heads=None,
         pos_embed_type='learnable',
         no_ln_pre=False,
-        final_ln_after_pool=False,
+        final_ln_after_pool=True,
         pool_type='avg',
         output_tokens=False,
+        output_dim=768,
     )
-
-    embed_dim = vision_cfg.width
-    act_layer = torch.nn.GELU
-    norm_layer = torch.nn.LayerNorm
-
-    model = VisionTransformer(
-        image_size=vision_cfg.image_size,
-        patch_size=vision_cfg.patch_size,
-        width=vision_cfg.width,
-        layers=vision_cfg.layers,
-        heads=12,
-        mlp_ratio=vision_cfg.mlp_ratio,
-        ls_init_value=vision_cfg.ls_init_value,
-        patch_dropout=vision_cfg.patch_dropout,
-        attentional_pool=vision_cfg.attentional_pool,
-        attn_pooler_queries=vision_cfg.attn_pooler_queries,
-        attn_pooler_heads=vision_cfg.attn_pooler_heads,
-        pos_embed_type=vision_cfg.pos_embed_type,
-        no_ln_pre=vision_cfg.no_ln_pre,
-        final_ln_after_pool=vision_cfg.final_ln_after_pool,
-        pool_type=vision_cfg.pool_type,
-        output_tokens=vision_cfg.output_tokens,
-        output_dim=embed_dim,
-        act_layer=act_layer,
-        norm_layer=norm_layer,
-    )
-    wrapped_model = model.eval()
-
-    calc_flops(
-        model=wrapped_model,
-        img_size=img_size,
-        compression_rate=None,
-        show_details=False
-    )
+    # Run FLOP measurement for ViT
+    calc_flops(vit_model, img_size=224, show_details=False)

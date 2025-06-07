@@ -1,5 +1,21 @@
 # DTP-ViT: Dynamic Token Pooling Vision Transformer
 
+## DTP-ViT results
+
+| dataset | model | GFLOPs (fvcore) | resolution | patch size | Top-1 Acc (%) | Top-5 Acc (%) | GPU memory | training step time |
+| ------- | ----- | --------------- | ---------- | ---------- | ---------------- | ------------- | ---------- | ------------------ |
+| COCO | ViT baseline | **2.96** | 224 | 32 | N/A | N/A | TBD | TBD |
+| COCO | DTPViT, 2x compression (0.5) | ***3.01*** | 32 | N/A | N/A | TBD | TBD |
+| COCO | DTPViT, 4x compression (0.25) | **2.32** | 32 | N/A | N/A | TBD | TBD |
+| COCO | DTPViT, 10x compression (0.1) | **1.86** | 32 | N/A | N/A | TBD | TBD |
+
+
+Important Adaptations from DynamicViT:
+
+1. [FLOP measurement](https://github.com/raoyongming/DynamicViT/blob/master/calc_flops.py)
+2. [simulating artificial bounddaries for DynamicViT](https://github.com/raoyongming/DynamicViT/blob/master/models/dylvvit.py)
+
+
 ## computing resource exploration (Pitzer and Ascend)
 
 | model | batch size | # nodes | # GPUs per node | effective batch size | cluster | partition | fit? |
@@ -187,7 +203,7 @@ post-layers (# is a HP, 2 from the paper)
      ↓
 final dense
 
-Note: the layer split from the paper is **2** (pre) + **8** (shortened) + **2** (post)
+Note: the layer split from the paper is 2 (pre) + 8 (shortened) + 2 (post)
 ```
 
 ### Training Objective
