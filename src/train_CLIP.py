@@ -65,7 +65,8 @@ def train_runner(
 
 def main():
     # dataset parameters
-    dataset_name = "COCO"
+    # now we are running a 1M subset of the LAION-400M dataset
+    dataset_name = "LAION"
 
     if dataset_name == "COCO":
         # COCO dataset
@@ -94,13 +95,15 @@ def main():
     print(f"training datapath: {train_data_path}")
     print(f"validation datapath: {val_data_path}")
 
-    
     # training parameters
     warmup = 50
 
     # experiment with batch size
     use_DTP = False
-    batch_size = 512
+
+    # batch size:
+    # 1024 for ViT-B-32
+    batch_size = 1024   
     lr = 1e-4
     wd = 0.1
     epochs = 30
