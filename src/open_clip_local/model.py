@@ -110,6 +110,9 @@ def _build_vision_tower(
         cast_dtype: Optional[torch.dtype] = None,
         DTP_ViT: bool = False,
 ):
+    print("[DEBUG] Building vision tower!")
+    print("#" * 40)
+
     if isinstance(vision_cfg, dict):
         vision_cfg = CLIPVisionCfg(**vision_cfg)
 
@@ -188,6 +191,11 @@ def _build_vision_tower(
                 act_layer=act_layer,
                 norm_layer=norm_layer,
             )
+
+            # sanity check to print every single model hyperparameter
+            logging.debug(f"Vision Transformer config: {vision_cfg}")
+            logging.debug(f"Vision Transformer model: {visual}")
+
 
     return visual
 

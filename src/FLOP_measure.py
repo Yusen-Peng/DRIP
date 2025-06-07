@@ -12,6 +12,7 @@ from fvcore.nn import FlopCountAnalysis
 from open_clip_local.DTP_ViT import DTPViT
 from open_clip_local.model import CLIPVisionCfg
 from open_clip_local.transformer import VisionTransformer
+from open_clip_local.factory import create_model_and_transforms
 
 def register_elemwise_flop_handlers(fca: FlopCountAnalysis):
     def elemwise(i, o):
@@ -104,7 +105,7 @@ if __name__ == "__main__":
         patch_dropout=0.1,
     )
 
-    COMPRESSION_RATE = 0.1
+    COMPRESSION_RATE = 1.0
 
     model = DTPViT(
         image_size=cfg.image_size,
@@ -112,7 +113,7 @@ if __name__ == "__main__":
         in_chans=3,
         embed_dim=cfg.width,
         depth=(2, 8, 2),
-        num_heads=cfg.width // 64,
+        num_heads=cfg.width // 64, # 768 // 64 = 12
         mlp_ratio=cfg.mlp_ratio,
         drop_rate=cfg.patch_dropout,
         attn_drop_rate=0.1,
@@ -127,24 +128,9 @@ if __name__ == "__main__":
     # Run FLOP measurement
     calc_flops(model, img_size=224, show_details=False)
 
-    vit_model = VisionTransformer(
-        image_size=224,
-        patch_size=32,
-        width=768,
-        layers=12,
-        heads=12,
-        mlp_ratio=4.0,
-        ls_init_value=1.0,
-        patch_dropout=0.1,
-        attentional_pool=False,
-        attn_pooler_queries=None,
-        attn_pooler_heads=None,
-        pos_embed_type='learnable',
-        no_ln_pre=False,
-        final_ln_after_pool=True,
-        pool_type='avg',
-        output_tokens=False,
-        output_dim=768,
-    )
+    model, _, _ = create_model_and_transforms("ViT-B-32", pretrained="laion2b_s34b_b79k", DTP_ViT=False)
+
+    vit_model = model.visual
+
     # Run FLOP measurement for ViT
     calc_flops(vit_model, img_size=224, show_details=False)
