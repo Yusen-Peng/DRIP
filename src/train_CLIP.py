@@ -99,11 +99,11 @@ def main():
     warmup = 50
 
     # experiment with batch size
-    use_DTP = True
+    use_DTP = False
     batch_size = 512
     lr = 1e-4
     wd = 0.1
-    epochs = 1        # 1, 10, 30
+    epochs = 30
     workers = 8       # CPU utilization
     model = "ViT-B-32"
 

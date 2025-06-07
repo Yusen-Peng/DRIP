@@ -4,10 +4,10 @@
 
 | dataset | model | GFLOPs (fvcore) | resolution | patch size | Top-1 Acc (%) | Top-5 Acc (%) | GPU memory | training step time |
 | ------- | ----- | --------------- | ---------- | ---------- | ---------------- | ------------- | ---------- | ------------------ |
-| COCO | ViT baseline | **2.96** | 224 | 32 | N/A | N/A | TBD | TBD |
-| COCO | DTPViT, 2x compression (0.5) | ***3.01*** | 32 | N/A | N/A | TBD | TBD |
-| COCO | DTPViT, 4x compression (0.25) | **2.32** | 32 | N/A | N/A | TBD | TBD |
-| COCO | DTPViT, 10x compression (0.1) | **1.86** | 32 | N/A | N/A | TBD | TBD |
+| COCO | ViT-B-32 | **2.96** | 224 | 32 | N/A | N/A | TBD | TBD |
+| COCO | DTPViT, 2x compression (0.5) | 224 | ***3.01*** | 32 | N/A | N/A | TBD | TBD |
+| COCO | DTPViT, 4x compression (0.25) | 224 | **2.32** | 32 | N/A | N/A | TBD | TBD |
+| COCO | DTPViT, 10x compression (0.1) | 224 | **1.86** | 32 | N/A | N/A | TBD | TBD |
 
 
 Important Adaptations from DynamicViT:
