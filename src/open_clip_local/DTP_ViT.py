@@ -124,10 +124,16 @@ class BoundaryPredictor(nn.Module):
 
         self.loss = nn.BCEWithLogitsLoss()
 
-    def forward(self, hidden):
+    def forward(self, hidden, flop_mode=False):
         # Hidden is of shape [seq_len x bs x d_model]
         # Boundaries we return are [bs x seq_len]
         boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
+
+        if flop_mode:
+            _ = self.loss(boundary_logits, torch.zeros_like(boundary_logits))  # dummy call
+            return boundary_logits.new_ones(boundary_logits.shape), boundary_logits.new_ones(boundary_logits.shape)
+
+
         boundary_probs = torch.sigmoid(boundary_logits)
 
         if self.bp_type == 'gumbel':
@@ -145,6 +151,7 @@ class BoundaryPredictor(nn.Module):
         elif self.bp_type in ['entropy', 'unigram']:
             soft_boundaries = boundary_probs
             hard_boundaries = (soft_boundaries > self.threshold).float()
+    
 
         return soft_boundaries, hard_boundaries
 
@@ -245,7 +252,8 @@ class TransformerBlock(nn.Module):
         )
 
     def forward(self, x):
-        x = x + self.drop_path(self.attn(self.norm1(x), self.norm1(x), self.norm1(x))[0])
+        attn_out, _ = self.attn(self.norm1(x), self.norm1(x), self.norm1(x))
+        x = x + self.drop_path(attn_out)
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         return x
 
@@ -330,11 +338,13 @@ class DTPViT(nn.Module):
         nn.init.normal_(self.null_group)
 
         print("=" * 70)
-        print("[INFO] DTP-ViT is successfully initialized!")
+        print("[INFO] Congratulations! You have successfully initialized DTP-ViT!")
+        print(f"Compression Rate: {compression_rate}")
+        print(f"depth of each section: {depth}")
         print("=" * 70)
 
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, flop_mode: bool = False) -> torch.Tensor:
         # Input: [B, 3, H, W]
         B = x.size(0)
         x = self.patch_embed(x)
@@ -346,7 +356,7 @@ class DTPViT(nn.Module):
         x = self.pre_blocks(x)
 
         residual = x
-        soft_boundaries, hard_boundaries = self.boundary_predictor(x)
+        soft_boundaries, hard_boundaries = self.boundary_predictor(x, flop_mode=flop_mode)
         x = downsample(hard_boundaries, x, self.null_group)
         x = self.norm(x)
 
