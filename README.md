@@ -7,9 +7,9 @@
 | model | GFLOPs (fvcore) | resolution | patch size | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | ---------- | ---------------- | ------------- | ---------- |
 | ViT-B-32 | 2.96 | 224 | 32 | 1.19% | 4.45% | **20.1** | **0.650** |
-| DTPViT, 2x compression | 3.01 | 224 | 32 | 1.06% | 4.33% | 22.2 | 0.708 |
-| DTPViT, 4x compression | 2.32 | 224 | 32 | 1.11% | 4.28% | 22.2 | 0.696 |
-| DTPViT, 10x compression | **1.86** | 224 | 32 | 1.08% | 4.36% | 22.2 | 0.690 |
+| 2x compression, with upsampling | 3.01 | 224 | 32 | 1.06% | 4.33% | 22.2 | 0.708 |
+| 4x compression, with upsampling | 2.32 | 224 | 32 | 1.11% | 4.28% | 22.2 | 0.696 |
+| 10x compression, with upsampling | **1.86** | 224 | 32 | 1.08% | 4.36% | 22.2 | 0.690 |
 
 
 ViT-B-32 after 50 epochs:
