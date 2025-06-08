@@ -2,19 +2,20 @@
 
 ## DTP-ViT results
 
-### 1M subset of LAION-400M - # epochs = 2, batch size = 512 
+### 1M subset of LAION-400M - # epochs = 2, batch size = 512
 
-| model | GFLOPs (fvcore) | resolution | patch size | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory | avg training step time |
+| model | GFLOPs (fvcore) | resolution | patch size | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | ---------- | ---------------- | ------------- | ---------- | ------------------ |
-| pretrained ViT-B-32 | 2.96 | 224 | 32 | N/A | N/A | TBD | TBD |
-| DTPViT, 2x compression | 3.01 | 224 |  32 | N/A | N/A | TBD | TBD |
-| DTPViT, 4x compression | 2.32 | 224 | 32 | N/A | N/A | TBD | TBD |
-| DTPViT, 10x compression | 1.86 | 224 | 32 |     |     |     | running |
+| ViT-B-32 | 2.96 | 224 | 32 | 1.19% | 4.45% | **20.1** | **0.650** |
+| DTPViT, 2x compression | 3.01 | 224 | 32 | 1.06% | 4.33% | 22.2 | 0.708 |
+| DTPViT, 4x compression | 2.32 | 224 | 32 | 1.11% | 4.28% | 22.2 | 0.696 |
+| DTPViT, 10x compression | **1.86** | 224 | 32 | 1.08% | 4.36% | 22.2 | 0.690 |
 
 Note:
 
-1. FLOPs are measured via a different script, not training
-2. GPU memory and training step time are averaged for each epoch
+1. FLOPs are measured via a different script, not training;
+2. a **pretrained** ViT-B-32 is used to compute FLOPs for ViT-B-32;
+3. GPU memory and training step time are averaged for each epoch.
 
 
 Important Adaptations from DynamicViT:
