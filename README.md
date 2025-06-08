@@ -11,6 +11,12 @@
 | DTPViT, 4x compression | 2.32 | 224 | 32 | 1.11% | 4.28% | 22.2 | 0.696 |
 | DTPViT, 10x compression | **1.86** | 224 | 32 | 1.08% | 4.36% | 22.2 | 0.690 |
 
+
+ViT-B-32 after 50 epochs:
+```
+2025-06-08,06:13:34 | INFO | Eval Epoch: 50 imagenet-zeroshot-val-top1: 0.0250	imagenet-zeroshot-val-top5: 0.0813
+```
+
 Note:
 
 1. FLOPs are measured via a different script, not training;

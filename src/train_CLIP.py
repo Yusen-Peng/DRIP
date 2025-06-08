@@ -70,14 +70,14 @@ def main():
     dataset_name = "LAION"  # "COCO" or "LAION"
 
     # experiment with batch size
-    use_DTP = True # DTP (Dynamic Token Pruning) is not used by default
+    use_DTP = False # DTP (Dynamic Token Pruning) is not used by default
 
     # batch size:
     # 1024 for ViT-B-32
     batch_size = 512
     lr = 1e-4
     wd = 0.1
-    epochs = 2
+    epochs = 50
     workers = 8       # CPU utilization
     model = "ViT-B-32"
     warmup = 50
