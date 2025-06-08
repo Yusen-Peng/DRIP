@@ -2,13 +2,19 @@
 
 ## DTP-ViT results
 
-| dataset | model | GFLOPs (fvcore) | resolution | patch size | Top-1 Acc (%) | Top-5 Acc (%) | GPU memory | training step time |
+### 1M subset of LAION-400M - # epochs = 2, batch size = 512 
+
+| model | GFLOPs (fvcore) | resolution | patch size | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory | avg training step time |
 | ------- | ----- | --------------- | ---------- | ---------- | ---------------- | ------------- | ---------- | ------------------ |
-| 1M subset of LAION-400M | pretrained ViT-B-32 | **2.96** | 224 | 32 | N/A | N/A | TBD | TBD |
-| 1M subset of LAION-400M | DTPViT, no compression (1.0) | **4.39** | 224 |  32 | N/A | N/A | TBD | TBD |
-| 1M subset of LAION-400M | DTPViT, 2x compression (0.5) | **3.01** | 224 |  32 | N/A | N/A | TBD | TBD |
-| 1M subset of LAION-400M | DTPViT, 4x compression (0.25) | **2.32** | 224 | 32 | N/A | N/A | TBD | TBD |
-| 1M subset of LAION-400M | DTPViT, 10x compression (0.1) | **1.86** | 224 | 32 | N/A | N/A | TBD | TBD |
+| pretrained ViT-B-32 | 2.96 | 224 | 32 | N/A | N/A | TBD | TBD |
+| DTPViT, 2x compression | 3.01 | 224 |  32 | N/A | N/A | TBD | TBD |
+| DTPViT, 4x compression | 2.32 | 224 | 32 | N/A | N/A | TBD | TBD |
+| DTPViT, 10x compression | 1.86 | 224 | 32 |     |     |     | running |
+
+Note:
+
+1. FLOPs are measured via a different script, not training
+2. GPU memory and training step time are averaged for each epoch
 
 
 Important Adaptations from DynamicViT:
@@ -58,7 +64,7 @@ Important Adaptations from DynamicViT:
 | ViT-B-32 (88M) | 256 | 4 | 4 | 4096 | pitzer | gpuparallel-48core | ❌ (Node count) |
 
 
-## Design summary: DTP-ViT v.s. baselines
+## DTP-ViT v.s. baselines/existing work
 
 | design | approach summary |
 | ------ | -------------------------- |
@@ -67,9 +73,8 @@ Important Adaptations from DynamicViT:
 | NativeSegViT | kmeans-like clustering to dynamically **GROUP** tokens repeatedly |
 | TokenLearner | a spatial attention module inserted in ViT to **LEARN** tokens |  
 | <tr><td colspan="2" align="center"> DTP-ViT </td></tr> |
-| DTP-ViT (entropy-spikes) | a boundary predictor supervised by entropy spikes |
-| DTP-ViT (tokenizer) | a boundary predictor supervised by an off-the-shelf image tokenizer |
 | DTP-ViT (Gumbel-Sigmoid) | a boundary predictor using Gumbel-Sigmoid |
+| DTP-ViT (entropy-spikes) | a boundary predictor supervised by entropy spikes |
 
 ## train a CLIP from scratch
 
@@ -82,12 +87,6 @@ Important Adaptations from DynamicViT:
 | LAION-400M (2021), 80k train, 20k val | ImageNet (2012), 50k val | RN50 | transformer | 1 | 0.27% | 1.29% | [HPs](training_plan/COCO_1.json) |
 | LAION-400M (2021), 80k train, 20k val | ImageNet (2012), 50k val | RN50 | transformer | 10 | 0.40% | 1.95% | [HPs](training_plan/COCO_2.json) |
 | LAION-400M (2021), 80k train, 20k val | ImageNet (2012), 50k val | RN50 | transformer | 30 | 0.50% | 2.09% | [HPs](training_plan/COCO_3.json) |
-| <tr><td colspan="8" align="center"> Small experiments </td></tr> |
-| LAION-400M (2021), 0.8M train, 0.2M val | ImageNet (2012), 50k val | ViT-B-32 | transformer | 1 | TBD | TBD | [HPs](training_plan/COCO_1.json) |
-| LAION-400M (2021), 0.8M train, 0.2M val | ImageNet (2012), 50k val | ViT-B-32 | transformer | 10 | TBD | TBD | [HPs](training_plan/COCO_1.json) |
-| LAION-400M (2021), 0.8M train, 0.2M val | ImageNet (2012), 50k val | ViT-B-32 | transformer | 30 | TBD | TBD | [HPs](training_plan/COCO_1.json) |
-| <tr><td colspan="8" align="center"> Real experiments </td></tr> |
-| <tr><td colspan="8" align="center"> TBD </td></tr> |
 
 
 ## evaluate a pretrained CLIP

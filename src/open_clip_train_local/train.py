@@ -66,6 +66,11 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
     autocast = get_autocast(args.precision, device_type=device.type)
     input_dtype = get_input_dtype(args.precision)
 
+
+    total_step_time = 0.0
+    total_gpu_mem = 0.0
+    num_logged_steps = 0
+
     model.train()
     if args.distill:
         dist_model.eval()
@@ -212,12 +217,27 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
             )
             samples_per_second = args.accum_freq * args.batch_size * args.world_size / batch_time_m.val
             samples_per_second_per_gpu = args.accum_freq * args.batch_size / batch_time_m.val
+
+
+            # log GPU memory and training step time
+            gpu_memory_allocated = torch.cuda.max_memory_allocated() / (1024 ** 3)  # in GB
+            gpu_memory_reserved = torch.cuda.max_memory_reserved() / (1024 ** 3)    # in GB
+            step_time = batch_time_m.val
+
+            total_step_time += step_time
+            total_gpu_mem += gpu_memory_allocated
+            num_logged_steps += 1
+
+
             logging.info(
                 f"Train Epoch: {epoch} [{num_samples:>{sample_digits}}/{samples_per_epoch} ({percent_complete:.0f}%)] "
                 f"Data (t): {data_time_m.avg:.3f} "
                 f"Batch (t): {batch_time_m.avg:.3f}, {samples_per_second:#g}/s, {samples_per_second_per_gpu:#g}/s/gpu "
                 f"LR: {optimizer.param_groups[0]['lr']:5f} "
-                f"Logit Scale: {logit_scale_scalar:.3f} " + loss_log
+                f"Logit Scale: {logit_scale_scalar:.3f} " 
+                f"Mem (alloc/resv): {gpu_memory_allocated:.1f}/{gpu_memory_reserved:.1f} GB "
+                f"Step time: {step_time:.3f}s "
+                + loss_log
             )
 
             # Save train loss / etc. Using non avg meter values as loggers have their own smoothing
@@ -230,6 +250,11 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
                 "lr": optimizer.param_groups[0]["lr"]
             }            
             log_data.update({name:val.val for name,val in losses_m.items()})
+            log_data.update({
+                "gpu_memory_allocated_GB": gpu_memory_allocated,
+                "gpu_memory_reserved_GB": gpu_memory_reserved,
+                "step_time_sec": step_time,
+            })
 
             log_data = {"train/" + name: val for name, val in log_data.items()}
 
@@ -246,7 +271,15 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
             batch_time_m.reset()
             data_time_m.reset()
     # end for
-
+    if num_logged_steps > 0:
+        avg_step_time = total_step_time / num_logged_steps
+        avg_gpu_mem = total_gpu_mem / num_logged_steps
+        logging.info("⭐" * 25)
+        logging.info(
+            f"[Epoch {epoch}] Average Step Time: {avg_step_time:.3f}s | "
+            f"Average GPU Memory: {avg_gpu_mem:.1f} GB"
+        )
+        logging.info("⭐" * 25)
 
 def evaluate(model, data, epoch, args, tb_writer=None, tokenizer=None):
     metrics = {}

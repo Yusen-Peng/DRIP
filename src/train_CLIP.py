@@ -1,6 +1,7 @@
 import torch
 import torch.distributed as dist
 import os
+import glob
 from open_clip_train_local.main import main as train_function
 
 def train_runner(
@@ -15,8 +16,8 @@ def train_runner(
         epochs: int = 4,
         workers: int = 8,
         model: str = "RN50",
-        train_num_samples: int | None = 10000000,  # only used if webdataset is True
-        imagenet_val_path: str = "dataset/ImageNet_val"
+        train_num_samples: int | None = 1_000_000,  # only used if webdataset is True
+        imagenet_val_path: str = "dataset/ImageNet_val",
     ):
 
     args_list = []
@@ -66,7 +67,20 @@ def train_runner(
 def main():
     # dataset parameters
     # now we are running a 1M subset of the LAION-400M dataset
-    dataset_name = "LAION"
+    dataset_name = "LAION"  # "COCO" or "LAION"
+
+    # experiment with batch size
+    use_DTP = True
+
+    # batch size:
+    # 1024 for ViT-B-32
+    batch_size = 512
+    lr = 1e-4
+    wd = 0.1
+    epochs = 2
+    workers = 8       # CPU utilization
+    model = "ViT-B-32"
+    warmup = 50
 
     if dataset_name == "COCO":
         # COCO dataset
@@ -76,39 +90,11 @@ def main():
         train_num_samples = None
 
     elif dataset_name == "LAION":
-        # LAION dataset
+        # LAION dataset (for now, it's 1M subset of LAION-400M)
         use_webdataset = True
-        train_data_path = ""
-        for i in range(7):
-            train_data_path += f"dataset/laion_shards/laion-00000{i}.tar::"
-        train_data_path += f"dataset/laion_shards/laion-000007.tar"
-
-
-        val_data_path = ""
-        for i in range(20):
-            val_data_path += f"dataset/laion_shards/laion-00000{i}.tar::"
-        val_data_path += f"dataset/laion_shards/laion-000020.tar"
-
-        train_num_samples = 80_000 # only used if webdataset is True
-
-
-    print(f"training datapath: {train_data_path}")
-    print(f"validation datapath: {val_data_path}")
-
-    # training parameters
-    warmup = 50
-
-    # experiment with batch size
-    use_DTP = False
-
-    # batch size:
-    # 1024 for ViT-B-32
-    batch_size = 1024   
-    lr = 1e-4
-    wd = 0.1
-    epochs = 30
-    workers = 8       # CPU utilization
-    model = "ViT-B-32"
+        train_data_path = "::".join(sorted(glob.glob("dataset/laion_shards/laion-*.tar")))
+        val_data_path = "::".join(sorted(glob.glob("dataset/laion_val/laion-*.tar")))
+        train_num_samples = 1_000_000
 
     # train CLIP
     train_runner(
