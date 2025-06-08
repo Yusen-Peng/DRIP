@@ -10,15 +10,15 @@
 | 2x compression | 3.01 | 224 | 32 | 1.06% | 4.33% | 22.2 | 0.708 |
 | 4x compression | 2.32 | 224 | 32 | 1.11% | 4.28% | 22.2 | 0.696 |
 | 10x compression | **1.86** | 224 | 32 | 1.08% | 4.36% | 22.2 | 0.690 |
-| 2x compression, no res | 3.01 | 224 | 32 | N/A | N/A | N/A | N/A |
-| 4x compression, no res | 2.32 | 224 | 32 | N/A | N/A | N/A | N/A |
-| 10x compression, no res | **1.86** | 224 | N/A | N/A | N/A | N/A | N/A |
-| 2x compression, no res, free mem | 3.01 | 224 | 32 | N/A | N/A | N/A | N/A |
-| 4x compression, no res, free mem | 2.32 | 224 | 32 | N/A | N/A | N/A | N/A |
-| 10x compression, no res, free mem | **1.86** | 224 | N/A | N/A | N/A | N/A | N/A |
-| 2x compression, no res, free mem, no upsampling | 3.01 | 224 | 32 | N/A | N/A | N/A | N/A |
-| 4x compression, no res, free mem, no upsampling | 2.32 | 224 | 32 | N/A | N/A | N/A | N/A |
-| 10x compression, no res, free mem, no upsampling | **1.86** | 224 | N/A | N/A | N/A | N/A | N/A |
+| 2x compression, no res | N/A | 224 | 32 | N/A | N/A | N/A | N/A |
+| 4x compression, no res | N/A | 224 | 32 | N/A | N/A | N/A | N/A |
+| 10x compression, no res | N/A | 224 | N/A | N/A | N/A | N/A | N/A |
+| 2x compression, no res, free mem | N/A | 224 | 32 | N/A | N/A | N/A | N/A |
+| 4x compression, no res, free mem | N/A | 224 | 32 | N/A | N/A | N/A | N/A |
+| 10x compression, no res, free mem | N/A | 224 | N/A | N/A | N/A | N/A | N/A |
+| 2x compression, no res, free mem, no upsampling | N/A | 224 | 32 | N/A | N/A | N/A | N/A |
+| 4x compression, no res, free mem, no upsampling | N/A | 224 | 32 | N/A | N/A | N/A | N/A |
+| 10x compression, no res, free mem, no upsampling | N/A | 224 | N/A | N/A | N/A | N/A | N/A |
 
 
 ViT-B-32 after 50 epochs:
