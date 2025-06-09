@@ -1,4 +1,4 @@
-# DTP-ViT: Dynamic Token Pooling Vision Transformer
+# DTP-ViT: Dynamic Token Pooling Vision Transformer for Efficient Contrastive Pretraining
 
 ## DTP-ViT results
 
@@ -6,32 +6,25 @@
 
 | model | GFLOPs (fvcore) | resolution | patch size | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | ---------- | ---------------- | ------------- | ---------- |
-| ViT-B-32 | 2.96 | 224 | 32 | 1.19% | 4.45% | **20.1** | **0.650** |
-| 2x compression | 3.01 | 224 | 32 | 1.06% | 4.33% | 22.2 | 0.708 |
-| 4x compression | 2.32 | 224 | 32 | 1.11% | 4.28% | 22.2 | 0.696 |
-| 10x compression | **1.86** | 224 | 32 | 1.08% | 4.36% | 22.2 | 0.690 |
-| 2x compression, no res | N/A | 224 | 32 | N/A | N/A | N/A | N/A |
-| 4x compression, no res | N/A | 224 | 32 | N/A | N/A | N/A | N/A |
-| 10x compression, no res | N/A | 224 | N/A | N/A | N/A | N/A | N/A |
-| 2x compression, no res, free mem | N/A | 224 | 32 | N/A | N/A | N/A | N/A |
-| 4x compression, no res, free mem | N/A | 224 | 32 | N/A | N/A | N/A | N/A |
-| 10x compression, no res, free mem | N/A | 224 | N/A | N/A | N/A | N/A | N/A |
-| 2x compression, no res, free mem, no upsampling | N/A | 224 | 32 | N/A | N/A | N/A | N/A |
-| 4x compression, no res, free mem, no upsampling | N/A | 224 | 32 | N/A | N/A | N/A | N/A |
-| 10x compression, no res, free mem, no upsampling | N/A | 224 | N/A | N/A | N/A | N/A | N/A |
+| **ViT-B-32** | 2.96 | 224 | 32 | **1.20%** | **4.55%** | **20.1** | 0.837 |
+| **2x compression** | 3.01 | 224 | 32 | 1.03% | 4.27% | 22.0 | 0.699 |
+| **4x compression** | 2.32 | 224 | 32 | 0.99% | 4.35% | 21.8 | 0.709 |
+| **10x compression** | 1.86 | 224 | 32 | 1.11% | 4.34% | 21.9 | **0.696** |
+| **2x, no upsampling** | 2.67 | 224 | 32 | 0.89 | 4.21% | 20.4 | 0.790 |
+| **4x, no upsampling** | 1.82 | 224 | 32 | 1.00% | 3.95% | 20.4 | 0.788 |
+| **10x, no upsampling** | **1.25** | 224 | 32 | 0.97% | 4.01% | **20.2** | 0.798 |
 
 
-ViT-B-32 after 50 epochs:
+**STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 ```
 2025-06-08,06:13:34 | INFO | Eval Epoch: 50 imagenet-zeroshot-val-top1: 0.0250	imagenet-zeroshot-val-top5: 0.0813
 ```
 
 Note:
 
-1. FLOPs are measured via a different script, not training;
+1. FLOPs are measured via a different script, not during training;
 2. a **pretrained** ViT-B-32 is used to compute FLOPs for ViT-B-32;
 3. GPU memory and training step time are averaged for each epoch.
-
 
 Important Adaptations from DynamicViT:
 

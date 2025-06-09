@@ -105,15 +105,15 @@ if __name__ == "__main__":
         patch_dropout=0.1,
     )
 
-    COMPRESSION_RATE = 1.0
+    COMPRESSION_RATE = 0.5
 
     model = DTPViT(
         image_size=cfg.image_size,
         patch_size=cfg.patch_size,
         in_chans=3,
         embed_dim=cfg.width,
-        depth=(2, 8, 2),
-        num_heads=cfg.width // 64, # 768 // 64 = 12
+        depth=(2, 10, 0),            # originally (2, 8, 2) from the DTP paper
+        num_heads=cfg.width // 64,  # 768 // 64 = 12
         mlp_ratio=cfg.mlp_ratio,
         drop_rate=cfg.patch_dropout,
         attn_drop_rate=0.1,

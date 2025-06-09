@@ -322,10 +322,13 @@ class DTPViT(nn.Module):
             TransformerBlock(embed_dim, num_heads, mlp_ratio, drop_rate, attn_drop_rate, activation_function)
             for _ in range(depth[1])
         ])
-        self.post_blocks = nn.Sequential(*[
-            TransformerBlock(embed_dim, num_heads, mlp_ratio, drop_rate, attn_drop_rate, activation_function)
-            for _ in range(depth[2])
-        ])
+
+
+        # NOTE: no upsampling in DTP-ViT, so no post blocks!
+        # self.post_blocks = nn.Sequential(*[
+        #     TransformerBlock(embed_dim, num_heads, mlp_ratio, drop_rate, attn_drop_rate, activation_function)
+        #     for _ in range(depth[2])
+        # ])
 
         self.boundary_predictor = BoundaryPredictor(
             d_model=embed_dim,
@@ -364,7 +367,8 @@ class DTPViT(nn.Module):
 
         x = self.pre_blocks(x)
 
-        residual = x
+        # NOTE: remove residual connection since we are not upsampling anymore
+        # residual = x
 
         # NOTE: we simulate the boundaries, like DynamicViT folks did.
         # https://github.com/raoyongming/DynamicViT/blob/master/models/dylvvit.py
@@ -382,11 +386,16 @@ class DTPViT(nn.Module):
         x = downsample(hard_boundaries, x, self.null_group)
         x = self.norm(x)
 
+
         x = self.shorten_blocks(x)
 
-        x = upsample(hard_boundaries, x)
-        x = x + residual
-        x = self.post_blocks(x) 
+        # NOTE: no upsampling!
+        # x = upsample(hard_boundaries, x)
+        
+        # NOTE: again, remove residual connection - no upsampling
+        #x = x + residual
+        
+        # x = self.post_blocks(x) 
 
         x = x.transpose(0, 1)
         x = self.norm(x)

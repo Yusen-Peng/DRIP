@@ -158,7 +158,7 @@ def _build_vision_tower(
                 patch_size=vision_cfg.patch_size,
                 in_chans=3,
                 embed_dim=vision_cfg.width,
-                depth=(2, 8, 2),
+                depth=(2, 10, 0),   # (2, 8, 2) from the original DTP paper
                 num_heads=vision_heads,
                 mlp_ratio=vision_cfg.mlp_ratio,
                 drop_rate=vision_cfg.patch_dropout,
