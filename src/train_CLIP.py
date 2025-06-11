@@ -77,7 +77,7 @@ def main():
     batch_size = 512
     lr = 1e-4
     wd = 0.1
-    epochs = 2
+    epochs = 5
     workers = 8       # CPU utilization
     model = "ViT-B-32"
     warmup = 50

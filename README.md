@@ -1,5 +1,29 @@
 # DTP-ViT: Dynamic Token Pooling Vision Transformer for Efficient Contrastive Pretraining
 
+
+## Efficiency Metrics
+
+1. GFLOPs: a different script (adapted from **DynamicViT**), NOT during training
+     1. a **pretrained** ViT-B-32 is used to compute FLOPs for ViT-B-32
+     2. important Adaptations from DynamicViT:
+          [FLOP measurement](https://github.com/raoyongming/DynamicViT/blob/master/calc_flops.py)
+          [simulating artificial bounddaries for DynamicViT](https://github.com/raoyongming/DynamicViT/blob/master/models/dylvvit.py)
+
+2. GPU memory and training step time are averaged for each epoch.
+     1. memory: torch.cuda.max_memory_allocated()
+     2. training step time: **already built-in** by CLIP!
+
+Important observation: the first epoch takes **MUCH LONG** time than the following epochs [why?]
+
+## Performance Metrics
+
+Top-1 Acc (%) and Top-5 Acc (%)
+
+Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
+```
+2025-06-08,06:13:34 | INFO | Eval Epoch: 50 imagenet-zeroshot-val-top1: 0.0250	imagenet-zeroshot-val-top5: 0.0813
+```
+
 ## DTP-ViT results
 
 ### 1M subset of LAION-400M - # epochs = 2, batch size = 512
@@ -10,26 +34,20 @@
 | **2x compression** | 3.01 | 224 | 32 | 1.03% | 4.27% | 22.0 | 0.699 |
 | **4x compression** | 2.32 | 224 | 32 | 0.99% | 4.35% | 21.8 | 0.709 |
 | **10x compression** | 1.86 | 224 | 32 | 1.11% | 4.34% | 21.9 | **0.696** |
-| **2x, no upsampling** | 2.67 | 224 | 32 | 0.89 | 4.21% | 20.4 | 0.790 |
+| **2x, no upsampling** | 2.67 | 224 | 32 | 0.89% | 4.21% | 20.4 | 0.790 |
 | **4x, no upsampling** | 1.82 | 224 | 32 | 1.00% | 3.95% | 20.4 | 0.788 |
 | **10x, no upsampling** | **1.25** | 224 | 32 | 0.97% | 4.01% | **20.2** | 0.798 |
 
+## DTP-ViT_XL results
 
-**STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
-```
-2025-06-08,06:13:34 | INFO | Eval Epoch: 50 imagenet-zeroshot-val-top1: 0.0250	imagenet-zeroshot-val-top5: 0.0813
-```
+### 1M subset of LAION-400M - # epochs = 2, batch size = 512
 
-Note:
-
-1. FLOPs are measured via a different script, not during training;
-2. a **pretrained** ViT-B-32 is used to compute FLOPs for ViT-B-32;
-3. GPU memory and training step time are averaged for each epoch.
-
-Important Adaptations from DynamicViT:
-
-1. [FLOP measurement](https://github.com/raoyongming/DynamicViT/blob/master/calc_flops.py)
-2. [simulating artificial bounddaries for DynamicViT](https://github.com/raoyongming/DynamicViT/blob/master/models/dylvvit.py)
+| model | GFLOPs (fvcore) | resolution | patch size | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
+| ------- | ----- | --------------- | ---------- | ---------- | ---------------- | ------------- | ---------- |
+| **ViT-B-32** | 2.96 | 224 | 32 | **1.20%** | **4.55%** | **20.1** | 0.837 |
+| **2x, no upsampling** | 2.67 | 224 | 32 | N/A | N/A | N/A | N/A |
+| **4x, no upsampling** | 1.82 | 224 | 32 | N/A | N/A | N/A | N/A |
+| **10x, no upsampling** | **1.25** | 224 | 32 | N/A | N/A | N/A | N/A |
 
 
 ## computing resource exploration (Pitzer and Ascend)
