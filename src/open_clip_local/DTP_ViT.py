@@ -506,8 +506,8 @@ class RelPartialLearnableMultiHeadAttn(nn.Module):
             elif attn_mask.dim() == 3:
                 attn_score.masked_fill_(attn_mask[:, None, :, :], -float('inf'))
         else:
-            raise NotImplementedError
-
+            pass
+        
         # [bsz x n_head x qlen x klen]
         attn_prob = F.softmax(attn_score, dim=3)
         attn_prob = self.dropatt(attn_prob)
@@ -600,7 +600,7 @@ class RelPartialLearnableDecoderLayer(nn.Module):
 
         return output
 
-class DTP_ViT_optimized(nn.Module):
+class DTPViT_XL(nn.Module):
     def __init__(self,
                  img_size=224,
                  patch_size=16,
@@ -616,10 +616,12 @@ class DTP_ViT_optimized(nn.Module):
                  bp_type='gumbel',
                  threshold=0.5,
                  num_classes=1000,
-                flop_measure: bool = False,  # whether to measure FLOPs
+                 flop_measure: bool = False,  # whether to measure FLOPs
         ):
 
         super().__init__()
+        self.flop_measure = flop_measure
+        self.prior = prior
         self.embed_dim = embed_dim
         self.num_patches = (img_size // patch_size) ** 2
         self.seq_len = self.num_patches
@@ -698,7 +700,7 @@ class DTP_ViT_optimized(nn.Module):
             print("[INFO] FLOP measurement mode: simulating fake boundaries to satisfy the compression rate.")
             print("=" * 80)
             L = x.shape[0]
-            interval = max(1, int(1 / self.compression_rate))
+            interval = max(1, int(1 / self.prior))
             hard_boundaries = torch.zeros(B, L, device=x.device)
             hard_boundaries[:, ::interval] = 1
         else:

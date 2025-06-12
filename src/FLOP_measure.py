@@ -9,7 +9,7 @@ from typing import Any, Callable, List, Optional, Union
 from numpy import prod
 import numpy as np
 from fvcore.nn import FlopCountAnalysis
-from open_clip_local.DTP_ViT import DTPViT
+from open_clip_local.DTP_ViT import DTPViT, DTPViT_XL
 from open_clip_local.model import CLIPVisionCfg
 from open_clip_local.transformer import VisionTransformer
 from open_clip_local.factory import create_model_and_transforms
@@ -107,22 +107,39 @@ if __name__ == "__main__":
 
     COMPRESSION_RATE = 0.5
 
-    model = DTPViT(
-        image_size=cfg.image_size,
+    # model = DTPViT(
+    #     image_size=cfg.image_size,
+    #     patch_size=cfg.patch_size,
+    #     in_chans=3,
+    #     embed_dim=cfg.width,
+    #     depth=(2, 10, 0),            # originally (2, 8, 2) from the DTP paper
+    #     num_heads=cfg.width // 64,  # 768 // 64 = 12
+    #     mlp_ratio=cfg.mlp_ratio,
+    #     drop_rate=cfg.patch_dropout,
+    #     attn_drop_rate=0.1,
+    #     temp=0.5,
+    #     compression_rate=COMPRESSION_RATE,
+    #     threshold=0.5,
+    #     activation_function="gelu",
+    #     num_classes=cfg.width,
+    #     flop_measure=True,
+    # )
+
+    model = DTPViT_XL(
+        img_size=cfg.image_size,
         patch_size=cfg.patch_size,
         in_chans=3,
         embed_dim=cfg.width,
-        depth=(2, 10, 0),            # originally (2, 8, 2) from the DTP paper
-        num_heads=cfg.width // 64,  # 768 // 64 = 12
+        depth=(2, 10, 0),   # (2, 8, 2) from the original DTP paper
+        num_heads=cfg.width // 64,
         mlp_ratio=cfg.mlp_ratio,
         drop_rate=cfg.patch_dropout,
         attn_drop_rate=0.1,
         temp=0.5,
-        compression_rate=COMPRESSION_RATE,
+        prior=COMPRESSION_RATE,
         threshold=0.5,
-        activation_function="gelu",
         num_classes=cfg.width,
-        flop_measure=True,
+        flop_measure=True
     )
 
     # Run FLOP measurement

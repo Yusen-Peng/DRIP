@@ -13,7 +13,8 @@
      1. memory: torch.cuda.max_memory_allocated()
      2. training step time: **already built-in** by CLIP!
 
-Important observation: the first epoch takes **MUCH LONG** time than the following epochs [why?]
+Important observation:
+1. the first epoch takes **longer** time than the following epochs: example - 1.428s, 0.641s, 0.608s, 0.609s, 0.615s...
 
 ## Performance Metrics
 
@@ -45,9 +46,9 @@ Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 | model | GFLOPs (fvcore) | resolution | patch size | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | ---------- | ---------------- | ------------- | ---------- |
 | **ViT-B-32** | 2.96 | 224 | 32 | **1.20%** | **4.55%** | **20.1** | 0.837 |
-| **2x, no upsampling** | 2.67 | 224 | 32 | N/A | N/A | N/A | N/A |
-| **4x, no upsampling** | 1.82 | 224 | 32 | N/A | N/A | N/A | N/A |
-| **10x, no upsampling** | **1.25** | 224 | 32 | N/A | N/A | N/A | N/A |
+| **2x, no upsampling** | 2.89 | 224 | 32 | 0.93% | 3.74% | 20.4 | 0.683 |
+| **4x, no upsampling** | 1.96 | 224 | 32 | 1.01% | 3.87% | 20.9 | 0.861 |
+| **10x, no upsampling** | 1.34 | 224 | 32 | 0.98% | 3.80% | 21.0 | 0.675 |
 
 
 ## computing resource exploration (Pitzer and Ascend)
