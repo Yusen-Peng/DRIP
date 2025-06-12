@@ -1,0 +1,2 @@
+2025-06-12 16:41:00,558 [PID 3582090] Start epoch 0
+2025-06-12 16:45:47,105 [PID 3582090] Train Epoch: 0 [   1024/1000000 (0%)] Data (t): 283.482 Batch (t): 286.542, 3.57364/s, 1.78682/s/gpu LR: 0.000002 Logit Scale: 14.286 Mem (alloc/resv): 18.9/19.9 GB Step time: 286.542s Contrastive_loss: 7.0540 (7.0540) Loss: 7.0540 (7.0540)

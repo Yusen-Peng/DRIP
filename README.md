@@ -39,7 +39,7 @@ Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 | **4x, no upsampling** | 1.82 | 224 | 32 | 1.00% | 3.95% | 20.4 | 0.788 |
 | **10x, no upsampling** | **1.25** | 224 | 32 | 0.97% | 4.01% | **20.2** | 0.798 |
 
-## DTP-ViT_XL results
+## DTP-ViT-XL results
 
 ### 1M subset of LAION-400M - # epochs = 2, batch size = 512
 

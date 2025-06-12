@@ -534,6 +534,9 @@ def get_dataset_fn(data_path, dataset_type):
         return get_csv_dataset
     elif dataset_type == "synthetic":
         return get_synthetic_dataset
+    elif dataset_type == "laion-stream":
+        from .laion_streaming_dataset import LAIONStreamingDatasetWrapper
+        return LAIONStreamingDatasetWrapper
     elif dataset_type == "auto":
         ext = data_path.split('.')[-1]
         if ext in ['csv', 'tsv']:
