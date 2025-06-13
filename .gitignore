@@ -11,3 +11,5 @@ LM-TFM/*.pt
 logs/
 *.zip
 *.txt
+.env
+*.log

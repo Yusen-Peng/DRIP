@@ -39,7 +39,7 @@ def train_runner(
             "--epochs", str(epochs),
             "--workers", str(workers),
             "--model", model,
-            "--dataset-type", "laion-stream",
+            #"--dataset-type", "laion-stream",
         ]
 
     else:
@@ -97,12 +97,12 @@ def main():
         #train_data_path = "::".join(sorted(glob.glob("dataset/laion_shards/laion-*.tar")))
         #val_data_path = "::".join(sorted(glob.glob("dataset/laion_val/laion-*.tar")))
         
-        # FIXME: stream-mode - "load on the fly"
-        train_data_path = "laion-stream"  # just a keyword
-        val_data_path = None  # no val needed for now
+        # FIXME: stream-mode: "load on the fly" - bad idea
+        # train_data_path = "laion-stream"  # just a keyword
+        # val_data_path = None  # no val needed for now
 
         # FIXME: 1M subset of LAION-400M for now 
-        train_num_samples = 1_000_000 
+        train_num_samples = 1_000_000
 
     # train CLIP
     train_runner(

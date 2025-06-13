@@ -25,23 +25,16 @@ Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 2025-06-08,06:13:34 | INFO | Eval Epoch: 50 imagenet-zeroshot-val-top1: 0.0250	imagenet-zeroshot-val-top5: 0.0813
 ```
 
-## Dataset
-
-
-
-## LAION-400M Dataset preparation  ✅ ❌
+## LAION-400M dataset preparation
 
 | preparation strategy | ideal? |
 | -------- | ------ |
-| stream arbitrary number of samples **"on the fly"** during training | ❌: nasty, slow down training by too much |
-| stream HuggingFace dataset for local download | ❌: still suboptimal, I/O bottleneck | 
+| stream **HuggingFace** dataset for local download with single process | ❌: slow, impossible to use |
+| stream **HuggingFace** dataset for local download with multi-processing | ⚠️: still suboptimal, I/O bottleneck |
+| stream arbitrary number of samples **"on the fly"** during training | ❌: NASTY, slow down training by too much |
+| download parquet metadata, then use **img2dataset** | ✅: the best solution I found so far; success rate~65% |
 
-
-Challenges: multi-processing + **many** samples are currupted
-
-prepare a 40M subset of LAION: use **64** processes directly streaming LAION-400M 
-
-## DTP-ViT results
+## DTP-ViT results - training from scratch
 
 ### 1M subset of LAION-400M - # epochs = 2, batch size = 512
 
@@ -66,6 +59,11 @@ prepare a 40M subset of LAION: use **64** processes directly streaming LAION-400
 | **4x, no upsampling** | 1.96 | 224 | 32 | 1.01% | 3.87% | 20.9 | 0.861 |
 | **10x, no upsampling** | 1.34 | 224 | 32 | 0.98% | 3.80% | 21.0 | 0.675 |
 
+
+
+## DTP-ViT results - finetuning on ImageNet
+
+TBD
 
 ## computing resource exploration (Pitzer and Ascend)
 
@@ -332,6 +330,12 @@ look up all partitions on a cluster
 
 ```bash
 sinfo -o "%P"
+```
+
+## HuggingFace Login
+
+```bash
+huggingface-cli login --token [your token]
 ```
 
 
