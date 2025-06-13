@@ -25,11 +25,21 @@ Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 2025-06-08,06:13:34 | INFO | Eval Epoch: 50 imagenet-zeroshot-val-top1: 0.0250	imagenet-zeroshot-val-top5: 0.0813
 ```
 
-## Dataset: local download OR streaming "on the fly"?
+## Dataset
 
-Observation: Training with local download is **WAY MUCH FASTER** than training with streaming "on the fly"
 
-Conclusion: use **local download** AT ALL TIME
+
+## LAION-400M Dataset preparation  ✅ ❌
+
+| preparation strategy | ideal? |
+| -------- | ------ |
+| stream arbitrary number of samples **"on the fly"** during training | ❌: nasty, slow down training by too much |
+| stream HuggingFace dataset for local download | ❌: still suboptimal, I/O bottleneck | 
+
+
+Challenges: multi-processing + **many** samples are currupted
+
+prepare a 40M subset of LAION: use **64** processes directly streaming LAION-400M 
 
 ## DTP-ViT results
 
