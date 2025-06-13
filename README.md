@@ -25,6 +25,12 @@ Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 2025-06-08,06:13:34 | INFO | Eval Epoch: 50 imagenet-zeroshot-val-top1: 0.0250	imagenet-zeroshot-val-top5: 0.0813
 ```
 
+## Dataset: local download OR streaming "on the fly"?
+
+Observation: Training with local download is **WAY MUCH FASTER** than training with streaming "on the fly"
+
+Conclusion: use **local download** AT ALL TIME
+
 ## DTP-ViT results
 
 ### 1M subset of LAION-400M - # epochs = 2, batch size = 512
