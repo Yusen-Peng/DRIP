@@ -1,11 +1,7 @@
 val2014/
 train2014/
 annotations/
-dataset/SMALL_images/
-dataset/images/
-dataset/ImageNet_val/
-dataset/laion_shards/
-dataset/laion_val/
+dataset/
 data/
 LM-TFM/*.pt
 logs/
@@ -13,3 +9,4 @@ logs/
 *.txt
 .env
 *.log
+*.tar

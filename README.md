@@ -61,8 +61,12 @@ Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 | -------- | ------ |
 | stream **HuggingFace** dataset for local download with single process | ❌: slow, impossible to use |
 | stream **HuggingFace** dataset for local download with multi-processing | ⚠️: still suboptimal, I/O bottleneck |
-| stream arbitrary number of samples **"on the fly"** during training | ❌: NASTY, slow down training by too much |
-| download parquet metadata, then use **img2dataset** | ✅: the best solution I found so far; success rate~65% |
+| stream arbitrary number of samples **"on the fly"** during training | 🤡: NASTY, slow down training by too much |
+| download parquet metadata, then use **img2dataset** | ✅: the best solution so far |
+
+1. current status:
+     1. **"10M"** samples (success rate = 65%, so ***effectively*** 6.5M samples 🥲)
+     2. **1000** shards in total
 
 ## DTP-ViT results - training from scratch
 

@@ -110,9 +110,6 @@ def _build_vision_tower(
         cast_dtype: Optional[torch.dtype] = None,
         DTP_ViT: bool = False,
 ):
-    print("[DEBUG] Building vision tower!")
-    print("#" * 40)
-
     if isinstance(vision_cfg, dict):
         vision_cfg = CLIPVisionCfg(**vision_cfg)
 
@@ -152,7 +149,7 @@ def _build_vision_tower(
             act_layer = partial(act_layer, **vision_cfg.act_kwargs)
 
         if DTP_ViT:
-            compression_rate = 0.25
+            compression_rate = 0.1
             visual = DTPViT(
                 image_size=vision_cfg.image_size,
                 patch_size=vision_cfg.patch_size,
@@ -212,7 +209,6 @@ def _build_vision_tower(
             # sanity check to print every single model hyperparameter
             logging.debug(f"Vision Transformer config: {vision_cfg}")
             logging.debug(f"Vision Transformer model: {visual}")
-
 
     return visual
 
