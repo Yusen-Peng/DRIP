@@ -33,7 +33,6 @@ PARQUET_URL="https://huggingface.co/datasets/${DATASET_NAME}/resolve/main/${PARQ
 echo "📥 Downloading Parquet shard: $PARQUET_URL"
 
 # Step 3: Download with auth header
-mkdir -p "$OUTPUT_DIR"
 wget -nc --header="Authorization: Bearer $HF_TOKEN" -P "$OUTPUT_DIR" "$PARQUET_URL"
 
 # Step 4: Run img2dataset

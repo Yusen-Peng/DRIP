@@ -64,7 +64,12 @@ Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 | stream arbitrary number of samples **"on the fly"** during training | 🤡: NASTY, slow down training by too much |
 | download parquet metadata, then use **img2dataset** | ✅: the best solution so far |
 
-Current status: **"10M"** samples (success rate = 65%, so ***effectively*** 6.5M samples 🥲) - we have **1000** shards in total
+Current status: 3M (3,006,464) samples
+
+```
+2 epochs: top1 - 2.52%	top5 - 8.30%
+```
+
 
 ## DTP-ViT results - training from scratch
 

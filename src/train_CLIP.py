@@ -17,7 +17,7 @@ def train_runner(
         workers: int = 8,
         model: str = "RN50",
         train_num_samples: int | None = 1_000_000,  # only used if webdataset is True
-        imagenet_val_path: str = "dataset/ImageNet_val",
+        imagenet_val_path: str = "/fs/scratch/PAS2836/yusenpeng_dataset/val",
     ):
 
     args_list = []
@@ -93,16 +93,11 @@ def main():
     elif dataset_name == "LAION":
         # LAION dataset (for now, it's 1M subset of LAION-400M)
         use_webdataset = True
+        train_data_path = "::".join(sorted(glob.glob("/fs/scratch/PAS2836/yusenpeng_dataset/laion_parquet/laion2B-data-shards/*.tar")))
+        val_data_path = None  # no val needed for now
 
-        #train_data_path = "::".join(sorted(glob.glob("dataset/laion_shards/laion-*.tar")))
-        #val_data_path = "::".join(sorted(glob.glob("dataset/laion_val/laion-*.tar")))
-        
-        # FIXME: stream-mode: "load on the fly" - bad idea
-        # train_data_path = "laion-stream"  # just a keyword
-        # val_data_path = None  # no val needed for now
-
-        # FIXME: 1M subset of LAION-400M for now 
-        train_num_samples = 1_000_000
+        # FIXME: 3M subset of LAION for now 
+        train_num_samples = 3_000_000
 
     # train CLIP
     train_runner(
