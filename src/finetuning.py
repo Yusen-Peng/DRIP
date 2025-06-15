@@ -18,7 +18,7 @@ np.random.seed(42)
 random.seed(42)
 torch.backends.cudnn.deterministic = True
 
-FREEZE_BACKBONE = False
+FREEZE_BACKBONE = True
 
 class VisionClassifier(nn.Module):
     def __init__(self, backbone, num_classes, DTP_ViT=False):
@@ -122,13 +122,7 @@ def finetuning_ViT():
     print("⭐" * 20)
 
 
-def weight_transfer(dtp_vit: nn.Module, clip_vit_state_dict):
-    """
-    Transfer weights from CLIP ViT to DTP ViT model.
-    Args:
-        dtp_vit (nn.Module): DTP ViT model to transfer weights to.
-        clip_vit_state_dict (dict): State dict of CLIP ViT model.
-    """
+def naive_weight_transfer(dtp_vit: nn.Module, clip_vit_state_dict):
     dtp_state_dict = dtp_vit.state_dict()
     transferred = 0
 
@@ -186,6 +180,74 @@ def weight_transfer(dtp_vit: nn.Module, clip_vit_state_dict):
     print(f"🎉 Transferred {transferred} parameter tensors successfully!")
     print(f"DTP-ViT now has {sum(p.numel() for p in dtp_vit.parameters())} parameters.")
 
+
+def all_weight_transfer(dtp_vit: nn.Module, clip_vit_state_dict):
+    dtp_state_dict = dtp_vit.state_dict()
+    transferred = 0
+
+    # map positional embedding
+    if "pos_embed" in dtp_state_dict and "positional_embedding" in clip_vit_state_dict:
+        src = clip_vit_state_dict["positional_embedding"]      # [50, 768]
+        dst = dtp_state_dict["pos_embed"]                       # [1, 50, 768]
+
+        if src.shape == dst.shape[1:]:  # [50, 768] == [50, 768]
+            dtp_state_dict["pos_embed"].copy_(src.unsqueeze(0))  # Add batch dim
+            print("✅ Transferred: pos_embed")
+        else:
+            print(f"❌ Cannot transfer pos_embed: shape mismatch {src.shape} → {dst.shape}")    
+
+
+
+    # map patch embedding
+    if "patch_embed.proj.weight" in dtp_state_dict and "conv1.weight" in clip_vit_state_dict:
+        dtp_state_dict["patch_embed.proj.weight"].copy_(clip_vit_state_dict["conv1.weight"])
+        dtp_state_dict["patch_embed.proj.bias"].zero_()
+        print("✅ Transferred: patch_embed.proj")
+
+    # map transformer blocks
+    for i in range(12):
+        if i < len(dtp_vit.pre_blocks):
+            prefix = f"pre_blocks.{i}"
+        else:
+            j = i - len(dtp_vit.pre_blocks)
+            prefix = f"shorten_blocks.{j}"
+
+        base = f"transformer.resblocks.{i}"
+
+        pairs = [
+            ("ln_1.weight", "norm1.weight"),
+            ("ln_1.bias", "norm1.bias"),
+            ("attn.in_proj_weight", "attn.in_proj_weight"),
+            ("attn.in_proj_bias", "attn.in_proj_bias"),
+            ("attn.out_proj.weight", "attn.out_proj.weight"),
+            ("attn.out_proj.bias", "attn.out_proj.bias"),
+            ("ln_2.weight", "norm2.weight"),
+            ("ln_2.bias", "norm2.bias"),
+            ("mlp.c_fc.weight", "mlp.0.weight"),
+            ("mlp.c_fc.bias", "mlp.0.bias"),
+            ("mlp.c_proj.weight", "mlp.3.weight"),
+            ("mlp.c_proj.bias", "mlp.3.bias"),
+        ]
+
+        for clip_key, dtp_key in pairs:
+            full_clip_key = f"{base}.{clip_key}"
+            full_dtp_key = f"{prefix}.{dtp_key}"
+            if full_clip_key in clip_vit_state_dict and full_dtp_key in dtp_state_dict:
+                if dtp_state_dict[full_dtp_key].shape == clip_vit_state_dict[full_clip_key].shape:
+                    dtp_state_dict[full_dtp_key].copy_(clip_vit_state_dict[full_clip_key])
+                    transferred += 1
+                else:
+                    print(f"⚠️ Shape mismatch: {full_clip_key} vs {full_dtp_key}")
+                    exit(1)
+            else:
+                print(f"⛔ Missing: {full_clip_key} or {full_dtp_key}")
+                exit(1)
+        print("✅ Transferred: " + prefix)  
+
+    print(f"🎉 Transferred {transferred} parameter tensors successfully!")
+    print(f"DTP-ViT now has {sum(p.numel() for p in dtp_vit.parameters())} parameters.")
+
+
 def finetuning_DTP_ViT():
     BATCH_SIZE = 512
     NUM_CLASSES = 1000
@@ -224,8 +286,8 @@ def finetuning_DTP_ViT():
     }
 
     # FIXME: should we do this? - load pretrained weights into DTP ViT model
-    #print("🔄 Loading pretrained weights into DTP ViT model...")
-    #weight_transfer(model_backbone, clip_state_dict)
+    print("🔄 Loading pretrained weights into DTP ViT model...")
+    all_weight_transfer(model_backbone, clip_state_dict)
  
 
     train_root = "/fs/scratch/PAS2836/yusenpeng_dataset/train"
