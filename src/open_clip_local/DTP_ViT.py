@@ -300,14 +300,37 @@ class DTPViT(nn.Module):
         flop_measure: bool = False,  # whether to measure FLOPs
     ):
         super(DTPViT, self).__init__()
+        self.image_size = image_size
+        self.patch_size = patch_size
+        self.in_chans = in_chans
+        self.embed_dim = embed_dim
+        self.depth = depth  # (Pre, Shorten, Post)
+        self.num_heads = num_heads
+        self.mlp_ratio = mlp_ratio
+        self.drop_rate = drop_rate
+        self.attn_drop_rate = attn_drop_rate
+        self.temp = temp
+        self.threshold = threshold
+        self.num_classes = num_classes
+        self.activation_function = activation_function
+        # whether to measure FLOPs
+        # if True, we will simulate the boundaries to satisfy the compression rate
+        # if False, we will use the BoundaryPredictor to predict the boundaries
         self.flop_measure = flop_measure
         self.compression_rate = compression_rate
+
 
         # patch embeddings
         self.patch_embed = PatchEmbedding(image_size, patch_size, in_chans, embed_dim)
 
         # positional embeddings
-        self.pos_embed = nn.Parameter(torch.zeros(1, self.patch_embed.num_patches, embed_dim))
+
+        # === CLS token ===
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))  # [1, 1, D]
+        nn.init.normal_(self.cls_token, std=0.02)
+        self.pos_embed = nn.Parameter(torch.zeros(1, 1 + self.patch_embed.num_patches, embed_dim))
+        nn.init.trunc_normal_(self.pos_embed, std=0.02)
+
 
         # dropout after positional embedding
         self.pos_drop = nn.Dropout(p=drop_rate)
@@ -359,6 +382,8 @@ class DTPViT(nn.Module):
         # Input: [B, 3, H, W]
         B = x.size(0)
         x = self.patch_embed(x)
+        cls_tokens = self.cls_token.expand(B, -1, -1)  # [B, 1, D]
+        x = torch.cat((cls_tokens, x), dim=1)          # [B, 1 + N, D]
         x = x + self.pos_embed
         x = self.pos_drop(x)
 

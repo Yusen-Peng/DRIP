@@ -64,9 +64,7 @@ Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 | stream arbitrary number of samples **"on the fly"** during training | 🤡: NASTY, slow down training by too much |
 | download parquet metadata, then use **img2dataset** | ✅: the best solution so far |
 
-1. current status:
-     1. **"10M"** samples (success rate = 65%, so ***effectively*** 6.5M samples 🥲)
-     2. **1000** shards in total
+Current status: **"10M"** samples (success rate = 65%, so ***effectively*** 6.5M samples 🥲) - we have **1000** shards in total
 
 ## DTP-ViT results - training from scratch
 
@@ -84,7 +82,7 @@ Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 
 ## DTP-ViT results - finetuning on ImageNet
 
-### starting point: evaluate pretrained CLIPs first
+### zero-shot performance of pretrained CLIPs
 
 | pretrained vision encoder | corresponding dataset | zero-shot dataset | zero-shot top-1 | zero-shot top-5 |
 | ------------------------- | --------------------- | ----------------- | --------------- | --------------- |
@@ -92,3 +90,12 @@ Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 | ViT-B-32 (88M) | laion2b_s34b_b79k | ImageNet (2012), 50k val | 66.53% | 89.89% |
 | ViT-B-16 (86M) | laion2b_s34b_b88k | ImageNet (2012), 50k val | 70.21% | 91.76% |
 | ViT-L-14 (307M) | laion2b_s32b_b82k | ImageNet (2012), 50k val | 75.26% | 94.25% |
+
+
+### finetune CLIP-pretrained ViTs on ImageNet-1K (1.28M images)
+
+| model | dataset pretrained on | freeze the backbone? | batch size | epoch | zero-shot (as reference) |classification accuracy |
+| ----- | --------------------- | ----------------- | -------- |
+| ViT-B-32 | laion2b_s34b_b79k | yes | 512 | 1 | 66.53% | **67.73%** | 
+| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 1 | 66.53% | running |
+| 10x compression | load weights from ViT-B-32 | entirely | 128 | 1 | 🤡1.46% |
