@@ -223,9 +223,9 @@ def finetuning_DTP_ViT():
         if not k.startswith("proj") and not k.startswith("ln_post") and "attn_mask" not in k
     }
 
-    # load pretrained weights into DTP ViT model
-    print("🔄 Loading pretrained weights into DTP ViT model...")
-    weight_transfer(model_backbone, clip_state_dict)
+    # FIXME: should we do this? - load pretrained weights into DTP ViT model
+    #print("🔄 Loading pretrained weights into DTP ViT model...")
+    #weight_transfer(model_backbone, clip_state_dict)
  
 
     train_root = "/fs/scratch/PAS2836/yusenpeng_dataset/train"
@@ -304,5 +304,5 @@ def finetuning_DTP_ViT():
     print("⭐" * 20)
 
 if __name__ == "__main__":
-    finetuning_ViT()
-    #finetuning_DTP_ViT()
+    #finetuning_ViT()
+    finetuning_DTP_ViT()
