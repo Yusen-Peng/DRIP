@@ -98,4 +98,4 @@ Current status: **"10M"** samples (success rate = 65%, so ***effectively*** 6.5M
 | ----- | --------------------- | -------------------- | ---------- | ----- | ------------------------ | ------------ |
 | ViT-B-32 | laion2b_s34b_b79k | yes | 512 | 1 | 66.53% | 👍🏻**67.73%** | 
 | ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 1 | 66.53% | 👎🏻50.02% |
-| 10x compression | load weights from ViT-B-32 | entirely | 128 | 1 | 🤡1.46% |
+| 10x compression | load weights from ViT-B-32 | entirely | 128 | 1 | 66.53% | 🤡1.46% |
