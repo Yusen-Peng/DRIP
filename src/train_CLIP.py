@@ -39,7 +39,7 @@ def train_runner(
             "--epochs", str(epochs),
             "--workers", str(workers),
             "--model", model,
-            #"--dataset-type", "laion-stream",
+            "--precision", "amp"
         ]
 
     else:
@@ -59,6 +59,7 @@ def train_runner(
             "--epochs", str(epochs),
             "--workers", str(workers),
             "--model", model,
+            "--precision", "amp"
         ]
 
     if DTP:
@@ -78,7 +79,7 @@ def main():
     batch_size = 512
     lr = 1e-4
     wd = 0.1
-    epochs = 2
+    epochs = 10
     workers = 8       # CPU utilization
     model = "ViT-B-32"
     warmup = 50
@@ -93,7 +94,7 @@ def main():
     elif dataset_name == "LAION":
         # LAION dataset (for now, it's 1M subset of LAION-400M)
         use_webdataset = True
-        train_data_path = "::".join(sorted(glob.glob("/fs/scratch/PAS2836/yusenpeng_dataset/laion_parquet/laion2B-data-shards/*.tar")))
+        train_data_path = "::".join(sorted(glob.glob("/fs/scratch/PAS2836/yusenpeng_dataset/laion_parquet/3M/*.tar")))
         val_data_path = None  # no val needed for now
 
         # FIXME: 3M subset of LAION for now 

@@ -66,6 +66,12 @@ huggingface-cli login --token [your token]
 unzip filename.zip -x "__MACOSX/*" "*.DS_Store"
 ```
 
+## check img2dataset process
+
+```bash
+ps aux | grep img2dataset
+```
+
 ## Environment Setup
 
 ```bash

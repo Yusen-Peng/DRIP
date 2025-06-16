@@ -64,16 +64,17 @@ Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 | stream arbitrary number of samples **"on the fly"** during training | 🤡: NASTY, slow down training by too much |
 | download parquet metadata, then use **img2dataset** | ✅: the best solution so far |
 
-Current status: 3M (3,006,464) samples
-
-```
-2 epochs: top1 - 2.52%	top5 - 8.30%
-```
-
-
 ## DTP-ViT results - training from scratch
 
-### 1M subset of LAION-400M - # epochs = 2, batch size = 512
+### 3M subset of LAION - batch size = 512, mixed precision
+
+| model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
+| ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
+| 10x comp | 1.25 | 224 | 32 | ***3*** | 3.50% | 10.79% | 17.6 | 0.517 |
+| 10x comp | 1.25 | 224 | 32 | ***10*** | ?? | ?? | ?? | ?? |
+
+
+### 1M subset of LAION - # epochs = 2, batch size = 512
 
 | model | GFLOPs (fvcore) | resolution | patch size | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | ---------- | ---------------- | ------------- | ---------- |
@@ -84,6 +85,8 @@ Current status: 3M (3,006,464) samples
 | **2x, no upsampling** | 2.67 | 224 | 32 | 0.89% | 4.21% | 20.4 | 0.790 |
 | **4x, no upsampling** | 1.82 | 224 | 32 | 1.00% | 3.95% | 20.4 | 0.788 |
 | **10x, no upsampling** | **1.25** | 224 | 32 | 0.97% | 4.01% | **20.2** | 0.798 |
+
+
 
 ## DTP-ViT results - finetuning on ImageNet
 

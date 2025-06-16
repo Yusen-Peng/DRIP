@@ -7,7 +7,7 @@ SHARD_ID="00000"
 DATASET_NAME="laion/relaion2B-en-research-safe"
 OUTPUT_DIR="/fs/scratch/PAS2836/yusenpeng_dataset/laion_parquet/laion2B-data-shards"
 NUM_THREADS=64
-COUNT=10000000  # 10M samples
+COUNT=30000000  # 30M samples
 # ------------------------
 
 # 🧠 Authenticate with Hugging Face if needed
@@ -33,7 +33,7 @@ PARQUET_URL="https://huggingface.co/datasets/${DATASET_NAME}/resolve/main/${PARQ
 echo "📥 Downloading Parquet shard: $PARQUET_URL"
 
 # Step 3: Download with auth header
-wget -nc --header="Authorization: Bearer $HF_TOKEN" -P "$OUTPUT_DIR" "$PARQUET_URL"
+wget --header="Authorization: Bearer $HF_TOKEN" -O "$OUTPUT_DIR/$PARQUET_FILE" "$PARQUET_URL"
 
 # Step 4: Run img2dataset
 echo "🚀 Starting img2dataset..."
@@ -70,3 +70,5 @@ if [ -f "$REPORT_FILE" ]; then
 else
     echo "⚠️  No report.json found in $OUTPUT_DIR" | tee -a "$OUTPUT_DIR/download_summary.log"
 fi
+
+echo "✅ EVERYTHING DONE! Check the output!"
