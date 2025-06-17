@@ -59,6 +59,11 @@ sinfo -o "%P"
 huggingface-cli login --token [your token]
 ```
 
+## check disk usage
+
+```bash
+quota -s
+```
 
 ## unzip datasets
 

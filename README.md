@@ -9,6 +9,10 @@
 | TokenLearner (2021) | a spatial attention module inserted in ViT to **LEARN** tokens |  
 | NativeSegViT (2025) | kmeans-like clustering to dynamically **GROUP** tokens repeatedly |
 
+According to DTP paper, both Gumbel-Sigmoid and Entropy-Spike are very suitable to adapt to other modalities:
+
+![alt text](docs/feasible.png)
+
 ## DTP-ViT Architecture
 
 ```txt
@@ -33,12 +37,7 @@ embeddings ready for contrastive learning
 
 ## Performance Metrics
 
-Top-1 Acc (%) and Top-5 Acc (%)
-
-Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
-```
-2025-06-08,06:13:34 | INFO | Eval Epoch: 50 imagenet-zeroshot-val-top1: 0.0250	imagenet-zeroshot-val-top5: 0.0813
-```
+Top-1 Acc (%) and Top-5 Acc (%) on ImageNet zero-shot
 
 ## Efficiency Metrics
 
@@ -66,12 +65,16 @@ Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 
 ## DTP-ViT results - training from scratch
 
-### 3M subset of LAION - batch size = 512, mixed precision
+### 3M subset of LAION - batch size = 512
 
 | model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
-| 10x comp | 1.25 | 224 | 32 | ***3*** | 3.50% | 10.79% | 17.6 | 0.517 |
-| 10x comp | 1.25 | 224 | 32 | ***10*** | ?? | ?? | ?? | ?? |
+| ViT-B-32 | 2.96 | 224 | 32 | **3** | **3.93%** | 11.51% | 20.1 | 0.864 |
+| 10x comp | 1.25 | 224 | 32 | **3** | **3.50%** | 10.79% | 17.6 | 0.517 |
+| ViT-B-32 | 2.96 | 224 | 32 | **12** | **8.46%** | 21.45% | 20.1 | 0.762 |
+| 10x comp | 1.25 | 224 | 32 | **12** | **7.32%** | 19.15% | 19.2 | 0.755 |
+| ViT-B-32 | 2.96 | 224 | 32 | **22** | **8.46%** | 21.26% | 20.1 | 0.742 |
+| 10x comp | 1.25 | 224 | 32 | **22** | **7.07%** | 18.57% | 19.3 | 0.762 |
 
 
 ### 1M subset of LAION - # epochs = 2, batch size = 512
@@ -85,8 +88,6 @@ Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 | **2x, no upsampling** | 2.67 | 224 | 32 | 0.89% | 4.21% | 20.4 | 0.790 |
 | **4x, no upsampling** | 1.82 | 224 | 32 | 1.00% | 3.95% | 20.4 | 0.788 |
 | **10x, no upsampling** | **1.25** | 224 | 32 | 0.97% | 4.01% | **20.2** | 0.798 |
-
-
 
 ## DTP-ViT results - finetuning on ImageNet
 
@@ -104,11 +105,12 @@ Important observation: **STILL NEED MUCH MORE DATA** - ViT-B-32 after 50 epochs:
 
 | model | dataset pretrained on | freeze the backbone? | batch size | epoch | zero-shot (as reference) | classification accuracy |
 | ----- | --------------------- | -------------------- | ---------- | ----- | ------------------------ | ------------ |
-| ViT-B-32 | laion2b_s34b_b79k | yes | 512 | 1 | 66.53% | 👍🏻**67.73%** | 
-| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 1 | 66.53% | 👎🏻50.02% |
-| 10x compression | **naively** load ALL weights from ViT-B-32 | yes | 128 | 1 | 66.53% | 🤡1.46% |
-| 10x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 1 | 66.53% | 💀16.24% |
-| 10x compression | no initialization (ablation) | yes | 128 | 1 | 66.53% | 💀9.66% |
+| ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | 1 | 66.53% | 👍🏻**67.73%** |
+| 10x compression | **naively** load ALL weights from ViT-B-32 | **yes** | 128 | 1 | 66.53% | 🤡1.46% |
+| 10x compression | no initialization (ablation) | **yes** | 128 | 1 | 66.53% | 1.43% |
+| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 1 | 66.53% | 50.02% (forgetting) |
+| 10x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 1 | 66.53% | 16.24% |
+| 10x compression | no initialization (ablation) | finetune all | 128 | 1 | 66.53% | 9.66% |
 
 ## So... pretraining from scratch OR just finetuning?
 
