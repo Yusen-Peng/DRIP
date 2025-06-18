@@ -15,6 +15,7 @@ except ImportError:
     wandb = None
 
 from open_clip_local import get_input_dtype, CLIP, CustomTextCLIP
+from open_clip_local.model import DTPViT
 from open_clip_train_local.distributed import is_master
 from open_clip_train_local.zero_shot import zero_shot_eval
 from open_clip_train_local.precision import get_autocast
@@ -72,6 +73,8 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
     num_logged_steps = 0
 
     model.train()
+    visual = unwrap_model(model).visual if hasattr(unwrap_model(model), "visual") else None
+    use_boundary = isinstance(visual, DTPViT)
     if args.distill:
         dist_model.eval()
 
@@ -107,6 +110,10 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
         if args.accum_freq == 1:
             with autocast():
                 model_out = model(images, texts)
+
+                if use_boundary:
+                    _, boundary_loss = visual(images, return_loss=True)
+
                 logit_scale = model_out["logit_scale"]
                 if args.distill:
                     with torch.no_grad():
@@ -115,6 +122,9 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
                 losses = loss(**model_out, output_dict=True)
 
                 total_loss = sum(losses.values())
+                if use_boundary:
+                    total_loss += boundary_loss
+                    losses["boundary_loss"] = boundary_loss
                 losses["loss"] = total_loss
 
             backward(total_loss, scaler)
@@ -123,6 +133,9 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
             with torch.no_grad():
                 with autocast():
                     model_out = model(images, texts)
+
+                    if use_boundary:
+                        _, boundary_loss = visual(images, return_loss=True)
 
                     for f in ("logit_scale", "logit_bias"):
                         model_out.pop(f, None)
@@ -151,6 +164,9 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
                 with autocast():
                     model_out = model(images, texts)
 
+                    if use_boundary:
+                        _, boundary_loss = visual(images, return_loss=True)
+
                     inputs_no_accum = {}
                     inputs_no_accum["logit_scale"] = logit_scale = model_out.pop("logit_scale")
                     if "logit_bias" in model_out:
@@ -165,6 +181,9 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
                     del inputs
                     del inputs_no_accum
                     total_loss = sum(losses.values())
+                    if use_boundary:
+                        total_loss += boundary_loss
+                        losses["boundary_loss"] = boundary_loss
                     losses["loss"] = total_loss
 
                 backward(total_loss, scaler)

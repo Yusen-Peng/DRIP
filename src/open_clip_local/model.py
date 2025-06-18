@@ -20,7 +20,7 @@ from .modified_resnet import ModifiedResNet
 from .timm_model import TimmModel
 from .transformer import LayerNormFp32, LayerNorm, QuickGELU, Attention, VisionTransformer, TextTransformer,\
     text_global_pool
-from .DTP_ViT import DTPViT, DTPViT_XL
+from .DTP_ViT import DTPViT
 from .utils import to_2tuple
 
 

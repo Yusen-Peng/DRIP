@@ -27,7 +27,7 @@ try:
     import horovod.torch as hvd
 except ImportError:
     hvd = None
-
+from open_clip_local.model import DTPViT
 from open_clip_local import create_model_and_transforms, trace_model, get_tokenizer, create_loss
 from open_clip_train_local.data import get_data
 from open_clip_train_local.distributed import is_master, init_distributed_device, broadcast_object
