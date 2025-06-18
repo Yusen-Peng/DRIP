@@ -279,6 +279,7 @@ class CLIP(nn.Module):
     ):
         super().__init__()
         self.output_dict = output_dict
+        self.DTP_ViT = DTP_ViT
 
         self.visual = _build_vision_tower(embed_dim, vision_cfg, quick_gelu, cast_dtype, DTP_ViT=DTP_ViT)
 
@@ -319,8 +320,14 @@ class CLIP(nn.Module):
         return no_wd
 
     def encode_image(self, image, normalize: bool = False):
-        features = self.visual(image)
-        return F.normalize(features, dim=-1) if normalize else features
+        if self.DTP_ViT:
+            features, boundary_loss = self.visual(image, return_loss=True)
+            if normalize:
+                features = F.normalize(features, dim=-1)
+            return features, boundary_loss
+        else:
+            features = self.visual(image)
+            return F.normalize(features, dim=-1) if normalize else features
 
     def encode_text(self, text, normalize: bool = False):
         cast_dtype = self.transformer.get_cast_dtype()
@@ -340,13 +347,22 @@ class CLIP(nn.Module):
         return F.normalize(x, dim=-1) if normalize else x
 
     def get_logits(self, image, text):
-        image_features = self.encode_image(image, normalize=True)
+        if self.DTP_ViT:
+            # DTP ViT returns features and boundary loss
+            image_features, boundary_loss = self.encode_image(image, normalize=True)
+        else:
+            image_features = self.encode_image(image, normalize=True)
         text_features = self.encode_text(text, normalize=True)
         image_logits = self.logit_scale.exp() * image_features @ text_features.T
         if self.logit_bias is not None:
             image_logits += self.logit_bias
         text_logits = image_logits.T
-        return image_logits, text_logits
+
+        if self.DTP_ViT:
+            # return image features and boundary loss for DTP ViT
+            return image_logits, text_logits, boundary_loss
+        else: 
+            return image_logits, text_logits
 
     def forward_intermediates(
             self,
@@ -456,7 +472,10 @@ class CLIP(nn.Module):
             image: Optional[torch.Tensor] = None,
             text: Optional[torch.Tensor] = None,
     ):
-        image_features = self.encode_image(image, normalize=True) if image is not None else None
+        if self.DTP_ViT:
+            image_features, boundary_loss = self.encode_image(image, normalize=True) if image is not None else (None, None)
+        else:
+            image_features = self.encode_image(image, normalize=True) if image is not None else None
         text_features = self.encode_text(text, normalize=True) if text is not None else None
 
         if self.output_dict:
@@ -467,6 +486,8 @@ class CLIP(nn.Module):
             }
             if self.logit_bias is not None:
                 out_dict['logit_bias'] = self.logit_bias
+            if self.DTP_ViT:
+                out_dict['boundary_loss'] = boundary_loss
             return out_dict
 
         if self.logit_bias is not None:
@@ -527,9 +548,15 @@ class CustomTextCLIP(nn.Module):
                 no_wd.add('text.' + n)
         return no_wd
 
-    def encode_image(self, image, normalize: bool = False):
-        features = self.visual(image)
-        return F.normalize(features, dim=-1) if normalize else features
+    def encode_image(self, image, normalize: bool = False, DTP_ViT: bool = False):
+        if DTP_ViT:
+            features, boundary_loss = self.visual(image, return_loss=True)
+            if normalize:
+                features = F.normalize(features, dim=-1)
+            return features, boundary_loss
+        else:
+            features = self.visual(image)
+            return F.normalize(features, dim=-1) if normalize else features
 
     def encode_text(self, text, normalize: bool = False):
         features = self.text(text)

@@ -15,7 +15,11 @@ According to DTP paper, both **Gumbel-Sigmoid** and **Entropy-Spike** are very s
 
 ## DTP-ViT Architecture
 
-Existing bug: **boundary loss** is not included in training objective...
+fixed a bug ✅: **boundary loss** was NOT included in training objective (like not going through back propagation)
+
+```txt
+Train Epoch: 0 [ 616448/3014656 (20%)] ... Contrastive_loss: 6.7620 (7.1868) Boundary_loss: 0.78544 (0.58045) Loss: 7.5474 (7.7673)
+```
 
 ```txt
 input sequence

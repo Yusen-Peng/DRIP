@@ -110,20 +110,24 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
         if args.accum_freq == 1:
             with autocast():
                 model_out = model(images, texts)
-
-                if use_boundary:
-                    _, boundary_loss = visual(images, return_loss=True)
-
                 logit_scale = model_out["logit_scale"]
+
                 if args.distill:
                     with torch.no_grad():
                         dist_model_out = dist_model(images, texts)
                     model_out.update({f'dist_{k}': v for k, v in dist_model_out.items()})
+
+                # ✅ Pop BEFORE using it or calling loss(...)
+                if use_boundary:
+                    boundary_loss = model_out.pop("boundary_loss")
+                else:
+                    boundary_loss = 0.0
+
+                # ✅ Now safe to call
                 losses = loss(**model_out, output_dict=True)
 
-                total_loss = sum(losses.values())
+                total_loss = sum(losses.values()) + boundary_loss
                 if use_boundary:
-                    total_loss += boundary_loss
                     losses["boundary_loss"] = boundary_loss
                 losses["loss"] = total_loss
 
@@ -134,8 +138,6 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
                 with autocast():
                     model_out = model(images, texts)
 
-                    if use_boundary:
-                        _, boundary_loss = visual(images, return_loss=True)
 
                     for f in ("logit_scale", "logit_bias"):
                         model_out.pop(f, None)
@@ -164,25 +166,31 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
                 with autocast():
                     model_out = model(images, texts)
 
+                    # ✅ Pop early to avoid passing to loss()
                     if use_boundary:
-                        _, boundary_loss = visual(images, return_loss=True)
+                        boundary_loss = model_out.pop("boundary_loss")
+                    else:
+                        boundary_loss = 0.0
 
-                    inputs_no_accum = {}
-                    inputs_no_accum["logit_scale"] = logit_scale = model_out.pop("logit_scale")
+                    # Remove logit params from model_out
+                    inputs_no_accum = {
+                        "logit_scale": model_out.pop("logit_scale")
+                    }
                     if "logit_bias" in model_out:
                         inputs_no_accum["logit_bias"] = model_out.pop("logit_bias")
 
+                    # Construct inputs with negatives
                     inputs = {}
                     for key, val in accum_features.items():
                         accumulated = accum_features[key]
                         inputs[key] = torch.cat(accumulated[:j] + [model_out[key]] + accumulated[j + 1:])
 
+                    # ✅ One and only loss call
                     losses = loss(**inputs, **inputs_no_accum, output_dict=True)
-                    del inputs
-                    del inputs_no_accum
-                    total_loss = sum(losses.values())
+
+                    # ✅ Total loss includes boundary
+                    total_loss = sum(losses.values()) + boundary_loss
                     if use_boundary:
-                        total_loss += boundary_loss
                         losses["boundary_loss"] = boundary_loss
                     losses["loss"] = total_loss
 
