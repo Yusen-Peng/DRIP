@@ -8,7 +8,7 @@ python train.py --model ViT-B-32 --pretrained laion2b_s34b_b79k --val-data src/d
 def eval_runner(
         batch_size: int = 128,
         model: str = "ViT-B-32",
-        pretrained: str = "laion2b_s34b_b79k",
+        pretrained: str = "laion400m_e31",
         imagenet_val_path: str = "dataset/ImageNet_val"
     ):
     
@@ -25,17 +25,18 @@ def main():
     # training parameters
     batch_size = 32
     
-    #model = "ViT-B-32"
+    model = "ViT-B-32"
+    pretrained = "laion400m_e31"
     #model = "ViT-B-16"
     # model = "ViT-L-14"
-    model = "RN50x16"
+    #model = "RN50x16"
 
     #pretrained = "laion2b_s34b_b79k" # for ViT-B-32
     #pretrained = "laion2b_s34b_b88k"  # for ViT-B-16
     #pretrained = "laion2b_s32b_b82k" # for ViT-L-14
-    pretrained = "openai" # for RN50x16
+    #pretrained = "openai" # for RN50x16
     
-    imagenet_val_path = "dataset/ImageNet_val"
+    imagenet_val_path = "/fs/scratch/PAS2836/yusenpeng_dataset/val"
 
     # train CLIP
     eval_runner(

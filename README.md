@@ -9,7 +9,7 @@
 | TokenLearner (2021) | a spatial attention module inserted in ViT to **LEARN** tokens |  
 | NativeSegViT (2025) | kmeans-like clustering to dynamically **GROUP** tokens repeatedly |
 
-According to DTP paper, both Gumbel-Sigmoid and Entropy-Spike are very suitable to adapt to other modalities:
+According to DTP paper, both **Gumbel-Sigmoid** and **Entropy-Spike** are very suitable to adapt to other modalities:
 
 ![alt text](docs/feasible.png)
 
@@ -54,52 +54,47 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet zero-shot
 **IMPORTANT** observation:
 1. the first epoch takes **longer** time than the following epochs: example - 1.428s, 0.641s, 0.608s, 0.609s, 0.615s...
 
-## LAION-400M dataset preparation - training from scratch
+## TRAINING FROM SCRATCH
+
+### preparation - training from scratch
 
 | preparation strategy | ideal? |
 | -------- | ------ |
 | stream **HuggingFace** dataset for local download with single process | ❌: slow, impossible to use |
 | stream **HuggingFace** dataset for local download with multi-processing | ⚠️: still suboptimal, I/O bottleneck |
 | stream arbitrary number of samples **"on the fly"** during training | 🤡: NASTY, slow down training by too much |
-| download parquet metadata, then use **img2dataset** | ✅: the best solution so far |
+| use **img2dataset** to extract | ✅: the best solution so far |
 
-## DTP-ViT results - training from scratch
-
-### 3M subset of LAION - batch size = 512
+### 3M subset from [relaion2B-en-research-safe](https://huggingface.co/datasets/laion/relaion2B-en-research-safe) using my [custom script](/scripts/img2dataset_download.sh)
 
 | model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
-| ViT-B-32 | 2.96 | 224 | 32 | **3** | **3.93%** | 11.51% | 20.1 | 0.864 |
-| 10x comp | 1.25 | 224 | 32 | **3** | **3.50%** | 10.79% | 17.6 | 0.517 |
 | ViT-B-32 | 2.96 | 224 | 32 | **12** | **8.46%** | 21.45% | 20.1 | 0.762 |
 | 10x comp | 1.25 | 224 | 32 | **12** | **7.32%** | 19.15% | 19.2 | 0.755 |
 | ViT-B-32 | 2.96 | 224 | 32 | **22** | **8.46%** | 21.26% | 20.1 | 0.742 |
 | 10x comp | 1.25 | 224 | 32 | **22** | **7.07%** | 18.57% | 19.3 | 0.762 |
 
+Note:
+1. batch size = 512
+2. only ~65% success rate
+![alt text](docs/sucess_rate.png)
 
-### 1M subset of LAION - # epochs = 2, batch size = 512
+### full CC12M from img2dataset [official script](https://github.com/rom1504/img2dataset/blob/main/dataset_examples/cc12m.md)
 
-| model | GFLOPs (fvcore) | resolution | patch size | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
-| ------- | ----- | --------------- | ---------- | ---------- | ---------------- | ------------- | ---------- |
-| **ViT-B-32** | 2.96 | 224 | 32 | **1.20%** | **4.55%** | **20.1** | 0.837 |
-| **2x compression** | 3.01 | 224 | 32 | 1.03% | 4.27% | 22.0 | 0.699 |
-| **4x compression** | 2.32 | 224 | 32 | 0.99% | 4.35% | 21.8 | 0.709 |
-| **10x compression** | 1.86 | 224 | 32 | 1.11% | 4.34% | 21.9 | **0.696** |
-| **2x, no upsampling** | 2.67 | 224 | 32 | 0.89% | 4.21% | 20.4 | 0.790 |
-| **4x, no upsampling** | 1.82 | 224 | 32 | 1.00% | 3.95% | 20.4 | 0.788 |
-| **10x, no upsampling** | **1.25** | 224 | 32 | 0.97% | 4.01% | **20.2** | 0.798 |
+dataset preparation script running!
 
-## DTP-ViT results - finetuning on ImageNet
+### LAION-400M from img2dataset [official script](https://github.com/rom1504/img2dataset/blob/main/dataset_examples/laion400m.md)
 
-### zero-shot performance of pretrained CLIPs
+coming soon!
 
-| pretrained vision encoder | corresponding dataset | zero-shot dataset | zero-shot top-1 | zero-shot top-5 |
-| ------------------------- | --------------------- | ----------------- | --------------- | --------------- |
-| RN50x16 | openai | ImageNet (2012), 50k val | 70.14% | 92.41% |
-| ViT-B-32 (88M) | laion2b_s34b_b79k | ImageNet (2012), 50k val | 66.53% | 89.89% |
-| ViT-B-16 (86M) | laion2b_s34b_b88k | ImageNet (2012), 50k val | 70.21% | 91.76% |
-| ViT-L-14 (307M) | laion2b_s32b_b82k | ImageNet (2012), 50k val | 75.26% | 94.25% |
+## FINETUNING ON IMAGENET-1K
 
+### zero-shot performance of pretrained CLIPs as reference
+
+| pretrained vision encoder | corresponding dataset | zero-shot dataset | zero-shot top-1 |
+| ------------------------- | --------------------- | ----------------- | --------------- |
+| ViT-B-32 | laion400m_e31 | ImageNet-1K | **60.22%** |
+| ViT-B-32 | laion2b_s34b_b79k | ImageNet-1K | **66.53%** |
 
 ### finetune CLIP-pretrained ViTs on ImageNet-1K (1.28M images)
 

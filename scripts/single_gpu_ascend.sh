@@ -19,7 +19,7 @@ source activate Fast-CLIP
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
 # Run your training
-python src/train_CLIP.py
+python src/eval_CLIP.py
 
 conda deactivate
 # End of script

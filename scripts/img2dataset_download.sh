@@ -1,6 +1,6 @@
 #!/bin/bash
 export OPENBLAS_NUM_THREADS=1
-export OMP_NUM_THREADS=1    # Also limit other BLAS variants
+export OMP_NUM_THREADS=1
 
 # -------- CONFIG --------
 SHARD_ID="00000"
