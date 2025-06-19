@@ -2,7 +2,19 @@ import torch
 import torch.distributed as dist
 import os
 import glob
+import json
 from open_clip_train_local.main import main as train_function
+
+def infer_successful_samples_from_stats(stats_glob: str) -> int:
+    """
+    Sum up 'successes' from all _stats.json files.
+    """
+    total_successes = 0
+    for stat_file in glob.glob(stats_glob):
+        with open(stat_file, "r") as f:
+            stats = json.load(f)
+            total_successes += stats.get("successes", 0)
+    return total_successes
 
 def train_runner(
         DTP: bool,
@@ -67,9 +79,8 @@ def train_runner(
     train_function(args_list)
 
 def main():
-    # dataset parameters
-    # now we are running a 1M subset of the LAION-400M dataset
-    dataset_name = "LAION"  # "COCO" or "LAION"
+    # dataset parameters - "COCO" or "LAION" or "CC12"
+    dataset_name = "CC12"
 
     # experiment with batch size
     use_DTP = True # DTP (Dynamic Token Pruning) is not used by default
@@ -96,9 +107,26 @@ def main():
         use_webdataset = True
         train_data_path = "::".join(sorted(glob.glob("/fs/scratch/PAS2836/yusenpeng_dataset/laion_parquet/3M/*.tar")))
         val_data_path = None  # no val needed for now
+ 
+        train_num_samples = infer_successful_samples_from_stats(
+            "/fs/scratch/PAS2836/yusenpeng_dataset/laion_parquet/3M/*_stats.json"
+        )
+        print("🌝"* 30)
+        print(f"Total successful samples in LAION dataset: {train_num_samples}")
+        print("🌝"* 30)
 
-        # FIXME: 3M subset of LAION for now 
-        train_num_samples = 3_000_000
+    elif dataset_name == "CC12":
+        # CC12M dataset
+        use_webdataset = True
+        train_data_path = "::".join(sorted(glob.glob("/fs/scratch/PAS2836/yusenpeng_dataset/cc12m/*.tar")))
+        val_data_path = None
+
+        train_num_samples = infer_successful_samples_from_stats(
+            "/fs/scratch/PAS2836/yusenpeng_dataset/cc12m/*_stats.json"
+        )
+        print("🌝"* 30)
+        print(f"Total successful samples in CC12 dataset: {train_num_samples}")
+        print("🌝"* 30)
 
     # train CLIP
     train_runner(
