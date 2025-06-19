@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=COCO_CLIP
 #SBATCH --output=COCO_CLIP.txt
-#SBATCH --time=12:00:00
+#SBATCH --time=15:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
 #SBATCH --gpus-per-node=4

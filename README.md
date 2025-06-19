@@ -15,8 +15,6 @@ According to DTP paper, both **Gumbel-Sigmoid** and **Entropy-Spike** are very s
 
 ## DTP-ViT Architecture
 
-fixed a bug ✅: **boundary loss** was NOT included in training objective (like not going through back propagation)
-
 ```txt
 Train Epoch: 0 [ 616448/3014656 (20%)] ... Contrastive_loss: 6.7620 (7.1868) Boundary_loss: 0.78544 (0.58045) Loss: 7.5474 (7.7673)
 ```
@@ -89,11 +87,12 @@ Note:
 
 | model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
-| 10x comp | 1.25 | 224 | 32 | **2** | **running** | running | running | running |
+| 10x comp | 1.25 | 224 | 32 | **2** | **6.33%** | 17.56% | 19.4 | 1.582 |
+| 10x comp | 1.25 | 224 | 32 | **10** | **running** | running | running | running |
 
 ### LAION-400M (only ? - ?M USABLE samples) from img2dataset [official script](https://github.com/rom1504/img2dataset/blob/main/dataset_examples/laion400m.md)
 
-coming soon!
+Pending!
 
 ## FINETUNING ON IMAGENET-1K
 

@@ -21,9 +21,9 @@ def parse_log_file(log_path):
         avg_step_time = sum(step_times) / len(step_times)
         avg_gpu_mem = sum(gpu_memories) / len(gpu_memories)
 
-        print(f"📊 Parsed {len(step_times)} epochs")
-        print(f"✅ Average Step Time: {avg_step_time:.3f} s")
-        print(f"✅ Average GPU Memory: {avg_gpu_mem:.1f} GB")
+        print(f"Parsed {len(step_times)} epochs")
+        print(f"Average Step Time: {avg_step_time:.3f} s")
+        print(f"Average GPU Memory: {avg_gpu_mem:.1f} GB")
     else:
         print("⚠️ No matching logs found in the file.")
 
