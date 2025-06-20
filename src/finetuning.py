@@ -18,7 +18,7 @@ np.random.seed(42)
 random.seed(42)
 torch.backends.cudnn.deterministic = True
 
-FREEZE_BACKBONE = True
+FREEZE_BACKBONE = False
 
 class VisionClassifier(nn.Module):
     def __init__(self, backbone, num_classes, DTP_ViT=False):
@@ -251,7 +251,7 @@ def all_weight_transfer(dtp_vit: nn.Module, clip_vit_state_dict):
 def finetuning_DTP_ViT():
     BATCH_SIZE = 512
     NUM_CLASSES = 1000
-    EPOCHS = 1
+    EPOCHS = 10
     LR = 1e-4
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -366,5 +366,5 @@ def finetuning_DTP_ViT():
     print("⭐" * 20)
 
 if __name__ == "__main__":
-    #finetuning_ViT()
-    finetuning_DTP_ViT()
+    finetuning_ViT()
+    #finetuning_DTP_ViT()

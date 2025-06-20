@@ -1,4 +1,4 @@
-# DTP-ViT: Dynamic Token Pooling Vision Transformer for Efficient Contrastive Pretraining
+# 💧 DTP-ViT: Dynamic Token Pooling Vision Transformer for Efficient Contrastive Pretraining
 
 ## DTP-ViT v.s. existing work
 
@@ -87,8 +87,8 @@ Note:
 
 | model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
-| 10x comp | 1.25 | 224 | 32 | **2** | **6.33%** | 17.56% | 19.4 | 1.582 |
-| 10x comp | 1.25 | 224 | 32 | **10** | **running** | running | running | running |
+
+| 10x comp | 1.25 | 224 | 32 | **10** | **13.38%(converged)** | 31.19% | 20.0 | 1.343 |
 
 ### LAION-400M (only ? - ?M USABLE samples) from img2dataset [official script](https://github.com/rom1504/img2dataset/blob/main/dataset_examples/laion400m.md)
 
@@ -108,9 +108,18 @@ Pending!
 | model | dataset pretrained on | freeze the backbone? | batch size | epoch | zero-shot (as reference) | classification accuracy |
 | ----- | --------------------- | -------------------- | ---------- | ----- | ------------------------ | ------------ |
 | ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | 1 | 66.53% | 👍🏻**67.73%** |
+| ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | 10 | 66.53% | TBD |
+
 | 10x compression | **naively** load ALL weights from ViT-B-32 | **yes** | 128 | 1 | 66.53% | 🤡1.46% |
 | 10x compression | no initialization (ablation) | **yes** | 128 | 1 | 66.53% | 1.43% |
+
 | ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 1 | 66.53% | 50.02% (forgetting) |
+| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | **10** | 66.53% | running | 
+
+
+
+
+
 | 10x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 1 | 66.53% | 16.24% |
 | 10x compression | no initialization (ablation) | finetune all | 128 | 1 | 66.53% | 9.66% |
 
