@@ -37,7 +37,7 @@ class VisionClassifier(nn.Module):
 
 def finetuning_ViT():
     BATCH_SIZE = 512
-    EPOCHS = 1
+    EPOCHS = 10
     LR = 1e-4
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
