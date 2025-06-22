@@ -68,12 +68,16 @@ Classification accuracy on ImageNet
 | ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | **30** | **76.81%** |
 | ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | **10** | **61.45%** |
 | ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | **30** | **60.98%** overfitting, train-acc > 96% |
-| 2x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 10 | **running** |
+| 10x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 10 | **33.95%** |
+| 10x compression | no initialization (ablation) | finetune all | 128 | 10 | **32.35%** |
+| 10x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 10 | **TBD** |
+| 10x compression | no initialization (ablation) | finetune all | 128 | 30 | **running** |
+
+
+| 2x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 10 | N/A |
 | 2x compression | no initialization (ablation) | finetune all | 128 | 10 | N/A |
 | 4x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 10 | N/A |
 | 4x compression | no initialization (ablation) | finetune all | 128 | 10 | N/A |
-| 10x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 10 | N/A |
-| 10x compression | no initialization (ablation) | finetune all | 128 | 10 | N/A |
 
 
 ## TASK 2 - Contrastive Pretraining (CLIP-style)

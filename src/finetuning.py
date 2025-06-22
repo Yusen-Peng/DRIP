@@ -251,7 +251,7 @@ def all_weight_transfer(dtp_vit: nn.Module, clip_vit_state_dict):
 def finetuning_DTP_ViT():
     BATCH_SIZE = 512
     NUM_CLASSES = 1000
-    EPOCHS = 10
+    EPOCHS = 30
     LR = 1e-4
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
