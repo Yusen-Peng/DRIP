@@ -126,6 +126,7 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
                 # ✅ Now safe to call
                 losses = loss(**model_out, output_dict=True)
 
+                # add boundary loss for back propagation
                 total_loss = sum(losses.values()) + boundary_loss
                 if use_boundary:
                     losses["boundary_loss"] = boundary_loss

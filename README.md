@@ -41,7 +41,7 @@ embeddings ready for contrastive learning
 
 Classification accuracy on ImageNet
 
-### Efficiency Metrics
+### Efficiency Metrics (**NOT IMPLEMENTED YET**)
 
 1. GFLOPs: a different script (adapted from **DynamicViT**), NOT during training
      1. a **pretrained** ViT-B-32 is used to compute FLOPs for ViT-B-32
@@ -49,7 +49,7 @@ Classification accuracy on ImageNet
           [FLOP measurement](https://github.com/raoyongming/DynamicViT/blob/master/calc_flops.py)
           [simulating artificial bounddaries for DynamicViT](https://github.com/raoyongming/DynamicViT/blob/master/models/dylvvit.py)
 
-2. GPU memory and training step time are averaged for each epoch (**NOT IMPLEMENTED YET**)
+2. GPU memory and training step time are averaged for each epoch
      1. memory: torch.cuda.max_memory_allocated()
      2. training step time
 
@@ -62,20 +62,18 @@ Classification accuracy on ImageNet
 
 ### train ViTs on ImageNet-1K (1.28M images)
 
-| model | dataset pretrained on | freeze the backbone? | batch size | epoch | zero-shot (as reference) | classification accuracy |
-| ----- | --------------------- | -------------------- | ---------- | ----- | ------------------------ | ------------ |
-| ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | 1 | 66.53% | 👍🏻**67.73%** |
-| ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | 10 | 66.53% | TBD |
-
-| 10x compression | **naively** load ALL weights from ViT-B-32 | **yes** | 128 | 1 | 66.53% | 🤡1.46% |
-| 10x compression | no initialization (ablation) | **yes** | 128 | 1 | 66.53% | 1.43% |
-
-| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 1 | 66.53% | 50.02% (forgetting) |
-| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | **10** | 66.53% | running | 
-
-
-| 10x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 1 | 66.53% | 16.24% |
-| 10x compression | no initialization (ablation) | finetune all | 128 | 1 | 66.53% | 9.66% |
+| model | dataset pretrained on | freeze the backbone? | batch size | epoch | classification accuracy |
+| ----- | --------------------- | -------------------- | ---------- | ----- | ----------------------- |
+| ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | **10** | **75.95%** |
+| ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | **30** | **76.81%** |
+| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | **10** | **61.45%** |
+| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | **30** | **60.98%** overfitting, train-acc > 96% |
+| 2x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 10 | **running** |
+| 2x compression | no initialization (ablation) | finetune all | 128 | 10 | N/A |
+| 4x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 10 | N/A |
+| 4x compression | no initialization (ablation) | finetune all | 128 | 10 | N/A |
+| 10x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 10 | N/A |
+| 10x compression | no initialization (ablation) | finetune all | 128 | 10 | N/A |
 
 
 ## TASK 2 - Contrastive Pretraining (CLIP-style)
@@ -100,10 +98,9 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
 
 | model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
-| ViT-B-32 | 2.96 | 224 | 32 | **10** | **running** | running | running | running |
-
-| 2x comp | 2.67 | 224 | 32 | **10** |  |  |  |  |
-| 4x comp | 1.82 | 224 | 32 | **10** |  |  |  |  |
+| ViT-B-32 | 2.96 | 224 | 32 | **10** | **17.14%** | 36.88% | 20.5 | 1.384 |
+| 2x comp | 2.67 | 224 | 32 | **10** | **13.23%** | 30.89% | 19.6 | 1.814 |
+| 4x comp | 1.82 | 224 | 32 | **10** | **13.34%** | 31.17% | 20.2 | 1.639 |
 | 10x comp | 1.25 | 224 | 32 | **10** | **13.38%** | 31.19% | 20.0 | 1.343 |
 
 ### LAION-400M (only ? - ?M USABLE samples) from img2dataset [official script](https://github.com/rom1504/img2dataset/blob/main/dataset_examples/laion400m.md)

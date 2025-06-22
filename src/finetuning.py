@@ -286,8 +286,8 @@ def finetuning_DTP_ViT():
     }
 
     # FIXME: should we do this? - load pretrained weights into DTP ViT model
-    # print("🔄 Loading pretrained weights into DTP ViT model...")
-    # all_weight_transfer(model_backbone, clip_state_dict)
+    print("🔄 Loading pretrained weights into DTP ViT model...")
+    all_weight_transfer(model_backbone, clip_state_dict)
  
 
     train_root = "/fs/scratch/PAS2836/yusenpeng_dataset/train"
@@ -366,5 +366,5 @@ def finetuning_DTP_ViT():
     print("⭐" * 20)
 
 if __name__ == "__main__":
-    finetuning_ViT()
-    #finetuning_DTP_ViT()
+    #finetuning_ViT()
+    finetuning_DTP_ViT()

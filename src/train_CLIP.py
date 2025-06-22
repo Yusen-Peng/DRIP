@@ -83,7 +83,7 @@ def main():
     dataset_name = "CC12"
 
     # experiment with batch size
-    use_DTP = False # DTP (Dynamic Token Pruning) is not used by default
+    use_DTP = True # DTP (Dynamic Token Pruning) is not used by default
 
     # batch size:
     # 1024 for ViT-B-32
