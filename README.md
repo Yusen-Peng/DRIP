@@ -70,7 +70,7 @@ Classification accuracy on ImageNet
 | ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | **30** | **60.98%** overfitting, train-acc > 96% |
 | 10x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 10 | **33.95%** |
 | 10x compression | no initialization (ablation) | finetune all | 128 | 10 | **32.35%** |
-| 10x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 10 | **TBD** |
+| 10x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 30 | **TBD** |
 | 10x compression | no initialization (ablation) | finetune all | 128 | 30 | **running** |
 
 
@@ -80,7 +80,7 @@ Classification accuracy on ImageNet
 | 4x compression | no initialization (ablation) | finetune all | 128 | 10 | N/A |
 
 
-## TASK 2 - Contrastive Pretraining (CLIP-style)
+## TASK 2 - Contrastive Pretraining (CLIP)
 
 ### Performance Metrics
 
@@ -109,9 +109,15 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
 
 ### LAION-400M (only ? - ?M USABLE samples) from img2dataset [official script](https://github.com/rom1504/img2dataset/blob/main/dataset_examples/laion400m.md)
 
-Pending
+Awaiting for OSC response!
 
-## TASK 3 - Visual Instruction Tuning (LLaVA-style)
- 
-Pending
+## TASK 3 - Visual Instruction Tuning (LLaVA)
 
+Visual Instruction Tuning
+
+![alt text](docs/LLaVA.png)
+
+1. LLaVA: **pretrained** CLIP, ViT-L/14 (vision) + Vicuna (language) -> finetune end-to-end
+2. dataset: 158K samples (58K conversations, 23K detailed description, 77K in complex reasoning)
+3. training:
+3. Benchmarks:
