@@ -35,13 +35,7 @@ dense
 embeddings ready for contrastive learning
 ```
 
-## TASK 1 - ImageNet Classification
-
-### Performance Metrics
-
-Classification accuracy on ImageNet
-
-### Efficiency Metrics (**NOT IMPLEMENTED YET**)
+## Efficiency Metrics
 
 1. GFLOPs: a different script (adapted from **DynamicViT**), NOT during training
      1. a **pretrained** ViT-B-32 is used to compute FLOPs for ViT-B-32
@@ -53,31 +47,35 @@ Classification accuracy on ImageNet
      1. memory: torch.cuda.max_memory_allocated()
      2. training step time
 
-### reference: zero-shot performance of pretrained CLIPs 
+## TASK 1 - ImageNet Classification
 
-| pretrained vision encoder | corresponding dataset | zero-shot dataset | zero-shot top-1 |
-| ------------------------- | --------------------- | ----------------- | --------------- |
-| ViT-B-32 | laion400m_e31 | ImageNet-1K | **60.22%** |
-| ViT-B-32 | laion2b_s34b_b79k | ImageNet-1K | **66.53%** |
+### Performance Metrics
+
+Classification accuracy on ImageNet
 
 ### train ViTs on ImageNet-1K (1.28M images)
 
+reference: zero-shot performance of pretrained CLIPs 
+
+| pretrained vision encoder | corresponding dataset | zero-shot dataset | zero-shot top-1 |
+| ------------------------- | --------------------- | ----------------- | --------------- |
+| ViT-B-32 | laion2b_s34b_b79k | ImageNet-1K | **66.53%** |
+
 | model | dataset pretrained on | freeze the backbone? | batch size | epoch | classification accuracy |
 | ----- | --------------------- | -------------------- | ---------- | ----- | ----------------------- |
-| ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | **10** | **75.95%** |
-| ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | **30** | **76.81%** |
-| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | **10** | **61.45%** |
-| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | **30** | **60.98%** overfitting, train-acc > 96% |
-| 10x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 10 | **33.95%** |
-| 10x compression | no initialization (ablation) | finetune all | 128 | 10 | **32.35%** |
-| 10x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 30 | **TBD** |
-| 10x compression | no initialization (ablation) | finetune all | 128 | 30 | **running** |
-
-
-| 2x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 10 | N/A |
-| 2x compression | no initialization (ablation) | finetune all | 128 | 10 | N/A |
-| 4x compression | **naively** load ALL weights from ViT-B-32 | finetune all | 128 | 10 | N/A |
-| 4x compression | no initialization (ablation) | finetune all | 128 | 10 | N/A |
+| <tr><td colspan="6" align="center"> pretrained ViT </td></tr> |
+| ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | 10 | 🟢75.95% |
+| ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | 30 | 🟢76.81% |
+| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 10 | 🟠61.45% |
+| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 30 | 🟠60.98%: overfitting, train-acc > 96% |
+| <tr><td colspan="6" align="center"> train ViT from scratch </td></tr> |
+| ViT-B-32 | **no initialization** | train all | 512 | 30 | **running** |
+| <tr><td colspan="6" align="center"> train DTP-ViT from scratch </td></tr> |
+| 10x compression | no initialization (ablation) | finetune all | 128 | 30 | **TBD** |
+| 4x compression | no initialization (ablation) | finetune all | 128 | 30 | **TBD** |
+| 2x compression | no initialization (ablation) | finetune all | 128 | 30 | **TBD** |
+| <tr><td colspan="6" align="center"> pretrained DTP-ViT </td></tr> |
+| <tr><td colspan="6" align="center"> wait for a **GOOD** pretrained DTP-ViT from CLIP training! </td></tr> |
 
 
 ## TASK 2 - Contrastive Pretraining (CLIP)
@@ -109,15 +107,23 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
 
 ### LAION-400M (only ? - ?M USABLE samples) from img2dataset [official script](https://github.com/rom1504/img2dataset/blob/main/dataset_examples/laion400m.md)
 
-Awaiting for OSC response!
+reference: zero-shot performance of pretrained CLIPs 
+
+| pretrained vision encoder | corresponding dataset | zero-shot dataset | zero-shot top-1 |
+| ------------------------- | --------------------- | ----------------- | --------------- |
+| ViT-B-32 | laion400m_e31 | ImageNet-1K | **60.22%** |
+
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
 
 Visual Instruction Tuning
 
-![alt text](docs/LLaVA.png)
-
 1. LLaVA: **pretrained** CLIP, ViT-L/14 (vision) + Vicuna (language) -> finetune end-to-end
-2. dataset: 158K samples (58K conversations, 23K detailed description, 77K in complex reasoning)
-3. training:
-3. Benchmarks:
+2. dataset (LLaVA-Instruct-158K): 158K samples (58K conversations, 23K detailed description, 77K in complex reasoning)
+3. 2-stages training:
+     1. pretraining for feature alignment (CC-595K subset for **1 epoch**): image + question -> response; both visual encoder and LLM are frozen, only train the projection layer
+     2. finetuning on (i) multimodal chatbot using LLaVA-Instruct-158K for **3 epochs** (ii) Science QA benchmark; **visual encoder is frozen**, update LLM and the projection layer 
+3. Quantitative Evaluation: LLM-judge...
+4. Benchmarks
+     1. LLaVA-Bench (COCO): COCO-Val-2014, 30 images, 90 questions
+     2. LLaVA-Bench (In-the-Wild): curate 24 images, 60 questions
