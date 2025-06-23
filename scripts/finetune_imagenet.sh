@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=CLIP_finetune_ablation
-#SBATCH --output=CLIP_finetune_ablation.txt
+#SBATCH --job-name=CLIP_finetune
+#SBATCH --output=CLIP_finetune.txt
 #SBATCH --time=5:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

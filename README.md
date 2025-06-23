@@ -71,7 +71,7 @@ reference: zero-shot performance of pretrained CLIPs
 | <tr><td colspan="6" align="center"> train ViT from scratch </td></tr> |
 | ViT-B-32 | **no initialization** | train all | 512 | 30 | **running** |
 | <tr><td colspan="6" align="center"> train DTP-ViT from scratch </td></tr> |
-| 10x compression | no initialization (ablation) | finetune all | 128 | 30 | **TBD** |
+| 10x compression | no initialization (ablation) | finetune all | 128 | 30 | **running** |
 | 4x compression | no initialization (ablation) | finetune all | 128 | 30 | **TBD** |
 | 2x compression | no initialization (ablation) | finetune all | 128 | 30 | **TBD** |
 | <tr><td colspan="6" align="center"> pretrained DTP-ViT </td></tr> |

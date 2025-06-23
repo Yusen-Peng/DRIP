@@ -6,6 +6,8 @@ from torch.utils.data import DataLoader
 from open_clip_local import create_model_and_transforms
 from open_clip_local.model import DTPViT
 from open_clip_local import CLIP
+from torch.cuda.amp import GradScaler
+from torch.cuda.amp import autocast
 import os
 import random
 import numpy as np
@@ -29,6 +31,16 @@ def setup_distributed():
 
 def cleanup_distributed():
     dist.destroy_process_group()
+
+def distributed_accuracy(correct, total, device):
+    correct_tensor = torch.tensor(correct, dtype=torch.long, device=device)
+    total_tensor = torch.tensor(total, dtype=torch.long, device=device)
+
+    dist.all_reduce(correct_tensor, op=dist.ReduceOp.SUM)
+    dist.all_reduce(total_tensor, op=dist.ReduceOp.SUM)
+
+    return correct_tensor.item(), total_tensor.item()
+
 
 FREEZE_BACKBONE = False
 
@@ -108,8 +120,7 @@ def finetuning_ViT():
             images, labels = images.to(DEVICE), labels.to(DEVICE)
             optimizer.zero_grad()
 
-            with torch.amp.autocast(device_type='cuda'):
-
+            with autocast():
                 outputs = model(images)
                 loss = criterion(outputs, labels)
 
@@ -136,7 +147,7 @@ def finetuning_ViT():
     with torch.no_grad():
         for images, labels in tqdm(val_loader, desc=f"[TEST]", leave=False):
             images, labels = images.to(DEVICE), labels.to(DEVICE)
-            with torch.amp.autocast(device_type='cuda'):
+            with autocast():
                 outputs = model(images)
             preds = outputs.argmax(1)
             correct += (preds == labels).sum().item()
@@ -149,13 +160,11 @@ def finetuning_ViT():
 
 def training_ViT_from_scratch():
     BATCH_SIZE = 512
-    EPOCHS = 10
+    EPOCHS = 30
     LR = 1e-4
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
     DEVICE = torch.device(f"cuda:{local_rank}")
-
-
     backbone, _, preprocess = create_model_and_transforms(
         model_name="ViT-B-32",
         pretrained=None, # TRAINING IT FROM SCRATCH
@@ -195,7 +204,7 @@ def training_ViT_from_scratch():
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=LR)
-    scaler = torch.amp.GradScaler(enabled=(DEVICE.type == 'cuda'))
+    scaler = GradScaler(enabled=(DEVICE.type == 'cuda'))
 
     for epoch in trange(EPOCHS, desc="Training Epochs"):
         model.train()
@@ -206,8 +215,7 @@ def training_ViT_from_scratch():
             images, labels = images.to(DEVICE), labels.to(DEVICE)
             optimizer.zero_grad()
 
-            with torch.amp.autocast(device_type='cuda'):
-
+            with autocast():
                 outputs = model(images)
                 loss = criterion(outputs, labels)
 
@@ -227,23 +235,30 @@ def training_ViT_from_scratch():
     print("Finetuning complete!")
     print("⭐" * 20)
 
-    # Final evaluation
+    # Final evaluation (DDP-aware)
     model.eval()
     correct = 0
     total = 0
     with torch.no_grad():
         for images, labels in tqdm(val_loader, desc=f"[TEST]", leave=False):
             images, labels = images.to(DEVICE), labels.to(DEVICE)
-            with torch.amp.autocast(device_type='cuda'):
+            with autocast():
                 outputs = model(images)
             preds = outputs.argmax(1)
             correct += (preds == labels).sum().item()
             total += labels.size(0)
 
-    val_acc = correct / total
-    print("⭐" * 20)
-    print(f"Final Validation Accuracy: {val_acc:.4f}")
-    print("⭐" * 20)
+    # Aggregate across all GPUs
+    correct_tensor = torch.tensor(correct, dtype=torch.long, device=DEVICE)
+    total_tensor = torch.tensor(total, dtype=torch.long, device=DEVICE)
+    dist.all_reduce(correct_tensor, op=dist.ReduceOp.SUM)
+    dist.all_reduce(total_tensor, op=dist.ReduceOp.SUM)
+
+    if dist.get_rank() == 0:
+        val_acc = correct_tensor.item() / total_tensor.item()
+        print("⭐" * 20)
+        print(f"Final Validation Accuracy: {val_acc:.4f}")
+        print("⭐" * 20)
 
 def naive_weight_transfer(dtp_vit: nn.Module, clip_vit_state_dict):
     dtp_state_dict = dtp_vit.state_dict()
@@ -443,7 +458,7 @@ def training_DTP_ViT_from_scratch():
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=LR)
-    scaler = torch.amp.GradScaler(enabled=(DEVICE.type == 'cuda'))
+    scaler = GradScaler(enabled=(DEVICE.type == 'cuda'))
 
     for epoch in trange(EPOCHS, desc="Training Epochs"):
         model.train()
@@ -454,7 +469,7 @@ def training_DTP_ViT_from_scratch():
             images, labels = images.to(DEVICE), labels.to(DEVICE)
             optimizer.zero_grad()
 
-            with torch.amp.autocast(device_type='cuda'):
+            with autocast():
                 logits, boundary_loss = model(images, return_loss=True)
                 ce_loss = criterion(logits, labels)
                 loss = ce_loss + boundary_loss
@@ -475,30 +490,36 @@ def training_DTP_ViT_from_scratch():
     print("Finetuning complete!")
     print("⭐" * 20)
 
-    # Final evaluation
-    if dist.get_rank() == 0:
-        model.eval()
-        correct = 0
-        total = 0
-        with torch.no_grad():
-            for images, labels in tqdm(val_loader, desc=f"[TEST]", leave=False):
-                images, labels = images.to(DEVICE), labels.to(DEVICE)
-                with torch.amp.autocast(device_type='cuda'):
-                    outputs = model(images)
-                preds = outputs.argmax(1)
-                correct += (preds == labels).sum().item()
-                total += labels.size(0)
+    # Final evaluation (DDP-aware)
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for images, labels in tqdm(val_loader, desc=f"[TEST]", leave=False):
+            images, labels = images.to(DEVICE), labels.to(DEVICE)
+            with autocast():
+                outputs = model(images)
+            preds = outputs.argmax(1)
+            correct += (preds == labels).sum().item()
+            total += labels.size(0)
 
-        val_acc = correct / total
+    # Aggregate across all GPUs
+    correct_tensor = torch.tensor(correct, dtype=torch.long, device=DEVICE)
+    total_tensor = torch.tensor(total, dtype=torch.long, device=DEVICE)
+    dist.all_reduce(correct_tensor, op=dist.ReduceOp.SUM)
+    dist.all_reduce(total_tensor, op=dist.ReduceOp.SUM)
+
+    if dist.get_rank() == 0:
+        val_acc = correct_tensor.item() / total_tensor.item()
         print("⭐" * 20)
-        print(f"Final Test set Accuracy: {val_acc:.4f}")
+        print(f"Final Validation Accuracy: {val_acc:.4f}")
         print("⭐" * 20)
 
 if __name__ == "__main__":
     setup_distributed()
 
     #finetuning_ViT()
-    training_ViT_from_scratch()
-    #training_DTP_ViT_from_scratch()
+    #training_ViT_from_scratch()
+    training_DTP_ViT_from_scratch()
 
     cleanup_distributed()
