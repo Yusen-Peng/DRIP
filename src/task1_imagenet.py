@@ -14,9 +14,9 @@ import numpy as np
 from tqdm import trange, tqdm
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
-import time
 import torch.distributed as dist
 import torch.multiprocessing as mp
+from transformers import get_cosine_schedule_with_warmup
 
 
 # Set seeds for reproducibility
@@ -40,225 +40,6 @@ def distributed_accuracy(correct, total, device):
     dist.all_reduce(total_tensor, op=dist.ReduceOp.SUM)
 
     return correct_tensor.item(), total_tensor.item()
-
-
-FREEZE_BACKBONE = False
-
-class VisionClassifier(nn.Module):
-    def __init__(self, backbone, num_classes, DTP_ViT=False):
-        super().__init__()
-        self.DTP_ViT = DTP_ViT
-        self.backbone = backbone
-        if not DTP_ViT:
-            self.fc = nn.Linear(backbone.output_dim, num_classes)
-
-    def forward(self, x):
-        if self.DTP_ViT:
-            return self.backbone(x)
-        else: 
-            feats = self.backbone(x)
-            return self.fc(feats)
-
-def finetuning_ViT():
-    BATCH_SIZE = 512
-    EPOCHS = 10
-    LR = 1e-4
-    local_rank = int(os.environ["LOCAL_RANK"])
-    torch.cuda.set_device(local_rank)
-    DEVICE = torch.device(f"cuda:{local_rank}")
-
-
-    backbone, _, preprocess = create_model_and_transforms(
-        model_name="ViT-B-32",
-        pretrained="laion2b_s34b_b79k",
-        DTP_ViT=False
-    )
-
-    train_root = "/fs/scratch/PAS2836/yusenpeng_dataset/train"
-    val_root   = "/fs/scratch/PAS2836/yusenpeng_dataset/val"
-
-    train_dataset = datasets.ImageFolder(train_root, transform=preprocess)
-    val_dataset   = datasets.ImageFolder(val_root, transform=preprocess)
-
-    NUM_CLASSES = len(train_dataset.classes)
-    print("⭐" * 20)
-    print(f"Number of classes: {NUM_CLASSES}")
-    print("⭐" * 20)
-
-    model = VisionClassifier(backbone.visual, NUM_CLASSES).to(DEVICE)
-    model = DDP(model, device_ids=[DEVICE])
-
-    if FREEZE_BACKBONE:
-        for param in model.backbone.parameters():
-            param.requires_grad = False
-        print("🔒 Backbone frozen. Only classification head will be trained.")
-
-    train_sampler = DistributedSampler(train_dataset)
-    train_loader = DataLoader(
-        train_dataset,
-        sampler=train_sampler,
-        batch_size=BATCH_SIZE,
-        num_workers=8,
-        pin_memory=True,
-        persistent_workers=True
-    )
-
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False,
-                            num_workers=8, pin_memory=True, persistent_workers=True)
-
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=LR)
-    scaler = torch.amp.GradScaler(enabled=(DEVICE.type == 'cuda'))
-
-    for epoch in trange(EPOCHS, desc="Training Epochs"):
-        train_sampler.set_epoch(epoch)
-        model.train()
-        total_loss = 0
-        correct = 0
-
-        for images, labels in tqdm(train_loader, desc=f"Epoch {epoch} [Train]", leave=False):
-            images, labels = images.to(DEVICE), labels.to(DEVICE)
-            optimizer.zero_grad()
-
-            with autocast():
-                outputs = model(images)
-                loss = criterion(outputs, labels)
-
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
-
-            total_loss += loss.item()
-            correct += (outputs.argmax(1) == labels).sum().item()
-
-        train_acc = correct / len(train_loader.dataset)
-        if dist.get_rank() == 0:
-            print(f"✅ Epoch {epoch}: Train Loss {total_loss:.2f}, Train Acc {train_acc:.4f}")
-
-
-    print("⭐" * 20)
-    print("Finetuning complete!")
-    print("⭐" * 20)
-
-    # Final evaluation
-    model.eval()
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for images, labels in tqdm(val_loader, desc=f"[TEST]", leave=False):
-            images, labels = images.to(DEVICE), labels.to(DEVICE)
-            with autocast():
-                outputs = model(images)
-            preds = outputs.argmax(1)
-            correct += (preds == labels).sum().item()
-            total += labels.size(0)
-
-    val_acc = correct / total
-    print("⭐" * 20)
-    print(f"Final Validation Accuracy: {val_acc:.4f}")
-    print("⭐" * 20)
-
-def training_ViT_from_scratch():
-    BATCH_SIZE = 512
-    EPOCHS = 30
-    LR = 1e-4
-    local_rank = int(os.environ["LOCAL_RANK"])
-    torch.cuda.set_device(local_rank)
-    DEVICE = torch.device(f"cuda:{local_rank}")
-    backbone, _, preprocess = create_model_and_transforms(
-        model_name="ViT-B-32",
-        pretrained=None, # TRAINING IT FROM SCRATCH
-        DTP_ViT=False
-    )
-
-    train_root = "/fs/scratch/PAS2836/yusenpeng_dataset/train"
-    val_root   = "/fs/scratch/PAS2836/yusenpeng_dataset/val"
-
-    train_dataset = datasets.ImageFolder(train_root, transform=preprocess)
-    val_dataset   = datasets.ImageFolder(val_root, transform=preprocess)
-
-    NUM_CLASSES = len(train_dataset.classes)
-    print("⭐" * 20)
-    print(f"Number of classes: {NUM_CLASSES}")
-    print("⭐" * 20)
-
-    model = VisionClassifier(backbone.visual, NUM_CLASSES).to(DEVICE)
-    model = DDP(model, device_ids=[DEVICE])
-
-    if FREEZE_BACKBONE:
-        for param in model.backbone.parameters():
-            param.requires_grad = False
-        print("🔒 Backbone frozen. Only classification head will be trained.")
-
-    train_sampler = DistributedSampler(train_dataset)
-    train_loader = DataLoader(
-        train_dataset,
-        sampler=train_sampler,
-        batch_size=BATCH_SIZE,
-        num_workers=8,
-        pin_memory=True,
-        persistent_workers=True
-    )
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False,
-                            num_workers=8, pin_memory=True, persistent_workers=True)
-
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=LR)
-    scaler = GradScaler(enabled=(DEVICE.type == 'cuda'))
-
-    for epoch in trange(EPOCHS, desc="Training Epochs"):
-        model.train()
-        total_loss = 0
-        correct = 0
-
-        for images, labels in tqdm(train_loader, desc=f"Epoch {epoch} [Train]", leave=False):
-            images, labels = images.to(DEVICE), labels.to(DEVICE)
-            optimizer.zero_grad()
-
-            with autocast():
-                outputs = model(images)
-                loss = criterion(outputs, labels)
-
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
-
-            total_loss += loss.item()
-            correct += (outputs.argmax(1) == labels).sum().item()
-
-        train_acc = correct / len(train_loader.dataset)
-        if dist.get_rank() == 0:
-            print(f"✅ Epoch {epoch}: Train Loss {total_loss:.2f}, Train Acc {train_acc:.4f}")
-
-
-    print("⭐" * 20)
-    print("Finetuning complete!")
-    print("⭐" * 20)
-
-    # Final evaluation (DDP-aware)
-    model.eval()
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for images, labels in tqdm(val_loader, desc=f"[TEST]", leave=False):
-            images, labels = images.to(DEVICE), labels.to(DEVICE)
-            with autocast():
-                outputs = model(images)
-            preds = outputs.argmax(1)
-            correct += (preds == labels).sum().item()
-            total += labels.size(0)
-
-    # Aggregate across all GPUs
-    correct_tensor = torch.tensor(correct, dtype=torch.long, device=DEVICE)
-    total_tensor = torch.tensor(total, dtype=torch.long, device=DEVICE)
-    dist.all_reduce(correct_tensor, op=dist.ReduceOp.SUM)
-    dist.all_reduce(total_tensor, op=dist.ReduceOp.SUM)
-
-    if dist.get_rank() == 0:
-        val_acc = correct_tensor.item() / total_tensor.item()
-        print("⭐" * 20)
-        print(f"Final Validation Accuracy: {val_acc:.4f}")
-        print("⭐" * 20)
 
 def naive_weight_transfer(dtp_vit: nn.Module, clip_vit_state_dict):
     dtp_state_dict = dtp_vit.state_dict()
@@ -384,11 +165,256 @@ def all_weight_transfer(dtp_vit: nn.Module, clip_vit_state_dict):
     print(f"🎉 Transferred {transferred} parameter tensors successfully!")
     print(f"DTP-ViT now has {sum(p.numel() for p in dtp_vit.parameters())} parameters.")
 
+FREEZE_BACKBONE = False
+
+class VisionClassifier(nn.Module):
+    def __init__(self, backbone, num_classes, DTP_ViT=False):
+        super().__init__()
+        self.DTP_ViT = DTP_ViT
+        self.backbone = backbone
+        if not DTP_ViT:
+            self.fc = nn.Linear(backbone.output_dim, num_classes)
+
+    def forward(self, x):
+        if self.DTP_ViT:
+            return self.backbone(x)
+        else: 
+            feats = self.backbone(x)
+            return self.fc(feats)
+
+def finetuning_ViT():
+    BATCH_SIZE = 512
+    EPOCHS = 10
+    LR = 1e-4
+    local_rank = int(os.environ["LOCAL_RANK"])
+    torch.cuda.set_device(local_rank)
+    DEVICE = torch.device(f"cuda:{local_rank}")
+
+
+    backbone, _, preprocess = create_model_and_transforms(
+        model_name="ViT-B-32",
+        pretrained="laion2b_s34b_b79k",
+        DTP_ViT=False
+    )
+
+    train_root = "/fs/scratch/PAS2836/yusenpeng_dataset/train"
+    val_root   = "/fs/scratch/PAS2836/yusenpeng_dataset/val"
+
+    train_dataset = datasets.ImageFolder(train_root, transform=preprocess)
+    val_dataset   = datasets.ImageFolder(val_root, transform=preprocess)
+
+    NUM_CLASSES = len(train_dataset.classes)
+    print("⭐" * 20)
+    print(f"Number of classes: {NUM_CLASSES}")
+    print("⭐" * 20)
+
+    model = VisionClassifier(backbone.visual, NUM_CLASSES).to(DEVICE)
+    model = DDP(model, device_ids=[DEVICE])
+
+    if FREEZE_BACKBONE:
+        for param in model.backbone.parameters():
+            param.requires_grad = False
+        print("🔒 Backbone frozen. Only classification head will be trained.")
+
+    train_sampler = DistributedSampler(train_dataset)
+    train_loader = DataLoader(
+        train_dataset,
+        sampler=train_sampler,
+        batch_size=BATCH_SIZE,
+        num_workers=8,
+        pin_memory=True,
+        persistent_workers=True
+    )
+
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False,
+                            num_workers=8, pin_memory=True, persistent_workers=True)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.05)
+    total_steps = len(train_loader) * EPOCHS
+    warmup_steps = int(0.05 * total_steps)  # 5% warmup
+
+    scheduler = get_cosine_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=warmup_steps,
+        num_training_steps=total_steps,
+        num_cycles=0.5  # Default: cosine from max → 0
+    )
+    scaler = GradScaler(enabled=(DEVICE.type == 'cuda'))
+
+    for epoch in trange(EPOCHS, desc="Training Epochs"):
+        train_sampler.set_epoch(epoch)
+        model.train()
+        total_loss = 0
+        correct = 0
+
+        for images, labels in tqdm(train_loader, desc=f"Epoch {epoch} [Train]", leave=False):
+            images, labels = images.to(DEVICE), labels.to(DEVICE)
+            optimizer.zero_grad()
+
+            with autocast():
+                outputs = model(images)
+                loss = criterion(outputs, labels)
+
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            scheduler.step()  # ⬅️ Step the LR scheduler every batch
+
+            total_loss += loss.item()
+            correct += (outputs.argmax(1) == labels).sum().item()
+
+        train_acc = correct / len(train_loader.dataset)
+        if dist.get_rank() == 0:
+            print(f"✅ Epoch {epoch}: Train Loss {total_loss:.2f}, Train Acc {train_acc:.4f}")
+
+
+    print("⭐" * 20)
+    print("Finetuning complete!")
+    print("⭐" * 20)
+
+    # Final evaluation
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for images, labels in tqdm(val_loader, desc=f"[TEST]", leave=False):
+            images, labels = images.to(DEVICE), labels.to(DEVICE)
+            with autocast():
+                outputs = model(images)
+            preds = outputs.argmax(1)
+            correct += (preds == labels).sum().item()
+            total += labels.size(0)
+
+    val_acc = correct / total
+    print("⭐" * 20)
+    print(f"Final Validation Accuracy: {val_acc:.4f}")
+    print("⭐" * 20)
+
+def training_ViT_from_scratch():
+    BATCH_SIZE = 512
+    EPOCHS = 30
+    # tune the learning rate
+    #LR = 1e-4
+    LR = 6e-3
+
+    local_rank = int(os.environ["LOCAL_RANK"])
+    torch.cuda.set_device(local_rank)
+    DEVICE = torch.device(f"cuda:{local_rank}")
+    backbone, _, preprocess = create_model_and_transforms(
+        model_name="ViT-B-32",
+        pretrained=None, # TRAINING IT FROM SCRATCH
+        DTP_ViT=False
+    )
+
+    train_root = "/fs/scratch/PAS2836/yusenpeng_dataset/train"
+    val_root   = "/fs/scratch/PAS2836/yusenpeng_dataset/val"
+
+    train_dataset = datasets.ImageFolder(train_root, transform=preprocess)
+    val_dataset   = datasets.ImageFolder(val_root, transform=preprocess)
+
+    NUM_CLASSES = len(train_dataset.classes)
+    print("⭐" * 20)
+    print(f"Number of classes: {NUM_CLASSES}")
+    print("⭐" * 20)
+
+    model = VisionClassifier(backbone.visual, NUM_CLASSES).to(DEVICE)
+    model = DDP(model, device_ids=[DEVICE])
+
+    if FREEZE_BACKBONE:
+        for param in model.backbone.parameters():
+            param.requires_grad = False
+        print("🔒 Backbone frozen. Only classification head will be trained.")
+
+    train_sampler = DistributedSampler(train_dataset)
+    train_loader = DataLoader(
+        train_dataset,
+        sampler=train_sampler,
+        batch_size=BATCH_SIZE,
+        num_workers=8,
+        pin_memory=True,
+        persistent_workers=True
+    )
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False,
+                            num_workers=8, pin_memory=True, persistent_workers=True)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.05)
+    total_steps = len(train_loader) * EPOCHS
+    warmup_steps = int(0.05 * total_steps)  # 5% warmup
+
+    scheduler = get_cosine_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=warmup_steps,
+        num_training_steps=total_steps,
+        num_cycles=0.5  # Default: cosine from max → 0
+    )
+    scaler = GradScaler(enabled=(DEVICE.type == 'cuda'))
+
+    for epoch in trange(EPOCHS, desc="Training Epochs"):
+        model.train()
+        total_loss = 0
+        correct = 0
+
+        for images, labels in tqdm(train_loader, desc=f"Epoch {epoch} [Train]", leave=False):
+            images, labels = images.to(DEVICE), labels.to(DEVICE)
+            optimizer.zero_grad()
+
+            with autocast():
+                outputs = model(images)
+                loss = criterion(outputs, labels)
+
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            scheduler.step()  # ⬅️ Step the LR scheduler every batch
+
+            total_loss += loss.item()
+            correct += (outputs.argmax(1) == labels).sum().item()
+
+        train_acc = correct / len(train_loader.dataset)
+        if dist.get_rank() == 0:
+            print(f"✅ Epoch {epoch}: Train Loss {total_loss:.2f}, Train Acc {train_acc:.4f}")
+
+
+    print("⭐" * 20)
+    print("Finetuning complete!")
+    print("⭐" * 20)
+
+    # Final evaluation (DDP-aware)
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for images, labels in tqdm(val_loader, desc=f"[TEST]", leave=False):
+            images, labels = images.to(DEVICE), labels.to(DEVICE)
+            with autocast():
+                outputs = model(images)
+            preds = outputs.argmax(1)
+            correct += (preds == labels).sum().item()
+            total += labels.size(0)
+
+    # Aggregate across all GPUs
+    correct_tensor = torch.tensor(correct, dtype=torch.long, device=DEVICE)
+    total_tensor = torch.tensor(total, dtype=torch.long, device=DEVICE)
+    dist.all_reduce(correct_tensor, op=dist.ReduceOp.SUM)
+    dist.all_reduce(total_tensor, op=dist.ReduceOp.SUM)
+
+    if dist.get_rank() == 0:
+        val_acc = correct_tensor.item() / total_tensor.item()
+        print("⭐" * 20)
+        print(f"Final Validation Accuracy: {val_acc:.4f}")
+        print("⭐" * 20)
+
+
 def training_DTP_ViT_from_scratch():
     BATCH_SIZE = 512
     NUM_CLASSES = 1000
     EPOCHS = 30
-    LR = 1e-4
+    
+    # tune the learning rate
+    #LR = 1e-4
+    LR = 6e-3
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
     DEVICE = torch.device(f"cuda:{local_rank}")
@@ -457,7 +483,16 @@ def training_DTP_ViT_from_scratch():
                             num_workers=8, pin_memory=True, persistent_workers=True)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=LR)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.05)
+    total_steps = len(train_loader) * EPOCHS
+    warmup_steps = int(0.05 * total_steps)  # 5% warmup
+
+    scheduler = get_cosine_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=warmup_steps,
+        num_training_steps=total_steps,
+        num_cycles=0.5  # Default: cosine from max → 0
+    )
     scaler = GradScaler(enabled=(DEVICE.type == 'cuda'))
 
     for epoch in trange(EPOCHS, desc="Training Epochs"):
@@ -477,6 +512,7 @@ def training_DTP_ViT_from_scratch():
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
+            scheduler.step()  # ⬅️ Step the LR scheduler every batch
 
             total_loss += loss.item()
             correct += (logits.argmax(1) == labels).sum().item()

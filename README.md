@@ -69,9 +69,11 @@ reference: zero-shot performance of pretrained CLIPs
 | ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 10 | 🟠61.45%: overfitting |
 | ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 30 | 🟠60.98%: overfitting, train-acc > 96% |
 | <tr><td colspan="6" align="center"> train ViT from scratch </td></tr> |
-| ViT-B-32 | no initialization (ablation) | train all | 512 | 30 | 🔴**24.02%**: underfitting, train-acc = 24% |
+| ViT-B-32 | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**24.02%**: underfitting, train-acc = 24% |
+| ViT-B-32 | no initialization | **6e-3 cosine scheduler with warmup** | 512 | 30 | N/A |
 | <tr><td colspan="6" align="center"> train DTP-ViT from scratch </td></tr> |
-| 10x compression | no initialization (ablation) | finetune all | 128 | 30 | 🔴**25.43%**: underfitting, train-acc = 24% |
+| 10x compression | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**25.43%**: underfitting, train-acc = 24% |
+| 10x compression | no initialization | **6e-3 cosine scheduler with warmup** | 512 | 30 | N/A |
 | <tr><td colspan="6" align="center"> pretrained DTP-ViT </td></tr> |
 | <tr><td colspan="6" align="center"> wait for a **GOOD** pretrained DTP-ViT from CLIP training! </td></tr> |
 
