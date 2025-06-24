@@ -296,7 +296,7 @@ def training_ViT_from_scratch():
     EPOCHS = 30
     # tune the learning rate
     #LR = 1e-4
-    LR = 6e-3
+    LR = 6e-4
 
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
@@ -414,7 +414,7 @@ def training_DTP_ViT_from_scratch():
     
     # tune the learning rate
     #LR = 1e-4
-    LR = 6e-3
+    LR = 6e-4
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
     DEVICE = torch.device(f"cuda:{local_rank}")

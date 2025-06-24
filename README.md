@@ -70,10 +70,10 @@ reference: zero-shot performance of pretrained CLIPs
 | ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 30 | 🟠60.98%: overfitting, train-acc > 96% |
 | <tr><td colspan="6" align="center"> train ViT from scratch </td></tr> |
 | ViT-B-32 | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**24.02%**: underfitting, train-acc = 24% |
-| ViT-B-32 | no initialization | **6e-3 cosine scheduler with warmup** | 512 | 30 | N/A |
+| ViT-B-32 | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | N/A |
 | <tr><td colspan="6" align="center"> train DTP-ViT from scratch </td></tr> |
 | 10x compression | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**25.43%**: underfitting, train-acc = 24% |
-| 10x compression | no initialization | **6e-3 cosine scheduler with warmup** | 512 | 30 | N/A |
+| 10x compression | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | N/A |
 | <tr><td colspan="6" align="center"> pretrained DTP-ViT </td></tr> |
 | <tr><td colspan="6" align="center"> wait for a **GOOD** pretrained DTP-ViT from CLIP training! </td></tr> |
 
@@ -127,3 +127,11 @@ Visual Instruction Tuning
 4. Benchmarks
      1. LLaVA-Bench (COCO): COCO-Val-2014, 30 images, 90 questions
      2. LLaVA-Bench (In-the-Wild): curate 24 images, 60 questions
+
+running uni-test examples:
+
+![alt text](uni_test/football.png)
+
+Q: What is happening in this image?
+
+A: In the image, a football game is taking place, and a player from the team wearing the number 2 is running with the ball. He is being chased by two other players from the opposing team, who are trying to tackle him. The scene captures the intensity and excitement of the game.
