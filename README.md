@@ -66,14 +66,12 @@ reference: zero-shot performance of pretrained CLIPs
 | <tr><td colspan="6" align="center"> pretrained ViT </td></tr> |
 | ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | 10 | 🟢75.95% |
 | ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | 30 | 🟢76.81% |
-| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 10 | 🟠61.45% |
+| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 10 | 🟠61.45%: overfitting |
 | ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 30 | 🟠60.98%: overfitting, train-acc > 96% |
 | <tr><td colspan="6" align="center"> train ViT from scratch </td></tr> |
-| ViT-B-32 | **no initialization** | train all | 512 | 30 | **running** |
+| ViT-B-32 | no initialization (ablation) | train all | 512 | 30 | 🔴**24.02%**: underfitting, train-acc = 24% |
 | <tr><td colspan="6" align="center"> train DTP-ViT from scratch </td></tr> |
-| 10x compression | no initialization (ablation) | finetune all | 128 | 30 | **running** |
-| 4x compression | no initialization (ablation) | finetune all | 128 | 30 | **TBD** |
-| 2x compression | no initialization (ablation) | finetune all | 128 | 30 | **TBD** |
+| 10x compression | no initialization (ablation) | finetune all | 128 | 30 | 🔴**25.43%**: underfitting, train-acc = 24% |
 | <tr><td colspan="6" align="center"> pretrained DTP-ViT </td></tr> |
 | <tr><td colspan="6" align="center"> wait for a **GOOD** pretrained DTP-ViT from CLIP training! </td></tr> |
 
