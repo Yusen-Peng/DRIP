@@ -1,3 +1,4 @@
+from datasets import load_dataset
 from LLaVA_wrapper.llava_local.model.builder import load_pretrained_model
 from LLaVA_wrapper.llava_local.mm_utils import get_model_name_from_path
 from LLaVA_wrapper.llava_local.eval.run_llava import eval_model

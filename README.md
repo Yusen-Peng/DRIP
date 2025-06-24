@@ -78,6 +78,11 @@ reference: zero-shot performance of pretrained CLIPs
 | <tr><td colspan="6" align="center"> wait for a **GOOD** pretrained DTP-ViT from CLIP training! </td></tr> |
 
 
+not enough resources for now...
+
+![alt text](docs/busy_resources.png)
+
+
 ## TASK 2 - Contrastive Pretraining (CLIP)
 
 ### Performance Metrics
@@ -128,10 +133,27 @@ Visual Instruction Tuning
      1. LLaVA-Bench (COCO): COCO-Val-2014, 30 images, 90 questions
      2. LLaVA-Bench (In-the-Wild): curate 24 images, 60 questions
 
-running uni-test examples:
+Successfully ran unit-inference examples:
 
 ![alt text](uni_test/football.png)
 
 Q: What is happening in this image?
 
 A: In the image, a football game is taking place, and a player from the team wearing the number 2 is running with the ball. He is being chased by two other players from the opposing team, who are trying to tackle him. The scene captures the intensity and excitement of the game.
+
+
+Dependency issue💥:
+
+if I use accelerate 0.25.0:
+
+```txt
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+llava 1.2.2.post1 requires accelerate==0.21.0, but you have accelerate 0.25.0 which is incompatible.
+```
+
+if I use accelerate 0.21.0:
+
+```txt
+RuntimeError: Failed to import transformers.trainer because of the following error (look up to see its traceback):
+cannot import name 'clear_device_cache' from 'accelerate.utils.memory' (/users/PAS2912/yusenpeng/.conda/envs/Fast-CLIP/lib/python3.11/site-packages/accelerate/utils/memory.py)
+```
