@@ -61,7 +61,25 @@ reference: zero-shot performance of pretrained CLIPs
 | ------------------------- | --------------------- | ----------------- | --------------- |
 | ViT-B-32 | laion2b_s34b_b79k | ImageNet-1K | **66.53%** |
 
+From ViT ("AN IMAGE IS WORTH 16X16 WORDS") paper (it mainly focuses on **PRE-training**):
+
+*"Table 3 summarizes our training setups for our different models. We found strong **regularization** to be key when training models from **scratch** on ImageNet.*
+
 ![alt text](docs/imagenet_train_HP.png)
+
+Seems like people struggle with training ViT from scratch too:
+
+![alt text](docs/ViT_struggle.png)
+
+some variants of ViT (ViT-SAM and T2T-ViT) claims otherwise...
+
+![alt text](docs/CELossLandscapes.png)
+
+![alt text](docs/ViT_compare.png)
+
+![alt text](docs/ViT_compare_2.png)
+
+Potential improvement? (more epochs, smaller patch size, data augmentation, label smoothing, gradient clipping)
 
 | model | dataset pretrained on | freeze the backbone? | batch size | epoch | classification accuracy |
 | ----- | --------------------- | -------------------- | ---------- | ----- | ----------------------- |
@@ -72,10 +90,10 @@ reference: zero-shot performance of pretrained CLIPs
 | ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 30 | 🟠60.98%: overfitting, train-acc > 96% |
 | <tr><td colspan="6" align="center"> train ViT from scratch </td></tr> |
 | ViT-B-32 | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**24.02%**: underfitting, train-acc = 24% |
-| ViT-B-32 | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | **running** |
+| ViT-B-32 | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | 🔴**35.92%** |
 | <tr><td colspan="6" align="center"> train DTP-ViT from scratch </td></tr> |
 | 10x compression | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**25.43%**: underfitting, train-acc = 24% |
-| 10x compression | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | **24.95%**: underfitting, train-acc = 24% |
+| 10x compression | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | 🔴**24.95%**: underfitting, train-acc = 24% |
 | <tr><td colspan="6" align="center"> pretrained DTP-ViT </td></tr> |
 | <tr><td colspan="6" align="center"> wait for a **GOOD** pretrained DTP-ViT from CLIP training! </td></tr> |
 
