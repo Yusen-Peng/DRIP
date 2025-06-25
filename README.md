@@ -118,31 +118,10 @@ reference: zero-shot performance of pretrained CLIPs
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
 
-Visual Instruction Tuning
+Benchmarks
 
-1. LLaVA: **pretrained** CLIP, ViT-L/14 (vision) + Vicuna (language) -> finetune end-to-end
-2. dataset (LLaVA-Instruct-158K): 158K samples (58K conversations, 23K detailed description, 77K in complex reasoning)
-
-
-
-
-finetuning on (i) multimodal chatbot using LLaVA-Instruct-158K for **3 epochs** (ii) Science QA benchmark; **visual encoder is frozen**, update LLM and the projection layer
-
-
-
-3. Quantitative Evaluation: LLM-judge...
-4. Benchmarks
-     1. LLaVA-Bench (COCO): COCO-Val-2014, 30 images, 90 questions
-     2. LLaVA-Bench (In-the-Wild): curate 24 images, 60 questions
-
-Successfully ran a unit-inference example!
-
-![alt text](uni_test/football.png)
-
-Q: What is happening in this image?
-
-A: In the image, a football game is taking place, and a player from the team wearing the number 2 is running with the ball. He is being chased by two other players from the opposing team, who are trying to tackle him. The scene captures the intensity and excitement of the game.
-
+1. LLaVA-Bench (COCO): COCO-Val-2014, 30 images, 90 questions
+2. LLaVA-Bench (In-the-Wild): curate 24 images, 60 questions
 
 ### Pretraining - Feature Alignment
 
@@ -152,7 +131,7 @@ dataset (already prepared🔥): **558K** samples
 2. objective: image + question -> response
 3. both visual encoder and LLM are frozen, only train the projection layer
 
-Pretraining experiment (taking ~30 hours with ViT-L-14, vicuna-7B):
+Pretraining experiment (taking ~30 hours with ViT-L-14, vicuna-7B, **1 epoch**):
 
 ```T
 {'loss': 3.079, 'grad_norm': 2.3081312761181407, 'learning_rate': 0.00016603053435114505, 'epoch': 0.0}
@@ -168,4 +147,6 @@ Pretraining experiment (taking ~30 hours with ViT-L-14, vicuna-7B):
 
 ### Visual Instruction Tuning
 
-Pending
+dataset (LLaVA-Instruct-158K): 158K samples (58K conversations, 23K detailed description, 77K in complex reasoning)
+
+finetuning on (i) multimodal chatbot using LLaVA-Instruct-158K for **3 epochs** (ii) Science QA benchmark; **visual encoder is frozen**, update LLM and the projection layer
