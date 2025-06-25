@@ -7,7 +7,12 @@ import argparse
 import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from llava.model.utils import auto_upgrade
+import os
+import sys
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../.."))
+sys.path.insert(0, PROJECT_ROOT)
+from src.LLaVA_wrapper.llava_local.model.utils import auto_upgrade
 
 
 def make_delta(base_model_path, target_model_path, delta_path, hub_repo_id):

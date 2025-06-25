@@ -61,6 +61,8 @@ reference: zero-shot performance of pretrained CLIPs
 | ------------------------- | --------------------- | ----------------- | --------------- |
 | ViT-B-32 | laion2b_s34b_b79k | ImageNet-1K | **66.53%** |
 
+![alt text](docs/imagenet_train_HP.png)
+
 | model | dataset pretrained on | freeze the backbone? | batch size | epoch | classification accuracy |
 | ----- | --------------------- | -------------------- | ---------- | ----- | ----------------------- |
 | <tr><td colspan="6" align="center"> pretrained ViT </td></tr> |
@@ -70,17 +72,12 @@ reference: zero-shot performance of pretrained CLIPs
 | ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 30 | 🟠60.98%: overfitting, train-acc > 96% |
 | <tr><td colspan="6" align="center"> train ViT from scratch </td></tr> |
 | ViT-B-32 | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**24.02%**: underfitting, train-acc = 24% |
-| ViT-B-32 | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | N/A |
+| ViT-B-32 | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | **running** |
 | <tr><td colspan="6" align="center"> train DTP-ViT from scratch </td></tr> |
 | 10x compression | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**25.43%**: underfitting, train-acc = 24% |
-| 10x compression | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | N/A |
+| 10x compression | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | **24.95%**: underfitting, train-acc = 24% |
 | <tr><td colspan="6" align="center"> pretrained DTP-ViT </td></tr> |
 | <tr><td colspan="6" align="center"> wait for a **GOOD** pretrained DTP-ViT from CLIP training! </td></tr> |
-
-
-not enough resources for now...
-
-![alt text](docs/busy_resources.png)
 
 
 ## TASK 2 - Contrastive Pretraining (CLIP)
@@ -125,15 +122,20 @@ Visual Instruction Tuning
 
 1. LLaVA: **pretrained** CLIP, ViT-L/14 (vision) + Vicuna (language) -> finetune end-to-end
 2. dataset (LLaVA-Instruct-158K): 158K samples (58K conversations, 23K detailed description, 77K in complex reasoning)
-3. 2-stages training:
-     1. pretraining for feature alignment (CC-595K subset for **1 epoch**): image + question -> response; both visual encoder and LLM are frozen, only train the projection layer
-     2. finetuning on (i) multimodal chatbot using LLaVA-Instruct-158K for **3 epochs** (ii) Science QA benchmark; **visual encoder is frozen**, update LLM and the projection layer 
+
+
+
+
+finetuning on (i) multimodal chatbot using LLaVA-Instruct-158K for **3 epochs** (ii) Science QA benchmark; **visual encoder is frozen**, update LLM and the projection layer
+
+
+
 3. Quantitative Evaluation: LLM-judge...
 4. Benchmarks
      1. LLaVA-Bench (COCO): COCO-Val-2014, 30 images, 90 questions
      2. LLaVA-Bench (In-the-Wild): curate 24 images, 60 questions
 
-Successfully ran unit-inference examples:
+Successfully ran a unit-inference example!
 
 ![alt text](uni_test/football.png)
 
@@ -142,18 +144,28 @@ Q: What is happening in this image?
 A: In the image, a football game is taking place, and a player from the team wearing the number 2 is running with the ball. He is being chased by two other players from the opposing team, who are trying to tackle him. The scene captures the intensity and excitement of the game.
 
 
-Dependency issue💥:
+### Pretraining - Feature Alignment
 
-if I use accelerate 0.25.0:
+dataset (already prepared🔥): **558K** samples 
+     
+1. image-caption data (LAION-CC-SBU with BLIP captions) -> conversation data
+2. objective: image + question -> response
+3. both visual encoder and LLM are frozen, only train the projection layer
 
-```txt
-ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
-llava 1.2.2.post1 requires accelerate==0.21.0, but you have accelerate 0.25.0 which is incompatible.
+Pretraining experiment (taking ~30 hours with ViT-L-14, vicuna-7B):
+
+```T
+{'loss': 3.079, 'grad_norm': 2.3081312761181407, 'learning_rate': 0.00016603053435114505, 'epoch': 0.0}
+
+  0%|          | 87/17442 [09:53<32:10:50,  6.68s/it]
+  1%|          | 88/17442 [10:00<32:06:43,  6.66s/it]
+                                                     
+{'loss': 3.1545, 'grad_norm': 2.3411817490443343, 'learning_rate': 0.00016793893129770992, 'epoch': 0.01}
+
+  1%|          | 88/17442 [10:00<32:06:43,  6.66s/it]
+  1%|          | 89/17442 [10:06<32:28:18,  6.74s/it]
 ```
 
-if I use accelerate 0.21.0:
+### Visual Instruction Tuning
 
-```txt
-RuntimeError: Failed to import transformers.trainer because of the following error (look up to see its traceback):
-cannot import name 'clear_device_cache' from 'accelerate.utils.memory' (/users/PAS2912/yusenpeng/.conda/envs/Fast-CLIP/lib/python3.11/site-packages/accelerate/utils/memory.py)
-```
+Pending

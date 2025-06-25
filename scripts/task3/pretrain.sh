@@ -15,12 +15,13 @@ source activate Fast-CLIP
 
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
+export WANDB_DISABLED=true
 
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
 deepspeed src/LLaVA_wrapper/llava_local/train/train_mem.py \
     --deepspeed src/LLaVA_wrapper/scripts/zero2.json \
-    --model_name_or_path lmsys/vicuna-13b-v1.5 \
+    --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version plain \
     --data_path /fs/scratch/PAS2836/yusenpeng_dataset/blip_laion_cc_sbu_558k.json \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_pretrain_images \
@@ -36,7 +37,6 @@ deepspeed src/LLaVA_wrapper/llava_local/train/train_mem.py \
     --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 1 \
-    --evaluation_strategy "no" \
     --save_strategy "steps" \
     --save_steps 24000 \
     --save_total_limit 1 \
@@ -49,5 +49,4 @@ deepspeed src/LLaVA_wrapper/llava_local/train/train_mem.py \
     --model_max_length 2048 \
     --gradient_checkpointing True \
     --dataloader_num_workers 4 \
-    --lazy_preprocess True \
-    # --report_to wandb
+    --lazy_preprocess True

@@ -5,8 +5,12 @@ import os
 import sys
 
 import requests
-
-from llava.constants import LOGDIR
+import os
+import sys
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../.."))
+sys.path.insert(0, PROJECT_ROOT)
+from src.LLaVA_wrapper.llava_local.constants import LOGDIR
 
 server_error_msg = "**NETWORK ERROR DUE TO HIGH TRAFFIC. PLEASE REGENERATE OR REFRESH THIS PAGE.**"
 moderation_msg = "YOUR INPUT VIOLATES OUR CONTENT MODERATION GUIDELINES. PLEASE TRY AGAIN."

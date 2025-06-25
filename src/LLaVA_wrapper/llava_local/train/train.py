@@ -15,6 +15,10 @@
 #    limitations under the License.
 
 import os
+import sys
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../.."))
+sys.path.insert(0, PROJECT_ROOT)
 import copy
 from dataclasses import dataclass, field
 import json
@@ -27,13 +31,13 @@ import torch
 import transformers
 import tokenizers
 
-from llava.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+from src.LLaVA_wrapper.llava_local.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from torch.utils.data import Dataset
-from llava.train.llava_trainer import LLaVATrainer
+from llava_trainer import LLaVATrainer
 
-from llava import conversation as conversation_lib
-from llava.model import *
-from llava.mm_utils import tokenizer_image_token
+from src.LLaVA_wrapper.llava_local import conversation as conversation_lib
+from src.LLaVA_wrapper.llava_local.model import *
+from src.LLaVA_wrapper.llava_local.mm_utils import tokenizer_image_token
 
 from PIL import Image
 
@@ -824,6 +828,18 @@ def train(attn_implementation=None):
                 **bnb_model_from_pretrained_args
             )
         else:
+            # # FIXME: this is a workaround for the HuggingFace logic
+            # config = transformers.AutoConfig.from_pretrained(
+            #     model_args.model_name_or_path,
+            #     trust_remote_code=True,
+            #     cache_dir=training_args.cache_dir
+            # )
+            # config.model_type = "llava_llama"  # patching for HuggingFace logic
+            # config.parallelization_style = "none"  # fix for post_init crash
+
+            # print("🔥"*20)
+            # print(config)
+            # print("🔥"*20)
             model = LlavaLlamaForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
                 cache_dir=training_args.cache_dir,
@@ -834,6 +850,7 @@ def train(attn_implementation=None):
     else:
         model = transformers.LlamaForCausalLM.from_pretrained(
             model_args.model_name_or_path,
+            config=config,  # FIXME: THIS IS MANDATORY!
             cache_dir=training_args.cache_dir,
             attn_implementation=attn_implementation,
             torch_dtype=(torch.bfloat16 if training_args.bf16 else None),

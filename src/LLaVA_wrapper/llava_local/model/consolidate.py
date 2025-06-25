@@ -6,8 +6,13 @@ import argparse
 
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from llava.model import *
-from llava.model.utils import auto_upgrade
+import os
+import sys
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../.."))
+sys.path.insert(0, PROJECT_ROOT)
+from src.LLaVA_wrapper.llava_local.model import *
+from src.LLaVA_wrapper.llava_local.model.utils import auto_upgrade
 
 
 def consolidate_ckpt(src_path, dst_path):

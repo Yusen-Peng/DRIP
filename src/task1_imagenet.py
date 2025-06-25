@@ -555,7 +555,7 @@ if __name__ == "__main__":
     setup_distributed()
 
     #finetuning_ViT()
-    #training_ViT_from_scratch()
-    training_DTP_ViT_from_scratch()
+    training_ViT_from_scratch()
+    #training_DTP_ViT_from_scratch()
 
     cleanup_distributed()

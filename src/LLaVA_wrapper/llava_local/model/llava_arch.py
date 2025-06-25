@@ -17,13 +17,17 @@ from abc import ABC, abstractmethod
 
 import torch
 import torch.nn as nn
+import os
+import sys
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../.."))
+sys.path.insert(0, PROJECT_ROOT)
 
 from .multimodal_encoder.builder import build_vision_tower
 from .multimodal_projector.builder import build_vision_projector
 
-from llava.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
-
-from llava.mm_utils import get_anyres_image_grid_shape
+from src.LLaVA_wrapper.llava_local.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+from src.LLaVA_wrapper.llava_local.mm_utils import get_anyres_image_grid_shape
 
 
 class LlavaMetaModel:
