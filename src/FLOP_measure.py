@@ -9,7 +9,7 @@ from typing import Any, Callable, List, Optional, Union
 from numpy import prod
 import numpy as np
 from fvcore.nn import FlopCountAnalysis
-from open_clip_local.DTP_ViT import DTPViT, DTPViT_XL
+from open_clip_local.DTP_ViT import DTPViT
 from open_clip_local.model import CLIPVisionCfg
 from open_clip_local.transformer import VisionTransformer
 from open_clip_local.factory import create_model_and_transforms
@@ -33,7 +33,6 @@ def register_elemwise_flop_handlers(fca: FlopCountAnalysis):
         flops_av = 2 * batch_size * num_heads * seq_len * embed_dim
 
         return flops_qk + flops_av
-
 
     # Fallback for common ops
     ops = [
@@ -96,58 +95,48 @@ def throughput(images, model):
 
 # Example usage with a dummy model
 if __name__ == "__main__":
+    PATCH_SIZE = 4
+    COMPRESSION_RATE = 0.5
 
     cfg = CLIPVisionCfg(
         image_size=224,
-        patch_size=32,
+        patch_size=PATCH_SIZE,
         width=768,
         mlp_ratio=4.0,
         patch_dropout=0.1,
     )
 
-    COMPRESSION_RATE = 0.5
 
-    # model = DTPViT(
-    #     image_size=cfg.image_size,
-    #     patch_size=cfg.patch_size,
-    #     in_chans=3,
-    #     embed_dim=cfg.width,
-    #     depth=(2, 10, 0),            # originally (2, 8, 2) from the DTP paper
-    #     num_heads=cfg.width // 64,  # 768 // 64 = 12
-    #     mlp_ratio=cfg.mlp_ratio,
-    #     drop_rate=cfg.patch_dropout,
-    #     attn_drop_rate=0.1,
-    #     temp=0.5,
-    #     compression_rate=COMPRESSION_RATE,
-    #     threshold=0.5,
-    #     activation_function="gelu",
-    #     num_classes=cfg.width,
-    #     flop_measure=True,
-    # )
-
-    model = DTPViT_XL(
-        img_size=cfg.image_size,
+    model = DTPViT(
+        image_size=cfg.image_size,
         patch_size=cfg.patch_size,
         in_chans=3,
         embed_dim=cfg.width,
-        depth=(2, 10, 0),   # (2, 8, 2) from the original DTP paper
-        num_heads=cfg.width // 64,
+        depth=(2, 10, 0),            # originally (2, 8, 2) from the DTP paper
+        num_heads=cfg.width // 64,  # 768 // 64 = 12
         mlp_ratio=cfg.mlp_ratio,
         drop_rate=cfg.patch_dropout,
         attn_drop_rate=0.1,
         temp=0.5,
-        prior=COMPRESSION_RATE,
+        compression_rate=COMPRESSION_RATE,
         threshold=0.5,
+        activation_function="gelu",
         num_classes=cfg.width,
-        flop_measure=True
+        flop_measure=True,
     )
 
     # Run FLOP measurement
     calc_flops(model, img_size=224, show_details=False)
-
-    model, _, _ = create_model_and_transforms("ViT-B-32", pretrained="laion2b_s34b_b79k", DTP_ViT=False)
-
-    vit_model = model.visual
+    
+    vit_model = VisionTransformer(
+        image_size=224,
+        patch_size=PATCH_SIZE,      # or 8, or any divisor of 224
+        width=768,                  # hidden size
+        layers=12,                  # depth
+        heads=12,                   # attention heads
+        mlp_ratio=4.0,              # MLP ratio
+        output_dim=512              # projection dim, used for CLIP – can be set arbitrarily
+    )
 
     # Run FLOP measurement for ViT
     calc_flops(vit_model, img_size=224, show_details=False)

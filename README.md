@@ -41,7 +41,7 @@ embeddings ready for contrastive learning
      1. a **pretrained** ViT-B-32 is used to compute FLOPs for ViT-B-32
      2. important Adaptations from DynamicViT:
           [FLOP measurement](https://github.com/raoyongming/DynamicViT/blob/master/calc_flops.py)
-          [simulating artificial bounddaries for DynamicViT](https://github.com/raoyongming/DynamicViT/blob/master/models/dylvvit.py)
+          [simulating artificial boundaries for DynamicViT](https://github.com/raoyongming/DynamicViT/blob/master/models/dylvvit.py)
 
 2. GPU memory and training step time are averaged for each epoch
      1. memory: torch.cuda.max_memory_allocated()
@@ -116,16 +116,36 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
      1. memory: torch.cuda.max_memory_allocated()
      2. training step time: **already built-in** by CLIP!
 
-### full CC12M (only 7,647,569 - 7M USABLE samples) from img2dataset [official script](https://github.com/rom1504/img2dataset/blob/main/dataset_examples/cc12m.md)
+### FLOP analysis w.r.t Patch Size and Compression Rate
+
+![alt text](docs/FLOP_analysis_plot.png)
+
+### CC12M results
 
 | model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
-| ViT-B-32 | 2.96 | 224 | 32 | **10** | **17.14%** | 36.88% | 20.5 | 1.384 |
-| 2x comp | 2.67 | 224 | 32 | **10** | **13.23%** | 30.89% | 19.6 | 1.814 |
-| 4x comp | 1.82 | 224 | 32 | **10** | **13.34%** | 31.17% | 20.2 | 1.639 |
-| 10x comp | 1.25 | 224 | 32 | **10** | **13.38%** | 31.19% | 20.0 | 1.343 |
+| ViT-B-32 | **2.96** | 224 | 32 | 10 | **17.14%** | 36.88% | 20.5 | 1.384 |
+| 2x comp | **2.69** | 224 | 32 | 10 | **13.23%** | 30.89% | 19.6 | 1.814 |
+| 4x comp | **1.83** | 224 | 32 | 10 | **13.34%** | 31.17% | 20.2 | 1.639 |
+| 10x comp | **1.26** | 224 | 32 | 10 | **13.38%** | 31.19% | 20.0 | 1.343 |
 
-### LAION-400M (only ? - ?M USABLE samples) from img2dataset [official script](https://github.com/rom1504/img2dataset/blob/main/dataset_examples/laion400m.md)
+### LAION-400M results
+
+Examples of failure:
+
+```JSON
+{
+    "count": 10000,
+    "successes": 6594,
+    "failed_to_download": 3126,
+    "failed_to_resize": 280,
+    "status_dict": {
+        "HTTP Error 404: Not Found": 1267,
+        "HTTP Error 403: Forbidden": 573,
+        "<urlopen error [Errno -2] Name or service not known>": 433
+    }
+}
+```
 
 reference: zero-shot performance of pretrained CLIPs 
 
@@ -133,6 +153,7 @@ reference: zero-shot performance of pretrained CLIPs
 | ------------------------- | --------------------- | ----------------- | --------------- |
 | ViT-B-32 | laion400m_e31 | ImageNet-1K | **60.22%** |
 
+running!
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
 
