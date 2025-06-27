@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=COCO_CLIP
-#SBATCH --output=COCO_CLIP.txt
+#SBATCH --job-name=COCO_CLIP_ablation
+#SBATCH --output=COCO_CLIP_ablation.txt
 #SBATCH --time=15:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
@@ -20,7 +20,7 @@ cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
 #python src/train_CLIP.py
 #torchrun --nproc_per_node=4 src/train_CLIP.py
-torchrun --nproc_per_node=4 src/train_CLIP.py 2>&1 | tee full.log
+torchrun --nproc_per_node=4 src/task2_clip.py 2>&1 | tee ablation.log
 
 conda deactivate
 # End of script

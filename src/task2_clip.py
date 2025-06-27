@@ -80,9 +80,9 @@ def train_runner(
 
 def main():
     # dataset parameters - "COCO" or "LAION" or "CC12"
-    dataset_name = "CC12"
+    dataset_name = "LAION"
 
-    use_DTP = True # DTP (Dynamic Token Pruning) is not used by default
+    use_DTP = False # DTP (Dynamic Token Pruning) is not used by default
 
     # experiment with batch size
     # batch size:
@@ -103,13 +103,13 @@ def main():
         train_num_samples = None
 
     elif dataset_name == "LAION":
-        # LAION dataset (for now, it's 1M subset of LAION-400M)
+        PATH = "/fs/scratch/PAS2836/laion2b-data/"
         use_webdataset = True
-        train_data_path = "::".join(sorted(glob.glob("/fs/scratch/PAS2836/yusenpeng_dataset/laion_parquet/3M/*.tar")))
+        train_data_path = "::".join(sorted(glob.glob(f"{PATH}*.tar")))
         val_data_path = None  # no val needed for now
  
         train_num_samples = infer_successful_samples_from_stats(
-            "/fs/scratch/PAS2836/yusenpeng_dataset/laion_parquet/3M/*_stats.json"
+            f"{PATH}*_stats.json"
         )
         print("🌝"* 30)
         print(f"Total successful samples in LAION dataset: {train_num_samples}")

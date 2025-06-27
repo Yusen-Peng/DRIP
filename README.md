@@ -47,6 +47,16 @@ embeddings ready for contrastive learning
      1. memory: torch.cuda.max_memory_allocated()
      2. training step time
 
+### Preliminaries: FLOP Analysis
+
+![alt text](docs/FLOP_analysis_plot.png)
+
+### Preliminaries: Boundary Visualization
+
+Examples of **first 3** correctly classified images from ImageNet test set:
+
+Pending!
+
 ## TASK 1 - ImageNet Classification
 
 ### Performance Metrics
@@ -116,11 +126,7 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
      1. memory: torch.cuda.max_memory_allocated()
      2. training step time: **already built-in** by CLIP!
 
-### FLOP analysis w.r.t Patch Size and Compression Rate
-
-![alt text](docs/FLOP_analysis_plot.png)
-
-### CC12M results
+### CC12M (7M samples) results
 
 | model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
@@ -129,23 +135,7 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
 | 4x comp | **1.83** | 224 | 32 | 10 | **13.34%** | 31.17% | 20.2 | 1.639 |
 | 10x comp | **1.26** | 224 | 32 | 10 | **13.38%** | 31.19% | 20.0 | 1.343 |
 
-### LAION-400M results
-
-Examples of failure:
-
-```JSON
-{
-    "count": 10000,
-    "successes": 6594,
-    "failed_to_download": 3126,
-    "failed_to_resize": 280,
-    "status_dict": {
-        "HTTP Error 404: Not Found": 1267,
-        "HTTP Error 403: Forbidden": 573,
-        "<urlopen error [Errno -2] Name or service not known>": 433
-    }
-}
-```
+### LAION-2B subset (26M samples) results
 
 reference: zero-shot performance of pretrained CLIPs 
 
@@ -153,7 +143,16 @@ reference: zero-shot performance of pretrained CLIPs
 | ------------------------- | --------------------- | ----------------- | --------------- |
 | ViT-B-32 | laion400m_e31 | ImageNet-1K | **60.22%** |
 
-running!
+| model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
+| ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
+| ViT-B-32 | **2.96** | 224 | 32 | 10 | **running** | running | running | running |
+| 2x comp | **2.69** | 224 | 32 | 10 | **21.91%** | 44.86% | 17.6 | 0.393 |
+| 4x comp | **1.83** | 224 | 32 | 10 | **running** | running | running | running |
+| 10x comp | **1.26** | 224 | 32 | 10 | **running** | running | running | running |
+
+### LAION-400M (?M samples) results
+
+script running to prepare the dataset! 
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
 
