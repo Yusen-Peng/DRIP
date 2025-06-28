@@ -143,10 +143,10 @@ reference: zero-shot performance of pretrained CLIPs
 
 | model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
-| ViT-B-32 | **2.96** | 224 | 32 | 10 | **running** | running | running | running |
-| 2x comp | **2.69** | 224 | 32 | 10 | **21.91%** | 44.86% | 17.6 | 0.393 |
-| 4x comp | **1.83** | 224 | 32 | 10 | **running** | running | running | running |
-| 10x comp | **1.26** | 224 | 32 | 10 | **running** | running | running | running |
+| ViT-B-32 | 2.96 | 224 | 32 | 10 | **28.77%** | 54.34% | 20.1 | 0.429 |
+| 2x comp | **2.69** | 224 | 32 | 10 | **21.91%** | 44.86% | **17.6** | **0.393** |
+| 4x comp | **1.83** | 224 | 32 | 10 | **21.51%** | 44.25% | **17.7** | **0.391** |
+| 10x comp | **1.26** | 224 | 32 | 10 | **21.75%** | 44.14% | **17.6** | **0.395** |
 
 ### LAION-400M (?M samples) results
 
@@ -167,18 +167,14 @@ dataset (already prepared🔥): **558K** samples
 2. objective: image + question -> response
 3. both visual encoder and LLM are frozen, only train the projection layer
 
-Pretraining experiment (taking ~30 hours with ViT-L-14, vicuna-7B, **1 epoch**):
+Pretraining experiment (taking 32 hours with ViT-L-14, vicuna-7B, **1 epoch**):
 
 ```T
-{'loss': 3.079, 'grad_norm': 2.3081312761181407, 'learning_rate': 0.00016603053435114505, 'epoch': 0.0}
+{'loss': 2.1691, 'grad_norm': 0.6584503898999098, 'learning_rate': 0.0, 'epoch': 1.0}
 
-  0%|          | 87/17442 [09:53<32:10:50,  6.68s/it]
-  1%|          | 88/17442 [10:00<32:06:43,  6.66s/it]
-                                                     
-{'loss': 3.1545, 'grad_norm': 2.3411817490443343, 'learning_rate': 0.00016793893129770992, 'epoch': 0.01}
-
-  1%|          | 88/17442 [10:00<32:06:43,  6.66s/it]
-  1%|          | 89/17442 [10:06<32:28:18,  6.74s/it]
+100%|██████████| 17442/17442 [32:31:42<00:00,  5.80s/it]
+                                                        
+{'train_runtime': 117102.9646, 'train_samples_per_second': 4.766, 'train_steps_per_second': 0.149, 'train_loss': 2.112418864089378, 'epoch': 1.0}
 ```
 
 ### Visual Instruction Tuning
