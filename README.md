@@ -47,7 +47,7 @@ embeddings ready for contrastive learning
 
 ### Preliminaries: FLOP Analysis
 
-<img src="docs/FLOP_analysis_plot.png" alt="Alt Text" width="300" height="300">
+<img src="docs/FLOP_analysis_plot.png" alt="Alt Text" width="500" height="400">
 
 ### Preliminaries: Boundary Visualization
 
