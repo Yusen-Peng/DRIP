@@ -9,9 +9,7 @@
 | TokenLearner (2021) | a spatial attention module inserted in ViT to **LEARN** tokens |  
 | NativeSegViT (2025) | kmeans-like clustering to dynamically **GROUP** tokens repeatedly |
 
-According to DTP paper, both **Gumbel-Sigmoid** and **Entropy-Spike** are very suitable to adapt to other modalities:
-
-![alt text](docs/feasible.png)
+According to DTP paper, both **Gumbel-Sigmoid** and **Entropy-Spike** are very suitable to adapt to other modalities!
 
 ## DTP-ViT Architecture
 
@@ -24,7 +22,7 @@ pre-layers (# is a HP, 2 default)
      ↓
 boundary predictor (MLP)
      ↓
-downsampling 
+downsampling
      ↓
 shortened-layers (# is a HP, 10 default)
      ↓
@@ -49,7 +47,7 @@ embeddings ready for contrastive learning
 
 ### Preliminaries: FLOP Analysis
 
-![alt text](docs/FLOP_analysis_plot.png)
+<img src="docs/FLOP_analysis_plot.png" alt="Alt Text" width="300" height="300">
 
 ### Preliminaries: Boundary Visualization
 
