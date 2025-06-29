@@ -89,6 +89,27 @@ some variants of ViT (ViT-SAM and T2T-ViT) claims otherwise...
 
 Potential improvement? (more epochs, smaller patch size, data augmentation, label smoothing, gradient clipping)
 
+#### Learning Rate Search (torch-lr-finder)
+
+for ViT:
+
+```
+Learning rate search finished. See the graph with {finder_name}.plot()
+LR suggestion: steepest gradient
+Suggested LR: 3.59E-04
+```
+![alt text](/lr_finder_plot_ViT.png)
+
+for DTP-ViT:
+
+```
+Learning rate search finished. See the graph with {finder_name}.plot()
+LR suggestion: steepest gradient
+Suggested LR: 2.48E-04
+```
+
+![alt text](/lr_finder_plot_DTP_ViT.png)
+
 | model | dataset pretrained on | freeze the backbone? | batch size | epoch | classification accuracy |
 | ----- | --------------------- | -------------------- | ---------- | ----- | ----------------------- |
 | <tr><td colspan="6" align="center"> pretrained ViT </td></tr> |
