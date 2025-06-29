@@ -184,7 +184,7 @@ class VisionClassifier(nn.Module):
 
 def finetuning_ViT():
     BATCH_SIZE = 512
-    EPOCHS = 10
+    EPOCHS = 100
     LR = 1e-4
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
@@ -293,7 +293,7 @@ def finetuning_ViT():
 
 def training_ViT_from_scratch():
     BATCH_SIZE = 512
-    EPOCHS = 100
+    EPOCHS = 300
     LR = 3.59e-04 # recommended by torch LR finder
 
     local_rank = int(os.environ["LOCAL_RANK"])
@@ -549,7 +549,7 @@ if __name__ == "__main__":
     setup_distributed()
 
     #finetuning_ViT()
-    #training_ViT_from_scratch()
-    training_DTP_ViT_from_scratch()
+    training_ViT_from_scratch()
+    #training_DTP_ViT_from_scratch()
 
     cleanup_distributed()

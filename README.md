@@ -111,9 +111,11 @@ Suggested LR: 2.48E-04
 | <tr><td colspan="6" align="center"> train ViT from scratch </td></tr> |
 | ViT-B-32 | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**24.02%**: underfitting, train-acc = 24% |
 | ViT-B-32 | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | 🔴**35.92%** |
+| ViT-B-32 | no initialization | **3.59e-04 cosine scheduler with warmup** | 512 | 100 | 🔴**34.44%** |
 | <tr><td colspan="6" align="center"> train DTP-ViT from scratch </td></tr> |
 | 10x compression | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**25.43%**: underfitting, train-acc = 24% |
-| 10x compression | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | 🔴**24.95%**: underfitting, train-acc = 24% |
+| 10x compression | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | 🔴**24.95%** |
+| 10x compression | no initialization | **2.48e-04 cosine scheduler with warmup** | 512 | 100 | 🔴**30.52%** |
 | <tr><td colspan="6" align="center"> pretrained DTP-ViT </td></tr> |
 | <tr><td colspan="6" align="center"> wait for a **GOOD** pretrained DTP-ViT from CLIP training! </td></tr> |
 
