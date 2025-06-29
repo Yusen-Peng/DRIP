@@ -323,7 +323,7 @@ class DTPViT(nn.Module):
 
         # positional embeddings
 
-        # === CLS token ===
+        # CLS token
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))  # [1, 1, D]
         nn.init.normal_(self.cls_token, std=0.02)
         self.pos_embed = nn.Parameter(torch.zeros(1, 1 + self.patch_embed.num_patches, embed_dim))
@@ -342,13 +342,6 @@ class DTPViT(nn.Module):
             TransformerBlock(embed_dim, num_heads, mlp_ratio, drop_rate, attn_drop_rate, activation_function)
             for _ in range(depth[1])
         ])
-
-
-        # NOTE: no upsampling in DTP-ViT, so no post blocks!
-        # self.post_blocks = nn.Sequential(*[
-        #     TransformerBlock(embed_dim, num_heads, mlp_ratio, drop_rate, attn_drop_rate, activation_function)
-        #     for _ in range(depth[2])
-        # ])
 
         self.boundary_predictor = BoundaryPredictor(
             d_model=embed_dim,
@@ -384,13 +377,9 @@ class DTPViT(nn.Module):
         x = torch.cat((cls_tokens, x), dim=1)          # [B, 1 + N, D]
         x = x + self.pos_embed
         x = self.pos_drop(x)
-
         x = x.transpose(0, 1)
 
         x = self.pre_blocks(x)
-
-        # NOTE: remove residual connection since we are not upsampling anymore
-        # residual = x
 
         # NOTE: we simulate the boundaries, like DynamicViT folks did.
         # https://github.com/raoyongming/DynamicViT/blob/master/models/dylvvit.py
@@ -410,23 +399,11 @@ class DTPViT(nn.Module):
 
         x = downsample(hard_boundaries, x, self.null_group)
         x = self.norm(x)
-
         x = self.shorten_blocks(x)
-
-        # NOTE: no upsampling!
-        # x = upsample(hard_boundaries, x)
-        
-        # NOTE: again, remove residual connection - no upsampling
-        #x = x + residual
-        
-        # x = self.post_blocks(x) 
-
         x = x.transpose(0, 1)
         x = self.norm(x)
-
         x = x.mean(dim=1)
         logits = self.head(x)
-
         if return_loss:
             return logits, boundary_loss
         else:

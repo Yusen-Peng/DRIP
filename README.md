@@ -47,13 +47,22 @@ embeddings ready for contrastive learning
 
 ### Preliminaries: FLOP Analysis
 
-<img src="docs/FLOP_analysis_plot.png" alt="Alt Text" width="500" height="400">
+![alt text](docs/FLOP_analysis_plot.png)
 
 ### Preliminaries: Boundary Visualization
 
-Examples of **first 3** correctly classified images from ImageNet test set:
+3 example images from COCO validation set (the model is DTP-VIT-10x pretrained on LAION-27M with 10 epochs):
 
-Pending!
+Sanity check: 
+
+1. we know image: 224x224; patch size: 32
+2. thus, boundary mask: (224/32)x(224/32) = 7x7
+
+![alt text](/boundary_visualization_1.png)
+![alt text](/boundary_visualization_2.png)
+![alt text](/boundary_visualization_3.png)
+
+Note: results won't be deterministic unless we set the random seed (in this case, seed = 42)
 
 ## TASK 1 - ImageNet Classification
 
@@ -69,24 +78,6 @@ reference: zero-shot performance of pretrained CLIPs
 | ------------------------- | --------------------- | ----------------- | --------------- |
 | ViT-B-32 | laion2b_s34b_b79k | ImageNet-1K | **66.53%** |
 
-From ViT ("AN IMAGE IS WORTH 16X16 WORDS") paper (it mainly focuses on **PRE-training**):
-
-*"Table 3 summarizes our training setups for our different models. We found strong **regularization** to be key when training models from **scratch** on ImageNet.*
-
-![alt text](docs/imagenet_train_HP.png)
-
-Seems like people struggle with training ViT from scratch too:
-
-![alt text](docs/ViT_struggle.png)
-
-some variants of ViT (ViT-SAM and T2T-ViT) claims otherwise...
-
-![alt text](docs/CELossLandscapes.png)
-
-![alt text](docs/ViT_compare.png)
-
-![alt text](docs/ViT_compare_2.png)
-
 Potential improvement? (more epochs, smaller patch size, data augmentation, label smoothing, gradient clipping)
 
 #### Learning Rate Search (torch-lr-finder)
@@ -98,7 +89,7 @@ Learning rate search finished. See the graph with {finder_name}.plot()
 LR suggestion: steepest gradient
 Suggested LR: 3.59E-04
 ```
-![alt text](/lr_finder_plot_ViT.png)
+<img src="/lr_finder_plot_ViT.png" alt="Alt Text" width="500" height="400">
 
 for DTP-ViT:
 
@@ -108,7 +99,7 @@ LR suggestion: steepest gradient
 Suggested LR: 2.48E-04
 ```
 
-![alt text](/lr_finder_plot_DTP_ViT.png)
+<img src="/lr_finder_plot_DTP_ViT.png" alt="Alt Text" width="500" height="400">
 
 | model | dataset pretrained on | freeze the backbone? | batch size | epoch | classification accuracy |
 | ----- | --------------------- | -------------------- | ---------- | ----- | ----------------------- |

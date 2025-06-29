@@ -293,10 +293,8 @@ def finetuning_ViT():
 
 def training_ViT_from_scratch():
     BATCH_SIZE = 512
-    EPOCHS = 30
-    # tune the learning rate
-    #LR = 1e-4
-    LR = 6e-4
+    EPOCHS = 100
+    LR = 3.59e-04 # recommended by torch LR finder
 
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
@@ -410,15 +408,11 @@ def training_ViT_from_scratch():
 def training_DTP_ViT_from_scratch():
     BATCH_SIZE = 512
     NUM_CLASSES = 1000
-    EPOCHS = 30
-    
-    # tune the learning rate
-    #LR = 1e-4
-    LR = 6e-4
+    EPOCHS = 100
+    LR = 2.48e-04 # recommended by torch LR finder
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
     DEVICE = torch.device(f"cuda:{local_rank}")
-
 
     compression_rate = 0.1
     model_backbone = DTPViT(
@@ -555,7 +549,7 @@ if __name__ == "__main__":
     setup_distributed()
 
     #finetuning_ViT()
-    training_ViT_from_scratch()
-    #training_DTP_ViT_from_scratch()
+    #training_ViT_from_scratch()
+    training_DTP_ViT_from_scratch()
 
     cleanup_distributed()

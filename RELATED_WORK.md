@@ -209,3 +209,21 @@ Note:
 
 1. existing papers tend to pretraining from scratch: Native Segmentation Vision Transformer is **pretrained from scratch** using contrastive objective for zero-shot segmentation; TokenLearner is also pretrained on with JFT, and then finetuning/zero-shot, etc.
 2. if we really want to leverage pretrained ViT-B-32: just can't naively load all the weights! we need smart strategies to do it...
+
+From ViT ("AN IMAGE IS WORTH 16X16 WORDS") paper (it mainly focuses on **PRE-training**):
+
+*"Table 3 summarizes our training setups for our different models. We found strong **regularization** to be key when training models from **scratch** on ImageNet.*
+
+![alt text](docs/imagenet_train_HP.png)
+
+Seems like people struggle with training ViT from scratch too:
+
+![alt text](docs/ViT_struggle.png)
+
+some variants of ViT (ViT-SAM and T2T-ViT) claims otherwise...
+
+![alt text](docs/CELossLandscapes.png)
+
+![alt text](docs/ViT_compare.png)
+
+![alt text](docs/ViT_compare_2.png)

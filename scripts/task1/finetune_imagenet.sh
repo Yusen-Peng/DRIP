@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=CLIP_finetune
 #SBATCH --output=CLIP_finetune.txt
-#SBATCH --time=5:00:00
+#SBATCH --time=20:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
