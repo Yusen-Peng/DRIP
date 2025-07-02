@@ -164,7 +164,46 @@ reference: zero-shot performance of pretrained CLIPs
 
 ### LAION-400M (?M samples) results
 
-script running to prepare the dataset! 
+Status up to July 2nd, 12:30AM: **34M** samples processed (over a week)
+
+img2dataset official script - they claim *"400M image/text pairs that can be downloaded in 3.5 days"*: 
+
+```bash
+img2dataset \
+  --url_list laion400m-meta \
+  --input_format "parquet" \
+  --url_col "URL" \
+  --caption_col "TEXT" \
+  --output_format webdataset \
+  --output_folder laion400m-data \
+  --processes_count 16 \
+  --thread_count 128 \
+  --image_size 256 \
+  --save_additional_columns '["NSFW","similarity","LICENSE"]' \
+  --enable_wandb True
+```
+
+
+my script (using login node - might be the issue?):
+
+```bash
+export OPENBLAS_NUM_THREADS=1
+export OMP_NUM_THREADS=1
+
+nohup img2dataset \
+  --url_list laion400m-meta \
+  --input_format "parquet" \
+  --url_col "URL" \
+  --caption_col "TEXT" \
+  --output_format webdataset \
+  --output_folder DATASET_LAION400M \
+  --processes_count 16 \
+  --thread_count 128 \
+  --image_size 256 \
+  --enable_wandb False \
+  --log_level debug \
+  > laion400m_download.log 2>&1 &
+```
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
 
