@@ -293,8 +293,8 @@ def finetuning_ViT():
 
 def training_ViT_from_scratch():
     BATCH_SIZE = 512
-    EPOCHS = 300
-    LR = 3.59e-04 # recommended by torch LR finder
+    EPOCHS = 300  # OFFICIAL: 300 epochs
+    BASE_LR = 1.5e-3  # OFFICIAL: 3e-3; 3e-3 * (2048 / 4096) = 1.5e-3
 
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
@@ -337,7 +337,8 @@ def training_ViT_from_scratch():
                             num_workers=8, pin_memory=True, persistent_workers=True)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.05)
+    # OFFICIAL: weight decay = 0.3
+    optimizer = torch.optim.AdamW(model.parameters(), lr=BASE_LR, weight_decay=0.3)
     total_steps = len(train_loader) * EPOCHS
     warmup_steps = int(0.05 * total_steps)  # 5% warmup
 
@@ -363,9 +364,11 @@ def training_ViT_from_scratch():
                 loss = criterion(outputs, labels)
 
             scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             scaler.step(optimizer)
             scaler.update()
-            scheduler.step()  # ⬅️ Step the LR scheduler every batch
+            scheduler.step()
 
             total_loss += loss.item()
             correct += (outputs.argmax(1) == labels).sum().item()
@@ -404,12 +407,11 @@ def training_ViT_from_scratch():
         print(f"Final Validation Accuracy: {val_acc:.4f}")
         print("⭐" * 20)
 
-
 def training_DTP_ViT_from_scratch():
     BATCH_SIZE = 512
     NUM_CLASSES = 1000
     EPOCHS = 100
-    LR = 2.48e-04 # recommended by torch LR finder
+    LR = 2.48e-04  # recommended by torch LR finder
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
     DEVICE = torch.device(f"cuda:{local_rank}")

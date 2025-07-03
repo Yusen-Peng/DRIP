@@ -138,14 +138,13 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
      1. memory: torch.cuda.max_memory_allocated()
      2. training step time: **already built-in** by CLIP!
 
-### CC12M (7M samples) results
+### Log the average number of boundaries and boundary ratio (per batch)
 
-| model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
-| ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
-| ViT-B-32 | **2.96** | 224 | 32 | 10 | **17.14%** | 36.88% | 20.5 | 1.384 |
-| 2x comp | **2.69** | 224 | 32 | 10 | **13.23%** | 30.89% | 19.6 | 1.814 |
-| 4x comp | **1.83** | 224 | 32 | 10 | **13.34%** | 31.17% | 20.2 | 1.639 |
-| 10x comp | **1.26** | 224 | 32 | 10 | **13.38%** | 31.19% | 20.0 | 1.343 |
+```java
+2025-07-03,00:37:42 | INFO | Train Epoch: 0 [ 8398848/26378240 (32%)] Avg Boundaries (per batch): 7.887 Boundary Ratio: 0.161 Contrastive_loss: 4.5894 (5.5977) Boundary_loss: 0.11576 (0.15703) Loss: 4.7052 (5.7547)
+2025-07-03,00:38:21 | INFO | Train Epoch: 0 [ 8603648/26378240 (33%)] Avg Boundaries (per batch): 7.590 Boundary Ratio: 0.155 Contrastive_loss: 4.5822 (5.5741) Boundary_loss: 0.10816 (0.15590) Loss: 4.6903 (5.7300)
+2025-07-03,00:39:00 | INFO | Train Epoch: 0 [ 8808448/26378240 (33%)] Avg Boundaries (per batch): 8.219 Boundary Ratio: 0.168 Contrastive_loss: 4.5918 (5.5518) Boundary_loss: 0.11694 (0.15501) Loss: 4.7087 (5.7068)
+```
 
 ### LAION-2B subset (26M samples) results
 

@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=COCO_CLIP_ablation
-#SBATCH --output=COCO_CLIP_ablation.txt
+#SBATCH --job-name=LAION_CLIP
+#SBATCH --output=LAION_CLIP.txt
 #SBATCH --time=15:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=2

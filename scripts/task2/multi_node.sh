@@ -3,7 +3,7 @@
 #SBATCH --output=COCO_CLIP.txt
 #SBATCH --time=1:00:00
 #SBATCH --nodes=4
-#SBATCH --ntasks=4                      # One task per node
+#SBATCH --ntasks=4                      
 #SBATCH --gpus-per-node=2
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G

@@ -117,13 +117,15 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
                         dist_model_out = dist_model(images, texts)
                     model_out.update({f'dist_{k}': v for k, v in dist_model_out.items()})
 
-                # ✅ Pop BEFORE using it or calling loss(...)
                 if use_boundary:
                     boundary_loss = model_out.pop("boundary_loss")
+                    avg_boundaries_per_batch = model_out.pop("avg_boundaries_per_batch")
+                    boundary_ratio = model_out.pop("boundary_ratio")
                 else:
                     boundary_loss = 0.0
+                    avg_boundaries_per_batch = 0.0
+                    boundary_ratio = 0.0
 
-                # ✅ Now safe to call
                 losses = loss(**model_out, output_dict=True)
 
                 # add boundary loss for back propagation
@@ -167,11 +169,14 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
                 with autocast():
                     model_out = model(images, texts)
 
-                    # ✅ Pop early to avoid passing to loss()
                     if use_boundary:
                         boundary_loss = model_out.pop("boundary_loss")
+                        avg_boundaries_per_batch = model_out.pop("avg_boundaries_per_batch")
+                        boundary_ratio = model_out.pop("boundary_ratio")
                     else:
                         boundary_loss = 0.0
+                        avg_boundaries_per_batch = 0.0
+                        boundary_ratio = 0.0
 
                     # Remove logit params from model_out
                     inputs_no_accum = {
@@ -186,10 +191,8 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
                         accumulated = accum_features[key]
                         inputs[key] = torch.cat(accumulated[:j] + [model_out[key]] + accumulated[j + 1:])
 
-                    # ✅ One and only loss call
                     losses = loss(**inputs, **inputs_no_accum, output_dict=True)
 
-                    # ✅ Total loss includes boundary
                     total_loss = sum(losses.values()) + boundary_loss
                     if use_boundary:
                         losses["boundary_loss"] = boundary_loss
@@ -262,12 +265,14 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
 
             logging.info(
                 f"Train Epoch: {epoch} [{num_samples:>{sample_digits}}/{samples_per_epoch} ({percent_complete:.0f}%)] "
-                f"Data (t): {data_time_m.avg:.3f} "
-                f"Batch (t): {batch_time_m.avg:.3f}, {samples_per_second:#g}/s, {samples_per_second_per_gpu:#g}/s/gpu "
-                f"LR: {optimizer.param_groups[0]['lr']:5f} "
-                f"Logit Scale: {logit_scale_scalar:.3f} " 
-                f"Mem (alloc/resv): {gpu_memory_allocated:.1f}/{gpu_memory_reserved:.1f} GB "
-                f"Step time: {step_time:.3f}s "
+                #f"Data (t): {data_time_m.avg:.3f} "
+                #f"Batch (t): {batch_time_m.avg:.3f}, {samples_per_second:#g}/s, {samples_per_second_per_gpu:#g}/s/gpu "
+                #f"LR: {optimizer.param_groups[0]['lr']:5f} "
+                #f"Logit Scale: {logit_scale_scalar:.3f} " 
+                #f"Mem (alloc/resv): {gpu_memory_allocated:.1f}/{gpu_memory_reserved:.1f} GB "
+                #f"Step time: {step_time:.3f}s "
+                f"Avg Boundaries (per batch): {avg_boundaries_per_batch:.3f} "
+                f"Boundary Ratio: {boundary_ratio:.3f} "
                 + loss_log
             )
 

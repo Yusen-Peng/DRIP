@@ -321,10 +321,10 @@ class CLIP(nn.Module):
 
     def encode_image(self, image, normalize: bool = False):
         if self.DTP_ViT:
-            features, boundary_loss = self.visual(image, return_loss=True)
+            features, boundary_loss, avg_boundaries_per_batch, boundary_ratio = self.visual(image, return_loss=True)
             if normalize:
                 features = F.normalize(features, dim=-1)
-            return features, boundary_loss
+            return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
         else:
             features = self.visual(image)
             return F.normalize(features, dim=-1) if normalize else features
@@ -349,7 +349,7 @@ class CLIP(nn.Module):
     def get_logits(self, image, text):
         if self.DTP_ViT:
             # DTP ViT returns features and boundary loss
-            image_features, boundary_loss = self.encode_image(image, normalize=True)
+            image_features, boundary_loss, avg_boundaries_per_batch, boundary_ratio = self.encode_image(image, normalize=True)
         else:
             image_features = self.encode_image(image, normalize=True)
         text_features = self.encode_text(text, normalize=True)
@@ -360,7 +360,7 @@ class CLIP(nn.Module):
 
         if self.DTP_ViT:
             # return image features and boundary loss for DTP ViT
-            return image_logits, text_logits, boundary_loss
+            return image_logits, text_logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
         else: 
             return image_logits, text_logits
 
@@ -473,7 +473,7 @@ class CLIP(nn.Module):
             text: Optional[torch.Tensor] = None,
     ):
         if self.DTP_ViT:
-            image_features, boundary_loss = self.encode_image(image, normalize=True) if image is not None else (None, None)
+            image_features, boundary_loss, avg_boundaries_per_batch, boundary_ratio = self.encode_image(image, normalize=True) if image is not None else (None, None)
         else:
             image_features = self.encode_image(image, normalize=True) if image is not None else None
         text_features = self.encode_text(text, normalize=True) if text is not None else None
@@ -488,6 +488,8 @@ class CLIP(nn.Module):
                 out_dict['logit_bias'] = self.logit_bias
             if self.DTP_ViT:
                 out_dict['boundary_loss'] = boundary_loss
+                out_dict['avg_boundaries_per_batch'] = avg_boundaries_per_batch
+                out_dict['boundary_ratio'] = boundary_ratio
             return out_dict
 
         if self.logit_bias is not None:

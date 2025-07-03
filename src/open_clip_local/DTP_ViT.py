@@ -53,7 +53,6 @@ def common(boundaries, upsample=False):
 
     return foo
 
-
 def downsample(boundaries, hidden, null_group):
     """
         Downsampling
@@ -83,26 +82,6 @@ def downsample(boundaries, hidden, null_group):
         )
 
         return shortened_hidden
-
-def upsample(boundaries, shortened_hidden):
-    """
-        Upsampling
-
-        - The first element of boundaries tensor is always 0 and doesn't matter
-        - 1 starts a new group
-        - i-th group can be upsampled only to the tokens from (i+1)-th group, otherwise there's a leak
-
-        Input:
-            boundaries: B x L
-            shortened_hidden: S x B x D
-        Output:
-            upsampled_hidden: L x B x D
-    """
-
-    foo = common(boundaries, upsample=True)  # B x L x S
-    bar = final(foo, upsample=True)  # B x L x S
-
-    return torch.einsum('sbd,bls->lbd', shortened_hidden, bar)
 
 class BoundaryPredictor(nn.Module):
     def __init__(self, d_model, d_inner, activation_function,
@@ -165,36 +144,14 @@ class BoundaryPredictor(nn.Module):
         elif self.bp_type in ['gumbel']:
             assert gt is None
             total_count = preds.size(-1)
-            target_count = torch.round(preds.sum(dim=-1))  # Convert to integer-valued targets
+            target_count = torch.round(preds.sum(dim=-1))
             binomial = torch.distributions.binomial.Binomial(
                 total_count=total_count,
-                probs=torch.tensor([self.prior], device=preds.device)
+                probs = torch.tensor(self.prior, device=preds.device)
             )
             loss_boundaries = -binomial.log_prob(target_count).mean() / total_count
             return loss_boundaries
 
-    def calc_stats(self, preds, gt):
-        # B x T
-        preds, gt = preds.bool(), gt.bool()
-        TP = ((preds == gt) & preds).sum().item()
-        FP = ((preds != gt) & preds).sum().item()
-        FN = ((preds != gt) & (~preds)).sum().item()
-
-        acc = (preds == gt).sum().item() / gt.numel()
-
-        if TP == 0:
-            precision, recall = 0, 0
-        else:
-            precision = TP / (TP + FP)
-            recall = TP / (TP + FN)
-
-        stats = {
-            'acc': acc,
-            'precision': precision,
-            'recall': recall
-        }
-
-        return stats
 
 class PatchEmbedding(nn.Module):
     def __init__(self, image_size: int, patch_size: int, in_chans: int = 3, embed_dim: int = 768):
@@ -329,7 +286,6 @@ class DTPViT(nn.Module):
         self.pos_embed = nn.Parameter(torch.zeros(1, 1 + self.patch_embed.num_patches, embed_dim))
         nn.init.trunc_normal_(self.pos_embed, std=0.02)
 
-
         # dropout after positional embedding
         self.pos_drop = nn.Dropout(p=drop_rate)
 
@@ -370,41 +326,59 @@ class DTPViT(nn.Module):
 
 
     def forward(self, x: torch.Tensor, return_loss=False):
-        # Input: [B, 3, H, W]
+        # input shape: [B, 3, H, W]
         B = x.size(0)
-        x = self.patch_embed(x)
-        cls_tokens = self.cls_token.expand(B, -1, -1)  # [B, 1, D]
-        x = torch.cat((cls_tokens, x), dim=1)          # [B, 1 + N, D]
-        x = x + self.pos_embed
-        x = self.pos_drop(x)
-        x = x.transpose(0, 1)
 
-        x = self.pre_blocks(x)
+        x = self.patch_embed(x)                             # [B, N, D]
+        cls_tokens = self.cls_token.expand(B, -1, -1)       # [B, 1, D]
+        x = torch.cat((cls_tokens, x), dim=1)               # [B, 1 + N, D]
+        x = x + self.pos_embed                              # [B, 1 + N, D]
+        x = self.pos_drop(x)                                # [B, 1 + N, D]
+        x = x.transpose(0, 1)                               # [1 + N, B, D]
 
-        # NOTE: we simulate the boundaries, like DynamicViT folks did.
-        # https://github.com/raoyongming/DynamicViT/blob/master/models/dylvvit.py
+        x = self.pre_blocks(x)                              # [1 + N, B, D]
+
+        # separate CLS token and patch tokens
+        cls_token, patch_tokens = x[0:1], x[1:]             # [1, B, D], [N, B, D]
+
+        # predict boundaries
+        avg_boundaries_per_batch = 0
+        boundary_ratio = 0
         if self.flop_measure:
             print("=" * 80)
             print("[INFO] FLOP measurement mode: simulating fake boundaries to satisfy the compression rate.")
             print("=" * 80)
-            L = x.shape[0]
+            L = patch_tokens.shape[0]
             interval = max(1, int(1 / self.compression_rate))
             hard_boundaries = torch.zeros(B, L, device=x.device)
             hard_boundaries[:, ::interval] = 1
             soft_boundaries = hard_boundaries.clone()
         else:
-            soft_boundaries, hard_boundaries = self.boundary_predictor(x)
-        
-        boundary_loss = self.boundary_predictor.calc_loss(soft_boundaries, gt=None)
+            soft_boundaries, hard_boundaries = self.boundary_predictor(patch_tokens)
 
-        x = downsample(hard_boundaries, x, self.null_group)
-        x = self.norm(x)
-        x = self.shorten_blocks(x)
-        x = x.transpose(0, 1)
-        x = self.norm(x)
-        x = x.mean(dim=1)
-        logits = self.head(x)
-        if return_loss:
-            return logits, boundary_loss
+            # [B] → count per sample
+            num_boundaries = hard_boundaries.sum(dim=1)
+            avg_boundaries_per_batch = num_boundaries.float().mean()
+            seq_len = hard_boundaries.shape[1]
+            boundary_ratio = avg_boundaries_per_batch / seq_len
+
+        # downsample patch tokens
+        patch_tokens = downsample(hard_boundaries, patch_tokens, self.null_group)
+        patch_tokens = patch_tokens[1:]  # remove null group at index 0 → [S, B, D]
+
+        # reattach CLS token
+        x = torch.cat([cls_token, patch_tokens], dim=0)     # [1 + S, B, D]
+
+        x = self.norm(x)                                     # [1 + S, B, D]
+        x = self.shorten_blocks(x)                           # [1 + S, B, D]
+
+        x = x.transpose(0, 1)                               # [B, 1 + S, D]
+        x = self.norm(x)                                    # [B, 1 + S, D]
+        x = x.mean(dim=1)                                   # [B, D]
+        logits = self.head(x)                               # [B, num_classes]
+
+        if return_loss and not self.flop_measure:
+            boundary_loss = self.boundary_predictor.calc_loss(soft_boundaries, gt=None)
+            return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
         else:
             return logits
