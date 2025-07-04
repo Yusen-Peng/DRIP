@@ -117,41 +117,36 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
      1. memory: torch.cuda.max_memory_allocated()
      2. training step time: **already built-in** by CLIP!
 
-### Log the average number of boundaries and boundary ratio (per batch)
-
-Q: is the compression rate ACTUALLY being enforced?
+### the compression rate is NOT being enforced (or at least controlled)
 
 1. For compression rate = 0.1 at the end of last epoch:
 
 ```java
-2025-07-03,13:52:12 | INFO | Train Epoch: 9 [26011648/26378240 (99%)] Avg Boundaries (per batch): 8.949 Boundary Ratio: 0.183 Contrastive_loss: 0.79265 (0.83532) Boundary_loss: 0.090794 (0.086892) Loss: 0.88344 (0.92221)
-2025-07-03,13:52:49 | INFO | Train Epoch: 9 [26216448/26378240 (99%)] Avg Boundaries (per batch): 8.777 Boundary Ratio: 0.179 Contrastive_loss: 0.80602 (0.83509) Boundary_loss: 0.084773 (0.086876) Loss: 0.89080 (0.92197)
 2025-07-03,13:53:18 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 9.002 Boundary Ratio: 0.184 Contrastive_loss: 0.80628 (0.83487) Boundary_loss: 0.091194 (0.086909) Loss: 0.89748 (0.92178)
 ```
 
 2. For compression rate = 0.25 at the end of last epoch:
 
 ```java
-coming soon!
+2025-07-04,09:57:56 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 8.723 Boundary Ratio: 0.178 Contrastive_loss: 0.83096 (0.84051) Boundary_loss: 0.071207 (0.073377) Loss: 0.90217 (0.91388)
 ```
 
 3. For compression rate = 0.5 at the end of last epoch:
 
 ```java
-coming soon!
-
+2025-07-04,10:51:05 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 9.148 Boundary Ratio: 0.187 Contrastive_loss: 0.87118 (0.84179) Boundary_loss: 0.27349 (0.26606) Loss: 1.1447 (1.1079)
 ```
 
 4. ablation study: For compression rate = 1 (don't compress?!) at the end of last epoch:
 
 ```java
-coming soon!
+2025-07-04,11:31:06 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 8.242 Boundary Ratio: 0.168 Contrastive_loss: 0.82972 (0.83114) Boundary_loss: 12.829 (12.800) Loss: 13.659 (13.631)
 ```
 
 5. ablation study: For compression rate = 0.02 (compress by 50x?!) at the end of last epoch:
 
 ```java
-coming soon!
+2025-07-04,10:56:32 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 9.482 Boundary Ratio: 0.194 Contrastive_loss: 0.79891 (0.84947) Boundary_loss: 0.34902 (0.34504) Loss: 1.1479 (1.1945)
 ```
 
 ### LAION-2B subset (26M samples) results
