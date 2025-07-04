@@ -117,36 +117,46 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
      1. memory: torch.cuda.max_memory_allocated()
      2. training step time: **already built-in** by CLIP!
 
-### the compression rate is NOT being enforced (or at least controlled)
+### a critical bug (FIXED!)
 
-1. For compression rate = 0.1 at the end of last epoch:
+Previously, in the DTP-ViT forward function, I passed in **soft boundaries** for loss calculation:
 
-```java
-2025-07-03,13:53:18 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 9.002 Boundary Ratio: 0.184 Contrastive_loss: 0.80628 (0.83487) Boundary_loss: 0.091194 (0.086909) Loss: 0.89748 (0.92178)
+```python
+if return_loss and not self.flop_measure:
+     boundary_loss = self.boundary_predictor.calc_loss(soft_boundaries, gt=None)
+     return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
 ```
 
-2. For compression rate = 0.25 at the end of last epoch:
+According to DTP official implementation, it should've been **hard boundaries**:
 
-```java
-2025-07-04,09:57:56 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 8.723 Boundary Ratio: 0.178 Contrastive_loss: 0.83096 (0.84051) Boundary_loss: 0.071207 (0.073377) Loss: 0.90217 (0.91388)
+```python
+if return_loss and not self.flop_measure:
+     # ISSUE FIXED: use hard boundaries instead of soft boundaries 
+     boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries, gt=None)
+     return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
 ```
 
-3. For compression rate = 0.5 at the end of last epoch:
+after this fix, the boundary ratio starts making sense:
+
+For compression rate = **0.5** (2x compression):
 
 ```java
-2025-07-04,10:51:05 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 9.148 Boundary Ratio: 0.187 Contrastive_loss: 0.87118 (0.84179) Boundary_loss: 0.27349 (0.26606) Loss: 1.1447 (1.1079)
+2025-07-04,13:40:34 | INFO | Train Epoch: 0 [ 5531648/26378240 (21%)] Avg Boundaries (per batch): 24.604 Boundary Ratio: 0.502 Contrastive_loss: 4.8873 (5.8698) Boundary_loss: 0.049989 (0.051957) Loss: 4.9373 (5.9217)
+2025-07-04,13:41:16 | INFO | Train Epoch: 0 [ 5736448/26378240 (22%)] Avg Boundaries (per batch): 24.449 Boundary Ratio: 0.499 Contrastive_loss: 4.9326 (5.8375) Boundary_loss: 0.048928 (0.051853) Loss: 4.9815 (5.8893)
 ```
 
-4. ablation study: For compression rate = 1 (don't compress?!) at the end of last epoch:
+For compression rate = **0.25** (4x compression):
 
 ```java
-2025-07-04,11:31:06 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 8.242 Boundary Ratio: 0.168 Contrastive_loss: 0.82972 (0.83114) Boundary_loss: 12.829 (12.800) Loss: 13.659 (13.631)
+2025-07-04,13:57:17 | INFO | Train Epoch: 0 [  616448/26378240 (2%)] Avg Boundaries (per batch): 12.129 Boundary Ratio: 0.248 Contrastive_loss: 6.9297 (7.2931) Boundary_loss: 0.051872 (0.075562) Loss: 6.9816 (7.3686)
+2025-07-04,13:57:55 | INFO | Train Epoch: 0 [  821248/26378240 (3%)] Avg Boundaries (per batch): 12.443 Boundary Ratio: 0.254 Contrastive_loss: 6.7113 (7.1767) Boundary_loss: 0.051431 (0.070736) Loss: 6.7628 (7.2475)
 ```
 
-5. ablation study: For compression rate = 0.02 (compress by 50x?!) at the end of last epoch:
+For compression rate = **0.1** (10x compression):
 
 ```java
-2025-07-04,10:56:32 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 9.482 Boundary Ratio: 0.194 Contrastive_loss: 0.79891 (0.84947) Boundary_loss: 0.34902 (0.34504) Loss: 1.1479 (1.1945)
+2025-07-04,13:56:09 | INFO | Train Epoch: 0 [ 2664448/26378240 (10%)] Avg Boundaries (per batch): 4.498 Boundary Ratio: 0.092 Contrastive_loss: 5.9756 (6.5334) Boundary_loss: 0.042732 (0.072620) Loss: 6.0183 (6.6060)
+2025-07-04,13:56:45 | INFO | Train Epoch: 0 [ 2869248/26378240 (11%)] Avg Boundaries (per batch): 4.732 Boundary Ratio: 0.097 Contrastive_loss: 5.8764 (6.4896) Boundary_loss: 0.042557 (0.070616) Loss: 5.9190 (6.5602)
 ```
 
 ### LAION-2B subset (26M samples) results

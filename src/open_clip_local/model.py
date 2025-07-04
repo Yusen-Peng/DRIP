@@ -149,7 +149,7 @@ def _build_vision_tower(
             act_layer = partial(act_layer, **vision_cfg.act_kwargs)
 
         if DTP_ViT:
-            compression_rate = 0.02
+            compression_rate = 0.25
             visual = DTPViT(
                 image_size=vision_cfg.image_size,
                 patch_size=vision_cfg.patch_size,
@@ -166,22 +166,6 @@ def _build_vision_tower(
                 activation_function="gelu",
                 num_classes=embed_dim,
             )
-
-            # visual = DTPViT_XL(
-            #     img_size=vision_cfg.image_size,
-            #     patch_size=vision_cfg.patch_size,
-            #     in_chans=3,
-            #     embed_dim=vision_cfg.width,
-            #     depth=(2, 10, 0),   # (2, 8, 2) from the original DTP paper
-            #     num_heads=vision_heads,
-            #     mlp_ratio=vision_cfg.mlp_ratio,
-            #     drop_rate=vision_cfg.patch_dropout,
-            #     attn_drop_rate=0.1,
-            #     temp=0.5,
-            #     prior=compression_rate,
-            #     threshold=0.5,
-            #     num_classes=embed_dim,
-            # )
 
         else:
             visual = VisionTransformer(

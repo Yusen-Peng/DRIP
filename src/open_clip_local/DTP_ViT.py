@@ -113,6 +113,10 @@ class BoundaryPredictor(nn.Module):
         self.loss = nn.BCEWithLogitsLoss()
 
     def forward(self, hidden):
+        """
+            This function is 100% copied and pasted without any changes
+            from https://github.com/PiotrNawrot/dynamic-pooling/blob/main/hourglass.py
+        """
         # Hidden is of shape [seq_len x bs x d_model]
         # Boundaries we return are [bs x seq_len]
         boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
@@ -137,6 +141,10 @@ class BoundaryPredictor(nn.Module):
         return soft_boundaries, hard_boundaries
 
     def calc_loss(self, preds, gt):
+        """
+            This function is 100% copied and pasted without any changes
+            from https://github.com/PiotrNawrot/dynamic-pooling/blob/main/hourglass.py
+        """
         # B x T
         if self.bp_type in ['entropy', 'unigram']:
             assert preds is not None and gt is not None
@@ -144,14 +152,13 @@ class BoundaryPredictor(nn.Module):
         elif self.bp_type in ['gumbel']:
             assert gt is None
             total_count = preds.size(-1)
-            target_count = torch.round(preds.sum(dim=-1))
+            target_count = preds.sum(dim=-1)
             binomial = torch.distributions.binomial.Binomial(
                 total_count=total_count,
-                probs = torch.tensor(self.prior, device=preds.device)
+                probs=torch.Tensor([self.prior]).to(preds.device)
             )
             loss_boundaries = -binomial.log_prob(target_count).mean() / total_count
             return loss_boundaries
-
 
 class PatchEmbedding(nn.Module):
     def __init__(self, image_size: int, patch_size: int, in_chans: int = 3, embed_dim: int = 768):
@@ -378,7 +385,8 @@ class DTPViT(nn.Module):
         logits = self.head(x)                               # [B, num_classes]
 
         if return_loss and not self.flop_measure:
-            boundary_loss = self.boundary_predictor.calc_loss(soft_boundaries, gt=None)
+            # ISSUE FIXED: use hard boundaries instead of soft boundaries 
+            boundary_loss = self.boundary_predictor.calc_loss(preds=hard_boundaries, gt=None)
             return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
         else:
             return logits

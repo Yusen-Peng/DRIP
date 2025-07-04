@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=LAION_CLIP_MOST
-#SBATCH --output=LAION_CLIP_MOST.txt
+#SBATCH --job-name=LAION_CLIP_4X_fixed
+#SBATCH --output=LAION_CLIP_4X_fixed.txt
 #SBATCH --time=15:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
