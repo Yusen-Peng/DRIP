@@ -80,12 +80,6 @@ squeue -p nextgen -o "%.18i %.9P %.8j %.8u %.2t %.10M %.6D %R"
 unzip filename.zip -x "__MACOSX/*" "*.DS_Store"
 ```
 
-## check img2dataset process
-
-```bash
-ps aux | grep img2dataset
-```
-
 ## Environment Setup
 
 ```bash

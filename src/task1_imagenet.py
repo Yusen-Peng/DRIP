@@ -410,8 +410,8 @@ def training_ViT_from_scratch():
 def training_DTP_ViT_from_scratch():
     BATCH_SIZE = 512
     NUM_CLASSES = 1000
-    EPOCHS = 100
-    LR = 2.48e-04  # recommended by torch LR finder
+    EPOCHS = 300
+    LR = 1.5e-3  # recommended by torch LR finder
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
     DEVICE = torch.device(f"cuda:{local_rank}")
@@ -501,7 +501,7 @@ def training_DTP_ViT_from_scratch():
             optimizer.zero_grad()
 
             with autocast():
-                logits, boundary_loss = model(images, return_loss=True)
+                logits, boundary_loss, _, _ = model(images, return_loss=True)
                 ce_loss = criterion(logits, labels)
                 loss = ce_loss + boundary_loss
 
@@ -551,7 +551,7 @@ if __name__ == "__main__":
     setup_distributed()
 
     #finetuning_ViT()
-    training_ViT_from_scratch()
-    #training_DTP_ViT_from_scratch()
+    #training_ViT_from_scratch()
+    training_DTP_ViT_from_scratch()
 
     cleanup_distributed()

@@ -236,3 +236,22 @@ some variants of ViT (ViT-SAM and T2T-ViT) claims otherwise...
 | 2x comp | **2.69** | 224 | 32 | 10 | **13.23%** | 30.89% | 19.6 | 1.814 |
 | 4x comp | **1.83** | 224 | 32 | 10 | **13.34%** | 31.17% | 20.2 | 1.639 |
 | 10x comp | **1.26** | 224 | 32 | 10 | **13.38%** | 31.19% | 20.0 | 1.343 |
+
+#### Learning Rate Search (torch-lr-finder)
+
+for ViT:
+
+```
+Learning rate search finished. See the graph with {finder_name}.plot()
+LR suggestion: steepest gradient
+Suggested LR: 3.59E-04
+```
+<img src="/lr_finder_plot_ViT.png" alt="Alt Text" width="500" height="400">
+
+for DTP-ViT:
+
+```
+Learning rate search finished. See the graph with {finder_name}.plot()
+LR suggestion: steepest gradient
+Suggested LR: 2.48E-04
+```

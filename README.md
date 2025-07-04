@@ -78,27 +78,6 @@ reference: zero-shot performance of pretrained CLIPs
 | ------------------------- | --------------------- | ----------------- | --------------- |
 | ViT-B-32 | laion2b_s34b_b79k | ImageNet-1K | **66.53%** |
 
-Potential improvement? (more epochs, smaller patch size, data augmentation, label smoothing, gradient clipping)
-
-#### Learning Rate Search (torch-lr-finder)
-
-for ViT:
-
-```
-Learning rate search finished. See the graph with {finder_name}.plot()
-LR suggestion: steepest gradient
-Suggested LR: 3.59E-04
-```
-<img src="/lr_finder_plot_ViT.png" alt="Alt Text" width="500" height="400">
-
-for DTP-ViT:
-
-```
-Learning rate search finished. See the graph with {finder_name}.plot()
-LR suggestion: steepest gradient
-Suggested LR: 2.48E-04
-```
-
 <img src="/lr_finder_plot_DTP_ViT.png" alt="Alt Text" width="500" height="400">
 
 | model | dataset pretrained on | freeze the backbone? | batch size | epoch | classification accuracy |
@@ -140,10 +119,39 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
 
 ### Log the average number of boundaries and boundary ratio (per batch)
 
+Q: is the compression rate ACTUALLY being enforced?
+
+1. For compression rate = 0.1 at the end of last epoch:
+
 ```java
-2025-07-03,00:37:42 | INFO | Train Epoch: 0 [ 8398848/26378240 (32%)] Avg Boundaries (per batch): 7.887 Boundary Ratio: 0.161 Contrastive_loss: 4.5894 (5.5977) Boundary_loss: 0.11576 (0.15703) Loss: 4.7052 (5.7547)
-2025-07-03,00:38:21 | INFO | Train Epoch: 0 [ 8603648/26378240 (33%)] Avg Boundaries (per batch): 7.590 Boundary Ratio: 0.155 Contrastive_loss: 4.5822 (5.5741) Boundary_loss: 0.10816 (0.15590) Loss: 4.6903 (5.7300)
-2025-07-03,00:39:00 | INFO | Train Epoch: 0 [ 8808448/26378240 (33%)] Avg Boundaries (per batch): 8.219 Boundary Ratio: 0.168 Contrastive_loss: 4.5918 (5.5518) Boundary_loss: 0.11694 (0.15501) Loss: 4.7087 (5.7068)
+2025-07-03,13:52:12 | INFO | Train Epoch: 9 [26011648/26378240 (99%)] Avg Boundaries (per batch): 8.949 Boundary Ratio: 0.183 Contrastive_loss: 0.79265 (0.83532) Boundary_loss: 0.090794 (0.086892) Loss: 0.88344 (0.92221)
+2025-07-03,13:52:49 | INFO | Train Epoch: 9 [26216448/26378240 (99%)] Avg Boundaries (per batch): 8.777 Boundary Ratio: 0.179 Contrastive_loss: 0.80602 (0.83509) Boundary_loss: 0.084773 (0.086876) Loss: 0.89080 (0.92197)
+2025-07-03,13:53:18 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 9.002 Boundary Ratio: 0.184 Contrastive_loss: 0.80628 (0.83487) Boundary_loss: 0.091194 (0.086909) Loss: 0.89748 (0.92178)
+```
+
+2. For compression rate = 0.25 at the end of last epoch:
+
+```java
+coming soon!
+```
+
+3. For compression rate = 0.5 at the end of last epoch:
+
+```java
+coming soon!
+
+```
+
+4. ablation study: For compression rate = 1 (don't compress?!) at the end of last epoch:
+
+```java
+coming soon!
+```
+
+5. ablation study: For compression rate = 0.02 (compress by 50x?!) at the end of last epoch:
+
+```java
+coming soon!
 ```
 
 ### LAION-2B subset (26M samples) results
@@ -159,7 +167,7 @@ reference: zero-shot performance of pretrained CLIPs
 | ViT-B-32 | 2.96 | 224 | 32 | 10 | **28.77%** | 54.34% | 20.1 | 0.429 |
 | 2x comp | **2.69** | 224 | 32 | 10 | **21.91%** | 44.86% | **17.6** | **0.393** |
 | 4x comp | **1.83** | 224 | 32 | 10 | **21.51%** | 44.25% | **17.7** | **0.391** |
-| 10x comp | **1.26** | 224 | 32 | 10 | **21.75%** | 44.14% | **17.6** | **0.395** |
+| 10x comp | **1.26** | 224 | 32 | 10 | **21.62%** | 44.64% | **17.6** | **0.395** |
 
 ### LAION-400M (?M samples) results
 
