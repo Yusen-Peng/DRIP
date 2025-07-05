@@ -298,7 +298,7 @@ def finetuning_ViT():
 def training_ViT_from_scratch():
     BATCH_SIZE = 512
     EPOCHS = 300  # OFFICIAL: 300 epochs
-    BASE_LR = 1.5e-3  # OFFICIAL: 3e-3; 3e-3 * (2048 / 4096) = 1.5e-3
+    BASE_LR = 3e-3  # OFFICIAL: 3e-3
 
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)

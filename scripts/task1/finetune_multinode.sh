@@ -9,7 +9,7 @@
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
 
-module load miniconda3
+module load miniconda3/24.1.2-py310
 conda activate Fast-CLIP
 source activate Fast-CLIP
 
