@@ -25,9 +25,13 @@ np.random.seed(42)
 random.seed(42)
 torch.backends.cudnn.deterministic = True
 
+# def setup_distributed():
+#     dist.init_process_group(backend="nccl")
+#     torch.cuda.set_device(dist.get_rank() % torch.cuda.device_count())
+
 def setup_distributed():
-    dist.init_process_group(backend="nccl")  # assumes GPU
-    torch.cuda.set_device(dist.get_rank() % torch.cuda.device_count())
+    dist.init_process_group(backend="nccl", init_method="env://")
+    torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
 
 def cleanup_distributed():
     dist.destroy_process_group()
@@ -551,7 +555,8 @@ if __name__ == "__main__":
     setup_distributed()
 
     #finetuning_ViT()
-    #training_ViT_from_scratch()
-    training_DTP_ViT_from_scratch()
+    training_ViT_from_scratch()
+    #training_DTP_ViT_from_scratch()
 
+    dist.barrier()
     cleanup_distributed()

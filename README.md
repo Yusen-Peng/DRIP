@@ -88,9 +88,7 @@ reference: zero-shot performance of pretrained CLIPs
 | ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 10 | 🟠61.45%: overfitting |
 | ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 30 | 🟠60.98%: overfitting, train-acc > 96% |
 | <tr><td colspan="6" align="center"> train ViT from scratch </td></tr> |
-| ViT-B-32 | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**24.02%**: underfitting, train-acc = 24% |
-| ViT-B-32 | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | 🔴**35.92%** |
-| ViT-B-32 | no initialization | **3.59e-04 cosine scheduler with warmup** | 512 | 100 | 🔴**34.44%** |
+| ViT-B-32 | no initialization | **ViT offical HPs except half batch size, half LR** | 512x4=2048 | 300 | 🟠50.26% |
 | <tr><td colspan="6" align="center"> train DTP-ViT from scratch </td></tr> |
 | 10x compression | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**25.43%**: underfitting, train-acc = 24% |
 | 10x compression | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | 🔴**24.95%** |
@@ -136,30 +134,25 @@ if return_loss and not self.flop_measure:
      return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
 ```
 
-after this fix, the boundary ratio starts making sense:
-
 For compression rate = **0.5** (2x compression):
 
 ```java
-2025-07-04,13:40:34 | INFO | Train Epoch: 0 [ 5531648/26378240 (21%)] Avg Boundaries (per batch): 24.604 Boundary Ratio: 0.502 Contrastive_loss: 4.8873 (5.8698) Boundary_loss: 0.049989 (0.051957) Loss: 4.9373 (5.9217)
-2025-07-04,13:41:16 | INFO | Train Epoch: 0 [ 5736448/26378240 (22%)] Avg Boundaries (per batch): 24.449 Boundary Ratio: 0.499 Contrastive_loss: 4.9326 (5.8375) Boundary_loss: 0.048928 (0.051853) Loss: 4.9815 (5.8893)
+2025-07-05,03:38:43 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 24.375 Boundary Ratio: 0.497 Contrastive_loss: 0.65619 (0.66083) Boundary_loss: 0.044992 (0.045003) Loss: 0.70118 (0.70583)
 ```
 
 For compression rate = **0.25** (4x compression):
 
 ```java
-2025-07-04,13:57:17 | INFO | Train Epoch: 0 [  616448/26378240 (2%)] Avg Boundaries (per batch): 12.129 Boundary Ratio: 0.248 Contrastive_loss: 6.9297 (7.2931) Boundary_loss: 0.051872 (0.075562) Loss: 6.9816 (7.3686)
-2025-07-04,13:57:55 | INFO | Train Epoch: 0 [  821248/26378240 (3%)] Avg Boundaries (per batch): 12.443 Boundary Ratio: 0.254 Contrastive_loss: 6.7113 (7.1767) Boundary_loss: 0.051431 (0.070736) Loss: 6.7628 (7.2475)
+2025-07-05,03:01:20 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 11.934 Boundary Ratio: 0.244 Contrastive_loss: 0.77482 (0.78547) Boundary_loss: 0.041668 (0.041678) Loss: 0.81649 (0.82715)
 ```
 
 For compression rate = **0.1** (10x compression):
 
 ```java
-2025-07-04,13:56:09 | INFO | Train Epoch: 0 [ 2664448/26378240 (10%)] Avg Boundaries (per batch): 4.498 Boundary Ratio: 0.092 Contrastive_loss: 5.9756 (6.5334) Boundary_loss: 0.042732 (0.072620) Loss: 6.0183 (6.6060)
-2025-07-04,13:56:45 | INFO | Train Epoch: 0 [ 2869248/26378240 (11%)] Avg Boundaries (per batch): 4.732 Boundary Ratio: 0.097 Contrastive_loss: 5.8764 (6.4896) Boundary_loss: 0.042557 (0.070616) Loss: 5.9190 (6.5602)
+2025-07-05,02:27:11 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 4.508 Boundary Ratio: 0.092 Contrastive_loss: 0.78377 (0.84650) Boundary_loss: 0.034696 (0.034691) Loss: 0.81847 (0.88119)
 ```
 
-### LAION-2B subset (26M samples) results
+### LAION-2B subset (26M samples) results (FIXED!)
 
 reference: zero-shot performance of pretrained CLIPs 
 
@@ -170,9 +163,9 @@ reference: zero-shot performance of pretrained CLIPs
 | model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
 | ViT-B-32 | 2.96 | 224 | 32 | 10 | **28.77%** | 54.34% | 20.1 | 0.429 |
-| 2x comp | **2.69** | 224 | 32 | 10 | **21.91%** | 44.86% | **17.6** | **0.393** |
-| 4x comp | **1.83** | 224 | 32 | 10 | **21.51%** | 44.25% | **17.7** | **0.391** |
-| 10x comp | **1.26** | 224 | 32 | 10 | **21.62%** | 44.64% | **17.6** | **0.395** |
+| 2x comp | **2.69** | 224 | 32 | 10 | **25.72%** | 49.95% | **18.4** | **0.412** |
+| 4x comp | **1.83** | 224 | 32 | 10 | **24.24%** | 47.82% | **16.3** | **0.378** |
+| 10x comp | **1.26** | 224 | 32 | 10 | **21.70%** | 44.30% | **15.0** | **0.365** |
 
 ### LAION-400M (?M samples) results
 
