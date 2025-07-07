@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=multinode_finetune
 #SBATCH --output=multinode_finetune.txt
-#SBATCH --time=1:00:00
+#SBATCH --time=60:00:00
 #SBATCH --nodes=2
 #SBATCH --ntasks=2                      
 #SBATCH --gpus-per-node=4

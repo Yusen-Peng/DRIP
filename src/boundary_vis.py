@@ -132,7 +132,9 @@ def visualize_boundaries(model, image_tensor, save_path=None):
 
 if __name__ == "__main__":
 
-    test_index = 3
+    test_index = 1
+    compression = "10x"  # or "4x", "10x"
+
 
     set_seed(42)
     preprocess = transforms.Compose([
@@ -165,11 +167,13 @@ if __name__ == "__main__":
         activation_function='gelu',
         flop_measure=False
     )
-    ckpt_path = "logs/DTP_ViT_10x/checkpoints/epoch_10.pt"
+
+
+    ckpt_path = f"logs/DTP-ViT-{compression}-32/checkpoints/epoch_10.pt"
     model = load_dtpx_from_clip_checkpoint(model, ckpt_path)    
     model.eval()
     visualize_boundaries(
         model, 
         input_tensor,
-        save_path=f"boundary_visualization_{test_index}.png"
+        save_path=f"boundary_visualization_{test_index}_{compression}.png"
     )

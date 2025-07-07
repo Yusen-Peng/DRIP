@@ -58,9 +58,14 @@ Sanity check:
 1. we know image: 224x224; patch size: 32
 2. thus, boundary mask: (224/32)x(224/32) = 7x7
 
-![alt text](/boundary_visualization_1.png)
-![alt text](/boundary_visualization_2.png)
-![alt text](/boundary_visualization_3.png)
+compression rate = 0.5:
+![alt text](/boundary_visualization_1_2x.png)
+
+compression rate = 0.25:
+![alt text](/boundary_visualization_1_4x.png)
+
+compression rate = 0.1:
+![alt text](/boundary_visualization_1_10x.png)
 
 Note: results won't be deterministic unless we set the random seed (in this case, seed = 42)
 
@@ -168,6 +173,9 @@ reference: zero-shot performance of pretrained CLIPs
 | 2x comp | **2.69** | 224 | 32 | 10 | **25.72%** | 49.95% | **18.4** | **0.412** |
 | 4x comp | **1.83** | 224 | 32 | 10 | **24.24%** | 47.82% | **16.3** | **0.378** |
 | 10x comp | **1.26** | 224 | 32 | 10 | **21.70%** | 44.30% | **15.0** | **0.365** |
+| 2x comp | **** | 224 | 16 | 10 | **** |  | **** | **** |
+| 4x comp | **** | 224 | 16 | 10 | **** |  | **** | **** |
+| 10x comp | **** | 224 | 16 | 10 | **** |  | **** | **** |
 
 ### LAION-400M (?M samples) results
 
