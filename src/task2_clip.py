@@ -82,7 +82,7 @@ def main():
     # dataset parameters - "COCO" or "LAION" or "CC12"
     dataset_name = "LAION"
 
-    use_DTP = True  # DTP (Dynamic Token Pruning) is not used by default
+    use_DTP = False  # DTP (Dynamic Token Pruning) is not used by default
 
     # experiment with batch size
     # batch size:
@@ -92,7 +92,7 @@ def main():
     wd = 0.1
     epochs = 10
     workers = 8       # CPU utilization
-    model = "ViT-B-16"
+    model = "ViT-B-16"  # model architecture, can be "RN50", "ViT-B-32", "ViT-B-16", etc.
     warmup = 50
 
     if dataset_name == "COCO":

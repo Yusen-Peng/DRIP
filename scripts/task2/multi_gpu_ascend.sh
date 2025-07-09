@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=LAION_CLIP_2X_fixed
-#SBATCH --output=LAION_CLIP_2X_fixed.txt
-#SBATCH --time=15:00:00
+#SBATCH --job-name=LAION_CLIP_16_4x
+#SBATCH --output=LAION_CLIP_16_4x.txt
+#SBATCH --time=30:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
 #SBATCH --gpus-per-node=4
