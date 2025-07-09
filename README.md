@@ -69,6 +69,17 @@ compression rate = 0.1:
 
 Note: results won't be deterministic unless we set the random seed (in this case, seed = 42)
 
+
+compression rate = 0.1, but patch size is 16:
+
+![alt text](/boundary_visualization_1_10x_16.png)
+
+![alt text](/boundary_visualization_2_10x_16.png)
+
+![alt text](/boundary_visualization_3_10x_16.png)
+
+![alt text](/boundary_visualization_4_10x_16.png)
+
 ## TASK 1 - ImageNet Classification
 
 ### Performance Metrics

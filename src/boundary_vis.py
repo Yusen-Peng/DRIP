@@ -132,8 +132,9 @@ def visualize_boundaries(model, image_tensor, save_path=None):
 
 if __name__ == "__main__":
 
-    test_index = 1
+    test_index = 4
     compression = "10x"  # or "4x", "10x"
+    patch_size = 16
 
 
     set_seed(42)
@@ -153,7 +154,7 @@ if __name__ == "__main__":
 
     model = DTPViT(
         image_size=224,
-        patch_size=32,
+        patch_size=patch_size,
         embed_dim=768,
         num_heads=12,
         depth=(2, 10, 0),
@@ -169,11 +170,11 @@ if __name__ == "__main__":
     )
 
 
-    ckpt_path = f"logs/DTP-ViT-{compression}-32/checkpoints/epoch_10.pt"
+    ckpt_path = f"logs/DTP-ViT-{compression}-{patch_size}/checkpoints/epoch_10.pt"
     model = load_dtpx_from_clip_checkpoint(model, ckpt_path)    
     model.eval()
     visualize_boundaries(
         model, 
         input_tensor,
-        save_path=f"boundary_visualization_{test_index}_{compression}.png"
+        save_path=f"boundary_visualization_{test_index}_{compression}_{patch_size}.png"
     )
