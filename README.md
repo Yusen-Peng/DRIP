@@ -1,6 +1,6 @@
 # 💧 DRIP: **D**ynamic token **R**eduction v**I**sion transformer via **P**ooling for efficient multimodal learning
 
-## DTP-ViT v.s. existing work
+## DRIP v.s. existing work
 
 | design | approach summary |
 | ------ | -------------------------- |
