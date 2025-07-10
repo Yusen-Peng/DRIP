@@ -1,17 +1,17 @@
-# 💧 DTP-ViT: Dynamic Token Pooling Vision Transformer
+# 💧 DRIP: **D**ynamic token **R**eduction v**I**sion transformer via **P**ooling for efficient multimodal learning
 
 ## DTP-ViT v.s. existing work
 
 | design | approach summary |
 | ------ | -------------------------- |
-| **DTP-ViT** (ours!) | a single boundary predictor using **Gumbel-Sigmoid** |
+| **DRIP** (ours!) | a single boundary predictor using **Gumbel-Sigmoid** |
 | DynamicViT (2021) | a binary decision mask to **PRUNE** tokens at each transformer layer |
 | TokenLearner (2021) | a spatial attention module inserted in ViT to **LEARN** tokens |  
 | NativeSegViT (2025) | kmeans-like clustering to dynamically **GROUP** tokens repeatedly |
 
 According to DTP paper, both **Gumbel-Sigmoid** and **Entropy-Spike** are very suitable to adapt to other modalities!
 
-## DTP-ViT Architecture
+## DRIP Architecture
 
 ```txt
 input sequence
@@ -132,43 +132,6 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
      1. memory: torch.cuda.max_memory_allocated()
      2. training step time: **already built-in** by CLIP!
 
-### a critical bug (FIXED!)
-
-Previously, in the DTP-ViT forward function, I passed in **soft boundaries** for loss calculation:
-
-```python
-if return_loss and not self.flop_measure:
-     boundary_loss = self.boundary_predictor.calc_loss(soft_boundaries, gt=None)
-     return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
-```
-
-According to DTP official implementation, it should've been **hard boundaries**:
-
-```python
-if return_loss and not self.flop_measure:
-     # ISSUE FIXED: use hard boundaries instead of soft boundaries 
-     boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries, gt=None)
-     return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
-```
-
-For compression rate = **0.5** (2x compression):
-
-```java
-2025-07-05,03:38:43 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 24.375 Boundary Ratio: 0.497 Contrastive_loss: 0.65619 (0.66083) Boundary_loss: 0.044992 (0.045003) Loss: 0.70118 (0.70583)
-```
-
-For compression rate = **0.25** (4x compression):
-
-```java
-2025-07-05,03:01:20 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 11.934 Boundary Ratio: 0.244 Contrastive_loss: 0.77482 (0.78547) Boundary_loss: 0.041668 (0.041678) Loss: 0.81649 (0.82715)
-```
-
-For compression rate = **0.1** (10x compression):
-
-```java
-2025-07-05,02:27:11 | INFO | Train Epoch: 9 [26378240/26378240 (100%)] Avg Boundaries (per batch): 4.508 Boundary Ratio: 0.092 Contrastive_loss: 0.78377 (0.84650) Boundary_loss: 0.034696 (0.034691) Loss: 0.81847 (0.88119)
-```
-
 ### LAION-2B subset (26M samples) results (FIXED!)
 
 reference: zero-shot performance of pretrained CLIPs 
@@ -188,48 +151,11 @@ reference: zero-shot performance of pretrained CLIPs
 | 4x comp | **** | 224 | 16 | 10 | **** |  | **** | **** |
 | 10x comp | **4.53** | 224 | 16 | 10 | **26.36%** | 50.79% | **26.3** | **0.515** |
 
-### LAION-400M (?M samples) results
+### LAION-280M (178Msamples, 178,918,585) results
 
-Status up to July 2nd, 12:30AM: **34M** samples processed (over a week)
+| model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
+| ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
 
-img2dataset official script - they claim *"400M image/text pairs that can be downloaded in 3.5 days"*: 
-
-```bash
-img2dataset \
-  --url_list laion400m-meta \
-  --input_format "parquet" \
-  --url_col "URL" \
-  --caption_col "TEXT" \
-  --output_format webdataset \
-  --output_folder laion400m-data \
-  --processes_count 16 \
-  --thread_count 128 \
-  --image_size 256 \
-  --save_additional_columns '["NSFW","similarity","LICENSE"]' \
-  --enable_wandb True
-```
-
-
-my script (using login node - might be the issue?):
-
-```bash
-export OPENBLAS_NUM_THREADS=1
-export OMP_NUM_THREADS=1
-
-nohup img2dataset \
-  --url_list laion400m-meta \
-  --input_format "parquet" \
-  --url_col "URL" \
-  --caption_col "TEXT" \
-  --output_format webdataset \
-  --output_folder DATASET_LAION400M \
-  --processes_count 16 \
-  --thread_count 128 \
-  --image_size 256 \
-  --enable_wandb False \
-  --log_level debug \
-  > laion400m_download.log 2>&1 &
-```
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
 
