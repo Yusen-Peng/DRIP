@@ -382,10 +382,11 @@ class DTPViT(nn.Module):
         x = x.transpose(0, 1)                               # [B, 1 + S, D]
         x = self.norm(x)                                    # [B, 1 + S, D]
         x = x.mean(dim=1)                                   # [B, D]
+        
+        # FIXME: do we need the classification head here?
         logits = self.head(x)                               # [B, num_classes]
 
         if return_loss and not self.flop_measure:
-            # ISSUE FIXED: use hard boundaries instead of soft boundaries 
             boundary_loss = self.boundary_predictor.calc_loss(preds=hard_boundaries, gt=None)
             return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
         else:

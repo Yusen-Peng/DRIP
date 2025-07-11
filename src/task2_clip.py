@@ -82,7 +82,7 @@ def main():
     # dataset parameters - "COCO" or "LAION" or "CC12"
     dataset_name = "LAION"
 
-    use_DTP = True  # DTP (Dynamic Token Pruning) is not used by default
+    use_DTP = False  # DTP (Dynamic Token Pruning) is not used by default
 
     # experiment with batch size
     # batch size:
@@ -103,7 +103,8 @@ def main():
         train_num_samples = None
 
     elif dataset_name == "LAION":
-        PATH = "/fs/scratch/PAS2836/yusenpeng_dataset/LAION_280M/"
+        #PATH = "/fs/scratch/PAS2836/yusenpeng_dataset/LAION_280M/"
+        PATH = "/fs/scratch/PAS2836/laion2b-data/"
         use_webdataset = True
         train_data_path = "::".join(sorted(glob.glob(f"{PATH}*.tar")))
         val_data_path = None  # no val needed for now

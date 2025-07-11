@@ -96,7 +96,7 @@ def throughput(images, model):
 # Example usage with a dummy model
 if __name__ == "__main__":
     PATCH_SIZE = 16
-    COMPRESSION_RATE = 0.1
+    COMPRESSION_RATE = 0.5
 
     cfg = CLIPVisionCfg(
         image_size=224,
