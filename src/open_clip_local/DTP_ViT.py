@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from functools import partial
 from typing import Tuple, List
 import torch
+import numpy as np
 
 def final(foo,
           upsample):
@@ -159,6 +160,33 @@ class BoundaryPredictor(nn.Module):
             )
             loss_boundaries = -binomial.log_prob(target_count).mean() / total_count
             return loss_boundaries
+    
+    def calc_loss_lower_bound(self, preds, lambda_val=1.0):
+        """
+        Compute lower-bound-aware boundary loss:
+        loss = max(k/N - beta, 0), where beta = alpha - lambda * sigma
+
+        Args:
+            preds: Tensor of shape [B, T] representing boundary probabilities
+            lambda_val: lambda hyperparameter (default = 1.0)
+
+        Returns:
+            Scalar tensor: computed loss
+        """
+        # compute k/N for each sample (boundary rate)
+        k_over_N = preds.mean(dim=-1)
+        
+        # compute standard deviation in this batch
+        sigma = k_over_N.std(unbiased=False)
+
+        # calculate dynamic lower bound
+        beta = self.prior - lambda_val * sigma
+
+        # compute final loss: max(k/N - beta, 0)
+        loss = torch.relu(k_over_N - beta)
+
+        return loss.mean()
+
 
 class PatchEmbedding(nn.Module):
     def __init__(self, image_size: int, patch_size: int, in_chans: int = 3, embed_dim: int = 768):
@@ -258,6 +286,8 @@ class DTPViT(nn.Module):
             # 0.25: 4x compression
             # 0.1: 10x compression
         threshold: float = 0.5,   # the cutoff used to decide whether a patch token should be kept or dropped
+        lower_bound: bool = False,  # whether to use lower-bound-aware boundary loss
+        lambda_val: float = 1.0,  # lambda hyperparameter for dynamic lower bound
         activation_function: str = 'gelu',
         num_classes: int = 1000,
         flop_measure: bool = False,  # whether to measure FLOPs
@@ -274,6 +304,8 @@ class DTPViT(nn.Module):
         self.attn_drop_rate = attn_drop_rate
         self.temp = temp
         self.threshold = threshold
+        self.lower_bound = lower_bound
+        self.lambda_val = lambda_val
         self.num_classes = num_classes
         self.activation_function = activation_function
         # whether to measure FLOPs
@@ -387,7 +419,18 @@ class DTPViT(nn.Module):
         logits = self.head(x)                               # [B, num_classes]
 
         if return_loss and not self.flop_measure:
-            boundary_loss = self.boundary_predictor.calc_loss(preds=hard_boundaries, gt=None)
+            if self.lower_bound:
+                # use soft boundaries for adaptive boundary loss with lower bound
+                boundary_loss = self.boundary_predictor.calc_loss_lower_bound(
+                    preds=soft_boundaries, 
+                    lambda_val=self.lambda_val
+                )
+            else:
+                # use hard boundaries for fixed boundary loss
+                boundary_loss = self.boundary_predictor.calc_loss(
+                    preds=hard_boundaries, 
+                    gt=None
+                )
             return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
         else:
             return logits

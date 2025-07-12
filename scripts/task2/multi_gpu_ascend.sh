@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=small_16_ablation
-#SBATCH --output=small_16_ablation.txt
+#SBATCH --job-name=lower_bound
+#SBATCH --output=lower_bound.txt
 #SBATCH --time=40:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
