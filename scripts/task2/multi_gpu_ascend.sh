@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=lower_bound
-#SBATCH --output=lower_bound.txt
-#SBATCH --time=20:00:00
+#SBATCH --job-name=lower_bound_soft
+#SBATCH --output=lower_bound_soft.txt
+#SBATCH --time=40:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
 #SBATCH --gpus-per-node=4

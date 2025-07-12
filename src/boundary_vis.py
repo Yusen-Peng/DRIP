@@ -34,7 +34,7 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-def load_dtpx_from_clip_checkpoint(model: nn.Module, ckpt_path: str):
+def load_dtpx_from_clip_checkpoint(model: nn.Module, ckpt_path: str) -> DTPViT:
     """
     Loads weights into a DTPViT model from a CLIP-style checkpoint.
 

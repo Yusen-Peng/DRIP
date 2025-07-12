@@ -13,25 +13,11 @@ According to DTP paper, both **Gumbel-Sigmoid** and **Entropy-Spike** are very s
 
 ## DRIP Architecture
 
-```txt
-input sequence
-     ↓
-embedding (dropout)
-     ↓
-pre-layers (# is a HP, 2 default)
-     ↓
-boundary predictor (MLP)
-     ↓
-downsampling
-     ↓
-shortened-layers (# is a HP, 10 default)
-     ↓
-pooling
-     ↓
-dense
-     ↓
-embeddings ready for contrastive learning
-```
+![alt text](/docs/DRIP.png)
+
+## Boundary rate lower bound?
+
+![alt text](/docs/lower_bound.PNG)
 
 ## Efficiency Metrics
 
@@ -88,21 +74,20 @@ Classification accuracy on ImageNet
 
 ### train ViTs on ImageNet-1K (1.28M images)
 
-reference: zero-shot performance of pretrained CLIPs 
-
-| pretrained vision encoder | corresponding dataset | zero-shot dataset | zero-shot top-1 |
-| ------------------------- | --------------------- | ----------------- | --------------- |
-| ViT-B-32 | laion2b_s34b_b79k | ImageNet-1K | **66.53%** |
-
 <img src="/lr_finder_plot_DTP_ViT.png" alt="Alt Text" width="500" height="400">
 
-| model | dataset pretrained on | freeze the backbone? | batch size | epoch | classification accuracy |
+| model | dataset pretrained on | zero-shot | freeze the backbone? | epoch | classification accuracy |
 | ----- | --------------------- | -------------------- | ---------- | ----- | ----------------------- |
 | <tr><td colspan="6" align="center"> pretrained ViT </td></tr> |
-| ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | 10 | 🟢75.95% |
-| ViT-B-32 | laion2b_s34b_b79k | **yes** | 512 | 30 | 🟢76.81% |
-| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 10 | 🟠61.45%: overfitting |
-| ViT-B-32 | laion2b_s34b_b79k | finetune all | 512 | 30 | 🟠60.98%: overfitting, train-acc > 96% |
+| ViT-B-32 | laion2b_s34b_b79k | 66.53% | yes | 30 | 🟢76.81% |
+| ViT-B-32 | laion2b_s34b_b79k | 66.53% | no | 30 | 🟠60.98% |
+| <tr><td colspan="6" align="center"> pretrained DRIP </td></tr> |
+| DRIP-2x-32 | 280M LAION after 10 epochs | **** | yes | 30 | **** |
+| DRIP-4x-32 | 280M LAION after 10 epochs | **** | yes | 30 | **** |
+| DRIP-10x-32 | 280M LAION after 10 epochs | **** | yes | 30 | **** |
+
+
+
 | <tr><td colspan="6" align="center"> train ViT from scratch </td></tr> |
 | ViT-B-32 | no initialization | **ViT offical HPs except half batch size, half LR** | 512x4=2048 | 300 | 🟠50.26% |
 | ViT-B-32 | no initialization | **ViT offical HPs** | 512x4x2=4096 | 300 | 🟠53.28% |
@@ -110,9 +95,6 @@ reference: zero-shot performance of pretrained CLIPs
 | 10x compression | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**25.43%**: underfitting, train-acc = 24% |
 | 10x compression | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | 🔴**24.95%** |
 | 10x compression | no initialization | **2.48e-04 cosine scheduler with warmup** | 512 | 100 | 🔴**30.52%** |
-| <tr><td colspan="6" align="center"> pretrained DTP-ViT </td></tr> |
-| <tr><td colspan="6" align="center"> wait for a **GOOD** pretrained DTP-ViT from CLIP training! </td></tr> |
-
 
 ## TASK 2 - Contrastive Pretraining (CLIP)
 

@@ -172,12 +172,17 @@ class BoundaryPredictor(nn.Module):
 
         Returns:
             Scalar tensor: computed loss
-        """
+        """        
+
         # compute k/N for each sample (boundary rate)
         k_over_N = preds.mean(dim=-1)
         
         # compute standard deviation in this batch
         sigma = k_over_N.std(unbiased=False)
+
+        # print("💀" * 20)
+        # print(f"{preds=}")
+        # print(f"{k_over_N=}, {sigma=}")
 
         # calculate dynamic lower bound
         beta = self.prior - lambda_val * sigma
@@ -360,7 +365,7 @@ class DTPViT(nn.Module):
         print("=" * 70)
         print("[INFO] Congratulations! You have successfully initialized DTP-ViT!")
         print(f"Compression Rate: {compression_rate}")
-        print(f"depth of each section: {depth}")
+        #print(f"depth of each section: {depth}")
         print("=" * 70)
 
 
@@ -415,14 +420,14 @@ class DTPViT(nn.Module):
         x = self.norm(x)                                    # [B, 1 + S, D]
         x = x.mean(dim=1)                                   # [B, D]
         
-        # FIXME: do we need the classification head here?
         logits = self.head(x)                               # [B, num_classes]
 
         if return_loss and not self.flop_measure:
             if self.lower_bound:
                 # use soft boundaries for adaptive boundary loss with lower bound
                 boundary_loss = self.boundary_predictor.calc_loss_lower_bound(
-                    preds=hard_boundaries, 
+                    #preds=hard_boundaries,
+                    preds=soft_boundaries,
                     lambda_val=self.lambda_val
                 )
             else:
