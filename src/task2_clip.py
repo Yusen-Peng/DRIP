@@ -103,8 +103,7 @@ def main():
         train_num_samples = None
 
     elif dataset_name == "LAION":
-        #PATH = "/fs/scratch/PAS2836/yusenpeng_dataset/LAION_280M/"
-        PATH = "/fs/scratch/PAS2836/laion2b-data/"
+        PATH = "/fs/scratch/PAS2836/yusenpeng_dataset/LAION_280M/"
         use_webdataset = True
         train_data_path = "::".join(sorted(glob.glob(f"{PATH}*.tar")))
         val_data_path = None  # no val needed for now

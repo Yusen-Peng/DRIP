@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
     plt.xlabel("Patch Size")
     plt.ylabel("GFLOPs")
-    plt.title("FLOPs vs. Patch Size for ViT and DTP-ViT Models")
+    plt.title("FLOPs vs. Patch Size for ViT and DRIP Models")
     plt.xscale('log', base=2)
     plt.legend()
     plt.grid(True)
