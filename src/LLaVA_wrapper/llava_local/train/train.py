@@ -818,6 +818,9 @@ def train(attn_implementation=None):
         ))
 
     if model_args.vision_tower is not None:
+        print("🔥"*20)
+        print("We are using vision tower:", model_args.vision_tower)
+
         if 'mpt' in model_args.model_name_or_path:
             config = transformers.AutoConfig.from_pretrained(model_args.model_name_or_path, trust_remote_code=True)
             config.attn_config['attn_impl'] = training_args.mpt_attn_impl

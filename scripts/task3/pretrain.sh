@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=LLaVA_pretrain
 #SBATCH --output=LLaVA_pretrain.txt
-#SBATCH --time=40:00:00
+#SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
@@ -19,7 +19,8 @@ export WANDB_DISABLED=true
 
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
-deepspeed src/LLaVA_wrapper/llava_local/train/train_mem.py \
+# src/LLaVA_wrapper/llava_local/train/train_mem.py
+deepspeed src/task3_llava.py \
     --deepspeed src/LLaVA_wrapper/scripts/zero2.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version plain \
@@ -32,7 +33,7 @@ deepspeed src/LLaVA_wrapper/llava_local/train/train_mem.py \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
     --bf16 True \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-13b-pretrain \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/TEST-llava-v1.5-13b-pretrain \
     --num_train_epochs 1 \
     --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 4 \

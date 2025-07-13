@@ -20,7 +20,7 @@ import torch.multiprocessing as mp
 from transformers import get_cosine_schedule_with_warmup
 
 
-FREEZE_BACKBONE = False
+FREEZE_BACKBONE = True
 
 
 # Set seeds for reproducibility
@@ -89,12 +89,11 @@ def finetuning_ViT():
     print("⭐" * 20)
 
     model = VisionClassifier(backbone.visual, NUM_CLASSES).to(DEVICE)
-    model = DDP(model, device_ids=[DEVICE])
-
     if FREEZE_BACKBONE:
         for param in model.backbone.parameters():
             param.requires_grad = False
         print("🔒 Backbone frozen. Only classification head will be trained.")
+    model = DDP(model, device_ids=[DEVICE])
 
     train_sampler = DistributedSampler(train_dataset)
     train_loader = DataLoader(
@@ -182,7 +181,7 @@ def finetuning_DTP_ViT():
 
     compression = "2x"  # "2x", "4x", or "10x"
     patch_size = 32
-    epoch_checkpoint = 10  # load checkpoint from epoch
+    epoch_checkpoint = 1  # load checkpoint from epoch
     if compression == "2x":
         compression_rate = 0.5
     elif compression == "4x":
@@ -237,15 +236,16 @@ def finetuning_DTP_ViT():
         )
 
     ckpt_path = f"logs/DTP-ViT-{compression}-{patch_size}/checkpoints/epoch_{epoch_checkpoint}.pt"
+    # FIXME: this is for temporay testing, should be removed later
+    ckpt_path = f"logs/2025_07_12-11_59_06-model_ViT-B-32-lr_0.0001-b_512-j_8-p_amp/checkpoints/epoch_{epoch_checkpoint}.pt"
     backbone = load_dtpx_from_clip_checkpoint(empty_backbone, ckpt_path)
 
     model = VisionClassifier(backbone, NUM_CLASSES).to(DEVICE)
-    model: VisionClassifier = DDP(model, device_ids=[DEVICE])
-
     if FREEZE_BACKBONE:
         for param in model.backbone.parameters():
             param.requires_grad = False
         print("🔒 Backbone frozen. Only classification head will be trained.")
+    model = DDP(model, device_ids=[DEVICE])    
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.05)
@@ -572,7 +572,8 @@ def finetuning_DTP_ViT():
 if __name__ == "__main__":
     setup_distributed()
 
-    finetuning_ViT()
+    #finetuning_ViT()
+    finetuning_DTP_ViT()
     #training_ViT_from_scratch()
     #training_DTP_ViT_from_scratch()
 

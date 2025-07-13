@@ -255,3 +255,12 @@ Learning rate search finished. See the graph with {finder_name}.plot()
 LR suggestion: steepest gradient
 Suggested LR: 2.48E-04
 ```
+
+
+| <tr><td colspan="6" align="center"> train ViT from scratch </td></tr> |
+| ViT-B-32 | no initialization | **ViT offical HPs except half batch size, half LR** | 512x4=2048 | 300 | 🟠50.26% |
+| ViT-B-32 | no initialization | **ViT offical HPs** | 512x4x2=4096 | 300 | 🟠53.28% |
+| <tr><td colspan="6" align="center"> train DTP-ViT from scratch </td></tr> |
+| 10x compression | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**25.43%**: underfitting, train-acc = 24% |
+| 10x compression | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | 🔴**24.95%** |
+| 10x compression | no initialization | **2.48e-04 cosine scheduler with warmup** | 512 | 100 | 🔴**30.52%** |

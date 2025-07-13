@@ -1,8 +1,14 @@
 import torch
 import torch.nn as nn
-
+from typing import Tuple
+import os
+import sys
 from transformers import CLIPVisionModel, CLIPImageProcessor, CLIPVisionConfig
-
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
+sys.path.insert(0, PROJECT_ROOT)
+from src.open_clip_local.DTP_ViT import DTPViT
+from src.boundary_vis import load_dtpx_from_clip_checkpoint
 
 class CLIPVisionTower(nn.Module):
     def __init__(self, vision_tower, args, delay_load=False):
@@ -88,6 +94,130 @@ class CLIPVisionTower(nn.Module):
         return (self.config.image_size // self.config.patch_size) ** 2
 
 
+class DRIPVisionTower(nn.Module):
+    """
+    DTP ViT wrapper for CLIP-like vision tower.
+    This class is designed to load a DTP ViT model from a CLIP checkpoint and
+    provide a forward method that returns image features.
+    """
+    def __init__(self, 
+            checkpoint_path: str,
+            args, 
+            image_size: int = 224,
+            patch_size: int = 16,
+            in_chans: int = 3,
+            embed_dim: int = 768,
+            depth: Tuple = (2, 10, 0),
+            num_heads: int = 12,
+            mlp_ratio: float = 4.0,
+            drop_rate: float = 0.1,
+            attn_drop_rate: float = 0.1, 
+            temp: float = 0.5, 
+            compression_rate: float = 0.1,
+            threshold: float = 0.5,
+            lower_bound: bool = False,
+            lambda_val: float = 1.0,
+            activation_function: str = 'gelu',
+            num_classes: int = 1000,
+            flop_measure: bool = False,
+            delay_load=False):
+        super().__init__()
+        self.checkpoint_path = checkpoint_path
+        self.image_size = image_size
+        self.patch_size = patch_size
+        self.in_chans = in_chans
+        self.embed_dim = embed_dim
+        self.depth = depth
+        self.num_heads = num_heads
+        self.mlp_ratio = mlp_ratio
+        self.drop_rate = drop_rate
+        self.attn_drop_rate = attn_drop_rate
+        self.temp = temp
+        self.compression_rate = compression_rate
+        self.threshold = threshold
+        self.lower_bound = lower_bound
+        self.lambda_val = lambda_val
+        self.activation_function = activation_function
+        self.num_classes = num_classes
+        self.flop_measure = flop_measure
+
+        self.is_loaded = False
+        if not delay_load or getattr(args, 'unfreeze_mm_vision_tower', False):
+            self.load_model()
+
+    def load_model(self):
+        if self.is_loaded:
+            print(f"{self.checkpoint_path} is already loaded. Skipping.")
+            return
+
+        self.vision_tower: DTPViT = DTPViT(
+            image_size=self.image_size,
+            patch_size=self.patch_size,
+            in_chans=self.in_chans,
+            embed_dim=self.embed_dim,
+            depth=self.depth,
+            num_heads=self.num_heads,
+            mlp_ratio=self.mlp_ratio,
+            drop_rate=self.drop_rate,
+            attn_drop_rate=self.attn_drop_rate,
+            temp=self.temp,
+            compression_rate=self.compression_rate,
+            threshold=self.threshold,
+            lower_bound=self.lower_bound,
+            lambda_val=self.lambda_val,
+            activation_function=self.activation_function,
+            num_classes=self.num_classes,
+            flop_measure=self.flop_measure
+        ) 
+        self.vision_tower = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+        print("🍑" * 20)
+        print("checkpoint is loaded successfully!")
+        self.vision_tower.requires_grad_(False)
+        self.is_loaded = True
+    
+    def feature_select(self, image_forward_outs):
+        assert image_forward_outs is not None
+        raise NotImplementedError("DTPViT does not require feature selection like CLIP. Use the full output.")
+
+    @torch.no_grad()
+    def forward(self, images):
+        """
+        images: torch.Tensor of shape [B, C, H, W]
+        returns: torch.Tensor of shape [B, N_tokens, hidden_dim]
+        """
+        image_features = self.vision_tower(
+            images.to(device=self.device, dtype=self.dtype),
+            return_loss=False # we don't have to log the boundary loss here
+        )
+        return image_features
+
+    @property
+    def dummy_feature(self):
+        return torch.zeros(1, self.hidden_size, device=self.device, dtype=self.dtype)
+
+    @property
+    def dtype(self):
+        return self.vision_tower.dtype
+
+    @property
+    def device(self):
+        return next(self.vision_tower.parameters()).device
+
+    @property
+    def config(self):
+        return self.vision_tower.config
+
+    @property
+    def hidden_size(self):
+        return self.config.hidden_size
+
+    @property
+    def num_patches_per_side(self):
+        return self.config.image_size // self.config.patch_size
+
+    @property
+    def num_patches(self):
+        return self.num_patches_per_side ** 2
 
 class CLIPVisionTowerS2(CLIPVisionTower):
     def __init__(self, vision_tower, args, delay_load=False):

@@ -426,8 +426,8 @@ class DTPViT(nn.Module):
             if self.lower_bound:
                 # use soft boundaries for adaptive boundary loss with lower bound
                 boundary_loss = self.boundary_predictor.calc_loss_lower_bound(
-                    #preds=hard_boundaries,
-                    preds=soft_boundaries,
+                    preds=hard_boundaries,
+                    #preds=soft_boundaries,
                     lambda_val=self.lambda_val
                 )
             else:
