@@ -15,6 +15,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     compression_rate = 0.5
     lower_bound = False
     lambda_val = 1.0
+    num_classes = 512
     delay_load = False
     vision_tower = getattr(vision_tower_cfg, 'mm_vision_tower', getattr(vision_tower_cfg, 'vision_tower', None))
     is_absolute_path_exists = os.path.exists(vision_tower)
@@ -25,11 +26,13 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         elif USE_DTP:
             return DRIPVisionTower(
                 checkpoint_path=checkpoint_path, 
+                vision_tower=vision_tower,
                 args=vision_tower_cfg,
                 patch_size=patch_size,
                 compression_rate=compression_rate,
                 lower_bound=lower_bound,
                 lambda_val=lambda_val,
+                num_classes=num_classes,
                 delay_load=delay_load, 
                 **kwargs)
         else:

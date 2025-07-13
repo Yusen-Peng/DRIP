@@ -33,7 +33,7 @@ import tokenizers
 
 from src.LLaVA_wrapper.llava_local.constants import IGNORE_INDEX, IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from torch.utils.data import Dataset
-from llava_trainer import LLaVATrainer
+from src.LLaVA_wrapper.llava_local.train.llava_trainer import LLaVATrainer
 
 from src.LLaVA_wrapper.llava_local import conversation as conversation_lib
 from src.LLaVA_wrapper.llava_local.model import *

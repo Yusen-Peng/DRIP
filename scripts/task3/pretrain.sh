@@ -21,7 +21,7 @@ cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
 # src/LLaVA_wrapper/llava_local/train/train_mem.py
 deepspeed src/task3_llava.py \
-    --deepspeed src/LLaVA_wrapper/scripts/zero2.json \
+    --deepspeed src/LLaVA_wrapper/scripts/mix_free.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version plain \
     --data_path /fs/scratch/PAS2836/yusenpeng_dataset/blip_laion_cc_sbu_558k.json \
@@ -32,7 +32,8 @@ deepspeed src/task3_llava.py \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --bf16 True \
+    --bf16 False \
+    --fp16 False \
     --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/TEST-llava-v1.5-13b-pretrain \
     --num_train_epochs 1 \
     --per_device_train_batch_size 32 \

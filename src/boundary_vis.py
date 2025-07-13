@@ -57,6 +57,31 @@ def load_dtpx_from_clip_checkpoint(model: nn.Module, ckpt_path: str) -> DTPViT:
     model.load_state_dict(dtpvit_state_dict, strict=False)
     return model
 
+
+def load_dtpx_from_clip_checkpoint_float(model: nn.Module, ckpt_path: str) -> DTPViT:
+    """
+    Loads weights into a DTPViT model from a CLIP-style checkpoint.
+
+    Args:
+        model (DTPViT): An uninitialized DTPViT model with the correct config.
+        ckpt_path (str): Path to a checkpoint with 'module.visual.' prefix in keys.
+
+    Returns:
+        model (DTPViT): The same model with loaded weights.
+    """
+    ckpt = torch.load(ckpt_path, map_location='cpu')
+    raw_state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
+
+    dtpvit_state_dict = {
+        k.replace("module.visual.", ""): v.float() 
+        for k, v in raw_state_dict.items()
+        if k.startswith("module.visual.")
+    }
+
+    model.load_state_dict(dtpvit_state_dict, strict=False)
+    return model
+
+
 @torch.no_grad()
 def visualize_boundaries(model: DTPViT, image_tensor: torch.Tensor, save_path=None):
     """

@@ -8,7 +8,7 @@ FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
 sys.path.insert(0, PROJECT_ROOT)
 from src.open_clip_local.DTP_ViT import DTPViT
-from src.boundary_vis import load_dtpx_from_clip_checkpoint
+from src.boundary_vis import load_dtpx_from_clip_checkpoint_float
 
 class CLIPVisionTower(nn.Module):
     def __init__(self, vision_tower, args, delay_load=False):
@@ -102,11 +102,12 @@ class DRIPVisionTower(nn.Module):
     """
     def __init__(self, 
             checkpoint_path: str,
+            vision_tower: str,
             args, 
             image_size: int = 224,
             patch_size: int = 16,
             in_chans: int = 3,
-            embed_dim: int = 768,
+            hidden_size: int = 768,
             depth: Tuple = (2, 10, 0),
             num_heads: int = 12,
             mlp_ratio: float = 4.0,
@@ -118,19 +119,21 @@ class DRIPVisionTower(nn.Module):
             lower_bound: bool = False,
             lambda_val: float = 1.0,
             activation_function: str = 'gelu',
-            num_classes: int = 1000,
+            num_classes: int = 512,
             flop_measure: bool = False,
             delay_load=False):
         super().__init__()
+
+        self.vision_tower_name = vision_tower
         self.checkpoint_path = checkpoint_path
         self.image_size = image_size
         self.patch_size = patch_size
         self.in_chans = in_chans
-        self.embed_dim = embed_dim
         self.depth = depth
         self.num_heads = num_heads
         self.mlp_ratio = mlp_ratio
         self.drop_rate = drop_rate
+        self._hidden_size = hidden_size
         self.attn_drop_rate = attn_drop_rate
         self.temp = temp
         self.compression_rate = compression_rate
@@ -154,7 +157,7 @@ class DRIPVisionTower(nn.Module):
             image_size=self.image_size,
             patch_size=self.patch_size,
             in_chans=self.in_chans,
-            embed_dim=self.embed_dim,
+            embed_dim=self._hidden_size,
             depth=self.depth,
             num_heads=self.num_heads,
             mlp_ratio=self.mlp_ratio,
@@ -169,11 +172,31 @@ class DRIPVisionTower(nn.Module):
             num_classes=self.num_classes,
             flop_measure=self.flop_measure
         ) 
-        self.vision_tower = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
-        print("🍑" * 20)
-        print("checkpoint is loaded successfully!")
+        self.vision_tower = load_dtpx_from_clip_checkpoint_float(self.vision_tower, self.checkpoint_path)
         self.vision_tower.requires_grad_(False)
+        self.image_processor = CLIPImageProcessor.from_pretrained(self.vision_tower_name)
+        self.image_processor.size = {'shortest_edge': 224}
+        self.image_processor.crop_size = {'height': 224, 'width': 224}
         self.is_loaded = True
+        self.vision_tower.config = {
+            'image_size': self.image_size,
+            'patch_size': self.patch_size,
+            'in_chans': self.in_chans,
+            'hidden_size': self._hidden_size,
+            'depth': self.depth,
+            'num_heads': self.num_heads,
+            'mlp_ratio': self.mlp_ratio,
+            'drop_rate': self.drop_rate,
+            'attn_drop_rate': self.attn_drop_rate,
+            'temp': self.temp,
+            'compression_rate': self.compression_rate,
+            'threshold': self.threshold,
+            'lower_bound': self.lower_bound,
+            'lambda_val': self.lambda_val,
+            'activation_function': self.activation_function,
+            'num_classes': self.num_classes,
+            'flop_measure': self.flop_measure
+        }
     
     def feature_select(self, image_forward_outs):
         assert image_forward_outs is not None
@@ -186,7 +209,7 @@ class DRIPVisionTower(nn.Module):
         returns: torch.Tensor of shape [B, N_tokens, hidden_dim]
         """
         image_features = self.vision_tower(
-            images.to(device=self.device, dtype=self.dtype),
+            images.to(device=self.device, dtype=torch.float32),
             return_loss=False # we don't have to log the boundary loss here
         )
         return image_features
@@ -197,7 +220,7 @@ class DRIPVisionTower(nn.Module):
 
     @property
     def dtype(self):
-        return self.vision_tower.dtype
+        return next(self.vision_tower.parameters()).dtype
 
     @property
     def device(self):
@@ -209,11 +232,11 @@ class DRIPVisionTower(nn.Module):
 
     @property
     def hidden_size(self):
-        return self.config.hidden_size
+        return self.vision_tower.embed_dim
 
     @property
     def num_patches_per_side(self):
-        return self.config.image_size // self.config.patch_size
+        return self.vision_tower.image_size // self.vision_tower.patch_size
 
     @property
     def num_patches(self):
