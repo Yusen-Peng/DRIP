@@ -170,6 +170,12 @@ Pretraining experiment (taking 32 hours with ViT-L-14, vicuna-7B, **1 epoch**):
 {'train_runtime': 117102.9646, 'train_samples_per_second': 4.766, 'train_steps_per_second': 0.149, 'train_loss': 2.112418864089378, 'epoch': 1.0}
 ```
 
+### DRIP Integration debugging list
+
+- [x] precision match: enforce float32 since it's the precision used in my DRIP checkpoint
+- [x] vision projector: ensure `embed_dim` alignment between the encoder and the projector
+- [ ] loss is zero (still figuring out the root cause)
+
 ### Visual Instruction Tuning
 
 dataset (LLaVA-Instruct-158K): 158K samples (58K conversations, 23K detailed description, 77K in complex reasoning)

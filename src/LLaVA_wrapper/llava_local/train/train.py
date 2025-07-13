@@ -934,7 +934,14 @@ def train(attn_implementation=None):
         )
         
         vision_tower = model.get_vision_tower()
-        vision_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
+        #vision_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
+        # FIXME: I am enforcing floa32 here
+        if training_args.bf16:          # --bf16
+            vision_tower.to(dtype=torch.bfloat16, device=training_args.device)
+        elif training_args.fp16:        # --fp16
+            vision_tower.to(dtype=torch.float16,  device=training_args.device)
+        else:                           # no mixed-precision flags
+            vision_tower.to(dtype=torch.float32, device=training_args.device)
 
         data_args.image_processor = vision_tower.image_processor
         data_args.is_multimodal = True

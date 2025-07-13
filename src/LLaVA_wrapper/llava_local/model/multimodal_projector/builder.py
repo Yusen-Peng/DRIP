@@ -31,6 +31,9 @@ class SimpleResBlock(nn.Module):
 
 
 def build_vision_projector(config, delay_load=False, **kwargs):
+    print("💥" * 20)
+    print("what kind of vision projector we are building?")
+    print(config)
     projector_type = getattr(config, 'mm_projector_type', 'linear')
 
     if projector_type == 'linear':

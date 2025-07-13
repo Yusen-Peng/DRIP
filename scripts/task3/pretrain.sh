@@ -26,14 +26,12 @@ deepspeed src/task3_llava.py \
     --version plain \
     --data_path /fs/scratch/PAS2836/yusenpeng_dataset/blip_laion_cc_sbu_558k.json \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_pretrain_images \
-    --vision_tower openai/clip-vit-large-patch14-336 \
+    --vision_tower openai/clip-vit-base-patch32 \
     --mm_projector_type mlp2x_gelu \
     --tune_mm_mlp_adapter True \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --bf16 False \
-    --fp16 False \
     --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/TEST-llava-v1.5-13b-pretrain \
     --num_train_epochs 1 \
     --per_device_train_batch_size 32 \
@@ -49,6 +47,5 @@ deepspeed src/task3_llava.py \
     --logging_steps 1 \
     --tf32 True \
     --model_max_length 2048 \
-    --gradient_checkpointing True \
     --dataloader_num_workers 4 \
     --lazy_preprocess True

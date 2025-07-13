@@ -8,7 +8,7 @@ FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
 sys.path.insert(0, PROJECT_ROOT)
 from src.open_clip_local.DTP_ViT import DTPViT
-from src.boundary_vis import load_dtpx_from_clip_checkpoint_float
+from src.boundary_vis import load_dtpx_from_clip_checkpoint_float, load_dtpx_from_clip_checkpoint
 
 class CLIPVisionTower(nn.Module):
     def __init__(self, vision_tower, args, delay_load=False):
@@ -172,13 +172,19 @@ class DRIPVisionTower(nn.Module):
             num_classes=self.num_classes,
             flop_measure=self.flop_measure
         ) 
-        self.vision_tower = load_dtpx_from_clip_checkpoint_float(self.vision_tower, self.checkpoint_path)
+        self.vision_tower = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+
+        # print the data types after loading
+        print(f"weight data type after loading:\n")
+        for k, v in self.vision_tower.state_dict().items():
+            print(f"{k}: {v.dtype}")
+
         self.vision_tower.requires_grad_(False)
         self.image_processor = CLIPImageProcessor.from_pretrained(self.vision_tower_name)
         self.image_processor.size = {'shortest_edge': 224}
         self.image_processor.crop_size = {'height': 224, 'width': 224}
         self.is_loaded = True
-        self.vision_tower.config = {
+        self.configurations = {
             'image_size': self.image_size,
             'patch_size': self.patch_size,
             'in_chans': self.in_chans,
@@ -208,11 +214,10 @@ class DRIPVisionTower(nn.Module):
         images: torch.Tensor of shape [B, C, H, W]
         returns: torch.Tensor of shape [B, N_tokens, hidden_dim]
         """
-        image_features = self.vision_tower(
-            images.to(device=self.device, dtype=torch.float32),
-            return_loss=False # we don't have to log the boundary loss here
-        )
-        return image_features
+        print(f"type: {self.dtype}")
+        print("🤖" * 20)
+        images = images.to(device=self.device, dtype=self.dtype)
+        return self.vision_tower(images, return_loss=False)
 
     @property
     def dummy_feature(self):
@@ -228,11 +233,11 @@ class DRIPVisionTower(nn.Module):
 
     @property
     def config(self):
-        return self.vision_tower.config
+        return self.configurations
 
     @property
     def hidden_size(self):
-        return self.vision_tower.embed_dim
+        return self.vision_tower.num_classes
 
     @property
     def num_patches_per_side(self):
