@@ -15,10 +15,6 @@ According to DTP paper, both **Gumbel-Sigmoid** and **Entropy-Spike** are very s
 
 ![alt text](/docs/DRIP.png)
 
-## Boundary rate lower bound?
-
-![alt text](/docs/lower_bound.PNG)
-
 ## Efficiency Metrics
 
 1. GFLOPs: a different script (adapted from **DynamicViT**), NOT during training
@@ -107,7 +103,7 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
      1. memory: torch.cuda.max_memory_allocated()
      2. training step time: **already built-in** by CLIP!
 
-### LAION-2B subset (26M samples) results (FIXED!)
+### LAION-2B subset (26M samples) results
 
 reference: zero-shot performance of pretrained CLIPs 
 
@@ -125,6 +121,15 @@ reference: zero-shot performance of pretrained CLIPs
 | 2x comp | 10.22 | 224 | 16 | 10 | **33.44%** | 60.17% | **43.9** | **0.762** |
 | 4x comp | 6.62 | 224 | 16 | 10 | **33.77%** | 61.10% | **43.9** | **0.763** |
 | 10x comp | 4.53 | 224 | 16 | 10 | **26.36%** | 50.79% | **26.3** | **0.515** |
+
+## Boundary rate lower bound?
+
+![alt text](/docs/lower_bound.PNG)
+
+| expected boundary rate | lambda | soft/hard boundaries | actual boundary rate | zero-shot |
+| ---------------------- | ------ | -------------------- | -------------------- | --------- |
+| 0.5 | 1.0 | hard | 8/49 (0.16) | 21.90% |
+| 0.5 | 1.0 | soft | 7.5/49 (0.15) | 21.56% |
 
 ### LAION-280M (178Msamples, 178,918,585) results
 
