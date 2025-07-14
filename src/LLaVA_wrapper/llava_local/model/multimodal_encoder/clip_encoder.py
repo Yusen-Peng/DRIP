@@ -8,7 +8,7 @@ FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
 sys.path.insert(0, PROJECT_ROOT)
 from src.open_clip_local.DTP_ViT import DTPViT
-from src.boundary_vis import load_dtpx_from_clip_checkpoint_float, load_dtpx_from_clip_checkpoint
+from src.boundary_vis import load_dtpx_from_clip_checkpoint
 
 class CLIPVisionTower(nn.Module):
     def __init__(self, vision_tower, args, delay_load=False):
@@ -217,7 +217,7 @@ class DRIPVisionTower(nn.Module):
         print(f"type: {self.dtype}")
         print("🤖" * 20)
         images = images.to(device=self.device, dtype=self.dtype)
-        return self.vision_tower(images, return_loss=False)
+        return self.vision_tower.encode(images, return_loss=False)
 
     @property
     def dummy_feature(self):
@@ -237,7 +237,7 @@ class DRIPVisionTower(nn.Module):
 
     @property
     def hidden_size(self):
-        return self.vision_tower.num_classes
+        return self.vision_tower.embed_dim
 
     @property
     def num_patches_per_side(self):

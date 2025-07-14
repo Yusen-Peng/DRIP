@@ -117,7 +117,7 @@ reference: zero-shot performance of pretrained CLIPs
 | 2x comp | 2.69 | 224 | 32 | 10 | **25.72%** | 49.95% | **18.4** | **0.412** |
 | 4x comp | 1.83 | 224 | 32 | 10 | **24.24%** | 47.82% | **16.3** | **0.378** |
 | 10x comp | 1.26 | 224 | 32 | 10 | **21.70%** | 44.30% | **15.0** | **0.365** |
-| ViT-B-16 | 11.33 | 224 | 32 | 10 | **** | | **** | **** |
+| ViT-B-16 | 11.33 | 224 | 32 | 10 | **33.88%** | 60.81% | **43.9** | **0.756** |
 | 2x comp | 10.22 | 224 | 16 | 10 | **33.44%** | 60.17% | **43.9** | **0.762** |
 | 4x comp | 6.62 | 224 | 16 | 10 | **33.77%** | 61.10% | **43.9** | **0.763** |
 | 10x comp | 4.53 | 224 | 16 | 10 | **26.36%** | 50.79% | **26.3** | **0.515** |
@@ -152,9 +152,7 @@ Benchmarks
 1. LLaVA-Bench (COCO): COCO-Val-2014, 30 images, 90 questions
 2. LLaVA-Bench (In-the-Wild): curate 24 images, 60 questions
 
-### Pretraining - Feature Alignment
-
-dataset (already prepared🔥): **558K** samples 
+### Pretraining - Feature Alignment with **558K** samples 
      
 1. image-caption data (LAION-CC-SBU with BLIP captions) -> conversation data
 2. objective: image + question -> response
@@ -172,9 +170,9 @@ Pretraining experiment (taking 32 hours with ViT-L-14, vicuna-7B, **1 epoch**):
 
 ### DRIP Integration debugging list
 
-- [x] precision match: enforce float32 since it's the precision used in my DRIP checkpoint
-- [x] vision projector: ensure `embed_dim` alignment between the encoder and the projector
-- [ ] loss is zero (still figuring out the root cause)
+- [x] precision matching: enforce float32 since it's the precision used in my DRIP checkpoint
+- [x] vision projector: ensure `embed_dim` alignment between the encoder and projector
+- [x] forward pass, but **ONLY imtermediates**: don't do mean pooling across tokens!
 
 ### Visual Instruction Tuning
 

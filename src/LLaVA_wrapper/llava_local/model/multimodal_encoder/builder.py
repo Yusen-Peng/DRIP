@@ -9,6 +9,9 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # FIXME: all hardcoded values for now
     USE_DTP = True
+    if USE_DTP:
+        print("🍟" * 20)
+        print("Using DTP-ViT as the vision tower")
     # FIXME: hardcoded checkpoint path, should be configurable
     checkpoint_path = "logs/2025_07_12-11_59_06-model_ViT-B-32-lr_0.0001-b_512-j_8-p_amp/checkpoints/epoch_1.pt"
     patch_size = 32

@@ -439,3 +439,71 @@ class DTPViT(nn.Module):
             return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
         else:
             return logits
+        
+    def encode(self, x: torch.Tensor, return_loss=False): # forward, but no pooling, no head
+        # input shape: [B, 3, H, W]
+        B = x.size(0)
+
+        x = self.patch_embed(x)                             # [B, N, D]
+        cls_tokens = self.cls_token.expand(B, -1, -1)       # [B, 1, D]
+        x = torch.cat((cls_tokens, x), dim=1)               # [B, 1 + N, D]
+        x = x + self.pos_embed                              # [B, 1 + N, D]
+        x = self.pos_drop(x)                                # [B, 1 + N, D]
+        x = x.transpose(0, 1)                               # [1 + N, B, D]
+
+        x = self.pre_blocks(x)                              # [1 + N, B, D]
+
+        # separate CLS token and patch tokens
+        cls_token, patch_tokens = x[0:1], x[1:]             # [1, B, D], [N, B, D]
+
+        # predict boundaries
+        avg_boundaries_per_batch = 0
+        boundary_ratio = 0
+        if self.flop_measure:
+            print("=" * 80)
+            print("[INFO] FLOP measurement mode: simulating fake boundaries to satisfy the compression rate.")
+            print("=" * 80)
+            L = patch_tokens.shape[0]
+            interval = max(1, int(1 / self.compression_rate))
+            hard_boundaries = torch.zeros(B, L, device=x.device)
+            hard_boundaries[:, ::interval] = 1
+            soft_boundaries = hard_boundaries.clone()
+        else:
+            soft_boundaries, hard_boundaries = self.boundary_predictor(patch_tokens)
+
+            # [B] → count per sample
+            num_boundaries = hard_boundaries.sum(dim=1)
+            avg_boundaries_per_batch = num_boundaries.float().mean()
+            seq_len = hard_boundaries.shape[1]
+            boundary_ratio = avg_boundaries_per_batch / seq_len
+
+        # downsample patch tokens
+        patch_tokens = downsample(hard_boundaries, patch_tokens, self.null_group)
+        patch_tokens = patch_tokens[1:]  # remove null group at index 0 → [S, B, D]
+
+        # reattach CLS token
+        x = torch.cat([cls_token, patch_tokens], dim=0)     # [1 + S, B, D]
+
+        x = self.norm(x)                                     # [1 + S, B, D]
+        x = self.shorten_blocks(x)                           # [1 + S, B, D]
+
+        x = x.transpose(0, 1)                               # [B, 1 + S, D]
+        x = self.norm(x)                                    # [B, 1 + S, D]
+
+        if return_loss and not self.flop_measure:
+            if self.lower_bound:
+                # use soft boundaries for adaptive boundary loss with lower bound
+                boundary_loss = self.boundary_predictor.calc_loss_lower_bound(
+                    preds=hard_boundaries,
+                    #preds=soft_boundaries,
+                    lambda_val=self.lambda_val
+                )
+            else:
+                # use hard boundaries for fixed boundary loss
+                boundary_loss = self.boundary_predictor.calc_loss(
+                    preds=hard_boundaries, 
+                    gt=None
+                )
+            return x, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+        else:
+            return x

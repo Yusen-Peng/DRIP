@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=LLaVA_pretrain
 #SBATCH --output=LLaVA_pretrain.txt
-#SBATCH --time=00:10:00
+#SBATCH --time=20:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=128G
+#SBATCH --mem=256G
 #SBATCH --account=PAS2836
 
 module load miniconda3/24.1.2-py310
@@ -47,5 +47,6 @@ deepspeed src/task3_llava.py \
     --logging_steps 1 \
     --tf32 True \
     --model_max_length 2048 \
+    --gradient_checkpointing True \
     --dataloader_num_workers 4 \
     --lazy_preprocess True

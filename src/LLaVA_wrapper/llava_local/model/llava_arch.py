@@ -81,8 +81,6 @@ class LlavaMetaModel:
         self.config.mm_patch_merge_type = mm_patch_merge_type
 
         if getattr(self, 'mm_projector', None) is None:
-            print("🥶" * 20)
-            print("aha! we are building the vision projector")
             self.mm_projector = build_vision_projector(self.config)
 
             if 'unpad' in mm_patch_merge_type:
@@ -272,24 +270,14 @@ class LlavaMetaForCausalLM(ABC):
                     cur_new_input_embeds.append(cur_image_features)
                     cur_new_labels.append(torch.full((cur_image_features.shape[0],), IGNORE_INDEX, device=cur_labels.device, dtype=cur_labels.dtype))
 
-            # FIXME: variable length input embeddings?!
-            # ensure every embed chunk is 2-D and already on the correct device
+            # FIXME: ensure every embed chunk is 2-D and already on the correct device
             cur_new_input_embeds = [
-                emb.to(self.device).view(-1, emb.size(-1))      # [hidden] → [1, hidden]
+                emb.to(self.device).view(-1, emb.size(-1))      
                 for emb in cur_new_input_embeds
             ]
-            # ensure every label chunk is 1-D and on the same device
-            cur_new_labels = [
-                lbl.to(self.device).view(-1)                    # [...,] → [k]
-                for lbl in cur_new_labels
-            ]
-            # now concatenate – ranks and devices match
-            cur_new_input_embeds = torch.cat(cur_new_input_embeds, dim=0)
-            cur_new_labels       = torch.cat(cur_new_labels,       dim=0)
-            # end FIXME
 
-            # cur_new_input_embeds = torch.cat(cur_new_input_embeds)
-            # cur_new_labels = torch.cat(cur_new_labels)
+            cur_new_input_embeds = torch.cat(cur_new_input_embeds)
+            cur_new_labels = torch.cat(cur_new_labels)
 
             new_input_embeds.append(cur_new_input_embeds)
             new_labels.append(cur_new_labels)
@@ -326,10 +314,6 @@ class LlavaMetaForCausalLM(ABC):
                     torch.zeros((max_len - cur_len, cur_new_embed.shape[1]), dtype=cur_new_embed.dtype, device=cur_new_embed.device)
                 ), dim=0))
                 if cur_len > 0:
-                    # FIXME
-                    if cur_new_labels.numel() > cur_len:
-                        cur_new_labels = cur_new_labels[cur_len:]
-
                     new_labels_padded[i, :cur_len] = cur_new_labels
                     attention_mask[i, :cur_len] = True
                     position_ids[i, :cur_len] = torch.arange(0, cur_len, dtype=position_ids.dtype, device=position_ids.device)
