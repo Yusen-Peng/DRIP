@@ -149,8 +149,8 @@ def _build_vision_tower(
             act_layer = partial(act_layer, **vision_cfg.act_kwargs)
 
         if DTP_ViT:
-            compression_rate = 0.5
-            lower_bound = True
+            compression_rate = 0.1
+            lower_bound = False
             lambda_val = 1.0
             visual = DTPViT(
                 image_size=vision_cfg.image_size,

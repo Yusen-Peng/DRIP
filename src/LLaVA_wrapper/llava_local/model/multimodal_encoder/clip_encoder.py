@@ -121,7 +121,9 @@ class DRIPVisionTower(nn.Module):
             activation_function: str = 'gelu',
             num_classes: int = 512,
             flop_measure: bool = False,
-            delay_load=False):
+            delay_load=False,
+            finetuning_mode: bool = False
+            ):
         super().__init__()
 
         self.vision_tower_name = vision_tower
@@ -143,6 +145,7 @@ class DRIPVisionTower(nn.Module):
         self.activation_function = activation_function
         self.num_classes = num_classes
         self.flop_measure = flop_measure
+        self.finetuning_mode = finetuning_mode
 
         self.is_loaded = False
         if not delay_load or getattr(args, 'unfreeze_mm_vision_tower', False):
@@ -173,6 +176,10 @@ class DRIPVisionTower(nn.Module):
             flop_measure=self.flop_measure
         ) 
         self.vision_tower = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+
+        # if in finetuning mode, change precision into float16
+        if self.finetuning_mode:
+            self.vision_tower = self.vision_tower.half()
 
         # print the data types after loading
         print(f"weight data type after loading:\n")

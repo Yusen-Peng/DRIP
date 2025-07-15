@@ -77,6 +77,8 @@ def downsample(boundaries, hidden, null_group):
     else:
         bar = final(foo=foo, upsample=False)  # B x L x S
 
+        bar = bar.to(hidden.dtype)  # ensure same dtype
+
         shortened_hidden = torch.einsum('lbd,bls->sbd', hidden, bar)
         shortened_hidden = torch.cat(
             [null_group.repeat(1, hidden.size(1), 1), shortened_hidden], dim=0

@@ -147,20 +147,15 @@ reference: zero-shot performance of pretrained CLIPs
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
 
-Benchmarks
-
-1. LLaVA-Bench (COCO): COCO-Val-2014, 30 images, 90 questions
-2. LLaVA-Bench (In-the-Wild): curate 24 images, 60 questions
-
 ### Pretraining - Feature Alignment with **558K** samples 
      
 1. image-caption data (LAION-CC-SBU with BLIP captions) -> conversation data
 2. objective: image + question -> response
-3. both visual encoder and LLM are frozen, only train the projection layer
+3. both visual encoder and LLM are frozen, only train the projectors
 
-Pretraining experiment (taking 32 hours with ViT-L-14, vicuna-7B, **1 epoch**):
+Pretraining experiment (taking 32 hours with **ViT-L-14**, vicuna-7B, 1 epoch):
 
-```T
+```Java
 {'loss': 2.1691, 'grad_norm': 0.6584503898999098, 'learning_rate': 0.0, 'epoch': 1.0}
 
 100%|██████████| 17442/17442 [32:31:42<00:00,  5.80s/it]
@@ -168,14 +163,45 @@ Pretraining experiment (taking 32 hours with ViT-L-14, vicuna-7B, **1 epoch**):
 {'train_runtime': 117102.9646, 'train_samples_per_second': 4.766, 'train_steps_per_second': 0.149, 'train_loss': 2.112418864089378, 'epoch': 1.0}
 ```
 
-### DRIP Integration debugging list
+2X compression, same size as ViT:
 
-- [x] precision matching: enforce float32 since it's the precision used in my DRIP checkpoint
-- [x] vision projector: ensure `embed_dim` alignment between the encoder and projector
-- [x] forward pass, but **ONLY imtermediates**: don't do mean pooling across tokens!
+```java
+{'loss': 2.8985, 'grad_norm': 0.5448363764319726, 'learning_rate': 0.0, 'epoch': 1.0}
+
+100%|██████████| 17442/17442 [5:00:11<00:00,  1.01it/s]
+                                                       
+{'train_runtime': 18013.7912, 'train_samples_per_second': 30.983, 'train_steps_per_second': 0.968, 'train_loss': 2.7407862679590096, 'epoch': 1.0}
+```
 
 ### Visual Instruction Tuning
 
 dataset (LLaVA-Instruct-158K): 158K samples (58K conversations, 23K detailed description, 77K in complex reasoning)
 
-finetuning on (i) multimodal chatbot using LLaVA-Instruct-158K for **3 epochs** (ii) Science QA benchmark; **visual encoder is frozen**, update LLM and the projection layer
+finetuning on (i) multimodal chatbot using LLaVA-Instruct-158K for **3 epochs** (ii) Science QA benchmark; **only visual encoder is frozen**, update LLM and the projectors
+
+### DRIP Integration debugging list
+
+- pretraining
+  - [x] precision matching: enforce float32 since it's the precision used in my DRIP checkpoint
+  - [x] vision projector: ensure `embed_dim` alignment between the encoder and projector
+  - [x] forward pass, but **ONLY imtermediates**: don't do mean pooling across tokens!
+- finetuning
+  - [x] fixed Cuda OOM issue with finetuning - but it killed my other CLIP pretraining experiments too...
+    - [x] float16 (HALF) instead of float32 (FLOAT)
+    - [x] LoRA enabled
+
+  ```java
+  ERROR: Unexpected bus error encountered in worker. This might be caused by insufficient shared memory (shm).
+  ```
+
+Finetuning experiment running:
+
+
+```java
+{'loss': 1.1328, 'grad_norm': 1.1301831000849685, 'learning_rate': 1.9519038076152304e-06, 'epoch': 0.0}
+
+  0%|          | 487/166325 [11:45<65:21:23,  1.42s/it]type: torch.float16
+🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖
+
+  0%|          | 488/166325 [11:47<71:58:21,  1.56s/it]
+```

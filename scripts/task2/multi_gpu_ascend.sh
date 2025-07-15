@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=lower_bound_soft
-#SBATCH --output=lower_bound_soft.txt
+#SBATCH --job-name=big_32_10x
+#SBATCH --output=big_32_10x.txt
 #SBATCH --time=40:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
@@ -10,8 +10,8 @@
 #SBATCH --account=PAS2836
 
 module load miniconda3/24.1.2-py310
-conda activate Fast-CLIP
-source activate Fast-CLIP
+conda activate DRIP
+source activate DRIP
 
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))

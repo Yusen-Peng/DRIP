@@ -70,11 +70,11 @@ quota -s
 ## Who the heck is using the GPUs?
 
 ```bash
-squeue -p quad -o "%.18i %.9P %.8j %.8u %.2t %.10M %.6D %R"
-squeue -p nextgen -o "%.18i %.9P %.8j %.8u %.2t %.10M %.6D %R"
+squeue -p quad -o "%.18i %.9P %.20j %.8u %.2t %.10M %.6D %R"
+squeue -p nextgen -o "%.18i %.9P %.20j %.8u %.2t %.10M %.6D %R"
 ```
 
-## unzip datasets
+## unzip dataset
 
 ```bash
 unzip filename.zip -x "__MACOSX/*" "*.DS_Store"
@@ -83,8 +83,8 @@ unzip filename.zip -x "__MACOSX/*" "*.DS_Store"
 ## Environment Setup
 
 ```bash
-conda create -n Fast-CLIP python=3.11
-conda activate Fast-CLIP
+conda create -n DRIP python=3.11
+conda activate DRIP
 python -m pip install open_clip_torch
 python -m pip install 'open_clip_torch[training]'
 conda install -c conda-forge sentencepiece

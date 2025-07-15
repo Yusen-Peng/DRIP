@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=LLaVA_pretrain
-#SBATCH --output=LLaVA_pretrain.txt
-#SBATCH --time=20:00:00
+#SBATCH --job-name=LLaVA_finetune
+#SBATCH --output=LLaVA_finetune.txt
+#SBATCH --time=00:15:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
@@ -10,6 +10,7 @@
 #SBATCH --account=PAS2836
 
 module load miniconda3/24.1.2-py310
+module load cuda/12.6.2
 conda activate DRIP
 source activate DRIP
 
@@ -20,32 +21,34 @@ export WANDB_DISABLED=true
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
 deepspeed src/task3_llava.py \
-    --deepspeed src/LLaVA_wrapper/scripts/mix_free.json \
+    --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
+    --deepspeed src/LLaVA_wrapper/scripts/finetune.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
-    --version plain \
-    --data_path /fs/scratch/PAS2836/yusenpeng_dataset/blip_laion_cc_sbu_558k.json \
-    --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_pretrain_images \
+    --version v1 \
+    --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/llava_v1_5_mix665k.json \
+    --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning \
     --vision_tower openai/clip-vit-base-patch32 \
     --mm_projector_type mlp2x_gelu \
-    --tune_mm_mlp_adapter True \
+    --fp16 True \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-DRIP-2x-32-pretrain/mm_projector.bin \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/TEST-llava-v1.5-13b-pretrain \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-DRIP-2x-32-finetune \
     --num_train_epochs 1 \
-    --per_device_train_batch_size 32 \
+    --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 1 \
+    --evaluation_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 24000 \
+    --save_steps 50000 \
     --save_total_limit 1 \
-    --learning_rate 1e-3 \
+    --learning_rate 2e-5 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
-    --tf32 True \
-    --model_max_length 2048 \
+    --model_max_length 1024 \
     --gradient_checkpointing True \
     --dataloader_num_workers 4 \
-    --lazy_preprocess True
+    --lazy_preprocess True \

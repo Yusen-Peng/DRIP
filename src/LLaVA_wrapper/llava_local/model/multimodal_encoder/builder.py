@@ -9,6 +9,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # FIXME: all hardcoded values for now
     USE_DTP = True
+    FINETUNING_MODE = True
     if USE_DTP:
         print("🍟" * 20)
         print("Using DTP-ViT as the vision tower")
@@ -37,6 +38,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
                 lambda_val=lambda_val,
                 num_classes=num_classes,
                 delay_load=delay_load, 
+                finetuning_mode=FINETUNING_MODE,
                 **kwargs)
         else:
             return CLIPVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
