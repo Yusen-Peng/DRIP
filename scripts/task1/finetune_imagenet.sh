@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=CLIP_finetune
-#SBATCH --output=CLIP_finetune.txt
-#SBATCH --time=60:00:00
+#SBATCH --job-name=DRIP_2x_16_finetune
+#SBATCH --output=DRIP_2x_16_finetune.txt
+#SBATCH --time=80:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
@@ -10,8 +10,8 @@
 #SBATCH --account=PAS2836
 
 module load miniconda3/24.1.2-py310
-conda activate Fast-CLIP
-source activate Fast-CLIP
+conda activate DRIP
+source activate DRIP
 
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))

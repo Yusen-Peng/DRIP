@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=LLaVA_finetune
 #SBATCH --output=LLaVA_finetune.txt
-#SBATCH --time=00:15:00
+#SBATCH --time=90:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=1
+#SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=256G
+#SBATCH --mem=128G
 #SBATCH --account=PAS2836
 
 module load miniconda3/24.1.2-py310

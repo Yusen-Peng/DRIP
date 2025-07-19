@@ -6,7 +6,7 @@ Evaluating a pretrained CLIP:
 salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00
 module load miniconda3/24.1.2-py310
 conda deactivate
-conda activate Fast-CLIP
+conda activate DRIP
 python src/task3_llava.py
 python src/eval_CLIP.py
 module load cuda/12.4.1

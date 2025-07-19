@@ -20,7 +20,7 @@ import torch.multiprocessing as mp
 from transformers import get_cosine_schedule_with_warmup
 
 
-FREEZE_BACKBONE = True
+FREEZE_BACKBONE = False
 
 
 # Set seeds for reproducibility
@@ -171,7 +171,7 @@ def finetuning_ViT():
     print("⭐" * 20)
 
 def finetuning_DTP_ViT():
-    BATCH_SIZE = 512
+    BATCH_SIZE = 64    # 256 -> OOM for patch_size 16
     EPOCHS = 100
     effective_batch_size = BATCH_SIZE * dist.get_world_size()
     LR = 1e-3 * (effective_batch_size / 512)
@@ -180,8 +180,8 @@ def finetuning_DTP_ViT():
     DEVICE = torch.device(f"cuda:{local_rank}")
 
     compression = "2x"  # "2x", "4x", or "10x"
-    patch_size = 32
-    epoch_checkpoint = 1  # load checkpoint from epoch
+    patch_size = 16
+    epoch_checkpoint = 3  # load checkpoint from epoch
     if compression == "2x":
         compression_rate = 0.5
     elif compression == "4x":
@@ -235,9 +235,9 @@ def finetuning_DTP_ViT():
             flop_measure=False
         )
 
-    ckpt_path = f"logs/DTP-ViT-{compression}-{patch_size}/checkpoints/epoch_{epoch_checkpoint}.pt"
+    #ckpt_path = f"logs/DTP-ViT-{compression}-{patch_size}/checkpoints/epoch_{epoch_checkpoint}.pt"
     # FIXME: this is for temporay testing, should be removed later
-    ckpt_path = f"logs/2025_07_12-11_59_06-model_ViT-B-32-lr_0.0001-b_512-j_8-p_amp/checkpoints/epoch_{epoch_checkpoint}.pt"
+    ckpt_path = f"logs/DRIP-2X-16/checkpoints/epoch_{epoch_checkpoint}.pt"
     backbone = load_dtpx_from_clip_checkpoint(empty_backbone, ckpt_path)
 
     model = VisionClassifier(backbone, NUM_CLASSES).to(DEVICE)

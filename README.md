@@ -78,6 +78,16 @@ Classification accuracy on ImageNet
 | ViT-B-32 | laion2b_s34b_b79k | 66.53% | yes | 30 | 🟢76.81% |
 | ViT-B-32 | laion2b_s34b_b79k | 66.53% | no | 30 | 🟠60.98% |
 | <tr><td colspan="6" align="center"> pretrained DRIP </td></tr> |
+| DRIP-2X-16 | 280M LAION | **36.71%** | yes | 30 | **** |
+| DRIP-2X-16 | 280m LAION | **36.71%** | no | 30 | **running** |
+
+
+NCCL timeout error:
+
+```java
+[Rank 0] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=7331, OpType=ALLREDUCE, NumelIn=7481064, NumelOut=7481064, Timeout(ms)=600000) ran for 600097 milliseconds before timing out.
+```
+
 | DRIP-2x-32 | 280M LAION after 10 epochs | **** | yes | 30 | **** |
 | DRIP-2x-32 | 280M LAION after 10 epochs | **** | no | 30 | **** |
 | DRIP-4x-32 | 280M LAION after 10 epochs | **** | yes | 30 | **** |
@@ -118,8 +128,8 @@ reference: zero-shot performance of pretrained CLIPs
 | 4x comp | 1.83 | 224 | 32 | 10 | **24.24%** | 47.82% | **16.3** | **0.378** |
 | 10x comp | 1.26 | 224 | 32 | 10 | **21.70%** | 44.30% | **15.0** | **0.365** |
 | ViT-B-16 | 11.33 | 224 | 32 | 10 | **33.88%** | 60.81% | **43.9** | **0.756** |
-| 2x comp | 10.22 | 224 | 16 | 10 | **33.44%** | 60.17% | **43.9** | **0.762** |
-| 4x comp | 6.62 | 224 | 16 | 10 | **33.77%** | 61.10% | **43.9** | **0.763** |
+| 2x comp | 10.22 | 224 | 16 | 10 | **30.59%** | 57.11% | **43.0** | **0.706** |
+| 4x comp | 6.62 | 224 | 16 | 10 | **28.25%** | 53.95% | **32.2** | **0.570** |
 | 10x comp | 4.53 | 224 | 16 | 10 | **26.36%** | 50.79% | **26.3** | **0.515** |
 
 ## Boundary rate lower bound?
@@ -139,10 +149,10 @@ reference: zero-shot performance of pretrained CLIPs
 | 2x comp | 2.69 | 224 | 32 | 5 | **35.57%** | 63.42% | **18.6** | **0.394** |
 | 4x comp | 1.83 | 224 | 32 | 5 | **33.04%** | 59.58% | **16.4** | **0.368** |
 | 10x comp | 1.26 | 224 | 32 | 5 | **30.91%** | 57.21% | **15.2** | **0.361** |
-| ViT-B-16 | 11.33 | 224 | 32 | 10 | **** | | **** | **** |
-| 2x comp | 10.22 | 224 | 16 | 10 | **** | | **** | **** |
-| 4x comp | 6.62 | 224 | 16 | 10 | **** |  | **** | **** |
-| 10x comp | 4.53 | 224 | 16 | 10 | **** |  | **** | **** |
+| ViT-B-16 | 11.33 | 224 | 32 | 3 | **39.70%** | 68.43% | 43.9 | 0.743 |
+| 2x comp | 10.22 | 224 | 16 | 3 | **36.71%** | 64.98% | **43.4** | **0.703** |
+| 4x comp | 6.62 | 224 | 16 | 3 | **running** | running | **running** | **running** |
+| 10x comp | 4.53 | 224 | 16 | 3 | **32.32%** | 59.40% | **26.2** | **0.486** |
 
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)

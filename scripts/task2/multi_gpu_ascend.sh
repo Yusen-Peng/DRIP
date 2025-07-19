@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=big_32_10x
-#SBATCH --output=big_32_10x.txt
+#SBATCH --job-name=big_16_4x
+#SBATCH --output=big_16_4x.txt
 #SBATCH --time=40:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
