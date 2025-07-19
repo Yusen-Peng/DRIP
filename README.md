@@ -82,18 +82,23 @@ Classification accuracy on ImageNet
 | DRIP-2X-16 | 280m LAION | **36.71%** | no | 30 | **running** |
 
 
-NCCL timeout error:
+### Two errors occur IN THE MIDDLE of finetuning
 
-```java
-[Rank 0] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=7331, OpType=ALLREDUCE, NumelIn=7481064, NumelOut=7481064, Timeout(ms)=600000) ran for 600097 milliseconds before timing out.
+Error 1: unused parameters?
+
+```python
+[rank3]: RuntimeError: Expected to have finished reduction in the prior iteration before starting a new one. This error indicates that your module has parameters that were not used in producing loss. You can enable unused parameter detection by passing the keyword argument `find_unused_parameters=True` to `torch.nn.parallel.DistributedDataParallel`, and by 
+[rank3]: making sure all `forward` function outputs participate in calculating loss. 
+[rank3]: If you already have done the above, then the distributed data parallel module wasn't able to locate the output tensors in the return value of your module's `forward` function. Please include the loss function and the structure of the return value of `forward` of your module when reporting this issue (e.g. list, dict, iterable).
+[rank3]: Parameter indices which did not receive grad for rank 3: 149 150 151 152
+[rank3]:  In addition, you can set the environment variable TORCH_DISTRIBUTED_DEBUG to either INFO or DETAIL to print out information about which particular parameters did not receive gradient on this rank as part of this error
 ```
 
-| DRIP-2x-32 | 280M LAION after 10 epochs | **** | yes | 30 | **** |
-| DRIP-2x-32 | 280M LAION after 10 epochs | **** | no | 30 | **** |
-| DRIP-4x-32 | 280M LAION after 10 epochs | **** | yes | 30 | **** |
-| DRIP-4x-32 | 280M LAION after 10 epochs | **** | no | 30 | **** |
-| DRIP-10x-32 | 280M LAION after 10 epochs | **** | yes | 30 | **** |
-| DRIP-10x-32 | 280M LAION after 10 epochs | **** | no | 30 | **** |
+Error 2: NCCL timeout error?
+
+```java
+[Rank 2] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=2664597, OpType=ALLREDUCE, NumelIn=8272897, NumelOut=8272897, Timeout(ms)=600000) ran for 600002 milliseconds before timing out.
+```
 
 ## TASK 2 - Contrastive Pretraining (CLIP)
 
