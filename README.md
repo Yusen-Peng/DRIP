@@ -139,12 +139,14 @@ reference: zero-shot performance of pretrained CLIPs
 
 ## Boundary rate lower bound?
 
-![alt text](/docs/lower_bound.PNG)
+![alt text](/docs/loss_paper.png)
 
 | expected boundary rate | lambda | soft/hard boundaries | actual boundary rate | zero-shot |
 | ---------------------- | ------ | -------------------- | -------------------- | --------- |
 | 0.5 | 1.0 | hard | 8/49 (0.16) | 21.90% |
 | 0.5 | 1.0 | soft | 7.5/49 (0.15) | 21.56% |
+
+![alt text](/docs/loss_implementation.png)
 
 ### LAION-280M (178Msamples, 178,918,585) results
 
