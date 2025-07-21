@@ -10,3 +10,4 @@ logs/
 .env
 *.log
 *.tar
+CascadeFormer_Best_Checkpoints/

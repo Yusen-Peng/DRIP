@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=big_16_4x
-#SBATCH --output=big_16_4x.txt
-#SBATCH --time=40:00:00
+#SBATCH --job-name=lower_bound
+#SBATCH --output=lower_bound.txt
+#SBATCH --time=50:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
 #SBATCH --gpus-per-node=4

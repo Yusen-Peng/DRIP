@@ -91,6 +91,7 @@ class BoundaryPredictor(nn.Module):
                  temp, prior, bp_type, threshold=0.5,
                  image_size=None, patch_size=None, embed_dim=None):
         super().__init__()
+
         self.temp = temp
         self.prior = prior
         self.bp_type = bp_type
@@ -164,35 +165,29 @@ class BoundaryPredictor(nn.Module):
             return loss_boundaries
     
     def calc_loss_lower_bound(self, preds, lambda_val=1.0):
-        """
-        Compute lower-bound-aware boundary loss:
-        loss = max(k/N - beta, 0), where beta = alpha - lambda * sigma
-
-        Args:
-            preds: Tensor of shape [B, T] representing boundary probabilities
-            lambda_val: lambda hyperparameter (default = 1.0)
-
-        Returns:
-            Scalar tensor: computed loss
-        """        
-
-        # compute k/N for each sample (boundary rate)
-        k_over_N = preds.mean(dim=-1)
+        # k 
+        sum_preds = preds.sum(dim=-1)
+        # N
+        total_count = preds.size(-1)
+        # k / N
+        est_prior = sum_preds / total_count
+        # sigma
+        prior_std = torch.std(est_prior, unbiased=False)
         
-        # compute standard deviation in this batch
-        sigma = k_over_N.std(unbiased=False)
+        # boundary rate upper bound: alpha
+        upper_bound = self.prior 
+        # boundary rate lower bound: beta = alpha - lambda * sigma
+        lower_bound = self.prior - lambda_val * prior_std
+        
+        # penalize when the boundary rate > upper bound 
+        loss_high = torch.clamp(est_prior - upper_bound, min=0.0)
 
-        # print("💀" * 20)
-        # print(f"{preds=}")
-        # print(f"{k_over_N=}, {sigma=}")
+        # penalize when the boundary rate < lower bound
+        loss_low = torch.clamp(lower_bound - est_prior, min=0.0)
 
-        # calculate dynamic lower bound
-        beta = self.prior - lambda_val * sigma
-
-        # compute final loss: max(k/N - beta, 0)
-        loss = torch.relu(k_over_N - beta)
-
-        return loss.mean()
+        # If both losses are near zero, use simple mean
+        loss_boundaries = (loss_high + loss_low).mean()
+        return loss_boundaries
 
 
 class PatchEmbedding(nn.Module):
@@ -443,6 +438,7 @@ class DTPViT(nn.Module):
             return logits
         
     def encode(self, x: torch.Tensor, return_loss=False): # forward, but no pooling, no head
+        """encode = forward immediates"""
         # input shape: [B, 3, H, W]
         B = x.size(0)
 
@@ -497,7 +493,6 @@ class DTPViT(nn.Module):
                 # use soft boundaries for adaptive boundary loss with lower bound
                 boundary_loss = self.boundary_predictor.calc_loss_lower_bound(
                     preds=hard_boundaries,
-                    #preds=soft_boundaries,
                     lambda_val=self.lambda_val
                 )
             else:

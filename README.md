@@ -168,26 +168,6 @@ reference: zero-shot performance of pretrained CLIPs
 2. objective: image + question -> response
 3. both visual encoder and LLM are frozen, only train the projectors
 
-Pretraining experiment (taking 32 hours with **ViT-L-14**, vicuna-7B, 1 epoch):
-
-```Java
-{'loss': 2.1691, 'grad_norm': 0.6584503898999098, 'learning_rate': 0.0, 'epoch': 1.0}
-
-100%|██████████| 17442/17442 [32:31:42<00:00,  5.80s/it]
-                                                        
-{'train_runtime': 117102.9646, 'train_samples_per_second': 4.766, 'train_steps_per_second': 0.149, 'train_loss': 2.112418864089378, 'epoch': 1.0}
-```
-
-2X compression, same size as ViT:
-
-```java
-{'loss': 2.8985, 'grad_norm': 0.5448363764319726, 'learning_rate': 0.0, 'epoch': 1.0}
-
-100%|██████████| 17442/17442 [5:00:11<00:00,  1.01it/s]
-                                                       
-{'train_runtime': 18013.7912, 'train_samples_per_second': 30.983, 'train_steps_per_second': 0.968, 'train_loss': 2.7407862679590096, 'epoch': 1.0}
-```
-
 ### Visual Instruction Tuning
 
 dataset (LLaVA-Instruct-158K): 158K samples (58K conversations, 23K detailed description, 77K in complex reasoning)
@@ -205,12 +185,7 @@ finetuning on (i) multimodal chatbot using LLaVA-Instruct-158K for **3 epochs** 
     - [x] float16 (HALF) instead of float32 (FLOAT)
     - [x] LoRA enabled
 
-  ```java
-  ERROR: Unexpected bus error encountered in worker. This might be caused by insufficient shared memory (shm).
-  ```
-
 Finetuning experiment running:
-
 
 ```java
 {'loss': 1.1328, 'grad_norm': 1.1301831000849685, 'learning_rate': 1.9519038076152304e-06, 'epoch': 0.0}
