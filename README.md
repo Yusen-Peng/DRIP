@@ -33,74 +33,11 @@ According to DTP paper, both **Gumbel-Sigmoid** and **Entropy-Spike** are very s
 
 ### Preliminaries: Boundary Visualization
 
-3 example images from COCO validation set (the model is DTP-VIT-10x pretrained on LAION-27M with 10 epochs):
+![alt text](unit_visualization/boundary_visualization_0_2x_32.png)
+![alt text](unit_visualization/boundary_visualization_0_4x_32.png)
+![alt text](unit_visualization/boundary_visualization_0_10x_32.png)
 
-Sanity check: 
-
-1. we know image: 224x224; patch size: 32
-2. thus, boundary mask: (224/32)x(224/32) = 7x7
-
-compression rate = 0.5:
-![alt text](/boundary_visualization_1_2x.png)
-
-compression rate = 0.25:
-![alt text](/boundary_visualization_1_4x.png)
-
-compression rate = 0.1:
-![alt text](/boundary_visualization_1_10x.png)
-
-Note: results won't be deterministic unless we set the random seed (in this case, seed = 42)
-
-
-compression rate = 0.1, but patch size is 16:
-
-![alt text](/boundary_visualization_1_10x_16.png)
-
-![alt text](/boundary_visualization_2_10x_16.png)
-
-![alt text](/boundary_visualization_3_10x_16.png)
-
-![alt text](/boundary_visualization_4_10x_16.png)
-
-## TASK 1 - ImageNet Classification
-
-### Performance Metrics
-
-Classification accuracy on ImageNet
-
-### train ViTs on ImageNet-1K (1.28M images)
-
-<img src="/lr_finder_plot_DTP_ViT.png" alt="Alt Text" width="500" height="400">
-
-| model | dataset pretrained on | zero-shot | freeze the backbone? | epoch | classification accuracy |
-| ----- | --------------------- | -------------------- | ---------- | ----- | ----------------------- |
-| <tr><td colspan="6" align="center"> pretrained ViT </td></tr> |
-| ViT-B-32 | laion2b_s34b_b79k | 66.53% | yes | 30 | 🟢76.81% |
-| ViT-B-32 | laion2b_s34b_b79k | 66.53% | no | 30 | 🟠60.98% |
-| <tr><td colspan="6" align="center"> pretrained DRIP </td></tr> |
-| DRIP-2X-16 | 280M LAION | **36.71%** | yes | 30 | **** |
-| DRIP-2X-16 | 280m LAION | **36.71%** | no | 30 | **running** |
-
-
-### Two errors occur IN THE MIDDLE of finetuning
-
-Error 1: unused parameters?
-
-```python
-[rank3]: RuntimeError: Expected to have finished reduction in the prior iteration before starting a new one. This error indicates that your module has parameters that were not used in producing loss. You can enable unused parameter detection by passing the keyword argument `find_unused_parameters=True` to `torch.nn.parallel.DistributedDataParallel`, and by 
-[rank3]: making sure all `forward` function outputs participate in calculating loss. 
-[rank3]: If you already have done the above, then the distributed data parallel module wasn't able to locate the output tensors in the return value of your module's `forward` function. Please include the loss function and the structure of the return value of `forward` of your module when reporting this issue (e.g. list, dict, iterable).
-[rank3]: Parameter indices which did not receive grad for rank 3: 149 150 151 152
-[rank3]:  In addition, you can set the environment variable TORCH_DISTRIBUTED_DEBUG to either INFO or DETAIL to print out information about which particular parameters did not receive gradient on this rank as part of this error
-```
-
-Error 2: NCCL timeout error?
-
-```java
-[Rank 2] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=2664597, OpType=ALLREDUCE, NumelIn=8272897, NumelOut=8272897, Timeout(ms)=600000) ran for 600002 milliseconds before timing out.
-```
-
-## TASK 2 - Contrastive Pretraining (CLIP)
+## TASK 1 - Contrastive Pretraining (CLIP)
 
 ### Performance Metrics
 
@@ -117,6 +54,41 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
 2. GPU memory and training step time are averaged for each epoch.
      1. memory: torch.cuda.max_memory_allocated()
      2. training step time: **already built-in** by CLIP!
+
+## TASK 2 - ImageNet Classification Finetuning
+
+### Performance Metrics
+
+Classification accuracy on ImageNet
+
+### train ViTs on ImageNet-1K (1.28M images)
+
+| model | dataset pretrained on | zero-shot | freeze the backbone? | epoch | classification accuracy |
+| ----- | --------------------- | -------------------- | ---------- | ----- | ----------------------- |
+| <tr><td colspan="6" align="center"> pretrained ViT </td></tr> |
+| ViT-B-32 | laion2b_s34b_b79k | 66.53% | yes | 30 | 🟢76.81% |
+| ViT-B-32 | laion2b_s34b_b79k | 66.53% | no | 30 | 🟠60.98% |
+| <tr><td colspan="6" align="center"> pretrained DRIP </td></tr> |
+| DRIP-2X-16 | 280M LAION | **36.71%** | yes | 30 | **** |
+| DRIP-2X-16 | 280m LAION | **36.71%** | no | 30 | **running** |
+
+### Two errors occur IN THE MIDDLE of finetuning experiment (at epoch 38)
+
+Error 1: unused parameters?
+
+```python
+[rank3]: RuntimeError: Expected to have finished reduction in the prior iteration before starting a new one. This error indicates that your module has parameters that were not used in producing loss. You can enable unused parameter detection by passing the keyword argument `find_unused_parameters=True` to `torch.nn.parallel.DistributedDataParallel`, and by 
+[rank3]: making sure all `forward` function outputs participate in calculating loss. 
+[rank3]: If you already have done the above, then the distributed data parallel module wasn't able to locate the output tensors in the return value of your module's `forward` function. Please include the loss function and the structure of the return value of `forward` of your module when reporting this issue (e.g. list, dict, iterable).
+[rank3]: Parameter indices which did not receive grad for rank 3: 149 150 151 152
+[rank3]:  In addition, you can set the environment variable TORCH_DISTRIBUTED_DEBUG to either INFO or DETAIL to print out information about which particular parameters did not receive gradient on this rank as part of this error
+```
+
+Error 2: NCCL timeout error?
+
+```java
+[Rank 2] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=2664597, OpType=ALLREDUCE, NumelIn=8272897, NumelOut=8272897, Timeout(ms)=600000) ran for 600002 milliseconds before timing out.
+```
 
 ### LAION-2B subset (26M samples) results
 
@@ -184,19 +156,21 @@ finetuning on (i) multimodal chatbot using LLaVA-Instruct-158K for **3 epochs** 
 - pretraining
   - [x] precision matching: enforce float32 since it's the precision used in my DRIP checkpoint
   - [x] vision projector: ensure `embed_dim` alignment between the encoder and projector
-  - [x] forward pass, but **ONLY imtermediates**: don't do mean pooling across tokens!
+  - [x] forward pass, but **ONLY imtermediates**: no average pooling across tokens!
 - finetuning
-  - [x] fixed Cuda OOM issue with finetuning - but it killed my other CLIP pretraining experiments too...
-    - [x] float16 (HALF) instead of float32 (FLOAT)
-    - [x] LoRA enabled
+  - [x] fixed Cuda OOM issue with finetuning
+  - [x] float16 (HALF) instead of float32 (FLOAT)
+  - [x] LoRA enabled
 
 Finetuning experiment running:
 
 ```java
-{'loss': 1.1328, 'grad_norm': 1.1301831000849685, 'learning_rate': 1.9519038076152304e-06, 'epoch': 0.0}
+{'loss': 0.8673, 'grad_norm': 0.8187538983880278, 'learning_rate': 1.9994675036189098e-05, 'epoch': 0.04}
 
-  0%|          | 487/166325 [11:45<65:21:23,  1.42s/it]type: torch.float16
-🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖🤖
+  4%|▍         | 1671/41582 [45:20<18:37:53,  1.68s/it]type: torch.float16
+...
+...
+{'loss': 0.8655, 'grad_norm': 1.189985028380524, 'learning_rate': 1.9918921441264966e-05, 'epoch': 0.07}
 
-  0%|          | 488/166325 [11:47<71:58:21,  1.56s/it]
+  7%|▋         | 2890/41582 [1:18:22<17:56:50,  1.67s/it]type: torch.float16
 ```

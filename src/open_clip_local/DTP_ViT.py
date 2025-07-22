@@ -4,10 +4,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from functools import partial
-from typing import Tuple, List
+from typing import Tuple
 import torch
-import numpy as np
 
 def final(foo,
           upsample):
@@ -364,7 +362,6 @@ class DTPViT(nn.Module):
         print("=" * 70)
         print("[INFO] Congratulations! You have successfully initialized DTP-ViT!")
         print(f"Compression Rate: {compression_rate}")
-        #print(f"depth of each section: {depth}")
         print("=" * 70)
 
 
