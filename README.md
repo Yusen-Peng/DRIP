@@ -121,7 +121,7 @@ reference: zero-shot performance of pretrained CLIPs
 
 | model | expected boundary rate | lambda | actual boundary rate | zero-shot |
 | ----- | ---------------------- | ------ | -------------------- | -------------------- |
-| DRIP-2X-32 | 50% | 1.0 | 24/49 (**49%**) | running |
+| DRIP-2X-32 | 50% | 1.0 | 24/49 (**49%**) | 26.78% |
 
 ### LAION-280M (178Msamples, 178,918,585) results
 
@@ -161,16 +161,17 @@ finetuning on (i) multimodal chatbot using LLaVA-Instruct-158K for **3 epochs** 
   - [x] fixed Cuda OOM issue with finetuning
   - [x] float16 (HALF) instead of float32 (FLOAT)
   - [x] LoRA enabled
+  - [ ] convert all files as .jpg in OCR-VQA [fixing]
 
-Finetuning experiment running:
+### Evaluation
 
-```java
-{'loss': 0.8673, 'grad_norm': 0.8187538983880278, 'learning_rate': 1.9994675036189098e-05, 'epoch': 0.04}
+benchmarks:
+- [ ] LLaVA-Bench-in-the-Wild
+  ![alt text](docs/LLaVA_in_the_wild.png)
+  - [ ] evaluation setup
+  - [ ] DRIP-2X-16 (**36.71%** zero-shot)
 
-  4%|▍         | 1671/41582 [45:20<18:37:53,  1.68s/it]type: torch.float16
-...
-...
-{'loss': 0.8655, 'grad_norm': 1.189985028380524, 'learning_rate': 1.9918921441264966e-05, 'epoch': 0.07}
-
-  7%|▋         | 2890/41582 [1:18:22<17:56:50,  1.67s/it]type: torch.float16
-```
+- [ ] ScienceQA
+  ![alt text](docs/Science_QA.png)
+  - [ ] evaluation setup
+  - [ ] DRIP-2X-16 (**36.71%** zero-shot)
