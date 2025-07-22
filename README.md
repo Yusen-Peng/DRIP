@@ -141,12 +141,15 @@ reference: zero-shot performance of pretrained CLIPs
 
 ![alt text](/docs/loss_paper.png)
 
-| expected boundary rate | lambda | soft/hard boundaries | actual boundary rate | zero-shot |
-| ---------------------- | ------ | -------------------- | -------------------- | --------- |
-| 0.5 | 1.0 | hard | 8/49 (0.16) | 21.90% |
-| 0.5 | 1.0 | soft | 7.5/49 (0.15) | 21.56% |
+| model | expected boundary rate | lambda | actual boundary rate | zero-shot |
+| ----- | ---------------------- | ------ | -------------------- | -------------------- |
+| DRIP-2X-32 | 50% | 1.0 | 8/49 (**16%**) | 21.90% |
 
 ![alt text](/docs/loss_implementation.png)
+
+| model | expected boundary rate | lambda | actual boundary rate | zero-shot |
+| ----- | ---------------------- | ------ | -------------------- | -------------------- |
+| DRIP-2X-32 | 50% | 1.0 | 24/49 (**49%**) | running |
 
 ### LAION-280M (178Msamples, 178,918,585) results
 
