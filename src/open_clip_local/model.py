@@ -150,7 +150,11 @@ def _build_vision_tower(
 
         if DTP_ViT:
             compression_rate = 0.5
-            lower_bound = False
+            lower_bound = True # use the lower bound now!
+            if lower_bound:
+                print("using the lower bound too!")
+            else:
+                print("not using the lower bound!")
             lambda_val = 1.0
             visual = DTPViT(
                 image_size=vision_cfg.image_size,

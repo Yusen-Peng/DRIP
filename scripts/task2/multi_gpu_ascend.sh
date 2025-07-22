@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=lower_bound
-#SBATCH --output=lower_bound.txt
+#SBATCH --job-name=lower_bound_log
+#SBATCH --output=lower_bound_log.txt
 #SBATCH --time=50:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=2

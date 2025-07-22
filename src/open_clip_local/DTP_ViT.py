@@ -173,9 +173,11 @@ class BoundaryPredictor(nn.Module):
         est_prior = sum_preds / total_count
         # sigma
         prior_std = torch.std(est_prior, unbiased=False)
+
+        print(f"est_prior: {est_prior}, prior_std: {prior_std}")
         
         # boundary rate upper bound: alpha
-        upper_bound = self.prior 
+        upper_bound = self.prior
         # boundary rate lower bound: beta = alpha - lambda * sigma
         lower_bound = self.prior - lambda_val * prior_std
         
@@ -421,14 +423,11 @@ class DTPViT(nn.Module):
 
         if return_loss and not self.flop_measure:
             if self.lower_bound:
-                # use soft boundaries for adaptive boundary loss with lower bound
                 boundary_loss = self.boundary_predictor.calc_loss_lower_bound(
                     preds=hard_boundaries,
-                    #preds=soft_boundaries,
                     lambda_val=self.lambda_val
                 )
             else:
-                # use hard boundaries for fixed boundary loss
                 boundary_loss = self.boundary_predictor.calc_loss(
                     preds=hard_boundaries, 
                     gt=None

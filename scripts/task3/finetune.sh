@@ -27,14 +27,14 @@ deepspeed src/task3_llava.py \
     --version v1 \
     --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/llava_v1_5_mix665k.json \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning \
-    --vision_tower openai/clip-vit-base-patch32 \
+    --vision_tower openai/clip-vit-base-patch16 \
     --mm_projector_type mlp2x_gelu \
     --fp16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-DRIP-2x-32-pretrain/mm_projector.bin \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/DRIP-2X-16-pretrain/mm_projector.bin \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-DRIP-2x-32-finetune \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/DRIP-2X-16-finetune \
     --num_train_epochs 1 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \

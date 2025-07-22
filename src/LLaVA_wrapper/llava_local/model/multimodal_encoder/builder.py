@@ -6,7 +6,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # FIXME: all hardcoded values for now
     USE_DTP = True
-    FINETUNING_MODE = False
+    FINETUNING_MODE = True
     if USE_DTP:
         print("🍟" * 20)
         print("Using DTP-ViT as the vision tower")
