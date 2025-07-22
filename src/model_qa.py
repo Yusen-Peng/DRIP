@@ -7,9 +7,8 @@ import json
 from tqdm import tqdm
 import shortuuid
 import os
-import sys
-from src.LLaVA_wrapper.llava_local.conversation import default_conversation
-from src.LLaVA_wrapper.llava_local.utils import disable_torch_init
+from LLaVA_wrapper.llava_local.conversation import default_conversation
+from LLaVA_wrapper.llava_local.utils import disable_torch_init
 
 
 @torch.inference_mode()

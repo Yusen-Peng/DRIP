@@ -8,11 +8,11 @@ import shortuuid
 import os
 import sys
 
-from src.LLaVA_wrapper.llava_local.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
-from src.LLaVA_wrapper.llava_local.conversation import conv_templates, SeparatorStyle
-from src.LLaVA_wrapper.llava_local.model.builder import load_pretrained_model
-from src.LLaVA_wrapper.llava_local.utils import disable_torch_init
-from src.LLaVA_wrapper.llava_local.mm_utils import tokenizer_image_token, process_images, load_image_from_base64, get_model_name_from_path
+from LLaVA_wrapper.llava_local.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
+from LLaVA_wrapper.llava_local.conversation import conv_templates, SeparatorStyle
+from LLaVA_wrapper.llava_local.model.builder import load_pretrained_model
+from LLaVA_wrapper.llava_local.utils import disable_torch_init
+from LLaVA_wrapper.llava_local.mm_utils import tokenizer_image_token, process_images, load_image_from_base64, get_model_name_from_path
 
 from PIL import Image
 import math

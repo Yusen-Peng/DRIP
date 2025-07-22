@@ -3,17 +3,17 @@ import torch
 import os
 import sys
 
-from src.LLaVA_wrapper.llava_local.constants import (
+from LLaVA_wrapper.llava_local.constants import (
     IMAGE_TOKEN_INDEX,
     DEFAULT_IMAGE_TOKEN,
     DEFAULT_IM_START_TOKEN,
     DEFAULT_IM_END_TOKEN,
     IMAGE_PLACEHOLDER,
 )
-from src.LLaVA_wrapper.llava_local.conversation import conv_templates, SeparatorStyle
-from src.LLaVA_wrapper.llava_local.model.builder import load_pretrained_model
-from src.LLaVA_wrapper.llava_local.utils import disable_torch_init
-from src.LLaVA_wrapper.llava_local.mm_utils import (
+from LLaVA_wrapper.llava_local.conversation import conv_templates, SeparatorStyle
+from LLaVA_wrapper.llava_local.model.builder import load_pretrained_model
+from LLaVA_wrapper.llava_local.utils import disable_torch_init
+from LLaVA_wrapper.llava_local.mm_utils import (
     process_images,
     tokenizer_image_token,
     get_model_name_from_path,
