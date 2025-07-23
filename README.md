@@ -162,6 +162,9 @@ finetuning on (i) multimodal chatbot using LLaVA-Instruct-158K for **3 epochs** 
   - [x] float16 (HALF) instead of float32 (FLOAT)
   - [x] LoRA enabled
   - [ ] convert all files as .jpg in OCR-VQA [fixing]
+  ```java
+  [rank3]: FileNotFoundError: [Errno 2] No such file or directory: '/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/ocr_vqa/images/689852649.jpg'
+  ```
 
 ### Evaluation
 
