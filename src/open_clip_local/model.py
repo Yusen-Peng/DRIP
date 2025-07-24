@@ -149,8 +149,8 @@ def _build_vision_tower(
             act_layer = partial(act_layer, **vision_cfg.act_kwargs)
 
         if DTP_ViT:
-            compression_rate = 0.5
-            lower_bound = True # use the lower bound now!
+            compression_rate = 0.25
+            lower_bound = False # use the lower bound now!
             if lower_bound:
                 print("using the lower bound too!")
             else:
@@ -161,7 +161,7 @@ def _build_vision_tower(
                 patch_size=vision_cfg.patch_size,
                 in_chans=3,
                 embed_dim=vision_cfg.width,
-                depth=(2, 10, 0),   # (2, 8, 2) from the original DTP paper
+                depth=(2, 12, 0), # (2, 10, 0), (2, 12, 0)
                 num_heads=vision_heads,
                 mlp_ratio=vision_cfg.mlp_ratio,
                 drop_rate=vision_cfg.patch_dropout,

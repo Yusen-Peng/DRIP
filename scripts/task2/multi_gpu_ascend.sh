@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=lower_bound_log
-#SBATCH --output=lower_bound_log.txt
-#SBATCH --time=50:00:00
+#SBATCH --job-name=DRIP-4x-32_2_12
+#SBATCH --output=DRIP-4x-32_2_12.log
+#SBATCH --time=70:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
 #SBATCH --gpus-per-node=4

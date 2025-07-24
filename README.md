@@ -100,14 +100,66 @@ reference: zero-shot performance of pretrained CLIPs
 
 | model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
-| ViT-B-32 | 2.96 | 224 | 32 | 10 | **28.77%** | 54.34% | 20.1 | 0.429 |
-| 2x comp | 2.69 | 224 | 32 | 10 | **25.72%** | 49.95% | **18.4** | **0.412** |
-| 4x comp | 1.83 | 224 | 32 | 10 | **24.24%** | 47.82% | **16.3** | **0.378** |
-| 10x comp | 1.26 | 224 | 32 | 10 | **21.70%** | 44.30% | **15.0** | **0.365** |
+| ViT-B-32 | **2.96** | 224 | 32 | 10 | **28.77%** | 54.34% | 20.1 | 0.429 |
+| DRIP-2x-32, 2+10 | 2.69 | 224 | 32 | 10 | **25.72%** | 49.95% | **18.4** | **0.412** |
+| DRIP-2x-32, 2+11 | 2.87⚠️ | 224 | 32 | 10 | **???** | ??? | **???** | **???** |
+| DRIP-2x-32, 2+12 | 3.06🤡 | 224 | 32 | 10 | **N/A** | N/A | **N/A** | **N/A** |
+| DRIP-4x-32, 2+10 | 1.83 | 224 | 32 | 10 | **24.24%** | 47.82% | **16.3** | **0.378** |
+| DRIP-4x-32, 2+12 | 2.03✅ | 224 | 32 | 10 | **running** | running | **running** | **running** |
+| DRIP-4x-32, 2+16 | 2.43✅ | 224 | 32 | 10 | **???** | ??? | **???** | **???** |
+| DRIP-4x-32, 2+18 | 2.63✅ | 224 | 32 | 10 | **???** | ??? | **???** | **???** |
+| DRIP-4x-32, 2+20 | 2.83⚠️ | 224 | 32 | 10 | **???** | ??? | **???** | **???** |
+| DRIP-10x-32, 2+10 | 1.26 | 224 | 32 | 10 | **21.70%** | 44.30% | **15.0** | **0.365** |
+| DRIP-10x-32, 2+24 | 1.86✅ | 224 | 32 | 10 | **???** | ??? | **???** | **???** |
 | ViT-B-16 | 11.33 | 224 | 32 | 10 | **33.88%** | 60.81% | **43.9** | **0.756** |
-| 2x comp | 10.22 | 224 | 16 | 10 | **30.59%** | 57.11% | **43.0** | **0.706** |
-| 4x comp | 6.62 | 224 | 16 | 10 | **28.25%** | 53.95% | **32.2** | **0.570** |
-| 10x comp | 4.53 | 224 | 16 | 10 | **26.36%** | 50.79% | **26.3** | **0.515** |
+| DRIP-2x-16, 2+10 | 10.22 | 224 | 16 | 10 | **30.59%** | 57.11% | **43.0** | **0.706** |
+| DRIP-4x-16, 2+10 | 6.62 | 224 | 16 | 10 | **28.25%** | 53.95% | **32.2** | **0.570** |
+| DRIP-10x-16, 2+10 | 4.53 | 224 | 16 | 10 | **26.36%** | 50.79% | **26.3** | **0.515** |
+
+## pooling across tokens
+
+ViT pooling implementation (average pooling excluding CLS/first token OR CLS/first token pooling):
+```py
+def _global_pool(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+     if self.pool_type == 'avg':
+          pooled, tokens = x[:, 1:].mean(dim=1), x[:, 1:]
+     elif self.pool_type == 'tok':
+          pooled, tokens = x[:, 0], x[:, 1:]
+     else:
+          pooled = tokens = x
+
+     return pooled, tokens
+```
+
+but the default one is CLS/first token pooling:
+
+```py
+pool_type: str = 'tok'
+```
+
+
+Our DRIP original pooling implementation (average pooling **including** CLS/first token):
+```py
+# downsample patch tokens
+patch_tokens = downsample(hard_boundaries, patch_tokens, self.null_group)
+patch_tokens = patch_tokens[1:]  # remove null group at index 0 → [S, B, D]
+
+# reattach CLS token
+x = torch.cat([cls_token, patch_tokens], dim=0)     # [1 + S, B, D]
+
+x = self.norm(x)                                     # [1 + S, B, D]
+x = self.shorten_blocks(x)                           # [1 + S, B, D]
+
+x = x.transpose(0, 1)                               # [B, 1 + S, D]
+x = self.norm(x)                                    # [B, 1 + S, D]
+x = x.mean(dim=1)                                   # [B, D]
+```
+
+alternatives:
+- [ ] average pooling **excluding** CLS/first token
+- [ ] CLS/first token pooling
+- [ ] last token pooling
+
 
 ## Boundary rate lower bound?
 

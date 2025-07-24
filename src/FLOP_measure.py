@@ -95,7 +95,7 @@ def throughput(images, model):
 
 # Example usage with a dummy model
 if __name__ == "__main__":
-    PATCH_SIZE = 16
+    PATCH_SIZE = 32
     COMPRESSION_RATE = 0.5
 
     cfg = CLIPVisionCfg(
@@ -112,7 +112,7 @@ if __name__ == "__main__":
         patch_size=cfg.patch_size,
         in_chans=3,
         embed_dim=cfg.width,
-        depth=(2, 10, 0),            # originally (2, 8, 2) from the DTP paper
+        depth=(2, 11, 0),
         num_heads=cfg.width // 64,  # 768 // 64 = 12
         mlp_ratio=cfg.mlp_ratio,
         drop_rate=cfg.patch_dropout,
