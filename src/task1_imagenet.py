@@ -93,7 +93,7 @@ def finetuning_ViT():
         for param in model.backbone.parameters():
             param.requires_grad = False
         print("🔒 Backbone frozen. Only classification head will be trained.")
-    model = DDP(model, device_ids=[DEVICE])
+    model = DDP(model, device_ids=[DEVICE], find_unused_parameters=True)
 
     train_sampler = DistributedSampler(train_dataset)
     train_loader = DataLoader(
@@ -245,7 +245,7 @@ def finetuning_DTP_ViT():
         for param in model.backbone.parameters():
             param.requires_grad = False
         print("🔒 Backbone frozen. Only classification head will be trained.")
-    model = DDP(model, device_ids=[DEVICE])    
+    model = DDP(model, device_ids=[DEVICE], find_unused_parameters=True)    
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.05)

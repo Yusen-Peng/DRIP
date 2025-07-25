@@ -102,19 +102,22 @@ reference: zero-shot performance of pretrained CLIPs
 | ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
 | ViT-B-32 | **2.96** | 224 | 32 | 10 | **28.77%** | 54.34% | 20.1 | 0.429 |
 | DRIP-2x-32, 2+10 | 2.69 | 224 | 32 | 10 | **25.72%** | 49.95% | **18.4** | **0.412** |
-| DRIP-2x-32, 2+11 | 2.87⚠️ | 224 | 32 | 10 | **???** | ??? | **???** | **???** |
-| DRIP-2x-32, 2+12 | 3.06🤡 | 224 | 32 | 10 | **N/A** | N/A | **N/A** | **N/A** |
+| DRIP-2x-32, 2+11 | 2.87⚠️ | 224 | 32 | 10 | **submitted** | submitted | **submitted** | **submitted** |
 | DRIP-4x-32, 2+10 | 1.83 | 224 | 32 | 10 | **24.24%** | 47.82% | **16.3** | **0.378** |
 | DRIP-4x-32, 2+12 | 2.03✅ | 224 | 32 | 10 | **running** | running | **running** | **running** |
-| DRIP-4x-32, 2+16 | 2.43✅ | 224 | 32 | 10 | **???** | ??? | **???** | **???** |
-| DRIP-4x-32, 2+18 | 2.63✅ | 224 | 32 | 10 | **???** | ??? | **???** | **???** |
-| DRIP-4x-32, 2+20 | 2.83⚠️ | 224 | 32 | 10 | **???** | ??? | **???** | **???** |
+| DRIP-4x-32, 2+16 | 2.43✅ | 224 | 32 | 10 | **running** | running | **running** | **running** |
+| DRIP-4x-32, 2+18 | 2.63✅ | 224 | 32 | 10 | **running** | running | **running** | **running** |
+| DRIP-4x-32, 2+20 | 2.83⚠️ | 224 | 32 | 10 | **running** | running | **running** | **running** |
 | DRIP-10x-32, 2+10 | 1.26 | 224 | 32 | 10 | **21.70%** | 44.30% | **15.0** | **0.365** |
 | DRIP-10x-32, 2+24 | 1.86✅ | 224 | 32 | 10 | **???** | ??? | **???** | **???** |
 | ViT-B-16 | 11.33 | 224 | 32 | 10 | **33.88%** | 60.81% | **43.9** | **0.756** |
 | DRIP-2x-16, 2+10 | 10.22 | 224 | 16 | 10 | **30.59%** | 57.11% | **43.0** | **0.706** |
 | DRIP-4x-16, 2+10 | 6.62 | 224 | 16 | 10 | **28.25%** | 53.95% | **32.2** | **0.570** |
 | DRIP-10x-16, 2+10 | 4.53 | 224 | 16 | 10 | **26.36%** | 50.79% | **26.3** | **0.515** |
+
+someone is going crazy with OSC (8 nodes simultaneously?!)
+
+![alt text](docs/bad_guy.png)
 
 ## pooling across tokens
 
@@ -218,15 +221,29 @@ finetuning on (i) multimodal chatbot using LLaVA-Instruct-158K for **3 epochs** 
   [rank3]: FileNotFoundError: [Errno 2] No such file or directory: '/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/ocr_vqa/images/689852649.jpg'
   ```
 
-### Evaluation
+### LLaVa Evaluation
 
 benchmarks:
-- [ ] LLaVA-Bench-in-the-Wild
-  ![alt text](docs/LLaVA_in_the_wild.png)
-  - [ ] evaluation setup
+
+- [ ] ScienceQA (LLM-free)
+  - [x] evaluation setup
+     - [x] fix dependency issues with transformers==4.41.2
   - [ ] DRIP-2X-16 (**36.71%** zero-shot)
 
-- [ ] ScienceQA
-  ![alt text](docs/Science_QA.png)
-  - [ ] evaluation setup
+| model details | Accuracy | IMG-Accuracy |
+| --------------------- | -------- | ------------ |
+| llava-v1.5-13b from HuggingFace | 68.43% | 70.45% |
+| DRIP-2X-16 (1 epoch pretrain + 1 epoch finetune) | N/A | N/A |
+
+
+- [ ] LLaVA-Bench-in-the-Wild (LLM-judge)
+  - [x] evaluation setup
   - [ ] DRIP-2X-16 (**36.71%** zero-shot)
+
+| model details | LLM-judge (A, C, D, R) | Rule-Based (A, C, D, R) | Overall (A, C, D, R) |   
+| ------------- | ---------------------- | ----------------------- | -------------------- |
+| llava-v1.5-13b | (88.7%, 91.8%, 88.0%, 87.1%) | (64.8%, 57.1%, 55.3%, 74.5%) | (73.0%, 62.2%, 62.9%, 85.4%) |
+
+
+Note: (A, C, D, R) = (Average, Conversation, Detail description, Complex reasoning)
+

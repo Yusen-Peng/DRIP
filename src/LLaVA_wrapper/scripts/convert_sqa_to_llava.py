@@ -85,4 +85,8 @@ def main(task, **kwargs):
 
 
 if __name__ == "__main__":
-    fire.Fire(main)
+    convert_to_llava(
+        base_dir="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa",
+        split="test",
+        prompt_format="QCM-LEA"
+    )

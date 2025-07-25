@@ -4,7 +4,7 @@
 #SBATCH --time=90:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=4
+#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
@@ -25,7 +25,7 @@ deepspeed src/task3_llava.py \
     --deepspeed src/LLaVA_wrapper/scripts/finetune.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version v1 \
-    --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/llava_v1_5_mix665k.json \
+    --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning \
     --vision_tower openai/clip-vit-base-patch16 \
     --mm_projector_type mlp2x_gelu \

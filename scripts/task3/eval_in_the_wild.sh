@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=in_the_wild_eval
 #SBATCH --output=in_the_wild_eval.txt
-#SBATCH --time=00:20:00
+#SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
@@ -17,6 +17,11 @@ export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
+
+# Load API key from .env
+set -a
+source /users/PAS2912/yusenpeng/Fast-CLIP/.env
+set +a
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers/llava-v1.5-13b.jsonl
