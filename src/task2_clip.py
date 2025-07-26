@@ -51,7 +51,9 @@ def train_runner(
             "--epochs", str(epochs),
             "--workers", str(workers),
             "--model", model,
-            "--precision", "amp"
+            "--precision", "amp",
+            "--resume", "latest", # resume from the latest checkpoints
+            "--checkpoint-path", "logs/DRIP-2X-32-11/checkpoints", # the path to save checkpoints
         ]
 
     else:
@@ -71,7 +73,9 @@ def train_runner(
             "--epochs", str(epochs),
             "--workers", str(workers),
             "--model", model,
-            "--precision", "amp"
+            "--precision", "amp",
+            "--resume", "latest", # resume from the latest checkpoints
+            "--checkpoint-path", "logs/DRIP-2X-16/checkpoints", # the path to save checkpoints
         ]
 
     if DTP:

@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=DRIP-2x-32_2_11
-#SBATCH --output=DRIP-2x-32_2_11.log
+#SBATCH --job-name=DRIP-2x-32-11-resume
+#SBATCH --output=DRIP-2x-32-11-resume.log
 #SBATCH --time=70:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks=2
-#SBATCH --gpus-per-node=4
+#SBATCH --ntasks=1
+#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836

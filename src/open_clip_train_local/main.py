@@ -100,7 +100,7 @@ def main(args):
             f"p_{args.precision}",
         ])
 
-    resume_latest = args.resume == 'latest'
+    resume_latest = args.resume == 'latest' # resume from the latest checkpoint
     log_base_path = os.path.join(args.logs, args.name)
     args.log_path = None
     if is_master(args, local=args.log_local):
@@ -120,7 +120,13 @@ def main(args):
     # Setup wandb, tensorboard, checkpoint logging
     args.wandb = 'wandb' in args.report_to or 'all' in args.report_to
     args.tensorboard = 'tensorboard' in args.report_to or 'all' in args.report_to
-    args.checkpoint_path = os.path.join(log_base_path, "checkpoints")
+    
+    if resume_latest:
+        # read the checkpoint from an arbitrary path if we resume our experiment
+        assert args.checkpoint_path is not None
+    else:
+        args.checkpoint_path = os.path.join(log_base_path, "checkpoints")
+
     if is_master(args):
         args.tensorboard_path = os.path.join(log_base_path, "tensorboard") if args.tensorboard else ''
         for dirname in [args.tensorboard_path, args.checkpoint_path]:

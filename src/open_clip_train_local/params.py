@@ -482,6 +482,12 @@ def parse_args(args):
         type=str,
         help='A string to specify a specific distributed loss implementation.'
     )
+    parser.add_argument(
+        "--checkpoint-path",
+        type=str,
+        default=None,
+        help="Path to save checkpoints. If None, defaults to logs/<name>/checkpoints.",
+    )
     
     args = parser.parse_args(args)
 

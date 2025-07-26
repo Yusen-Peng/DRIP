@@ -55,69 +55,24 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
      1. memory: torch.cuda.max_memory_allocated()
      2. training step time: **already built-in** by CLIP!
 
-## TASK 2 - ImageNet Classification Finetuning
-
-### Performance Metrics
-
-Classification accuracy on ImageNet
-
-### train ViTs on ImageNet-1K (1.28M images)
-
-| model | dataset pretrained on | zero-shot | freeze the backbone? | epoch | classification accuracy |
-| ----- | --------------------- | -------------------- | ---------- | ----- | ----------------------- |
-| <tr><td colspan="6" align="center"> pretrained ViT </td></tr> |
-| ViT-B-32 | laion2b_s34b_b79k | 66.53% | yes | 30 | 🟢76.81% |
-| ViT-B-32 | laion2b_s34b_b79k | 66.53% | no | 30 | 🟠60.98% |
-| <tr><td colspan="6" align="center"> pretrained DRIP </td></tr> |
-| DRIP-2X-16 | 280M LAION | **36.71%** | yes | 30 | **** |
-| DRIP-2X-16 | 280m LAION | **36.71%** | no | 30 | **running** |
-
-### Two errors occur IN THE MIDDLE of finetuning experiment (at epoch 38)
-
-Error 1: unused parameters?
-
-```python
-[rank3]: RuntimeError: Expected to have finished reduction in the prior iteration before starting a new one. This error indicates that your module has parameters that were not used in producing loss. You can enable unused parameter detection by passing the keyword argument `find_unused_parameters=True` to `torch.nn.parallel.DistributedDataParallel`, and by 
-[rank3]: making sure all `forward` function outputs participate in calculating loss. 
-[rank3]: If you already have done the above, then the distributed data parallel module wasn't able to locate the output tensors in the return value of your module's `forward` function. Please include the loss function and the structure of the return value of `forward` of your module when reporting this issue (e.g. list, dict, iterable).
-[rank3]: Parameter indices which did not receive grad for rank 3: 149 150 151 152
-[rank3]:  In addition, you can set the environment variable TORCH_DISTRIBUTED_DEBUG to either INFO or DETAIL to print out information about which particular parameters did not receive gradient on this rank as part of this error
-```
-
-Error 2: NCCL timeout error?
-
-```java
-[Rank 2] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=2664597, OpType=ALLREDUCE, NumelIn=8272897, NumelOut=8272897, Timeout(ms)=600000) ran for 600002 milliseconds before timing out.
-```
-
 ### LAION-2B subset (26M samples) results
-
-reference: zero-shot performance of pretrained CLIPs 
-
-| pretrained vision encoder | corresponding dataset | zero-shot dataset | zero-shot top-1 |
-| ------------------------- | --------------------- | ----------------- | --------------- |
-| ViT-B-32 | laion400m_e31 | ImageNet-1K | **60.22%** |
 
 | model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
 | ------- | ----- | --------------- | ---------- | -------- | ---------- | ---------------- | ------------- | ---------- |
 | ViT-B-32 | **2.96** | 224 | 32 | 10 | **28.77%** | 54.34% | 20.1 | 0.429 |
 | DRIP-2x-32, 2+10 | 2.69 | 224 | 32 | 10 | **25.72%** | 49.95% | **18.4** | **0.412** |
-| DRIP-2x-32, 2+11 | 2.87⚠️ | 224 | 32 | 10 | **submitted** | submitted | **submitted** | **submitted** |
+| DRIP-2x-32, 2+11 | 2.87⚠️ | 224 | 32 | 10 | **26.13%** | 50.91% | **18.9** | **0.398** |
 | DRIP-4x-32, 2+10 | 1.83 | 224 | 32 | 10 | **24.24%** | 47.82% | **16.3** | **0.378** |
-| DRIP-4x-32, 2+12 | 2.03✅ | 224 | 32 | 10 | **running** | running | **running** | **running** |
-| DRIP-4x-32, 2+16 | 2.43✅ | 224 | 32 | 10 | **running** | running | **running** | **running** |
-| DRIP-4x-32, 2+18 | 2.63✅ | 224 | 32 | 10 | **running** | running | **running** | **running** |
-| DRIP-4x-32, 2+20 | 2.83⚠️ | 224 | 32 | 10 | **running** | running | **running** | **running** |
+| DRIP-4x-32, 2+12 | 2.03✅ | 224 | 32 | 10 | **23.87%** | 47.23% | **16.9** | **0.383** |
+| DRIP-4x-32, 2+16 | 2.43✅ | 224 | 32 | 10 | **24.54%** | 48.70% | **18.5** | **0.402** |
+| DRIP-4x-32, 2+18 | 2.63✅ | 224 | 32 | 10 | **24.67%** | 48.75% | **19.2** | **0.405** |
+| DRIP-4x-32, 2+20 | 2.83⚠️ | 224 | 32 | 10 | **25.67%** | 49.81% | **19.8** | **0.398** |
 | DRIP-10x-32, 2+10 | 1.26 | 224 | 32 | 10 | **21.70%** | 44.30% | **15.0** | **0.365** |
-| DRIP-10x-32, 2+24 | 1.86✅ | 224 | 32 | 10 | **???** | ??? | **???** | **???** |
+| DRIP-10x-32, 2+24 | 1.86✅ | 224 | 32 | 10 | **running** | running | **running** | **running** |
 | ViT-B-16 | 11.33 | 224 | 32 | 10 | **33.88%** | 60.81% | **43.9** | **0.756** |
 | DRIP-2x-16, 2+10 | 10.22 | 224 | 16 | 10 | **30.59%** | 57.11% | **43.0** | **0.706** |
 | DRIP-4x-16, 2+10 | 6.62 | 224 | 16 | 10 | **28.25%** | 53.95% | **32.2** | **0.570** |
 | DRIP-10x-16, 2+10 | 4.53 | 224 | 16 | 10 | **26.36%** | 50.79% | **26.3** | **0.515** |
-
-someone is going crazy with OSC (8 nodes simultaneously?!)
-
-![alt text](docs/bad_guy.png)
 
 ## pooling across tokens
 
@@ -160,23 +115,14 @@ x = x.mean(dim=1)                                   # [B, D]
 
 alternatives:
 - [ ] average pooling **excluding** CLS/first token
+  - [ ] DRIP-2x-32, 10 epochs of 28M: running now!
+  - [ ] DRIP-4x-32, 10 epochs of 28M: running now!
 - [ ] CLS/first token pooling
+  - [ ] DRIP-2x-32, 10 epochs of 28M: running now!
+  - [ ] DRIP-4x-32, 10 epochs of 28M: submitted!
 - [ ] last token pooling
-
-
-## Boundary rate lower bound?
-
-![alt text](/docs/loss_paper.png)
-
-| model | expected boundary rate | lambda | actual boundary rate | zero-shot |
-| ----- | ---------------------- | ------ | -------------------- | -------------------- |
-| DRIP-2X-32 | 50% | 1.0 | 8/49 (**16%**) | 21.90% |
-
-![alt text](/docs/loss_implementation.png)
-
-| model | expected boundary rate | lambda | actual boundary rate | zero-shot |
-| ----- | ---------------------- | ------ | -------------------- | -------------------- |
-| DRIP-2X-32 | 50% | 1.0 | 24/49 (**49%**) | 26.78% |
+  - [ ] DRIP-2x-32, 10 epochs of 28M: 
+  - [ ] DRIP-4x-32, 10 epochs of 28M:
 
 ### LAION-280M (178Msamples, 178,918,585) results
 
@@ -190,6 +136,24 @@ alternatives:
 | 2x comp | 10.22 | 224 | 16 | 3 | **36.71%** | 64.98% | **43.4** | **0.703** |
 | 4x comp | 6.62 | 224 | 16 | 3 | **34.14%** | 61.89% | **32.3** | **0.557** |
 | 10x comp | 4.53 | 224 | 16 | 3 | **32.32%** | 59.40% | **26.2** | **0.486** |
+
+Note: CLIP people trained their models for **32** epochs instead of 10.
+
+## TASK 2 - ImageNet Classification Finetuning
+
+### Performance Metrics
+
+Classification accuracy on ImageNet
+
+### train ViTs on ImageNet-1K (1.28M images)
+
+| model | dataset pretrained on | zero-shot | freeze the backbone? | epoch | classification accuracy |
+| ----- | --------------------- | -------------------- | ---------- | ----- | ----------------------- |
+| <tr><td colspan="6" align="center"> pretrained ViT </td></tr> |
+| ViT-B-32 | laion2b_s34b_b79k | 66.53% | yes | 30 | 🟢76.81% |
+| ViT-B-32 | laion2b_s34b_b79k | 66.53% | no | 30 | 🟠60.98% |
+| <tr><td colspan="6" align="center"> pretrained DRIP </td></tr> |
+| DRIP-2X-16 | 3 epochs of 280M LAION | **36.71%** | no | 100 | **42.30%** |
 
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
@@ -219,6 +183,10 @@ finetuning on (i) multimodal chatbot using LLaVA-Instruct-158K for **3 epochs** 
   - [ ] convert all files as .jpg in OCR-VQA [fixing]
   ```java
   [rank3]: FileNotFoundError: [Errno 2] No such file or directory: '/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/ocr_vqa/images/689852649.jpg'
+  ```
+  - [ ] cannot decrease scale anymore? 
+  ```java
+  [rank0]: Exception: Current loss scale already at minimum - cannot decrease scale anymore. Exiting run.
   ```
 
 ### LLaVa Evaluation

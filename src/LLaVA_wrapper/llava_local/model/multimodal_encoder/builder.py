@@ -5,7 +5,7 @@ from .clip_encoder import CLIPVisionTower, CLIPVisionTowerS2, DRIPVisionTower
 def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # FIXME: all hardcoded values for now
-    USE_DTP = False # now let's eval original LLaVA first
+    USE_DTP = True
     FINETUNING_MODE = True
     if USE_DTP:
         print("🍟" * 20)
