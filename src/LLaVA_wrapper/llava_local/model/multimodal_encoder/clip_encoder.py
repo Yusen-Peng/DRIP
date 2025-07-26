@@ -151,9 +151,10 @@ class DRIPVisionTower(nn.Module):
         if not delay_load or getattr(args, 'unfreeze_mm_vision_tower', False):
             self.load_model()
 
-    def load_model(self):
+    def load_model(self, device_map=None):
         if self.is_loaded:
             print(f"{self.checkpoint_path} is already loaded. Skipping.")
+            print(f"btw, device map is {device_map}")
             return
 
         self.vision_tower: DTPViT = DTPViT(
@@ -180,12 +181,7 @@ class DRIPVisionTower(nn.Module):
         # if in finetuning mode, change precision into float16
         if self.finetuning_mode:
             self.vision_tower = self.vision_tower.half()
-
-        # print the data types after loading
-        print(f"weight data type after loading:\n")
-        for k, v in self.vision_tower.state_dict().items():
-            print(f"{k}: {v.dtype}")
-
+        
         self.vision_tower.requires_grad_(False)
         self.image_processor = CLIPImageProcessor.from_pretrained(self.vision_tower_name)
         self.image_processor.size = {'shortest_edge': 224}
@@ -221,10 +217,11 @@ class DRIPVisionTower(nn.Module):
         images: torch.Tensor of shape [B, C, H, W]
         returns: torch.Tensor of shape [B, N_tokens, hidden_dim]
         """
-        print(f"type: {self.dtype}")
-        print("🤖" * 20)
-        images = images.to(device=self.device, dtype=self.dtype)
-        return self.vision_tower.encode(images, return_loss=False)
+        # encode images
+        images = images.to("cuda", dtype=self.dtype)
+        features = self.vision_tower.encode(images, return_loss=False)
+        features = features.to("cuda", dtype=self.dtype)
+        return features
 
     @property
     def dummy_feature(self):
@@ -236,7 +233,7 @@ class DRIPVisionTower(nn.Module):
 
     @property
     def device(self):
-        return next(self.vision_tower.parameters()).device
+        return torch.device("cuda")
 
     @property
     def config(self):

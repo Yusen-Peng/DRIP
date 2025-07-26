@@ -55,7 +55,7 @@ def load_dtpx_from_clip_checkpoint(model: nn.Module, ckpt_path: str) -> DTPViT:
     }
 
     model.load_state_dict(dtpvit_state_dict, strict=False)
-    return model
+    return model.to("cuda")
 
 
 def load_dtpx_from_clip_checkpoint_float(model: nn.Module, ckpt_path: str) -> DTPViT:

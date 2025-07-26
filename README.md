@@ -1,16 +1,5 @@
 # 💧 DRIP: **D**ynamic token **R**eduction v**I**sion transformer via **P**ooling for efficient multimodal learning
 
-## DRIP v.s. existing work
-
-| design | approach summary |
-| ------ | -------------------------- |
-| **DRIP** (ours!) | a single boundary predictor using **Gumbel-Sigmoid** |
-| DynamicViT (2021) | a binary decision mask to **PRUNE** tokens at each transformer layer |
-| TokenLearner (2021) | a spatial attention module inserted in ViT to **LEARN** tokens |  
-| NativeSegViT (2025) | kmeans-like clustering to dynamically **GROUP** tokens repeatedly |
-
-According to DTP paper, both **Gumbel-Sigmoid** and **Entropy-Spike** are very suitable to adapt to other modalities!
-
 ## DRIP Architecture
 
 ![alt text](/docs/DRIP.png)
@@ -68,7 +57,7 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
 | DRIP-4x-32, 2+18 | 2.63✅ | 224 | 32 | 10 | **24.67%** | 48.75% | **19.2** | **0.405** |
 | DRIP-4x-32, 2+20 | 2.83⚠️ | 224 | 32 | 10 | **25.67%** | 49.81% | **19.8** | **0.398** |
 | DRIP-10x-32, 2+10 | 1.26 | 224 | 32 | 10 | **21.70%** | 44.30% | **15.0** | **0.365** |
-| DRIP-10x-32, 2+24 | 1.86✅ | 224 | 32 | 10 | **running** | running | **running** | **running** |
+| DRIP-10x-32, 2+24 | 1.86✅ | 224 | 32 | 10 | **22.52%** | 45.27% | **18.5** | **0.391** |
 | ViT-B-16 | 11.33 | 224 | 32 | 10 | **33.88%** | 60.81% | **43.9** | **0.756** |
 | DRIP-2x-16, 2+10 | 10.22 | 224 | 16 | 10 | **30.59%** | 57.11% | **43.0** | **0.706** |
 | DRIP-4x-16, 2+10 | 6.62 | 224 | 16 | 10 | **28.25%** | 53.95% | **32.2** | **0.570** |
@@ -114,15 +103,15 @@ x = x.mean(dim=1)                                   # [B, D]
 ```
 
 alternatives:
-- [ ] average pooling **excluding** CLS/first token
-  - [ ] DRIP-2x-32, 10 epochs of 28M: running now!
-  - [ ] DRIP-4x-32, 10 epochs of 28M: running now!
+- [x] average pooling **excluding** CLS/first token
+  - [x] DRIP-2x-32, 10 epochs of 28M: 25.96% (originally 25.72%)
+  - [x] DRIP-4x-32, 10 epochs of 28M: 23.23% (originally 24.24%)
 - [ ] CLS/first token pooling
-  - [ ] DRIP-2x-32, 10 epochs of 28M: running now!
+  - [x] DRIP-2x-32, 10 epochs of 28M: 24.17% (originally 25.72%)
   - [ ] DRIP-4x-32, 10 epochs of 28M: submitted!
-- [ ] last token pooling
-  - [ ] DRIP-2x-32, 10 epochs of 28M: 
-  - [ ] DRIP-4x-32, 10 epochs of 28M:
+- [ ] last token pooling (we hope it's cumulative)
+  - [ ] DRIP-2x-32, 10 epochs of 28M: pending
+  - [ ] DRIP-4x-32, 10 epochs of 28M: pending
 
 ### LAION-280M (178Msamples, 178,918,585) results
 
@@ -141,10 +130,6 @@ Note: CLIP people trained their models for **32** epochs instead of 10.
 
 ## TASK 2 - ImageNet Classification Finetuning
 
-### Performance Metrics
-
-Classification accuracy on ImageNet
-
 ### train ViTs on ImageNet-1K (1.28M images)
 
 | model | dataset pretrained on | zero-shot | freeze the backbone? | epoch | classification accuracy |
@@ -153,65 +138,27 @@ Classification accuracy on ImageNet
 | ViT-B-32 | laion2b_s34b_b79k | 66.53% | yes | 30 | 🟢76.81% |
 | ViT-B-32 | laion2b_s34b_b79k | 66.53% | no | 30 | 🟠60.98% |
 | <tr><td colspan="6" align="center"> pretrained DRIP </td></tr> |
-| DRIP-2X-16 | 3 epochs of 280M LAION | **36.71%** | no | 100 | **42.30%** |
+| DRIP-2X-16 | 3 epochs of 280M LAION | **36.71%** | no | 100 | **🟢42.30%** |
 
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
 
-### Pretraining - Feature Alignment with **558K** samples 
-     
-1. image-caption data (LAION-CC-SBU with BLIP captions) -> conversation data
-2. objective: image + question -> response
-3. both visual encoder and LLM are frozen, only train the projectors
+### LLaVA Benchmark Evaluation
 
-### Visual Instruction Tuning
-
-dataset (LLaVA-Instruct-158K): 158K samples (58K conversations, 23K detailed description, 77K in complex reasoning)
-
-finetuning on (i) multimodal chatbot using LLaVA-Instruct-158K for **3 epochs** (ii) Science QA benchmark; **only visual encoder is frozen**, update LLM and the projectors
-
-### DRIP Integration debugging list
-
-- pretraining
-  - [x] precision matching: enforce float32 since it's the precision used in my DRIP checkpoint
-  - [x] vision projector: ensure `embed_dim` alignment between the encoder and projector
-  - [x] forward pass, but **ONLY imtermediates**: no average pooling across tokens!
-- finetuning
-  - [x] fixed Cuda OOM issue with finetuning
-  - [x] float16 (HALF) instead of float32 (FLOAT)
-  - [x] LoRA enabled
-  - [ ] convert all files as .jpg in OCR-VQA [fixing]
-  ```java
-  [rank3]: FileNotFoundError: [Errno 2] No such file or directory: '/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/ocr_vqa/images/689852649.jpg'
-  ```
-  - [ ] cannot decrease scale anymore? 
-  ```java
-  [rank0]: Exception: Current loss scale already at minimum - cannot decrease scale anymore. Exiting run.
-  ```
-
-### LLaVa Evaluation
-
-benchmarks:
-
-- [ ] ScienceQA (LLM-free)
-  - [x] evaluation setup
-     - [x] fix dependency issues with transformers==4.41.2
-  - [ ] DRIP-2X-16 (**36.71%** zero-shot)
+#### ScienceQA (LLM-free)
 
 | model details | Accuracy | IMG-Accuracy |
 | --------------------- | -------- | ------------ |
 | llava-v1.5-13b from HuggingFace | 68.43% | 70.45% |
-| DRIP-2X-16 (1 epoch pretrain + 1 epoch finetune) | N/A | N/A |
+| DRIP-2X-16 (**36.71%** zero-shot, 1 epoch pretrain + 1 epoch finetune) | 67.20% | 61.92% |
 
 
-- [ ] LLaVA-Bench-in-the-Wild (LLM-judge)
-  - [x] evaluation setup
-  - [ ] DRIP-2X-16 (**36.71%** zero-shot)
+#### LLaVA-Bench-in-the-Wild (LLM-judge)
 
 | model details | LLM-judge (A, C, D, R) | Rule-Based (A, C, D, R) | Overall (A, C, D, R) |   
 | ------------- | ---------------------- | ----------------------- | -------------------- |
 | llava-v1.5-13b | (88.7%, 91.8%, 88.0%, 87.1%) | (64.8%, 57.1%, 55.3%, 74.5%) | (73.0%, 62.2%, 62.9%, 85.4%) |
-
+| DRIP-2X-16 (**36.71%** zero-shot, 1 epoch pretrain + 1 epoch finetune) | (93.5%, 94.1%, 98.0%, 90.7%) | (29.8%, 25.3%, 16.0%, 39.8%) | (31.8%, 26.9%, 16.3%, 43.9%) |
 
 Note: (A, C, D, R) = (Average, Conversation, Detail description, Complex reasoning)
 

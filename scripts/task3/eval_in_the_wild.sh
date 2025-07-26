@@ -24,18 +24,19 @@ source /users/PAS2912/yusenpeng/Fast-CLIP/.env
 set +a
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers/llava-v1.5-13b.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers/DRIP-2X-16-finetune.jsonl
 
 python src/model_vqa.py \
-    --model-path liuhaotian/llava-v1.5-13b \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/DRIP-2X-16-finetune \
+    --model-base lmsys/vicuna-7b-v1.5 \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/questions.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/images \
-    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers/llava-v1.5-13b.jsonl \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers/DRIP-2X-16-finetune.jsonl \
     --temperature 0 \
     --conv-mode vicuna_v1
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews/llava-v1.5-13b.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews/DRIP-2X-16-finetune.jsonl
 
 python src/eval_gpt_review_bench.py \
     --question /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/questions.jsonl \
@@ -43,11 +44,11 @@ python src/eval_gpt_review_bench.py \
     --rule src/LLaVA_wrapper/llava_local/eval/table/rule.json \
     --answer-list \
         /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers_gpt4.jsonl \
-        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers/llava-v1.5-13b.jsonl \
+        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers/DRIP-2X-16-finetune.jsonl \
     --output \
-        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews/llava-v1.5-13b.jsonl
+        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews/DRIP-2X-16-finetune.jsonl
 
-python src/summarize_gpt_review.py -f /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews/llava-v1.5-13b.jsonl
+python src/summarize_gpt_review.py -f /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews/DRIP-2X-16-finetune.jsonl
 
 conda deactivate
 # End of script

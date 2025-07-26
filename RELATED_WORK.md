@@ -264,3 +264,29 @@ Suggested LR: 2.48E-04
 | 10x compression | no initialization | **1e-4 constant scheduler** | 512 | 30 | 🔴**25.43%**: underfitting, train-acc = 24% |
 | 10x compression | no initialization | **6e-4 cosine scheduler with warmup** | 512 | 30 | 🔴**24.95%** |
 | 10x compression | no initialization | **2.48e-04 cosine scheduler with warmup** | 512 | 100 | 🔴**30.52%** |
+
+
+### DRIP Integration debugging list
+
+- pretraining
+  - [x] precision matching: enforce float32 since it's the precision used in my DRIP checkpoint
+  - [x] vision projector: ensure `embed_dim` alignment between the encoder and projector
+  - [x] forward pass, but **ONLY imtermediates**: no average pooling across tokens!
+- finetuning
+  - [x] fixed Cuda OOM issue with finetuning
+  - [x] float16 (HALF) instead of float32 (FLOAT)
+  - [x] LoRA enabled
+  - [x] convert all files as .jpg in OCR-VQA [fixed!]
+
+
+
+## DRIP v.s. existing work
+
+| design | approach summary |
+| ------ | -------------------------- |
+| **DRIP** (ours!) | a single boundary predictor using **Gumbel-Sigmoid** |
+| DynamicViT (2021) | a binary decision mask to **PRUNE** tokens at each transformer layer |
+| TokenLearner (2021) | a spatial attention module inserted in ViT to **LEARN** tokens |  
+| NativeSegViT (2025) | kmeans-like clustering to dynamically **GROUP** tokens repeatedly |
+
+According to DTP paper, both **Gumbel-Sigmoid** and **Entropy-Spike** are very suitable to adapt to other modalities!

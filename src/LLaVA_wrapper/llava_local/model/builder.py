@@ -50,11 +50,16 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
     if use_flash_attn:
         kwargs['attn_implementation'] = 'flash_attention_2'
 
-    if 'llava' in model_name.lower():
+    if 'llava' in model_name.lower() or 'drip' in model_name.lower():
         # Load LLaVA model
-        if 'lora' in model_name.lower() and model_base is None:
+        if ( 'lora' in model_name.lower() or 'drip' in model_name.lower() ) and model_base is None:
             warnings.warn('There is `lora` in model name but no `model_base` is provided. If you are loading a LoRA model, please provide the `model_base` argument. Detailed instruction: https://github.com/haotian-liu/LLaVA#launch-a-model-worker-lora-weights-unmerged.')
-        if 'lora' in model_name.lower() and model_base is not None:
+        if ( 'lora' in model_name.lower() or 'drip' in model_name.lower() ) and model_base is not None:
+            
+            print("🎉" * 20)
+            print("this is the right place! Good luck!")
+            print("🎉" * 20)            
+
             from src.LLaVA_wrapper.llava_local.model.language_model.llava_llama import LlavaConfig
             lora_cfg_pretrained = LlavaConfig.from_pretrained(model_path)
             tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
@@ -148,7 +153,10 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
 
     image_processor = None
 
-    if 'llava' in model_name.lower():
+    if 'llava' in model_name.lower() or 'drip' in model_name.lower():
+        print("🔑" * 20)
+        print("let's get the image processor here!")
+        print("🔑" * 20)
         mm_use_im_start_end = getattr(model.config, "mm_use_im_start_end", False)
         mm_use_im_patch_token = getattr(model.config, "mm_use_im_patch_token", True)
         if mm_use_im_patch_token:
@@ -168,5 +176,11 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
         context_len = model.config.max_sequence_length
     else:
         context_len = 2048
+
+    # Move mm_projector to the correct device
+    if hasattr(model.model, "mm_projector"):
+        print("[INFO] Moving mm_projector to correct device...")
+        model.model.mm_projector = model.model.mm_projector.to(device)
+        print(f"[DEBUG] mm_projector now on: {next(model.model.mm_projector.parameters()).device}")
 
     return tokenizer, model, image_processor, context_len
