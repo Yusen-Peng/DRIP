@@ -415,15 +415,19 @@ class DTPViT(nn.Module):
         x = x.transpose(0, 1)                               # [B, 1 + S, D]
         x = self.norm(x)                                    # [B, 1 + S, D]
         
-        # FIXME: CLS token pooling
-        x = x[:, 0]                                         # [B, D]
+
+        # # FIXME: last token pooling
+        # x = x[:, -1]
+
+        # # FIXME: CLS token pooling
+        # x = x[:, 0]                                         # [B, D]
 
         # # FIXME: mean pooling but exclude CLS token
         # x = x[:, 1:]                                        # [B, S, D]
         # x = x.mean(dim=1)                                   # [B, D]
         
         # FIXME: mean pooling but include CLS token
-        #x = x.mean(dim=1)                                   # [B, D]
+        x = x.mean(dim=1)                                   # [B, D]
         
         # FIXME: this might be problematic... (do we need this linear layer?)
         logits = self.head(x)                                   # [B, num_classes]

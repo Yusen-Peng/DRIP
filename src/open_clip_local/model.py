@@ -149,7 +149,7 @@ def _build_vision_tower(
             act_layer = partial(act_layer, **vision_cfg.act_kwargs)
 
         if DTP_ViT:
-            compression_rate = 0.25
+            compression_rate = 0.5
             lower_bound = False # use the lower bound now!
             if lower_bound:
                 print("using the lower bound too!")

@@ -108,10 +108,27 @@ alternatives:
   - [x] DRIP-4x-32, 10 epochs of 28M: 23.23% (originally 24.24%)
 - [ ] CLS/first token pooling
   - [x] DRIP-2x-32, 10 epochs of 28M: 24.17% (originally 25.72%)
-  - [ ] DRIP-4x-32, 10 epochs of 28M: submitted!
+  - [ ] DRIP-4x-32, 10 epochs of 28M: running!
 - [ ] last token pooling (we hope it's cumulative)
-  - [ ] DRIP-2x-32, 10 epochs of 28M: pending
-  - [ ] DRIP-4x-32, 10 epochs of 28M: pending
+  - [ ] DRIP-2x-32, 10 epochs of 28M: running!
+  - [ ] DRIP-4x-32, 10 epochs of 28M: running!
+
+![what the hell](docs/bad_guy.png)
+
+Higher learning rate is subject to gradient explosion:
+
+```cpp
+ValueError: Expected parameter probs (Tensor of shape (512, 49)) of distribution LogitRelaxedBernoulli(probs: torch.Size([512, 49])) to satisfy the constraint Interval(lower_bound=0.0, upper_bound=1.0), but found invalid values:
+tensor([[nan, nan, nan,  ..., nan, nan, nan],
+        [nan, nan, nan,  ..., nan, nan, nan],
+        [nan, nan, nan,  ..., nan, nan, nan],
+        ...,
+        [nan, nan, nan,  ..., nan, nan, nan],
+        [nan, nan, nan,  ..., nan, nan, nan],
+        [nan, nan, nan,  ..., nan, nan, nan]], device='cuda:0',
+       dtype=torch.float16, grad_fn=<SigmoidBackward0>)
+```
+
 
 ### LAION-280M (178Msamples, 178,918,585) results
 
@@ -128,7 +145,7 @@ alternatives:
 
 Note: CLIP people trained their models for **32** epochs instead of 10.
 
-## TASK 2 - ImageNet Classification Finetuning
+## TASK 2 - ImageNet Finetuning
 
 ### train ViTs on ImageNet-1K (1.28M images)
 
@@ -139,7 +156,6 @@ Note: CLIP people trained their models for **32** epochs instead of 10.
 | ViT-B-32 | laion2b_s34b_b79k | 66.53% | no | 30 | 🟠60.98% |
 | <tr><td colspan="6" align="center"> pretrained DRIP </td></tr> |
 | DRIP-2X-16 | 3 epochs of 280M LAION | **36.71%** | no | 100 | **🟢42.30%** |
-
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
 
@@ -152,8 +168,7 @@ Note: CLIP people trained their models for **32** epochs instead of 10.
 | llava-v1.5-13b from HuggingFace | 68.43% | 70.45% |
 | DRIP-2X-16 (**36.71%** zero-shot, 1 epoch pretrain + 1 epoch finetune) | 67.20% | 61.92% |
 
-
-#### LLaVA-Bench-in-the-Wild (LLM-judge)
+#### LLaVA-Bench-in-the-Wild (LLM-judge AND rule-based)
 
 | model details | LLM-judge (A, C, D, R) | Rule-Based (A, C, D, R) | Overall (A, C, D, R) |   
 | ------------- | ---------------------- | ----------------------- | -------------------- |
