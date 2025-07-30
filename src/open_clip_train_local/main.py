@@ -413,6 +413,14 @@ def main(args):
     )
     assert len(data), 'At least one train or eval dataset must be specified.'
 
+
+    # proposed fix: override args.lr with the optimizer's current lr if resuming
+    if args.resume is not None and optimizer is not None:
+        args.lr = optimizer.param_groups[0]['lr']
+        print("🧠" * 20)
+        print(f"Overriding args.lr with optimizer's current lr: {args.lr}", flush=True)
+
+
     # create scheduler if train
     scheduler = None
     if 'train' in data and optimizer is not None:

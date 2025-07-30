@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=DRIP-2X-16_continue
-#SBATCH --output=DRIP-2X-16_continue.log
-#SBATCH --time=168:00:00
+#SBATCH --job-name=learning_rate_TEST
+#SBATCH --output=learning_rate_TEST.log
+#SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=2

@@ -63,7 +63,7 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
 | DRIP-4x-16, 2+10 | 6.62 | 224 | 16 | 10 | **28.25%** | 53.95% | **32.2** | **0.570** |
 | DRIP-10x-16, 2+10 | 4.53 | 224 | 16 | 10 | **26.36%** | 50.79% | **26.3** | **0.515** |
 
-## pooling across tokens
+### pooling across tokens
 
 ViT pooling implementation (average pooling excluding CLS/first token OR CLS/first token pooling):
 ```py
@@ -83,7 +83,6 @@ but the default one is CLS/first token pooling:
 ```py
 pool_type: str = 'tok'
 ```
-
 
 Our DRIP original pooling implementation (average pooling **including** CLS/first token):
 ```py
@@ -106,14 +105,14 @@ alternatives:
 - [x] average pooling **excluding** CLS/first token
   - [x] DRIP-2x-32, 10 epochs of 28M: 25.96% (originally 25.72%)
   - [x] DRIP-4x-32, 10 epochs of 28M: 23.23% (originally 24.24%)
-- [ ] CLS/first token pooling
+- [x] CLS/first token pooling
   - [x] DRIP-2x-32, 10 epochs of 28M: 24.17% (originally 25.72%)
-  - [ ] DRIP-4x-32, 10 epochs of 28M: running!
-- [ ] last token pooling (we hope it's cumulative)
+  - [x] DRIP-4x-32, 10 epochs of 28M: 23.34% (originally 24.24%)
+- [ ] last token pooling (we hope it's cumulative!)
   - [ ] DRIP-2x-32, 10 epochs of 28M: running!
   - [ ] DRIP-4x-32, 10 epochs of 28M: running!
 
-![what the hell](docs/bad_guy.png)
+### High LR: gradient explodes!
 
 Higher learning rate is subject to gradient explosion:
 
@@ -129,6 +128,46 @@ tensor([[nan, nan, nan,  ..., nan, nan, nan],
        dtype=torch.float16, grad_fn=<SigmoidBackward0>)
 ```
 
+### Resume from the last checkpoint
+
+Successfully load the **last checkpoint** and the **optimizer state**, too:
+
+```csharp
+"--resume", "latest", # resume from the latest checkpoints
+"--checkpoint-path", "logs/DRIP-2X-16/checkpoints", # the path to save checkpoints
+```
+
+but... the learning rate will always be re-initialized!
+
+```python
+# create scheduler if train
+scheduler = None
+if 'train' in data and optimizer is not None:
+     total_steps = (data["train"].dataloader.num_batches // args.accum_freq) * args.epochs
+     if args.lr_scheduler == "cosine":
+          scheduler = cosine_lr(optimizer, args.lr, args.warmup, total_steps)
+     elif args.lr_scheduler == "const":
+          scheduler = const_lr(optimizer, args.lr, args.warmup, total_steps)
+```
+
+my proposed fix:
+
+```python
+# proposed fix: override args.lr with the optimizer's current lr if resuming
+if args.resume is not None and optimizer is not None:
+     args.lr = optimizer.param_groups[0]['lr']
+     print("🧠" * 20)
+     print(f"Overriding args.lr with optimizer's current lr: {args.lr}", flush=True)
+```
+
+final results 🎉:
+
+```csharp
+2025-07-29,22:52:07 | INFO | => resuming checkpoint 'logs/DRIP-2X-16/checkpoints/epoch_3.pt' (epoch 3)
+🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠
+Overriding args.lr with optimizer's current lr: 7.939449900550195e-05
+```
+
 
 ### LAION-280M (178Msamples, 178,918,585) results
 
@@ -142,8 +181,6 @@ tensor([[nan, nan, nan,  ..., nan, nan, nan],
 | 2x comp | 10.22 | 224 | 16 | 3 | **36.71%** | 64.98% | **43.4** | **0.703** |
 | 4x comp | 6.62 | 224 | 16 | 3 | **34.14%** | 61.89% | **32.3** | **0.557** |
 | 10x comp | 4.53 | 224 | 16 | 3 | **32.32%** | 59.40% | **26.2** | **0.486** |
-
-Note: CLIP people trained their models for **32** epochs instead of 10.
 
 ## TASK 2 - ImageNet Finetuning
 

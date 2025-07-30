@@ -51,7 +51,7 @@ def train_runner(
             "--epochs", str(epochs),
             "--workers", str(workers),
             "--model", model,
-            "--precision", "amp",
+            "--precision", "amp", # automatic mixed precision
             "--resume", "latest", # resume from the latest checkpoints
             "--checkpoint-path", "logs/DRIP-2X-16/checkpoints", # the path to save checkpoints
         ]
@@ -73,7 +73,7 @@ def train_runner(
             "--epochs", str(epochs),
             "--workers", str(workers),
             "--model", model,
-            "--precision", "amp",
+            "--precision", "amp", # automatic mixed precision
             "--resume", "latest", # resume from the latest checkpoints
             "--checkpoint-path", "logs/DRIP-2X-16/checkpoints", # the path to save checkpoints
         ]
