@@ -114,7 +114,7 @@ alternatives:
 
 ### High LR: gradient explodes!
 
-Higher learning rate is subject to gradient explosion:
+Higher learning rate is subject to gradient explosion (for Sigmoid function specifically):
 
 ```cpp
 ValueError: Expected parameter probs (Tensor of shape (512, 49)) of distribution LogitRelaxedBernoulli(probs: torch.Size([512, 49])) to satisfy the constraint Interval(lower_bound=0.0, upper_bound=1.0), but found invalid values:
@@ -127,6 +127,14 @@ tensor([[nan, nan, nan,  ..., nan, nan, nan],
         [nan, nan, nan,  ..., nan, nan, nan]], device='cuda:0',
        dtype=torch.float16, grad_fn=<SigmoidBackward0>)
 ```
+
+my proposed fix(es):
+
+- [x] gradient clipping
+     ```bash
+     "--grad-clip-norm", "1.0", # gradient clipping
+     ```
+- [ ] maybe we need more...
 
 ### Resume from the last checkpoint
 

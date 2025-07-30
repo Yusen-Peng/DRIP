@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=learning_rate_TEST
-#SBATCH --output=learning_rate_TEST.log
-#SBATCH --time=00:10:00
+#SBATCH --job-name=gradient_clipping_1e_3_DRIP_2X_32
+#SBATCH --output=gradient_clipping_1e_3_DRIP_2X_32.log
+#SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=2
