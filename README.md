@@ -108,9 +108,9 @@ alternatives:
 - [x] CLS/first token pooling
   - [x] DRIP-2x-32, 10 epochs of 28M: 24.17% (originally 25.72%)
   - [x] DRIP-4x-32, 10 epochs of 28M: 23.34% (originally 24.24%)
-- [ ] last token pooling (we hope it's cumulative!)
-  - [ ] DRIP-2x-32, 10 epochs of 28M: running!
-  - [ ] DRIP-4x-32, 10 epochs of 28M: running!
+- [x] last token pooling (we hope it's cumulative!)
+  - [x] DRIP-2x-32, 10 epochs of 28M: 25.25% (originally 25.72%)
+  - [x] DRIP-4x-32, 10 epochs of 28M: 24.99% (originally 24.24%)
 
 ### High LR: gradient explodes!
 
