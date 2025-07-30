@@ -134,7 +134,15 @@ my proposed fix(es):
      ```bash
      "--grad-clip-norm", "1.0", # gradient clipping
      ```
-- [ ] maybe we need more...
+- [x] logit clamping
+     ```python
+     boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
+     # before sigmoid
+     boundary_logits = torch.clamp(boundary_logits, min=-20.0, max=20.0)
+     boundary_probs = torch.sigmoid(boundary_logits)
+     # after sigmoid
+     boundary_probs = torch.clamp(boundary_probs, min=1e-4, max=1 - 1e-4)
+     ```
 
 ### Resume from the last checkpoint
 

@@ -115,14 +115,15 @@ class BoundaryPredictor(nn.Module):
         self.loss = nn.BCEWithLogitsLoss()
 
     def forward(self, hidden):
-        """
-            This function is 100% copied and pasted without any changes
-            from https://github.com/PiotrNawrot/dynamic-pooling/blob/main/hourglass.py
-        """
         # Hidden is of shape [seq_len x bs x d_model]
         # Boundaries we return are [bs x seq_len]
         boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
+        # before sigmoid
+        boundary_logits = torch.clamp(boundary_logits, min=-20.0, max=20.0)
         boundary_probs = torch.sigmoid(boundary_logits)
+        # after sigmoid
+        boundary_probs = torch.clamp(boundary_probs, min=1e-4, max=1 - 1e-4)
+
 
         if self.bp_type == 'gumbel':
             bernoulli = torch.distributions.relaxed_bernoulli.RelaxedBernoulli(
