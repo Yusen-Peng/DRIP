@@ -363,7 +363,6 @@ class DTPViT(nn.Module):
         print("=" * 70)
         print("[INFO] Congratulations! You have successfully initialized DTP-ViT!")
         print(f"Compression Rate: {compression_rate}")
-        print("=" * 70)
 
 
     def forward(self, x: torch.Tensor, return_loss=False):
@@ -388,14 +387,19 @@ class DTPViT(nn.Module):
         if self.flop_measure:
             print("=" * 80)
             print("[INFO] FLOP measurement mode: simulating fake boundaries to satisfy the compression rate.")
-            print("=" * 80)
             L = patch_tokens.shape[0]
-            interval = max(1, int(1 / self.compression_rate))
+            print("[INFO] Total number of patch tokens:", L)
+            # interval = max(1, int(1 / self.compression_rate))
+            # hard_boundaries = torch.zeros(B, L, device=x.device)
+            # hard_boundaries[:, ::interval] = 1
+            # soft_boundaries = hard_boundaries.clone()
+            num_tokens_to_keep = max(1, int(L * self.compression_rate))
+            indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
             hard_boundaries = torch.zeros(B, L, device=x.device)
-            hard_boundaries[:, ::interval] = 1
-            soft_boundaries = hard_boundaries.clone()
+            hard_boundaries[:, indices] = 1
         else:
-            soft_boundaries, hard_boundaries = self.boundary_predictor(patch_tokens)
+            # used for training + evaluation
+            _, hard_boundaries = self.boundary_predictor(patch_tokens)
 
             # [B] → count per sample
             num_boundaries = hard_boundaries.sum(dim=1)

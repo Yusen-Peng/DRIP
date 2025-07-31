@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=ViT-B-16_continue
-#SBATCH --output=ViT-B-16_continue.log
+#SBATCH --job-name=50_rate_3_9_layers
+#SBATCH --output=50_rate_3_9_layers.log
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

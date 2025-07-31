@@ -7,13 +7,10 @@ import time
 import torch
 from numbers import Number
 from typing import Any, List
-from numpy import prod
 import numpy as np
 from fvcore.nn import FlopCountAnalysis
 from open_clip_local.DTP_ViT import DTPViT
-from open_clip_local.model import CLIPVisionCfg
 from open_clip_local.transformer import VisionTransformer
-from open_clip_local.factory import create_model_and_transforms
 
 DROPOUT_FLOPS = 4
 LAYER_NORM_FLOPS = 5
@@ -80,7 +77,7 @@ def main():
             patch_size=patch_size,
             in_chans=3,
             embed_dim=width,
-            depth=(2, 12, 0),
+            depth=(3, 9, 0),
             num_heads=width // 64,
             mlp_ratio=mlp_ratio,
             drop_rate=patch_dropout,

@@ -161,7 +161,7 @@ def _build_vision_tower(
                 patch_size=vision_cfg.patch_size,
                 in_chans=3,
                 embed_dim=vision_cfg.width,
-                depth=(2, 10, 0), # (2, 10, 0), (2, 12, 0), (2, 16, 0)
+                depth=(3, 9, 0),
                 num_heads=vision_heads,
                 mlp_ratio=vision_cfg.mlp_ratio,
                 drop_rate=vision_cfg.patch_dropout,
