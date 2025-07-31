@@ -290,3 +290,132 @@ Suggested LR: 2.48E-04
 | NativeSegViT (2025) | kmeans-like clustering to dynamically **GROUP** tokens repeatedly |
 
 According to DTP paper, both **Gumbel-Sigmoid** and **Entropy-Spike** are very suitable to adapt to other modalities!
+
+### High LR: gradient explodes!
+
+Higher learning rate is subject to gradient explosion (for Sigmoid function specifically):
+
+```cpp
+ValueError: Expected parameter probs (Tensor of shape (512, 49)) of distribution LogitRelaxedBernoulli(probs: torch.Size([512, 49])) to satisfy the constraint Interval(lower_bound=0.0, upper_bound=1.0), but found invalid values:
+tensor([[nan, nan, nan,  ..., nan, nan, nan],
+        [nan, nan, nan,  ..., nan, nan, nan],
+        [nan, nan, nan,  ..., nan, nan, nan],
+        ...,
+        [nan, nan, nan,  ..., nan, nan, nan],
+        [nan, nan, nan,  ..., nan, nan, nan],
+        [nan, nan, nan,  ..., nan, nan, nan]], device='cuda:0',
+       dtype=torch.float16, grad_fn=<SigmoidBackward0>)
+```
+
+my proposed fix(es):
+
+- [x] gradient clipping
+     ```bash
+     "--grad-clip-norm", "1.0", # gradient clipping
+     ```
+- [x] logit clamping
+     ```python
+     boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
+     # before sigmoid
+     boundary_logits = torch.clamp(boundary_logits, min=-20.0, max=20.0)
+     boundary_probs = torch.sigmoid(boundary_logits)
+     # after sigmoid
+     boundary_probs = torch.clamp(boundary_probs, min=1e-4, max=1 - 1e-4)
+     ```
+
+### Resume from the last checkpoint
+
+Successfully load the **last checkpoint** and the **optimizer state**, too:
+
+```csharp
+"--resume", "latest", # resume from the latest checkpoints
+"--checkpoint-path", "logs/DRIP-2X-16/checkpoints", # the path to save checkpoints
+```
+
+but... the learning rate will always be re-initialized!
+
+```python
+# create scheduler if train
+scheduler = None
+if 'train' in data and optimizer is not None:
+     total_steps = (data["train"].dataloader.num_batches // args.accum_freq) * args.epochs
+     if args.lr_scheduler == "cosine":
+          scheduler = cosine_lr(optimizer, args.lr, args.warmup, total_steps)
+     elif args.lr_scheduler == "const":
+          scheduler = const_lr(optimizer, args.lr, args.warmup, total_steps)
+```
+
+my proposed fix:
+
+```python
+# proposed fix: override args.lr with the optimizer's current lr if resuming
+if args.resume is not None and optimizer is not None:
+     args.lr = optimizer.param_groups[0]['lr']
+     print("🧠" * 20)
+     print(f"Overriding args.lr with optimizer's current lr: {args.lr}", flush=True)
+```
+
+final results 🎉:
+
+```csharp
+2025-07-29,22:52:07 | INFO | => resuming checkpoint 'logs/DRIP-2X-16/checkpoints/epoch_3.pt' (epoch 3)
+🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠
+Overriding args.lr with optimizer's current lr: 7.939449900550195e-05
+```
+
+### pooling across tokens
+
+ViT pooling implementation (average pooling excluding CLS/first token OR CLS/first token pooling):
+```py
+def _global_pool(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+     if self.pool_type == 'avg':
+          pooled, tokens = x[:, 1:].mean(dim=1), x[:, 1:]
+     elif self.pool_type == 'tok':
+          pooled, tokens = x[:, 0], x[:, 1:]
+     else:
+          pooled = tokens = x
+
+     return pooled, tokens
+```
+
+but the default one is CLS/first token pooling:
+
+```py
+pool_type: str = 'tok'
+```
+
+Our DRIP original pooling implementation (average pooling **including** CLS/first token):
+```py
+# downsample patch tokens
+patch_tokens = downsample(hard_boundaries, patch_tokens, self.null_group)
+patch_tokens = patch_tokens[1:]  # remove null group at index 0 → [S, B, D]
+
+# reattach CLS token
+x = torch.cat([cls_token, patch_tokens], dim=0)     # [1 + S, B, D]
+
+x = self.norm(x)                                     # [1 + S, B, D]
+x = self.shorten_blocks(x)                           # [1 + S, B, D]
+
+x = x.transpose(0, 1)                               # [B, 1 + S, D]
+x = self.norm(x)                                    # [B, 1 + S, D]
+x = x.mean(dim=1)                                   # [B, D]
+```
+
+alternatives:
+- [x] average pooling **excluding** CLS/first token
+  - [x] DRIP-2x-32, 10 epochs of 28M: 25.96% (originally 25.72%)
+  - [x] DRIP-4x-32, 10 epochs of 28M: 23.23% (originally 24.24%)
+- [x] CLS/first token pooling
+  - [x] DRIP-2x-32, 10 epochs of 28M: 24.17% (originally 25.72%)
+  - [x] DRIP-4x-32, 10 epochs of 28M: 23.34% (originally 24.24%)
+- [x] last token pooling (we hope it's cumulative!)
+  - [x] DRIP-2x-32, 10 epochs of 28M: 25.25% (originally 25.72%)
+  - [x] DRIP-4x-32, 10 epochs of 28M: 24.99% (originally 24.24%)
+
+
+### Preliminaries: Boundary Visualization
+
+![alt text](unit_visualization/boundary_visualization_0_2x_32.png)
+![alt text](unit_visualization/boundary_visualization_0_4x_32.png)
+![alt text](unit_visualization/boundary_visualization_0_10x_32.png)
+

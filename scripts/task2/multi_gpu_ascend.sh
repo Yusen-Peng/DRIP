@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=gradient_clipping_and_clamping_1e_3_DRIP_2X_32
-#SBATCH --output=gradient_clipping_and_clamping_1e_3_DRIP_2X_32.log
+#SBATCH --job-name=ViT-B-16_continue
+#SBATCH --output=ViT-B-16_continue.log
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
