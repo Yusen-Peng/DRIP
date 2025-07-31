@@ -66,7 +66,7 @@ def throughput(images, model):
 
 
 def main():
-    COMPRESSION_RATE = 0.1
+    COMPRESSION_RATE = 0.5
     patch_size = 32
     img_size = 224
     width = 768
@@ -80,7 +80,7 @@ def main():
             patch_size=patch_size,
             in_chans=3,
             embed_dim=width,
-            depth=(2, 10, 0),
+            depth=(2, 12, 0),
             num_heads=width // 64,
             mlp_ratio=mlp_ratio,
             drop_rate=patch_dropout,
