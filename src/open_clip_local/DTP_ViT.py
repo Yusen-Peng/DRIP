@@ -304,60 +304,34 @@ class BoundaryPredictor(nn.Module):
         # Boundaries we return are [bs x seq_len]
         boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
         boundary_probs = torch.sigmoid(boundary_logits)
+        # apply clampling to avoid invalid values in RelaxedBernoulli
+        boundary_probs = boundary_probs.clamp(1e-6, 1 - 1e-6)
 
-        if self.bp_type == 'gumbel':
-            bernoulli = torch.distributions.relaxed_bernoulli.RelaxedBernoulli(
-                temperature=self.temp,
-                probs=boundary_probs,
-            )
+        bernoulli = torch.distributions.relaxed_bernoulli.RelaxedBernoulli(
+            temperature=self.temp,
+            probs=boundary_probs,
+        )
 
-            soft_boundaries = bernoulli.rsample()
+        soft_boundaries = bernoulli.rsample()
 
-            hard_boundaries = (soft_boundaries > self.threshold).float()
-            hard_boundaries = (
-                hard_boundaries - soft_boundaries.detach() + soft_boundaries
-            )
-        else:
-            raise NotImplementedError(f"Boundary predictor type {self.bp_type} is not implemented.")
+        hard_boundaries = (soft_boundaries > self.threshold).float()
+        hard_boundaries = (
+            hard_boundaries - soft_boundaries.detach() + soft_boundaries
+        )
         
-        self.soft_boundaries = soft_boundaries
-        self.hard_boundaries = hard_boundaries
-
         return soft_boundaries, hard_boundaries
 
-    def calc_loss(self, preds, gt, attention_mask: torch.Tensor):
-        """
-            This function is adapted from FLEXITOKENS: 
-            https://github.com/owos/flexitokens/blob/master/src/model/fxt.py
-        """
+    def calc_loss(self, preds):
         # B x T
-        if self.bp_type in ['gumbel']:
-            assert gt is None
+        total_count = preds.size(-1)
+        target_count = preds.sum(dim=-1)
+        binomial = torch.distributions.binomial.Binomial(
+            total_count=total_count,
+            probs=torch.Tensor([self.prior]).to(preds.device)
+        )
+        loss_boundaries = -binomial.log_prob(target_count).mean() / total_count
+        return loss_boundaries
 
-            # create a mask based on attention_mask
-            mask = attention_mask.eq(
-                1
-            )  # Mask is True where tokens are present, False for padding
-
-            # apply the mask to predictions
-            masked_preds = preds * mask.float()
-            sum_preds = masked_preds.sum(dim=-1).unsqueeze(dim=-1)
-
-            # Compute the total count of trials for each example in the batch
-            total_count = mask.sum(
-                dim=-1, keepdim=True
-            ).float()  # Number of non-padded tokens
-
-            binomial = torch.distributions.binomial.Binomial(
-                total_count=total_count,
-                probs=torch.Tensor([self.prior]).to(preds.device)
-            )
-
-            loss_boundaries = -binomial.log_prob(sum_preds).mean() / preds.size(-1)
-            return loss_boundaries
-        else:
-            raise NotImplementedError(f"Boundary predictor type {self.bp_type} is not implemented.")
-    
     def calc_stats(self, preds, gt):
         # B x T
         preds, gt = preds.bool(), gt.bool()
@@ -462,16 +436,7 @@ class DTPViT(nn.Module):
         """
         Process input with relative attention and padding-aware masking.
         """
-
-        # # debugging information
-        # print("Core input shape:", core_input.shape)
-        # print("Attention mask shape:", attention_mask.shape)
-        # print("Attention mask (0=regular,1=padded):")
-        # # Force PyTorch to print all elements without truncation
-        # torch.set_printoptions(profile="full")
-        # print(attention_mask.int())
-
-        T, B, _ = core_input.size()
+        T, _, _ = core_input.size()
 
         # Compute position embeddings
         pos_seq = torch.arange(T - 1, -1, -1.0, device=core_input.device, dtype=core_input.dtype)
@@ -528,6 +493,12 @@ class DTPViT(nn.Module):
         # attention mask for post-pooling transformer layers
         S = shortened_hidden.size(0)
         pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
+
+        # # FIXME: print pad_mask
+        # torch.set_printoptions(profile="full")
+        # pad_mask_debug = pad_mask.transpose(0, 1)                   # B x S
+        # print(f"pad_mask_debug: {pad_mask_debug.int()}")
+
         attn_mask = pad_mask.transpose(0, 1).unsqueeze(1)     # B x 1 x S
         attn_mask = attn_mask.expand(B, S, S)                 # B x S x S
 
@@ -543,12 +514,7 @@ class DTPViT(nn.Module):
 
         if return_loss and not self.flop_measure:
             # Binomial boundary loss (no need for mask since all sequences have the same number of tokens)
-            all_one_mask = torch.ones_like(hard_boundaries, dtype=torch.float32) 
-            boundary_loss = self.boundary_predictor.calc_loss(
-                preds=hard_boundaries,  # B x L
-                gt=None,
-                attention_mask=all_one_mask  # B x L
-            )
+            boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
             avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
             boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
             return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio

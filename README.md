@@ -75,8 +75,7 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
 | DRIP-2x-32, 3+9 | **2.8🔥** | 224 | 32 | 10 | **running** | running | **running** | **running** |
 
 
-### create the attention mask
-
+#### create the attention mask
 
 ```python
 # attention mask for post-pooling transformer layers
@@ -85,10 +84,45 @@ pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0
 attn_mask = pad_mask.transpose(0, 1).unsqueeze(1)     # B x 1 x S
 attn_mask = attn_mask.expand(B, S, S)                 # B x S x S
 ```
-![mask](docs/attention_mask.png)
 
-### use the attention mask
+padding mask example from a real experiment:
 
+```bash
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+```
+
+#### use the attention mask
+
+```python
+if attn_mask is not None:
+     if attn_mask.dim() == 2:
+          attn_score.masked_fill_(attn_mask[None, None, :, :], -float('inf'))
+     elif attn_mask.dim() == 3:
+          attn_score.masked_fill_(attn_mask[:, None, :, :], -float('inf'))
+else:
+     pass
+```
+
+#### Debugging list
+
+- [ ] RelaxedBernoulli requires (0, 1) open-interval values to pass in
+  - [x] add clamping after sigmoid and before RelaxedBernoulli
+
+
+#### new experiments
+
+| model | GFLOPs | epochs | top-1 | top-5 |
+| ----- | ------ | ------ | ----- | ----- |
+| ViT-B-32 | 2.95 | 10 | **28.77%** | 54.34% |
+| new DRIP-2X-32, 2+10 | 2.81 | 10 | running | running |
+| new DRIP-4X-32, 5+7 | 2.73 | 10 | running | running |
+| new DRIP-4X-32, 4+8 | 2.44 | 10 | running | running |
+| new DRIP-4X-32, 2+10 | 1.88 | 10 | running | running |
 
 
 

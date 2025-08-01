@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=new_DRIP
-#SBATCH --output=new_DRIP.log
+#SBATCH --job-name=new_DRIP_debug_4x_4_8
+#SBATCH --output=new_DRIP_debug_4x_4_8.log
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
