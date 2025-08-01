@@ -110,8 +110,11 @@ else:
 
 #### Debugging list
 
-- [ ] RelaxedBernoulli requires (0, 1) open-interval values to pass in
-  - [x] add clamping after sigmoid and before RelaxedBernoulli
+- [ ] FP16 underflow/overflow when it comes to RelaxedBernoulli
+  - [failed] add clamping after sigmoid and before RelaxedBernoulli
+  - [failed] force boundary logit computation in FP32
+  - [failed] use logits without converting to probabilities
+  - [x] reduce learning rate (from 1e-4 to 5e-5)
 
 
 #### new experiments
@@ -119,11 +122,10 @@ else:
 | model | GFLOPs | epochs | top-1 | top-5 |
 | ----- | ------ | ------ | ----- | ----- |
 | ViT-B-32 | 2.95 | 10 | **28.77%** | 54.34% |
-| new DRIP-2X-32, 2+10 | 2.81 | 10 | running | running |
-| new DRIP-4X-32, 5+7 | 2.73 | 10 | running | running |
-| new DRIP-4X-32, 4+8 | 2.44 | 10 | running | running |
-| new DRIP-4X-32, 2+10 | 1.88 | 10 | running | running |
-
+| new DRIP-2X-32, 2+10 | 2.81? | 10 | running | running |
+| new DRIP-4X-32, 5+7 | 2.73? | 10 | running | running |
+| new DRIP-4X-32, 4+8 | 2.44? | 10 | running | running |
+| new DRIP-4X-32, 2+10 | 1.88? | 10 | running | running |
 
 
 ### LAION-280M (178Msamples, 178,918,585) results

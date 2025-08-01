@@ -298,27 +298,30 @@ class BoundaryPredictor(nn.Module):
         )
 
         self.loss = nn.BCEWithLogitsLoss()
-
+    
     def forward(self, hidden):
         # Hidden is of shape [seq_len x bs x d_model]
         # Boundaries we return are [bs x seq_len]
+
         boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
         boundary_probs = torch.sigmoid(boundary_logits)
-        # apply clampling to avoid invalid values in RelaxedBernoulli
-        boundary_probs = boundary_probs.clamp(1e-6, 1 - 1e-6)
 
-        bernoulli = torch.distributions.relaxed_bernoulli.RelaxedBernoulli(
-            temperature=self.temp,
-            probs=boundary_probs,
-        )
+        if self.bp_type == 'gumbel':
+            bernoulli = torch.distributions.relaxed_bernoulli.RelaxedBernoulli(
+                temperature=self.temp,
+                probs=boundary_probs,
+            )
 
-        soft_boundaries = bernoulli.rsample()
+            soft_boundaries = bernoulli.rsample()
 
-        hard_boundaries = (soft_boundaries > self.threshold).float()
-        hard_boundaries = (
-            hard_boundaries - soft_boundaries.detach() + soft_boundaries
-        )
-        
+            hard_boundaries = (soft_boundaries > self.threshold).float()
+            hard_boundaries = (
+                hard_boundaries - soft_boundaries.detach() + soft_boundaries
+            )
+        elif self.bp_type in ['entropy', 'unigram']:
+            soft_boundaries = boundary_probs
+            hard_boundaries = (soft_boundaries > self.threshold).float()
+
         return soft_boundaries, hard_boundaries
 
     def calc_loss(self, preds):
@@ -493,11 +496,6 @@ class DTPViT(nn.Module):
         # attention mask for post-pooling transformer layers
         S = shortened_hidden.size(0)
         pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
-
-        # # FIXME: print pad_mask
-        # torch.set_printoptions(profile="full")
-        # pad_mask_debug = pad_mask.transpose(0, 1)                   # B x S
-        # print(f"pad_mask_debug: {pad_mask_debug.int()}")
 
         attn_mask = pad_mask.transpose(0, 1).unsqueeze(1)     # B x 1 x S
         attn_mask = attn_mask.expand(B, S, S)                 # B x S x S

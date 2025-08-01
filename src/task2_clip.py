@@ -94,7 +94,7 @@ def main():
     # batch size:
     # 1024 for ViT-B-32
     batch_size = 256
-    lr = 1e-4
+    lr = 5e-5
     wd = 0.1
     epochs = 10
     workers = 8       # CPU utilization
