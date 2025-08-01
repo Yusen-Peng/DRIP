@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=50_rate_3_9_layers
-#SBATCH --output=50_rate_3_9_layers.log
+#SBATCH --job-name=new_DRIP
+#SBATCH --output=new_DRIP.log
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

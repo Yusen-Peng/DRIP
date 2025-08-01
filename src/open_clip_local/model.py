@@ -161,7 +161,7 @@ def _build_vision_tower(
                 patch_size=vision_cfg.patch_size,
                 in_chans=3,
                 embed_dim=vision_cfg.width,
-                depth=(3, 9, 0),
+                depth=(2, 10, 0),
                 num_heads=vision_heads,
                 mlp_ratio=vision_cfg.mlp_ratio,
                 drop_rate=vision_cfg.patch_dropout,
@@ -169,10 +169,10 @@ def _build_vision_tower(
                 temp=0.5,
                 compression_rate=compression_rate,
                 threshold=0.5,
-                lower_bound=lower_bound,
-                lambda_val=lambda_val,
                 activation_function="gelu",
                 num_classes=embed_dim,
+                #lower_bound=lower_bound,
+                #lambda_val=lambda_val,
             )
 
         else:

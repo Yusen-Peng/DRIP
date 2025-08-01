@@ -74,6 +74,24 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
 | <tr><td colspan="9" align="center"> delay pooling </td></tr> |
 | DRIP-2x-32, 3+9 | **2.8🔥** | 224 | 32 | 10 | **running** | running | **running** | **running** |
 
+
+### create the attention mask
+
+
+```python
+# attention mask for post-pooling transformer layers
+S = shortened_hidden.size(0)
+pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
+attn_mask = pad_mask.transpose(0, 1).unsqueeze(1)     # B x 1 x S
+attn_mask = attn_mask.expand(B, S, S)                 # B x S x S
+```
+![mask](docs/attention_mask.png)
+
+### use the attention mask
+
+
+
+
 ### LAION-280M (178Msamples, 178,918,585) results
 
 | model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
