@@ -1,4 +1,4 @@
-# 💧 DRIP: **D**ynamic token **R**eduction v**I**sion transformer via **P**ooling for efficient multimodal learning
+# DRIP💧: **D**ynamic token **R**eduction v**I**sion transformer via **P**ooling for efficient multimodal learning
 
 ## DRIP Architecture
 
@@ -122,17 +122,20 @@ else:
 | model details | GFLOPs | epochs | top-1 | top-5 |
 | ----- | ------ | ------ | ----- | ----- |
 | ViT-B-32 | **2.95** | 10 | **28.77%** | 54.34% |
-| DRIP-32-50%, 2+10 | 2.81 | 10 | running | running |
-| DRIP-32-25%, 5+7 | 2.73🔥 | 10 | running | running |
-| DRIP-32-25%, 4+8 | 2.44 | 10 | running | running |
-| DRIP-32-25%, 2+10 | 1.88 | 10 | running | running |
-| H-DRIP-32-50%-50%, 3+3+6 | 2.51🔥 | 10 | running | running |
+| 💧DRIP-32-50%, 2+10 | 2.81 | 10 | running | running |
+| 💧DRIP-32-25%, 5+7 | 2.73🔥 | 10 | running | running |
+| 💧DRIP-32-25%, 4+8 | 2.44 | 10 | running | running |
+| 💧DRIP-32-25%, 2+10 | 1.88 | 10 | running | running |
+| 💦H-DRIP-32-50%-50%, 3+3+6 | 2.51🔥 | 10 | running | running |
+| 🫧S-DRIP-32-40%-60%, 2+10 | ?? | 10 | ?? | ?? |
 | ViT-B-16 | **11.29** | 10 | **33.88%** | 60.81% |
-| DRIP-2X-16, 2+10 | 11.14 | 10 | running | running |
-| DRIP-4X-16, 5+7 | 10.82🔥 | 10 | running | running |
-| DRIP-4X-16, 4+8 | 9.61 | 10 | running | running |
-| DRIP-4X-16, 2+10 | 7.21 | 10 | running | running |
-| H-DRIP-16-50%-50%, 3+3+6 | 9.65🔥 | 10 | running | running |
+| 💧DRIP-2X-16, 2+10 | 11.14 | 10 | running | running |
+| 💧DRIP-4X-16, 5+7 | 10.82🔥 | 10 | running | running |
+| 💧DRIP-4X-16, 4+8 | 9.61 | 10 | running | running |
+| 💧DRIP-4X-16, 2+10 | 7.21 | 10 | running | running |
+| 💦H-DRIP-16-50%-50%, 3+3+6 | 9.65🔥 | 10 | running | running |
+| 🫧S-DRIP-16-40%-60%, 2+10 | ?? | 10 | ?? | ?? |
+
 
 
 ### LAION-280M (178Msamples, 178,918,585) results
