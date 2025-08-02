@@ -6,6 +6,7 @@ import copy
 import logging
 import math
 from dataclasses import dataclass
+from tkinter import FALSE
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -20,9 +21,10 @@ from .modified_resnet import ModifiedResNet
 from .timm_model import TimmModel
 from .transformer import LayerNormFp32, LayerNorm, QuickGELU, Attention, VisionTransformer, TextTransformer,\
     text_global_pool
-from .DTP_ViT import DTPViT
+from .DTP_ViT import DTPViT, HierarchicalDTPViT
 from .utils import to_2tuple
 
+ZERO = 0
 
 @dataclass
 class CLIPVisionCfg:
@@ -148,20 +150,16 @@ def _build_vision_tower(
         if vision_cfg.act_kwargs is not None:
             act_layer = partial(act_layer, **vision_cfg.act_kwargs)
 
-        if DTP_ViT:
+        HIERARCHICAL = True  # whether to use hierarchical DTP-ViT
+        SOFT = False  # whether to use soft DTP-ViT
+        if DTP_ViT and not HIERARCHICAL and not SOFT: 
             compression_rate = 0.25
-            lower_bound = False # use the lower bound now!
-            if lower_bound:
-                print("using the lower bound too!")
-            else:
-                print("not using the lower bound!")
-            lambda_val = 1.0
             visual = DTPViT(
                 image_size=vision_cfg.image_size,
                 patch_size=vision_cfg.patch_size,
                 in_chans=3,
                 embed_dim=vision_cfg.width,
-                depth=(4, 8, 0),
+                depth=(4, 8, ZERO),
                 num_heads=vision_heads,
                 mlp_ratio=vision_cfg.mlp_ratio,
                 drop_rate=vision_cfg.patch_dropout,
@@ -170,10 +168,33 @@ def _build_vision_tower(
                 compression_rate=compression_rate,
                 threshold=0.5,
                 activation_function="gelu",
-                num_classes=embed_dim,
-                #lower_bound=lower_bound,
-                #lambda_val=lambda_val,
+                num_classes=embed_dim
             )
+
+        elif DTP_ViT and HIERARCHICAL:
+            rate1 = 0.5  # compression rate at stage 1
+            rate2 = 0.5  # compression rate at stage 2
+            visual = HierarchicalDTPViT(
+                image_size=vision_cfg.image_size,
+                patch_size=vision_cfg.patch_size,
+                in_chans=3,
+                embed_dim=vision_cfg.width,
+                depth=(3, 3, 6),
+                num_heads=vision_heads,
+                mlp_ratio=vision_cfg.mlp_ratio,
+                drop_rate=vision_cfg.patch_dropout,
+                attn_drop_rate=0.1,
+                temp=0.5,
+                compression_rate=(rate1, rate2),  # compression at stage 1 and 2
+                threshold=0.5,
+                activation_function="gelu",
+                num_classes=embed_dim,
+            )
+        
+        elif DTP_ViT and SOFT:
+            upper_bound = 0.6  # compression rate upper bound
+            lower_bound = 0.4  # compression rate lower bound
+            raise NotImplementedError("Soft DTP-ViT is not implemented yet!")
 
         else:
             visual = VisionTransformer(

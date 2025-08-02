@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=new_DRIP_16p_4x_4_8_BIG
-#SBATCH --output=new_DRIP_16p_4x_4_8_BIG.log
+#SBATCH --job-name=H-DRIP-16
+#SBATCH --output=H-DRIP-16.log
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=4
+#SBATCH --gpus-per-node=2
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836

@@ -9,7 +9,7 @@ from numbers import Number
 from typing import Any, List
 import numpy as np
 from fvcore.nn import FlopCountAnalysis
-from open_clip_local.DTP_ViT import DTPViT
+from open_clip_local.DTP_ViT import DTPViT, HierarchicalDTPViT
 from open_clip_local.transformer import VisionTransformer
 
 DROPOUT_FLOPS = 4
@@ -69,7 +69,7 @@ def main():
     width = 768
     mlp_ratio = 4.0
     patch_dropout = 0.1
-    MODE = "DRIP" # "DRIP" or "ViT"
+    MODE = "H-DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT"
 
     if MODE == "DRIP":
         model = DTPViT(
@@ -89,6 +89,26 @@ def main():
             num_classes=width,
             flop_measure=True, # simulating fake boundaries for reproducible GFLOPs
         )
+    elif MODE == "H-DRIP":
+        rate1 = 0.5  # compression rate at stage 1
+        rate2 = 0.5  # compression rate at stage 2
+        model = HierarchicalDTPViT(
+            image_size=img_size,
+            patch_size=patch_size,
+            in_chans=3,
+            embed_dim=width,
+            depth=(3, 3, 6),
+            num_heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            drop_rate=patch_dropout,
+            attn_drop_rate=0.1,
+            temp=0.5,
+            compression_rate=(rate1, rate2),  # compression at stage 1 and 2
+            threshold=0.5,
+            activation_function="gelu",
+            num_classes=width,
+            flop_measure=True,  # simulating fake boundaries for reproducible GFLOPs
+        )
     elif MODE == "ViT":
         model = VisionTransformer(
             image_size=img_size,
@@ -105,7 +125,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device).eval()
     flops = calc_flops(model, img_size)
-    print('GFLOPs: {}'.format(round(flops, 2)))
+    print('GFLOPs for {}: {}'.format(MODE, round(flops, 2)))
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6
     print(f'number of parameters: {round(n_parameters, 2)} M')
 

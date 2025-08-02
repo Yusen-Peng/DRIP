@@ -15,7 +15,7 @@ except ImportError:
     wandb = None
 
 from open_clip_local import get_input_dtype, CLIP, CustomTextCLIP
-from open_clip_local.model import DTPViT
+from open_clip_local.model import DTPViT, HierarchicalDTPViT
 from open_clip_train_local.distributed import is_master
 from open_clip_train_local.zero_shot import zero_shot_eval
 from open_clip_train_local.precision import get_autocast
@@ -74,7 +74,7 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
 
     model.train()
     visual = unwrap_model(model).visual if hasattr(unwrap_model(model), "visual") else None
-    use_boundary = isinstance(visual, DTPViT)
+    use_boundary = isinstance(visual, DTPViT) or isinstance(visual, HierarchicalDTPViT)
     if args.distill:
         dist_model.eval()
 
@@ -262,15 +262,8 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
             total_gpu_mem += gpu_memory_allocated
             num_logged_steps += 1
 
-
             logging.info(
                 f"Train Epoch: {epoch} [{num_samples:>{sample_digits}}/{samples_per_epoch} ({percent_complete:.0f}%)] "
-                #f"Data (t): {data_time_m.avg:.3f} "
-                #f"Batch (t): {batch_time_m.avg:.3f}, {samples_per_second:#g}/s, {samples_per_second_per_gpu:#g}/s/gpu "
-                #f"LR: {optimizer.param_groups[0]['lr']:5f} "
-                #f"Logit Scale: {logit_scale_scalar:.3f} " 
-                #f"Mem (alloc/resv): {gpu_memory_allocated:.1f}/{gpu_memory_reserved:.1f} GB "
-                #f"Step time: {step_time:.3f}s "
                 f"Avg Boundaries (per batch): {avg_boundaries_per_batch:.3f} "
                 f"Boundary Ratio: {boundary_ratio:.3f} "
                 + loss_log

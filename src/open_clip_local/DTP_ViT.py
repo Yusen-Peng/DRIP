@@ -372,7 +372,7 @@ class DTPViT(nn.Module):
                  threshold=0.5,
                  num_classes=1000,
                  activation_function='gelu',
-                 flop_measure: bool = False,  # whether to measure FLOPs
+                 flop_measure: bool = False,
         ):
 
         super().__init__()
@@ -516,6 +516,214 @@ class DTPViT(nn.Module):
             avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
             boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
             return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+        else:
+            return features
+
+    def forward(self, x, return_loss=False):
+        """
+        Full forward pass including pooling to class logits.
+        """
+        features_out = self.encode(x, return_loss=return_loss)
+
+        if return_loss and not self.flop_measure:
+            # encode returns tuple (features, loss, avg_boundaries, boundary_ratio)
+            x, boundary_loss, avg_boundaries_per_batch, boundary_ratio = features_out
+        else:
+            x = features_out
+
+        # pool across sequence dimension with mean pooling
+        x = x.mean(dim=0)
+        logits = self.head(x)
+
+        if return_loss and not self.flop_measure:
+            return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+        else:
+            return logits
+
+class HierarchicalDTPViT(nn.Module):
+    def __init__(self,
+                 image_size=224,
+                 patch_size=16,
+                 in_chans=3,
+                 embed_dim=768,
+                 depth=(2, 4, 4),
+                 num_heads=12,
+                 mlp_ratio=4.0,
+                 drop_rate=0.1,
+                 attn_drop_rate=0.1,
+                 temp=1.0,
+                 compression_rate=(0.5, 0.5),  # compression at stage 1 and 2
+                 bp_type='gumbel',
+                 threshold=0.5,
+                 num_classes=1000,
+                 activation_function='gelu',
+                 flop_measure: bool = False,
+        ):
+        super().__init__()
+        self.flop_measure = flop_measure
+        self.embed_dim = embed_dim
+        self.num_patches = (image_size // patch_size) ** 2
+        self.seq_len = self.num_patches
+
+        # Patch embedding
+        self.patch_embed = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
+        self.dropout = nn.Dropout(drop_rate)
+
+        # Positional embedding
+        self.pos_emb = PositionalEmbedding(embed_dim)
+        self.r_w_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
+        self.r_r_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
+
+        # Helper to create decoder layers
+        def create_decoder_layers(n_layers):
+            return nn.ModuleList(
+                [
+                    RelPartialLearnableDecoderLayer(
+                        n_head=num_heads,
+                        d_model=embed_dim,
+                        d_head=embed_dim // num_heads,
+                        d_inner=int(embed_dim * mlp_ratio),
+                        dropout=drop_rate,
+                        dropatt=attn_drop_rate,
+                        pre_lnorm=False,
+                        activation_function=activation_function,
+                    )
+                    for _ in range(n_layers)
+                ]
+            )
+
+        # Transformer blocks for each stage
+        self.pre_blocks = create_decoder_layers(depth[0])    # before 1st pooling
+        self.mid_blocks = create_decoder_layers(depth[1])    # between 1st and 2nd pooling
+        self.final_blocks = create_decoder_layers(depth[2])  # after 2nd pooling
+
+        # Two-stage boundary predictors
+        self.bp1 = BoundaryPredictor(
+            d_model=embed_dim,
+            d_inner=int(embed_dim * mlp_ratio),
+            activation_function=activation_function,
+            temp=temp,
+            prior=compression_rate[0],
+            bp_type=bp_type,
+            threshold=threshold
+        )
+
+        self.bp2 = BoundaryPredictor(
+            d_model=embed_dim,
+            d_inner=int(embed_dim * mlp_ratio),
+            activation_function=activation_function,
+            temp=temp,
+            prior=compression_rate[1],
+            bp_type=bp_type,
+            threshold=threshold
+        )
+
+        # Layer norm and null token
+        self.down_ln = nn.LayerNorm(embed_dim)
+        self.null_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        nn.init.normal_(self.null_token, std=0.02)
+
+        # Final classification head
+        self.head = nn.Linear(embed_dim, num_classes)
+
+    def forward_after_pooling_with_attn_masks(self, core_input: torch.Tensor, layers, attention_mask: torch.Tensor):
+        """
+        Process input with relative attention and padding-aware masking.
+        """
+        T, _, _ = core_input.size()
+        pos_seq = torch.arange(T - 1, -1, -1.0, device=core_input.device, dtype=core_input.dtype)
+        pos_emb = self.dropout(self.pos_emb(pos_seq))
+
+        core_out = core_input
+        for layer in layers:
+            core_out = layer(core_out, pos_emb, self.r_w_bias, self.r_r_bias, dec_attn_mask=attention_mask)
+        return core_out
+
+    def _make_attn_mask(self, seq: torch.Tensor):
+        """
+        seq: S x B x D
+        return: B x S x S mask (True=mask)
+        """
+        S, B, _ = seq.size()
+        pad_mask = seq.abs().sum(-1).eq(0)  # S x B
+        attn_mask = pad_mask.transpose(0, 1).unsqueeze(1).expand(B, S, S)  # B x S x S
+        return attn_mask
+
+    def _downsample_stage(self, x, boundary_predictor):
+        """
+        One stage of boundary prediction + downsampling
+        """
+        B = x.size(1)
+        L = x.size(0)
+        hidden = self.down_ln(x)
+
+        # boundary prediction
+        if self.flop_measure:
+            num_tokens_to_keep = max(1, int(L * boundary_predictor.prior))
+            indices = torch.arange(0, L, step=max(1, L // num_tokens_to_keep), device=x.device)
+            hard_boundaries = torch.zeros(B, L, device=x.device)
+            hard_boundaries[:, indices] = 1
+        else:
+            _, hard_boundaries = boundary_predictor(x)  # B x L
+
+        # downsample
+        shortened_hidden = downsample(
+            boundaries=hard_boundaries,
+            hidden=hidden,
+            null_group=self.null_token
+        )  # S x B x D
+
+        return shortened_hidden, hard_boundaries
+
+    def encode(self, x: torch.Tensor, return_loss: bool = False):
+        B = x.size(0)
+
+        # Patch embedding
+        x = self.patch_embed(x)  # B x C x H' x W'
+        x = x.flatten(2).transpose(1, 2)  # B x L x C
+        x = self.dropout(x).transpose(0, 1)  # L x B x C
+
+        # Stage 0: pre-blocks
+        pos_seq = torch.arange(self.seq_len - 1, -1, -1.0, device=x.device, dtype=x.dtype)
+        r = self.pos_emb(pos_seq)  # L x 1 x C
+        for block in self.pre_blocks:
+            x = block(x, r, self.r_w_bias, self.r_r_bias)
+
+        # Stage 1: 1st downsampling
+        x, hard_boundaries1 = self._downsample_stage(x, self.bp1)
+        attn_mask1 = self._make_attn_mask(x)
+
+        # Stage 1 blocks
+        x = self.forward_after_pooling_with_attn_masks(x, self.mid_blocks, attention_mask=attn_mask1)
+
+        # Stage 2: 2nd downsampling
+        x, hard_boundaries2 = self._downsample_stage(x, self.bp2)
+        attn_mask2 = self._make_attn_mask(x)
+
+        # Stage 2 blocks (final)
+        x = self.forward_after_pooling_with_attn_masks(x, self.final_blocks, attention_mask=attn_mask2)
+
+        features = x  # S x B x D
+
+        if return_loss and not self.flop_measure:
+            loss1 = self.bp1.calc_loss(hard_boundaries1)
+            loss2 = self.bp2.calc_loss(hard_boundaries2)
+            boundary_loss = loss1 + loss2
+            avg_boundaries_per_batch1 = hard_boundaries1.sum(dim=1).float().mean().item()
+            avg_boundaries_per_batch2 = hard_boundaries2.sum(dim=1).float().mean().item()
+
+            boundary_ratio1 = avg_boundaries_per_batch1 / hard_boundaries1.size(1)
+            boundary_ratio2 = avg_boundaries_per_batch2 / hard_boundaries2.size(1)
+
+            # only report the second boundary ratio
+            # this is not really that helpful, but we keep it for consistency
+            cumulative_avg_boundaries_per_batch = avg_boundaries_per_batch2
+
+            # compute the cumulative boundary ratio (e.g., 0.5 * 0.5 = 0.25)
+            # NOTE: this is really important to monitor the cumulative compression ratio!
+            cumulative_boundary_ratio = boundary_ratio1 * boundary_ratio2 
+
+            return features, boundary_loss, cumulative_avg_boundaries_per_batch, cumulative_boundary_ratio
         else:
             return features
 
