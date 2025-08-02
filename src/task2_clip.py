@@ -98,7 +98,7 @@ def main():
     wd = 0.1
     epochs = 10
     workers = 8       # CPU utilization
-    model = "ViT-B-32"  # model architecture, can be "RN50", "ViT-B-32", "ViT-B-16", etc.
+    model = "ViT-B-16"  # model architecture, can be "RN50", "ViT-B-32", "ViT-B-16", etc.
     warmup = 50
 
     if dataset_name == "COCO":

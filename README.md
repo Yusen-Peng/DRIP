@@ -110,22 +110,27 @@ else:
 
 #### Debugging list
 
-- [ ] FP16 underflow/overflow when it comes to RelaxedBernoulli
+- [x] FP16 underflow/overflow when it comes to RelaxedBernoulli
   - [failed] add clamping after sigmoid and before RelaxedBernoulli
   - [failed] force boundary logit computation in FP32
   - [failed] use logits without converting to probabilities
   - [x] reduce learning rate (from 1e-4 to 5e-5)
 
 
-#### new experiments
+#### Experiments with new DRIP
 
 | model | GFLOPs | epochs | top-1 | top-5 |
 | ----- | ------ | ------ | ----- | ----- |
-| ViT-B-32 | 2.95 | 10 | **28.77%** | 54.34% |
-| new DRIP-2X-32, 2+10 | 2.81? | 10 | running | running |
-| new DRIP-4X-32, 5+7 | 2.73? | 10 | running | running |
-| new DRIP-4X-32, 4+8 | 2.44? | 10 | running | running |
-| new DRIP-4X-32, 2+10 | 1.88? | 10 | running | running |
+| ViT-B-32 | **2.95** | 10 | **28.77%** | 54.34% |
+| new DRIP-2X-32, 2+10 | 2.81🔥 | 10 | running | running |
+| new DRIP-4X-32, 5+7 | 2.73🔥 | 10 | running | running |
+| new DRIP-4X-32, 4+8 | 2.44🔥 | 10 | running | running |
+| new DRIP-4X-32, 2+10 | 1.88🔥 | 10 | running | running |
+| ViT-B-16 | **11.29** | 10 | **33.88%** | 60.81% |
+| new DRIP-2X-16, 2+10 | 11.14🔥 | 10 | running | running |
+| new DRIP-4X-16, 5+7 | 10.82🔥 | 10 | running | running |
+| new DRIP-4X-16, 4+8 | 9.61🔥 | 10 | running | running |
+| new DRIP-4X-16, 2+10 | 7.21🔥 | 10 | running | running |
 
 
 ### LAION-280M (178Msamples, 178,918,585) results

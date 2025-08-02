@@ -64,7 +64,7 @@ def throughput(images, model):
 
 def main():
     COMPRESSION_RATE = 0.25
-    patch_size = 32
+    patch_size = 16
     img_size = 224
     width = 768
     mlp_ratio = 4.0
@@ -91,7 +91,7 @@ def main():
         )
     elif MODE == "ViT":
         model = VisionTransformer(
-            image_size=224,
+            image_size=img_size,
             patch_size=patch_size,
             width=width,
             layers=12,
