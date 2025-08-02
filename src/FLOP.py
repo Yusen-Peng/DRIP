@@ -9,7 +9,7 @@ from numbers import Number
 from typing import Any, List
 import numpy as np
 from fvcore.nn import FlopCountAnalysis
-from open_clip_local.DTP_ViT import DTPViT, HierarchicalDTPViT
+from open_clip_local.DTP_ViT import DTPViT, HierarchicalDTPViT, SoftDTPViT
 from open_clip_local.transformer import VisionTransformer
 
 DROPOUT_FLOPS = 4
@@ -63,15 +63,16 @@ def throughput(images, model):
 
 
 def main():
-    COMPRESSION_RATE = 0.25
-    patch_size = 16
+    patch_size = 32
+    MODE = "S-DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT"
+
+
     img_size = 224
     width = 768
     mlp_ratio = 4.0
     patch_dropout = 0.1
-    MODE = "H-DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT"
-
     if MODE == "DRIP":
+        COMPRESSION_RATE = 0.25
         model = DTPViT(
             image_size=img_size,
             patch_size=patch_size,
@@ -104,6 +105,27 @@ def main():
             attn_drop_rate=0.1,
             temp=0.5,
             compression_rate=(rate1, rate2),  # compression at stage 1 and 2
+            threshold=0.5,
+            activation_function="gelu",
+            num_classes=width,
+            flop_measure=True,  # simulating fake boundaries for reproducible GFLOPs
+        )
+    elif MODE == "S-DRIP":
+        upper_bound = 0.6  # compression rate upper bound
+        lower_bound = 0.4  # compression rate lower bound
+        compression_rate = (lower_bound, upper_bound)
+        model = SoftDTPViT(
+            image_size=img_size,
+            patch_size=patch_size,
+            in_chans=3,
+            embed_dim=width,
+            depth=(2, 10, 0),
+            num_heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            drop_rate=patch_dropout,
+            attn_drop_rate=0.1,
+            temp=0.5,
+            compression_rate=compression_rate,
             threshold=0.5,
             activation_function="gelu",
             num_classes=width,

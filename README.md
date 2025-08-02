@@ -117,24 +117,24 @@ else:
   - [x] reduce learning rate (from 1e-4 to 5e-5)
 
 
-### New experiments with DRIP, H-DRIP, and S-DRIP
+### New experiments with DRIP💧, H-DRIP💦, and S-DRIP🫧
 
-| model details | GFLOPs | epochs | top-1 | top-5 |
+| model details | GFLOPs | epochs | top-1 zero-shot | top-5 zero-shot |
 | ----- | ------ | ------ | ----- | ----- |
-| ViT-B-32 | **2.95** | 10 | **28.77%** | 54.34% |
+| ViT-B-32 | **2.95** | 10 | **28.77%, re-running** | 54.34%, re-running |
 | 💧DRIP-32-50%, 2+10 | 2.81 | 10 | running | running |
 | 💧DRIP-32-25%, 5+7 | 2.73🔥 | 10 | running | running |
 | 💧DRIP-32-25%, 4+8 | 2.44 | 10 | running | running |
 | 💧DRIP-32-25%, 2+10 | 1.88 | 10 | running | running |
 | 💦H-DRIP-32-50%-50%, 3+3+6 | 2.51🔥 | 10 | running | running |
-| 🫧S-DRIP-32-40%-60%, 2+10 | ?? | 10 | ?? | ?? |
-| ViT-B-16 | **11.29** | 10 | **33.88%** | 60.81% |
+| 🫧S-DRIP-32-40%-60%, 2+10 | 2.81 | 10 | running | running |
+| ViT-B-16 | **11.29** | 10 | **33.88% re-running** | 60.81%, re-running |
 | 💧DRIP-2X-16, 2+10 | 11.14 | 10 | running | running |
 | 💧DRIP-4X-16, 5+7 | 10.82🔥 | 10 | running | running |
 | 💧DRIP-4X-16, 4+8 | 9.61 | 10 | running | running |
 | 💧DRIP-4X-16, 2+10 | 7.21 | 10 | running | running |
 | 💦H-DRIP-16-50%-50%, 3+3+6 | 9.65🔥 | 10 | running | running |
-| 🫧S-DRIP-16-40%-60%, 2+10 | ?? | 10 | ?? | ?? |
+| 🫧S-DRIP-16-40%-60%, 2+10 | 11.14 | 10 | running | running |
 
 
 
@@ -182,4 +182,3 @@ else:
 | DRIP-2X-16 (**36.71%** zero-shot, 1 epoch pretrain + 1 epoch finetune) | (93.5%, 94.1%, 98.0%, 90.7%) | (29.8%, 25.3%, 16.0%, 39.8%) | (31.8%, 26.9%, 16.3%, 43.9%) |
 
 Note: (A, C, D, R) = (Average, Conversation, Detail description, Complex reasoning)
-

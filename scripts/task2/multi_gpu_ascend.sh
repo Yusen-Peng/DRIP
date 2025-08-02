@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=H-DRIP-16
-#SBATCH --output=H-DRIP-16.log
+#SBATCH --job-name=new_vit32
+#SBATCH --output=new_vit32.log
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

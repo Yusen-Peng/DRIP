@@ -21,7 +21,7 @@ from .modified_resnet import ModifiedResNet
 from .timm_model import TimmModel
 from .transformer import LayerNormFp32, LayerNorm, QuickGELU, Attention, VisionTransformer, TextTransformer,\
     text_global_pool
-from .DTP_ViT import DTPViT, HierarchicalDTPViT
+from .DTP_ViT import DTPViT, HierarchicalDTPViT, SoftDTPViT
 from .utils import to_2tuple
 
 ZERO = 0
@@ -150,8 +150,8 @@ def _build_vision_tower(
         if vision_cfg.act_kwargs is not None:
             act_layer = partial(act_layer, **vision_cfg.act_kwargs)
 
-        HIERARCHICAL = True  # whether to use hierarchical DTP-ViT
-        SOFT = False  # whether to use soft DTP-ViT
+        HIERARCHICAL = False  # whether to use hierarchical DTP-ViT
+        SOFT = True  # whether to use soft DTP-ViT
         if DTP_ViT and not HIERARCHICAL and not SOFT: 
             compression_rate = 0.25
             visual = DTPViT(
@@ -159,7 +159,7 @@ def _build_vision_tower(
                 patch_size=vision_cfg.patch_size,
                 in_chans=3,
                 embed_dim=vision_cfg.width,
-                depth=(4, 8, ZERO),
+                depth=(2, 10, ZERO),
                 num_heads=vision_heads,
                 mlp_ratio=vision_cfg.mlp_ratio,
                 drop_rate=vision_cfg.patch_dropout,
@@ -171,7 +171,7 @@ def _build_vision_tower(
                 num_classes=embed_dim
             )
 
-        elif DTP_ViT and HIERARCHICAL:
+        elif DTP_ViT and HIERARCHICAL and not SOFT:
             rate1 = 0.5  # compression rate at stage 1
             rate2 = 0.5  # compression rate at stage 2
             visual = HierarchicalDTPViT(
@@ -194,8 +194,23 @@ def _build_vision_tower(
         elif DTP_ViT and SOFT:
             upper_bound = 0.6  # compression rate upper bound
             lower_bound = 0.4  # compression rate lower bound
-            raise NotImplementedError("Soft DTP-ViT is not implemented yet!")
-
+            compression_rate = (lower_bound, upper_bound)
+            visual = SoftDTPViT(
+                image_size=vision_cfg.image_size,
+                patch_size=vision_cfg.patch_size,
+                in_chans=3,
+                embed_dim=vision_cfg.width,
+                depth=(2, 10, ZERO),
+                num_heads=vision_heads,
+                mlp_ratio=vision_cfg.mlp_ratio,
+                drop_rate=vision_cfg.patch_dropout,
+                attn_drop_rate=0.1,
+                temp=0.5,
+                compression_rate=compression_rate,
+                threshold=0.5,
+                activation_function="gelu",
+                num_classes=embed_dim
+            )
         else:
             visual = VisionTransformer(
                 image_size=vision_cfg.image_size,

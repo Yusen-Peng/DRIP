@@ -15,7 +15,7 @@ except ImportError:
     wandb = None
 
 from open_clip_local import get_input_dtype, CLIP, CustomTextCLIP
-from open_clip_local.model import DTPViT, HierarchicalDTPViT
+from open_clip_local.model import DTPViT, HierarchicalDTPViT, SoftDTPViT
 from open_clip_train_local.distributed import is_master
 from open_clip_train_local.zero_shot import zero_shot_eval
 from open_clip_train_local.precision import get_autocast
@@ -74,7 +74,7 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
 
     model.train()
     visual = unwrap_model(model).visual if hasattr(unwrap_model(model), "visual") else None
-    use_boundary = isinstance(visual, DTPViT) or isinstance(visual, HierarchicalDTPViT)
+    use_boundary = isinstance(visual, DTPViT) or isinstance(visual, HierarchicalDTPViT) or isinstance(visual, SoftDTPViT)
     if args.distill:
         dist_model.eval()
 
