@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=new_vit32
-#SBATCH --output=new_vit32.log
+#SBATCH --job-name=new_DRIP_2x
+#SBATCH --output=new_DRIP_2x.log
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

@@ -88,7 +88,7 @@ def main():
     # dataset parameters - "COCO" or "LAION" or "CC12"
     dataset_name = "LAION"
 
-    use_DTP = False # DTP (Dynamic Token Pruning) is not used by default
+    use_DTP = True # DTP (Dynamic Token Pruning) is not used by default
 
     # experiment with batch size
     # batch size:

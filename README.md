@@ -69,10 +69,10 @@ Top-1 Acc (%) and Top-5 Acc (%) on ImageNet **Zero-Shot**
 | DRIP-2x-16, 2+10 | 10.22 | 224 | 16 | 10 | **30.59%** | 57.11% | **43.0** | **0.706** |
 | DRIP-4x-16, 2+10 | 6.62 | 224 | 16 | 10 | **28.25%** | 53.95% | **32.2** | **0.570** |
 | DRIP-10x-16, 2+10 | 4.46 | 224 | 16 | 10 | **26.36%** | 50.79% | **26.3** | **0.515** |
-| <tr><td colspan="9" align="center"> higher boundary rate </td></tr> |
-| DRIP-1.6x-32 (60%), 2+9 | **2.76🔥** | 224 | 32 | 10 | **running** | running | **running** | **running** |
+| <tr><td colspan="9" align="center"> higher boundary rate, but fewer layers </td></tr> |
+| DRIP-1.6x-32 (60%), 2+9 | **2.76🔥** | 224 | 32 | 10 | **24.32%** | 48.75% | **10.4 (I cut the batch size by half)** | **0.191** |
 | <tr><td colspan="9" align="center"> delay pooling </td></tr> |
-| DRIP-2x-32, 3+9 | **2.8🔥** | 224 | 32 | 10 | **running** | running | **running** | **running** |
+| DRIP-2x-32, 3+9 | **2.8🔥** | 224 | 32 | 10 | **25.09%** | 49.66% | **10.3 (I cut the batch size by half)** | **0.194** |
 
 
 #### create the attention mask
@@ -121,12 +121,12 @@ else:
 
 | model details | GFLOPs | epochs | top-1 zero-shot | top-5 zero-shot |
 | ----- | ------ | ------ | ----- | ----- |
-| ViT-B-32 | **2.95** | 10 | **28.77%, re-running** | 54.34%, re-running |
+| ViT-B-32 | **2.95** | 10 | **re-running** | re-running |
 | 💧DRIP-32-50%, 2+10 | 2.81 | 10 | running | running |
-| 💧DRIP-32-25%, 5+7 | 2.73🔥 | 10 | running | running |
-| 💧DRIP-32-25%, 4+8 | 2.44 | 10 | running | running |
-| 💧DRIP-32-25%, 2+10 | 1.88 | 10 | running | running |
-| 💦H-DRIP-32-50%-50%, 3+3+6 | 2.51🔥 | 10 | running | running |
+| 💧DRIP-32-25%, 5+7 | 2.73 | 10 | 24.20% | 48.97% |
+| 💧DRIP-32-25%, 4+8 | 2.44 | 10 | 24.00% | 48.64% |
+| 💧DRIP-32-25%, 2+10 | 1.88 | 10 | 24.56% | 48.80% |
+| 💦H-DRIP-32-50%-50%, 3+3+6 | 2.51 | 10 | 23.10% | 46.92% |
 | 🫧S-DRIP-32-40%-60%, 2+10 | 2.81 | 10 | running | running |
 | ViT-B-16 | **11.29** | 10 | **33.88% re-running** | 60.81%, re-running |
 | 💧DRIP-2X-16, 2+10 | 11.14 | 10 | running | running |
@@ -136,6 +136,9 @@ else:
 | 💦H-DRIP-16-50%-50%, 3+3+6 | 9.65🔥 | 10 | running | running |
 | 🫧S-DRIP-16-40%-60%, 2+10 | 11.14 | 10 | running | running |
 
+### accuracy visualization
+
+![alt text](/acc_vis.png)
 
 
 ### LAION-280M (178Msamples, 178,918,585) results

@@ -151,9 +151,9 @@ def _build_vision_tower(
             act_layer = partial(act_layer, **vision_cfg.act_kwargs)
 
         HIERARCHICAL = False  # whether to use hierarchical DTP-ViT
-        SOFT = True  # whether to use soft DTP-ViT
+        SOFT = False  # whether to use soft DTP-ViT
         if DTP_ViT and not HIERARCHICAL and not SOFT: 
-            compression_rate = 0.25
+            compression_rate = 0.5
             visual = DTPViT(
                 image_size=vision_cfg.image_size,
                 patch_size=vision_cfg.patch_size,
