@@ -121,13 +121,13 @@ else:
 
 | model details | GFLOPs | epochs | top-1 zero-shot | top-5 zero-shot |
 | ----- | ------ | ------ | ----- | ----- |
-| ViT-B-32 | **2.95** | 10 | **re-running** | re-running |
+| ViT-B-32 | **2.95** | 10 | **26.69%** | **52.36%** |
 | 💧DRIP-32-50%, 2+10 | 2.81 | 10 | running | running |
-| 💧DRIP-32-25%, 5+7 | 2.73 | 10 | 24.20% | 48.97% |
+| 💧DRIP-32-25%, 5+7 | 2.73 | 10 | 24.20% | **48.97%** |
 | 💧DRIP-32-25%, 4+8 | 2.44 | 10 | 24.00% | 48.64% |
-| 💧DRIP-32-25%, 2+10 | 1.88 | 10 | 24.56% | 48.80% |
+| 💧DRIP-32-25%, 2+10 | 1.88 | 10 | **24.56%** | 48.80% |
 | 💦H-DRIP-32-50%-50%, 3+3+6 | 2.51 | 10 | 23.10% | 46.92% |
-| 🫧S-DRIP-32-40%-60%, 2+10 | 2.81 | 10 | running | running |
+| 🫧S-DRIP-32-40%-60%, 2+10 | 2.81 | 10 | 23.32% | 46.97% |
 | ViT-B-16 | **11.29** | 10 | **33.88% re-running** | 60.81%, re-running |
 | 💧DRIP-2X-16, 2+10 | 11.14 | 10 | running | running |
 | 💧DRIP-4X-16, 5+7 | 10.82🔥 | 10 | running | running |
@@ -138,7 +138,9 @@ else:
 
 ### accuracy visualization
 
-![alt text](/acc_vis.png)
+| patch size = 32 | patch size = 16 |
+| --------------- | --------------- |
+| ![alt text](/acc_vis_32.png) | ![alt text](/acc_vis_16.png) | 
 
 
 ### LAION-280M (178Msamples, 178,918,585) results
