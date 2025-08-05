@@ -142,6 +142,12 @@ else:
 | --------------- | --------------- |
 | ![alt text](/acc_vis_32.png) | ![alt text](/acc_vis_16.png) | 
 
+existing bug: 
+- [ ] not mask **the null token** in the attention mask 
+
+other things to try:
+- [ ] extend training epochs and reduce LR slightly
+- [ ] add temperature annealing for RelaxedBernoulli and start with a high value
 
 ### LAION-280M (178Msamples, 178,918,585) results
 
