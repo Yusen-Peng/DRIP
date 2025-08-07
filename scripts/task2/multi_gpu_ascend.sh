@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=new_DRIP_2x
-#SBATCH --output=new_DRIP_2x.log
+#SBATCH --job-name=Aug6_LONG_ViT
+#SBATCH --output=Aug6_LONG_ViT.log
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=2
+#SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836

@@ -80,6 +80,44 @@ def downsample(boundaries, hidden, null_group):
 
         return shortened_hidden
 
+
+# def final(foo):
+#     lel = 1 - foo
+#     lel = lel / (lel.sum(dim=1, keepdim=True) + 1e-9)
+#     return lel
+
+
+# def common(boundaries):
+#     boundaries = boundaries.clone()
+#     n_segments = boundaries.sum(dim=-1).max().item()
+
+#     if n_segments == 0:
+#         return None
+
+#     tmp = torch.zeros_like(boundaries).unsqueeze(2) + torch.arange(
+#         start=0,
+#         end=n_segments,
+#         device=boundaries.device
+#     )  # Shape: B x L x S
+
+#     segment_ids = boundaries.cumsum(1) - boundaries  # Shift to segment index
+#     foo = tmp - segment_ids.unsqueeze(-1)            # Distance to group index
+
+#     return foo
+
+
+# def downsample(boundaries, hidden):
+#     foo = common(boundaries)  # B x L x S
+
+#     if foo is None:
+#         return hidden[:1] * 0.0  # Return all-zero tensor if no groups found
+
+#     weights = final(foo).to(hidden.dtype)  # B x L x S
+
+#     shortened_hidden = torch.einsum('lbd,bls->sbd', hidden, weights)
+#     return shortened_hidden
+
+
 @torch.jit.script
 def add_and_scale(tensor1, tensor2, alpha: float) -> torch.Tensor:
     return alpha * (tensor1 + tensor2)
@@ -427,7 +465,7 @@ class DTPViT(nn.Module):
             threshold=threshold
         )
 
-        # layer normalization and null token
+        # layer normalization
         self.down_ln = nn.LayerNorm(embed_dim)
         self.null_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         nn.init.normal_(self.null_token, std=0.02)
@@ -532,7 +570,15 @@ class DTPViT(nn.Module):
             x = features_out
 
         # pool across sequence dimension with mean pooling
-        x = x.mean(dim=0)
+        pad_mask = x.abs().sum(-1).eq(0).float()           # S x B
+        valid_mask = 1.0 - pad_mask                        # S x B
+        valid_mask_exp = valid_mask.unsqueeze(-1)          # S x B x 1
+
+        x = x * valid_mask_exp                             # Mask padded tokens
+        sum_x = x.sum(dim=0)                               # B x D
+        valid_counts = valid_mask.sum(dim=0).clamp(min=1e-6).unsqueeze(-1)  # B x 1
+        x = sum_x / valid_counts                           # B x D (masked mean)
+
         logits = self.head(x)
 
         if return_loss and not self.flop_measure:
@@ -618,7 +664,7 @@ class HierarchicalDTPViT(nn.Module):
             threshold=threshold
         )
 
-        # Layer norm and null token
+        # Layer norm
         self.down_ln = nn.LayerNorm(embed_dim)
         self.null_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         nn.init.normal_(self.null_token, std=0.02)
@@ -740,7 +786,15 @@ class HierarchicalDTPViT(nn.Module):
             x = features_out
 
         # pool across sequence dimension with mean pooling
-        x = x.mean(dim=0)
+        pad_mask = x.abs().sum(-1).eq(0).float()           # S x B
+        valid_mask = 1.0 - pad_mask                        # S x B
+        valid_mask_exp = valid_mask.unsqueeze(-1)          # S x B x 1
+
+        x = x * valid_mask_exp                             # Mask padded tokens
+        sum_x = x.sum(dim=0)                               # B x D
+        valid_counts = valid_mask.sum(dim=0).clamp(min=1e-6).unsqueeze(-1)  # B x 1
+        x = sum_x / valid_counts                           # B x D (masked mean)
+
         logits = self.head(x)
 
         if return_loss and not self.flop_measure:
@@ -1021,7 +1075,15 @@ class SoftDTPViT(nn.Module):
             x = features_out
 
         # pool across sequence dimension with mean pooling
-        x = x.mean(dim=0)
+        pad_mask = x.abs().sum(-1).eq(0).float()           # S x B
+        valid_mask = 1.0 - pad_mask                        # S x B
+        valid_mask_exp = valid_mask.unsqueeze(-1)          # S x B x 1
+
+        x = x * valid_mask_exp                             # Mask padded tokens
+        sum_x = x.sum(dim=0)                               # B x D
+        valid_counts = valid_mask.sum(dim=0).clamp(min=1e-6).unsqueeze(-1)  # B x 1
+        x = sum_x / valid_counts                           # B x D (masked mean)
+
         logits = self.head(x)
 
         if return_loss and not self.flop_measure:

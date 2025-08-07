@@ -142,6 +142,26 @@ else:
 | --------------- | --------------- |
 | ![alt text](/acc_vis_32.png) | ![alt text](/acc_vis_16.png) | 
 
+### fix mean pooling by not pooling padded tokens
+
+For this set of experiments: 
+
+```bash
+learning_rate = 5e-5
+batch_size = 512
+GPU = 4
+```
+
+| model details | GFLOPs | epochs | top-1 zero-shot | top-5 zero-shot |
+| ----- | ------ | ------ | ----- | ----- |
+| ViT-B-16 | **11.29** | 10 | **Aug6_ViT_16** | **Aug6_ViT_16** |
+| 💧DRIP-4X-16, 4+8 | 9.61 | 10 | **Aug6_DRIP_25_4_8** | **Aug6_DRIP_25_4_8** |
+| 💧DRIP-4X-16, 2+10 | 7.21 | 10 | **Aug6_DRIP_25_2_10** | **Aug6_DRIP_25_2_10** |
+| 💦H-DRIP-16-50%-50%, 3+3+6 | 9.65 | 10 | **Aug6_H-DRIP** | **Aug6_H-DRIP** |
+| 🫧S-DRIP-16-20%-30%, 2+10 | 7.21 | 10 | **Aug6_S-DRIP** | **Aug6_S-DRIP** |
+
+### What else?
+
 existing bug: 
 - [ ] not mask **the null token** in the attention mask 
 

@@ -93,8 +93,8 @@ def main():
     # experiment with batch size
     # batch size:
     # 1024 for ViT-B-32
-    batch_size = 256
-    patch_size = 32
+    batch_size = 512
+    patch_size = 16
     lr = 5e-5
     wd = 0.1
     epochs = 10

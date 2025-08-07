@@ -63,9 +63,8 @@ def throughput(images, model):
 
 
 def main():
-    patch_size = 32
+    patch_size = 16
     MODE = "S-DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT"
-
 
     img_size = 224
     width = 768
@@ -111,8 +110,8 @@ def main():
             flop_measure=True,  # simulating fake boundaries for reproducible GFLOPs
         )
     elif MODE == "S-DRIP":
-        upper_bound = 0.6  # compression rate upper bound
-        lower_bound = 0.4  # compression rate lower bound
+        upper_bound = 0.3  # compression rate upper bound
+        lower_bound = 0.2  # compression rate lower bound
         compression_rate = (lower_bound, upper_bound)
         model = SoftDTPViT(
             image_size=img_size,

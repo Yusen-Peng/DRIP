@@ -151,9 +151,10 @@ def _build_vision_tower(
             act_layer = partial(act_layer, **vision_cfg.act_kwargs)
 
         HIERARCHICAL = False  # whether to use hierarchical DTP-ViT
-        SOFT = False  # whether to use soft DTP-ViT
+        SOFT = True  # whether to use soft DTP-ViT
         if DTP_ViT and not HIERARCHICAL and not SOFT: 
-            compression_rate = 0.5
+            compression_rate = 0.25
+            print(f"Using DTP ViT with compression rate {compression_rate}")
             visual = DTPViT(
                 image_size=vision_cfg.image_size,
                 patch_size=vision_cfg.patch_size,
@@ -172,8 +173,10 @@ def _build_vision_tower(
             )
 
         elif DTP_ViT and HIERARCHICAL and not SOFT:
+            print("Using Hierarchical DTP ViT")
             rate1 = 0.5  # compression rate at stage 1
             rate2 = 0.5  # compression rate at stage 2
+            print(f"Compression rates: {rate1}, {rate2}")
             visual = HierarchicalDTPViT(
                 image_size=vision_cfg.image_size,
                 patch_size=vision_cfg.patch_size,
@@ -192,8 +195,9 @@ def _build_vision_tower(
             )
         
         elif DTP_ViT and SOFT:
-            upper_bound = 0.6  # compression rate upper bound
-            lower_bound = 0.4  # compression rate lower bound
+            upper_bound = 0.2  # compression rate upper bound
+            lower_bound = 0.3  # compression rate lower bound
+            print(f"Using Soft DTP ViT with compression rate {upper_bound} - {lower_bound}")
             compression_rate = (lower_bound, upper_bound)
             visual = SoftDTPViT(
                 image_size=vision_cfg.image_size,
