@@ -35,7 +35,7 @@ def plot_acc_vis(model2acc: Dict, patch_size: int) -> None:
     plt.ylabel("Top-1 Accuracy")
     plt.title(f"26M samples, patch_size={patch_size}, lr=5e-5, after 10 epochs")
     plt.legend()
-    plt.savefig(f"acc_vis_{patch_size}.png")
+    plt.savefig(f"NEW_acc_vis_{patch_size}.png")
 
 def main():
 
@@ -52,15 +52,24 @@ def main():
             "S-DRIP-32-40%-60%, 2+10": 'S-DRIP.log',
         }
     elif PATCH_SIZE == 16:
+        # model2path = {
+        #     'ViT-B-16': 'new_vit16.log',
+        #     "DRIP-16-50%, 2+10": 'new_DRIP_16p_2x.log',
+        #     "DRIP-16-25%, 5+7": 'new_DRIP_16p_4x_5_7.log',
+        #     "DRIP-16-25%, 4+8": 'new_DRIP_16p_4x_4_8.log',
+        #     "DRIP-16-25%, 2+10": 'new_DRIP_16p_4x.log',
+        #     "H-DRIP-16-50%-50%, 3+3+6": 'H-DRIP-16.log',
+        #     "S-DRIP-16-40%-60%, 2+10": 'S-DRIP-16.log',
+        # }
         model2path = {
-            'ViT-B-16': 'new_vit16.log',
-            "DRIP-16-50%, 2+10": 'new_DRIP_16p_2x.log',
-            "DRIP-16-25%, 5+7": 'new_DRIP_16p_4x_5_7.log',
-            "DRIP-16-25%, 4+8": 'new_DRIP_16p_4x_4_8.log',
-            "DRIP-16-25%, 2+10": 'new_DRIP_16p_4x.log',
-            "H-DRIP-16-50%-50%, 3+3+6": 'H-DRIP-16.log',
-            "S-DRIP-16-40%-60%, 2+10": 'S-DRIP-16.log',
+            'ViT-B-16': 'Aug6_ViT16.log',
+            "DRIP-16-25%, 2+10": 'Aug6_DRIP_25_2_10.log',
+            "DRIP-16-25%, 4+8": 'Aug6_DRIP_25_4_8.log',
+            "H-DRIP-16-50%-50%, 3+3+6": 'Aug6_H-DRIP.log',
+            "S-DRIP-16-20%-30%, 2+10": 'Aug6_S-DRIP.log',
         }
+
+
     else:
         raise ValueError("Unsupported patch size. Only 16 and 32 are supported.")
 
