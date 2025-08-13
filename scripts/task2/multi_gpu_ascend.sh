@@ -1,7 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=Aug6_LONG_ViT
-#SBATCH --output=Aug6_LONG_ViT.log
-#SBATCH --time=168:00:00
+#SBATCH --job-name=Aug13_DRIP_4_8
+#SBATCH --output=Aug13_DRIP_4_8.log
+#SBATCH --partition=quad
+#SBATCH --time=120:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
@@ -18,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
-torchrun --nproc_per_node=1 src/task2_clip.py 2>&1 | tee ablation.log
+torchrun --nproc_per_node=1 src/task2_clip.py 2>&1 | tee what_the_heck.log
 
 conda deactivate
 # End of script

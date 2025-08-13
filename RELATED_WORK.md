@@ -419,3 +419,68 @@ alternatives:
 ![alt text](unit_visualization/boundary_visualization_0_4x_32.png)
 ![alt text](unit_visualization/boundary_visualization_0_10x_32.png)
 
+#### create the attention mask
+
+```python
+# attention mask for post-pooling transformer layers
+S = shortened_hidden.size(0)
+pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
+attn_mask = pad_mask.transpose(0, 1).unsqueeze(1)     # B x 1 x S
+attn_mask = attn_mask.expand(B, S, S)                 # B x S x S
+```
+
+padding mask example from a real experiment:
+
+```bash
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+```
+
+#### use the attention mask
+
+```python
+if attn_mask is not None:
+     if attn_mask.dim() == 2:
+          attn_score.masked_fill_(attn_mask[None, None, :, :], -float('inf'))
+     elif attn_mask.dim() == 3:
+          attn_score.masked_fill_(attn_mask[:, None, :, :], -float('inf'))
+else:
+     pass
+```
+
+#### Debugging list
+
+- [x] FP16 underflow/overflow when it comes to RelaxedBernoulli
+  - [failed] add clamping after sigmoid and before RelaxedBernoulli
+  - [failed] force boundary logit computation in FP32
+  - [failed] use logits without converting to probabilities
+  - [x] reduce learning rate (from 1e-4 to 5e-5)
+
+### New experiments with DRIP💧, H-DRIP💦, and S-DRIP🫧
+
+| model details | GFLOPs | epochs | top-1 zero-shot | top-5 zero-shot |
+| ----- | ------ | ------ | ----- | ----- |
+| ViT-B-32 | **2.95** | 10 | **26.69%** | **52.36%** |
+| 💧DRIP-32-50%, 2+10 | 2.81 | 10 | 23.45% | 47.53% |
+| 💧DRIP-32-25%, 5+7 | 2.73 | 10 | 24.20% | **48.97%** |
+| 💧DRIP-32-25%, 4+8 | 2.44 | 10 | 24.00% | 48.64% |
+| 💧DRIP-32-25%, 2+10 | 1.88 | 10 | **24.56%** | 48.80% |
+| 💦H-DRIP-32-50%-50%, 3+3+6 | 2.51 | 10 | 23.10% | 46.92% |
+| 🫧S-DRIP-32-40%-60%, 2+10 | 2.81 | 10 | 23.32% | 46.97% |
+| ViT-B-16 | **11.29** | 10 | **30.69%** | 57.45% |
+| 💧DRIP-2X-16, 2+10 | 11.14 | 10 | 26.45% | 51.64% |
+| 💧DRIP-4X-16, 5+7 | 10.82 | 10 | 28.27% | 54.72% |
+| 💧DRIP-4X-16, 4+8 | 9.61 | 10 | 28.22% | 54.32% |
+| 💧DRIP-4X-16, 2+10 | 7.21 | 10 | 26.19% | 51.75% |
+| 💦H-DRIP-16-50%-50%, 3+3+6 | 9.65🔥 | 10 | 26.80% | 52.36% |
+| 🫧S-DRIP-16-40%-60%, 2+10 | 11.14 | 10 | 28.23% | 54.29% |
+
+### accuracy visualization
+
+| patch size = 32 | patch size = 16 |
+| --------------- | --------------- |
+| ![alt text](/acc_vis_32.png) | ![alt text](/acc_vis_16.png) |

@@ -32,53 +32,27 @@ def train_runner(
         imagenet_val_path: str = "/fs/scratch/PAS2836/yusenpeng_dataset/val",
     ):
 
-    args_list = []
-
-    if use_webdataset == True:
-
-        args_list = [
-            "--train-data", train_data_path,
-            "--dataset-type", "webdataset",
-            "--train-num-samples", str(train_num_samples),
-            "--imagenet-val", imagenet_val_path,
-            "--save-frequency", "1",
-            "--zeroshot-frequency", "1",
-            "--report-to", "tensorboard",
-            "--batch-size", str(batch_size),
-            "--warmup", str(warmup),
-            "--lr", str(lr),
-            "--wd", str(wd),
-            "--epochs", str(epochs),
-            "--workers", str(workers),
-            "--model", model,
-            "--precision", "amp", # automatic mixed precision
-            #"--grad-clip-norm", "1.0", # gradient clipping
-            #"--resume", "latest", # resume from the latest checkpoints
-            #"--checkpoint-path", "logs/ViT-B-16/checkpoints", # the path to save checkpoints
-        ]
-
-    else:
-        args_list = [
-            "--save-frequency", "1",
-            "--zeroshot-frequency", "1",
-            "--report-to", "tensorboard",
-            "--train-data", train_data_path,
-            "--val-data", val_data_path,
-            "--csv-img-key", "filepath",
-            "--csv-caption-key", "caption",
-            "--imagenet-val", imagenet_val_path,
-            "--warmup", str(warmup),
-            "--batch-size", str(batch_size),
-            "--lr", str(lr),
-            "--wd", str(wd),
-            "--epochs", str(epochs),
-            "--workers", str(workers),
-            "--model", model,
-            "--precision", "amp", # automatic mixed precision
-            #"--grad-clip-norm", "1.0", # gradient clipping
-            #"--resume", "latest", # resume from the latest checkpoints
-            #"--checkpoint-path", "logs/ViT-B-16/checkpoints", # the path to save checkpoints
-        ]
+    args_list = [
+        "--train-data", train_data_path,
+        "--dataset-type", "webdataset",
+        "--train-num-samples", str(train_num_samples),
+        "--imagenet-val", imagenet_val_path,
+        "--save-frequency", "1",
+        "--zeroshot-frequency", "1",
+        "--report-to", "tensorboard",
+        "--batch-size", str(batch_size),
+        "--warmup", str(warmup),
+        "--lr", str(lr),
+        "--wd", str(wd),
+        "--epochs", str(epochs),
+        "--workers", str(workers),
+        "--model", model,
+        "--precision", "amp", # automatic mixed precision
+        "--logs", "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/",
+        #"--grad-clip-norm", "1.0", # gradient clipping
+        #"--resume", "latest", # resume from the latest checkpoints
+        #"--checkpoint-path", "logs/ViT-B-16/checkpoints", # the path to save checkpoints
+    ]
 
     if DTP:
         args_list.append("--DTP")

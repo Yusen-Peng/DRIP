@@ -471,6 +471,7 @@ class DTPViT(nn.Module):
         nn.init.normal_(self.null_token, std=0.02)
 
         # final projection
+        self.num_classes = num_classes
         self.head = nn.Linear(embed_dim, num_classes)
     
     def forward_after_pooling_with_attn_masks(self, core_input: torch.Tensor, layers, attention_mask: torch.Tensor):

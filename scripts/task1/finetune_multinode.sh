@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=DRIP_2x_16_finetune
-#SBATCH --output=DRIP_2x_16_finetune.txt
-#SBATCH --time=80:00:00
-#SBATCH --nodes=2
-#SBATCH --ntasks=2                      
+#SBATCH --job-name=ImageNet_DRIP_4_8
+#SBATCH --output=ImageNet_DRIP_4_8.txt
+#SBATCH --time=120:00:00
+#SBATCH --nodes=4
+#SBATCH --ntasks=4                      
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -25,8 +25,8 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 srun bash -c "
 torchrun \
-  --nproc_per_node=2 \
-  --nnodes=2 \
+  --nproc_per_node=1 \
+  --nnodes=4 \
   --node_rank=\$SLURM_PROCID \
   --rdzv_backend=c10d \
   --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT \

@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=DRIP_2x_16_finetune
-#SBATCH --output=DRIP_2x_16_finetune.txt
+#SBATCH --job-name=ImageNet_DRIP_2_10
+#SBATCH --output=ImageNet_DRIP_2_10.txt
 #SBATCH --time=80:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
