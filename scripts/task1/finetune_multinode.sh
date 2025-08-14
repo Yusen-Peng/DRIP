@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=ImageNet_DRIP_4_8
-#SBATCH --output=ImageNet_DRIP_4_8.txt
+#SBATCH --job-name=ImageNet_ViT16
+#SBATCH --output=ImageNet_ViT16.txt
 #SBATCH --time=120:00:00
 #SBATCH --nodes=4
 #SBATCH --ntasks=4                      

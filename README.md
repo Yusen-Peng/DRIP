@@ -128,7 +128,7 @@ other things to try:
 | 4x comp | 6.62 | 224 | 16 | 3 | **34.14%** | 61.89% | **32.3** | **0.557** |
 | 10x comp | 4.53 | 224 | 16 | 3 | **32.32%** | 59.40% | **26.2** | **0.486** |
 
-## TASK 2 - ImageNet Finetuning
+## TASK 2 - ImageNet Classification
 
 ### train ViTs on ImageNet-1K (1.28M images)
 
@@ -139,6 +139,9 @@ other things to try:
 | ViT-B-32 | laion2b_s34b_b79k | 66.53% | no | 30 | 🟠60.98% |
 | <tr><td colspan="6" align="center"> pretrained DRIP </td></tr> |
 | DRIP-2X-16 | 3 epochs of 280M LAION | **36.71%** | no | 100 | **🟢42.30%** |
+| | <tr><td colspan="6" align="center"> training from scratch </td></tr> |
+| DRIP-2X-16, 2+10 | N/A | N/A | N/A | 100 | running! |
+| DRIP-2X-16, 4+8  | N/A | N/A | N/A | 100 | running! |
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
 

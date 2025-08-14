@@ -305,8 +305,7 @@ def finetuning_DTP_ViT():
 def train_DTP_ViT_from_scratch():
     BATCH_SIZE = 512
     EPOCHS = 100
-    effective_batch_size = BATCH_SIZE * dist.get_world_size()
-    LR = 1e-3 * (effective_batch_size / 512)
+    LR = 5e-5
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
     DEVICE = torch.device(f"cuda:{local_rank}")
@@ -354,7 +353,7 @@ def train_DTP_ViT_from_scratch():
             patch_size=patch_size,
             embed_dim=768,
             num_heads=12,
-            depth=(4, 8, 0),
+            depth=(2, 10, 0),
             mlp_ratio=4.0,
             drop_rate=0.0,
             attn_drop_rate=0.1,
@@ -455,15 +454,15 @@ def train_DTP_ViT_from_scratch():
 def train_ViT_from_scratch():
     BATCH_SIZE = 512
     EPOCHS = 100
-    LR = 1e-4
+    LR = 5e-5
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
     DEVICE = torch.device(f"cuda:{local_rank}")
 
 
     backbone, _, preprocess = create_model_and_transforms(
-        model_name="ViT-B-32",
-        pretrained="laion2b_s34b_b79k",
+        model_name="ViT-B-16",
+        pretrained=None,
         DTP_ViT=False
     )
 
@@ -576,6 +575,7 @@ def train_ViT_from_scratch():
 
 if __name__ == "__main__":
     setup_distributed()
-    train_DTP_ViT_from_scratch()
+    train_ViT_from_scratch()
+    #train_DTP_ViT_from_scratch()
     dist.barrier()
     cleanup_distributed()
