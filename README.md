@@ -140,7 +140,7 @@ other things to try:
 | <tr><td colspan="6" align="center"> pretrained DRIP </td></tr> |
 | DRIP-2X-16 | 3 epochs of 280M LAION | **36.71%** | no | 100 | **🟢42.30%** |
 | | <tr><td colspan="6" align="center"> training from scratch </td></tr> |
-| ViT-B-16 | N/A | N/A | N/A | 100 | **running!** |
+| ViT-B-16 | N/A | N/A | N/A | 100 | **27.56%** |
 | DRIP-2X-16, 4+8  | N/A | N/A | N/A | 100 | **42.31%** |
 | DRIP-2X-16, 2+10 | N/A | N/A | N/A | 100 | **34.88%** |
 

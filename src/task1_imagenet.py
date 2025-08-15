@@ -550,11 +550,6 @@ def train_ViT_from_scratch():
         if dist.get_rank() == 0:
             print(f"✅ Epoch {epoch}: Train Acc {train_acc:.4f}, Val Acc {val_acc:.4f}", flush=True)
 
-
-    print("⭐" * 20)
-    print("Finetuning complete!")
-    print("⭐" * 20)
-
     # Final evaluation
     model.eval()
     correct = 0
