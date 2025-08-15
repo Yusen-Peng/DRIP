@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+#from downsampling import downsample
 
 def final(foo,
           upsample):
@@ -79,44 +80,6 @@ def downsample(boundaries, hidden, null_group):
         )
 
         return shortened_hidden
-
-
-# def final(foo):
-#     lel = 1 - foo
-#     lel = lel / (lel.sum(dim=1, keepdim=True) + 1e-9)
-#     return lel
-
-
-# def common(boundaries):
-#     boundaries = boundaries.clone()
-#     n_segments = boundaries.sum(dim=-1).max().item()
-
-#     if n_segments == 0:
-#         return None
-
-#     tmp = torch.zeros_like(boundaries).unsqueeze(2) + torch.arange(
-#         start=0,
-#         end=n_segments,
-#         device=boundaries.device
-#     )  # Shape: B x L x S
-
-#     segment_ids = boundaries.cumsum(1) - boundaries  # Shift to segment index
-#     foo = tmp - segment_ids.unsqueeze(-1)            # Distance to group index
-
-#     return foo
-
-
-# def downsample(boundaries, hidden):
-#     foo = common(boundaries)  # B x L x S
-
-#     if foo is None:
-#         return hidden[:1] * 0.0  # Return all-zero tensor if no groups found
-
-#     weights = final(foo).to(hidden.dtype)  # B x L x S
-
-#     shortened_hidden = torch.einsum('lbd,bls->sbd', hidden, weights)
-#     return shortened_hidden
-
 
 @torch.jit.script
 def add_and_scale(tensor1, tensor2, alpha: float) -> torch.Tensor:
@@ -307,6 +270,75 @@ class RelPartialLearnableDecoderLayer(nn.Module):
 
         return output
 
+########### This is the version used for CLIP pretraining ###########
+# class BoundaryPredictor(nn.Module):
+#     def __init__(self, d_model, d_inner, activation_function,
+#                  temp, prior, bp_type, threshold=0.5,
+#                  image_size=None, patch_size=None, embed_dim=None):
+#         super().__init__()
+
+#         self.temp = temp
+#         self.prior = prior
+#         self.bp_type = bp_type
+#         self.threshold = threshold
+#         self.compression_rate = prior
+#         self.embed_dim = embed_dim
+#         if image_size is not None and patch_size is not None:
+#             self.image_size = image_size
+#             self.patch_size = patch_size
+#             self.num_patches = (image_size // patch_size) ** 2
+
+#         if activation_function == 'relu':
+#             activation_fn = nn.ReLU(inplace=True)
+#         elif activation_function == 'gelu':
+#             activation_fn = torch.nn.GELU()
+
+#         self.boundary_predictor = nn.Sequential(
+#             nn.Linear(d_model, d_inner),
+#             activation_fn,
+#             nn.Linear(d_inner, 1),
+#         )
+
+#         self.loss = nn.BCEWithLogitsLoss()
+    
+#     def forward(self, hidden):
+#         # Hidden is of shape [seq_len x bs x d_model]
+#         # Boundaries we return are [bs x seq_len]
+
+#         boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
+#         boundary_probs = torch.sigmoid(boundary_logits)
+
+#         if self.bp_type == 'gumbel':
+#             bernoulli = torch.distributions.relaxed_bernoulli.RelaxedBernoulli(
+#                 temperature=self.temp,
+#                 probs=boundary_probs,
+#             )
+
+#             soft_boundaries = bernoulli.rsample()
+
+#             hard_boundaries = (soft_boundaries > self.threshold).float()
+#             hard_boundaries = (
+#                 hard_boundaries - soft_boundaries.detach() + soft_boundaries
+#             )
+#         elif self.bp_type in ['entropy', 'unigram']:
+#             soft_boundaries = boundary_probs
+#             hard_boundaries = (soft_boundaries > self.threshold).float()
+
+#         return soft_boundaries, hard_boundaries
+
+#     def calc_loss(self, preds):
+#         # B x T
+#         total_count = preds.size(-1)
+#         target_count = preds.sum(dim=-1)
+#         binomial = torch.distributions.binomial.Binomial(
+#             total_count=total_count,
+#             probs=torch.Tensor([self.prior]).to(preds.device)
+#         )
+#         loss_boundaries = -binomial.log_prob(target_count).mean() / total_count
+#         return loss_boundaries
+
+
+########### This is the version used for ImageNet training ###########
 class BoundaryPredictor(nn.Module):
     def __init__(self, d_model, d_inner, activation_function,
                  temp, prior, bp_type, threshold=0.5,
@@ -324,10 +356,7 @@ class BoundaryPredictor(nn.Module):
             self.patch_size = patch_size
             self.num_patches = (image_size // patch_size) ** 2
 
-        if activation_function == 'relu':
-            activation_fn = nn.ReLU(inplace=True)
-        elif activation_function == 'gelu':
-            activation_fn = torch.nn.GELU()
+        activation_fn = nn.ReLU(inplace=True) if activation_function == 'relu' else nn.GELU()
 
         self.boundary_predictor = nn.Sequential(
             nn.Linear(d_model, d_inner),
@@ -335,62 +364,66 @@ class BoundaryPredictor(nn.Module):
             nn.Linear(d_inner, 1),
         )
 
+        # initialize last bias to match prior
+        with torch.no_grad():
+            last = self.boundary_predictor[-1]
+            nn.init.zeros_(last.weight)
+            p = torch.tensor(self.prior, dtype=torch.float32)
+            p = p.clamp(1e-6, 1 - 1e-6)
+            last.bias.copy_(torch.log(p / (1 - p)))
+
         self.loss = nn.BCEWithLogitsLoss()
-    
+
     def forward(self, hidden):
-        # Hidden is of shape [seq_len x bs x d_model]
-        # Boundaries we return are [bs x seq_len]
+        # hidden: [S, B, D]
+        import math
+        with torch.cuda.amp.autocast(enabled=False):
+            x32 = hidden.to(torch.float32)
 
-        boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
-        boundary_probs = torch.sigmoid(boundary_logits)
+            # Forward the head in fp32
+            logits = self.boundary_predictor(x32).squeeze(-1).transpose(0, 1)  # [B, S], fp32
 
-        if self.bp_type == 'gumbel':
-            bernoulli = torch.distributions.relaxed_bernoulli.RelaxedBernoulli(
-                temperature=self.temp,
-                probs=boundary_probs,
-            )
+            # 1) Sanitize BEFORE clamp: replace NaN/±Inf
+            logits = torch.nan_to_num(logits, nan=0.0, posinf=15.0, neginf=-15.0)
 
-            soft_boundaries = bernoulli.rsample()
+            # 2) Clamp to a safe range (slightly softer than 15 to avoid near-determinism)
+            logits = logits.clamp(-12.0, 12.0)
 
-            hard_boundaries = (soft_boundaries > self.threshold).float()
-            hard_boundaries = (
-                hard_boundaries - soft_boundaries.detach() + soft_boundaries
-            )
-        elif self.bp_type in ['entropy', 'unigram']:
-            soft_boundaries = boundary_probs
-            hard_boundaries = (soft_boundaries > self.threshold).float()
+            if self.bp_type == 'gumbel':
+                # Ensure temperature is a valid positive float32
+                tau = float(self.temp)
+                if not math.isfinite(tau) or tau <= 0:
+                    tau = 1.0
 
-        return soft_boundaries, hard_boundaries
+                bern = torch.distributions.relaxed_bernoulli.LogitRelaxedBernoulli(
+                    temperature=tau, logits=logits
+                )
+                soft = bern.rsample().to(hidden.dtype)
+                hard = (soft > self.threshold).to(soft.dtype)
+                hard = hard - soft.detach() + soft  # straight-through
+            else:  # 'entropy' / 'unigram'
+                probs = torch.sigmoid(logits)
+                eps = 1e-4 if hidden.dtype == torch.float16 else 1e-6
+                probs = probs.clamp(eps, 1 - eps)
+                soft = probs.to(hidden.dtype)
+                hard = (soft > self.threshold).to(soft.dtype)
+
+        # Optional safety assert (remove once stable)
+        if not torch.isfinite(logits).all():
+            raise RuntimeError("Non-finite logits after sanitize+clamp in BoundaryPredictor.forward")
+
+        return soft, hard
 
     def calc_loss(self, preds):
-        # B x T
+        # preds: [B x T] (hard or soft boundaries)
         total_count = preds.size(-1)
         target_count = preds.sum(dim=-1)
         binomial = torch.distributions.binomial.Binomial(
             total_count=total_count,
-            probs=torch.Tensor([self.prior]).to(preds.device)
+            probs=torch.tensor([self.prior], device=preds.device, dtype=torch.float32)
         )
-        loss_boundaries = -binomial.log_prob(target_count).mean() / total_count
+        loss_boundaries = -binomial.log_prob(target_count.float()).mean() / total_count
         return loss_boundaries
-
-    def calc_stats(self, preds, gt):
-        # B x T
-        preds, gt = preds.bool(), gt.bool()
-        TP = ((preds == gt) & preds).sum().item()
-        FP = ((preds != gt) & preds).sum().item()
-        FN = ((preds != gt) & (~preds)).sum().item()
-
-        acc = (preds == gt).sum().item() / gt.numel()
-
-        if TP == 0:
-            precision, recall = 0, 0
-        else:
-            precision = TP / (TP + FP)
-            recall = TP / (TP + FN)
-
-        stats = {"acc": acc, "precision": precision, "recall": recall}
-
-        return stats
 
 
 class DTPViT(nn.Module):

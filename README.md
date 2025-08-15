@@ -143,8 +143,23 @@ other things to try:
 | ViT-B-16 | N/A | N/A | N/A | 100 | **27.56%** |
 | DRIP-2X-16, 4+8  | N/A | N/A | N/A | 100 | **42.31%** |
 | DRIP-2X-16, 2+10 | N/A | N/A | N/A | 100 | **34.88%** |
+| | <tr><td colspan="6" align="center"> different LR </td></tr> |
+| ViT-B-16, 3e-3 | N/A | N/A | N/A | 100 | **...** |
+| ViT-B-16, 5e-4 | N/A | N/A | N/A | 100 | **...** |
+| DRIP-2-10, 5e-4 | N/A | N/A | N/A | 100 | **...** |
 
 ![alt text](/NEW_ImageNet_acc_vis_16.png)
+
+tune LR for ViT:
+
+![alt text](/ViT_ImageNet_acc_vis_16.png)
+
+A similar GitHub issue (other folks only got 47% on ViT-B-16, too): [https://github.com/google-research/vision_transformer/issues/153]
+
+
+tune LR for DRIP:
+
+![alt text](/DRIP_ImageNet_acc_vis_16.png)
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
 

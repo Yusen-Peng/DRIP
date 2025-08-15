@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=ImageNet_ViT16
-#SBATCH --output=ImageNet_ViT16.txt
-#SBATCH --time=100:00:00
+#SBATCH --job-name=less_aggressive_clamp_4_8_replace
+#SBATCH --output=less_aggressive_DRIP_4_8_replace.txt
+#SBATCH --time=85:00:00
 #SBATCH --nodes=4
 #SBATCH --ntasks=4                      
 #SBATCH --gpus-per-node=4

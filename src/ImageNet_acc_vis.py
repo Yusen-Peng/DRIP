@@ -35,17 +35,25 @@ def plot_acc_vis(model2acc: Dict, patch_size: int) -> None:
         plt.plot(accs, label=model)
     plt.xlabel("Epoch")
     plt.ylabel("Top-1 Accuracy")
-    plt.title(f"patch_size={patch_size}, batch size = 512, lr=5e-5, 4x4 GPUs, after 100 epochs")
+    plt.title(f"patch_size={patch_size}, batch size = 512, 4x4 GPUs, after 100 epochs")
     plt.legend()
-    plt.savefig(f"NEW_ImageNet_acc_vis_{patch_size}.png")
+    plt.savefig(f"DRIP_ImageNet_acc_vis_{patch_size}.png")
 
 def main():
     PATCH_SIZE = 16
 
+    # model2path = {
+    #     'ViT-B-16': 'ImageNet_ViT16.txt',
+    #     "DRIP-16-25%, 2+10": 'ImageNet_DRIP_2_10.txt',
+    #     "DRIP-16-25%, 4+8": 'ImageNet_DRIP_4_8.txt'
+    # }
     model2path = {
-        'ViT-B-16': 'ImageNet_ViT16.txt',
-        "DRIP-16-25%, 2+10": 'ImageNet_DRIP_2_10.txt',
-        "DRIP-16-25%, 4+8": 'ImageNet_DRIP_4_8.txt'
+        # 'ViT-B-16, 5e-5': 'ImageNet_ViT16.txt',
+        # 'ViT-B-16, 5e-4': 'less_aggressive_ViT.txt',
+        # 'ViT-B-16, 3e-3': 'faithful_ImageNet_ViT16.txt',
+        'DRIP-16-25%, 4+8, 5e-4': 'less_aggressive_DRIP_4_8_replace.txt',
+        "DRIP-16-25%, 2+10, 5e-5": 'ImageNet_DRIP_2_10.txt',
+        "DRIP-16-25%, 4+8, 5e-5": 'ImageNet_DRIP_4_8.txt'
     }
 
     model2acc = parse_all_accuracies(model2path)

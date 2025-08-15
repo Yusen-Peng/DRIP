@@ -69,7 +69,7 @@ def main():
     # 1024 for ViT-B-32
     batch_size = 512
     patch_size = 16
-    lr = 5e-5
+    lr = 5e-5 # this learning rate is safe for the boundary predictor for now
     wd = 0.1
     epochs = 10
     workers = 8       # CPU utilization
