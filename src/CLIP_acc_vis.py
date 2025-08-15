@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from typing import Dict, List
 import re
 
+
 def parse_one_accuracy(file_path) -> List[float]:
     """Parses a single file to extract the top1 accuracy values."""
     top1_values = []
@@ -61,12 +62,17 @@ def main():
         #     "H-DRIP-16-50%-50%, 3+3+6": 'H-DRIP-16.log',
         #     "S-DRIP-16-40%-60%, 2+10": 'S-DRIP-16.log',
         # }
+        # model2path = {
+        #     'ViT-B-16': 'Aug6_ViT16.log',
+        #     "DRIP-16-25%, 2+10": 'Aug6_DRIP_25_2_10.log',
+        #     "DRIP-16-25%, 4+8": 'Aug6_DRIP_25_4_8.log',
+        #     "H-DRIP-16-50%-50%, 3+3+6": 'Aug6_H-DRIP.log',
+        #     "S-DRIP-16-20%-30%, 2+10": 'Aug6_S-DRIP.log',
+        # }
         model2path = {
-            'ViT-B-16': 'Aug6_ViT16.log',
-            "DRIP-16-25%, 2+10": 'Aug6_DRIP_25_2_10.log',
-            "DRIP-16-25%, 4+8": 'Aug6_DRIP_25_4_8.log',
-            "H-DRIP-16-50%-50%, 3+3+6": 'Aug6_H-DRIP.log',
-            "S-DRIP-16-20%-30%, 2+10": 'Aug6_S-DRIP.log',
+            'ViT-B-16': 'Aug13_ViT16.log',
+            "DRIP-16-25%, 2+10": 'Aug13_DRIP_2_10.log',
+            "DRIP-16-25%, 4+8": 'Aug13_DRIP_4_8.log'
         }
 
 

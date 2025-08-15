@@ -93,7 +93,7 @@ GPU = 4
 | 💦H-DRIP-16-50%-50%, 3+3+6 | 9.65 | **5🌝** | **22.88%** | **46.69%** |
 | 🫧S-DRIP-16-20%-30%, 2+10 | 7.21 | 6 | **24.51%** | **48.98%** |
 
-![alt text](/NEW_acc_vis_16.png)
+![alt text](/incomplete_acc_vis_16.png)
 
 Train with exact 10 epochs:
 
@@ -103,7 +103,7 @@ Train with exact 10 epochs:
 | 💧DRIP-4X-16, 4+8 | 9.61🔥 | **10** | **?** | **?** |
 | 💧DRIP-4X-16, 2+10 | 7.21 | **10** | **?** | **?** |
 
-
+![alt text](/NEW_acc_vis_16.png)
 
 
 ### What else?
@@ -143,6 +143,8 @@ other things to try:
 | ViT-B-16 | N/A | N/A | N/A | 100 | **running!** |
 | DRIP-2X-16, 4+8  | N/A | N/A | N/A | 100 | **42.31%** |
 | DRIP-2X-16, 2+10 | N/A | N/A | N/A | 100 | **34.88%** |
+
+![alt text](/NEW_ImageNet_acc_vis_16.png)
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
 
