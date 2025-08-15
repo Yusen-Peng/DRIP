@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=ImageNet_ViT16
 #SBATCH --output=ImageNet_ViT16.txt
-#SBATCH --time=120:00:00
+#SBATCH --time=100:00:00
 #SBATCH --nodes=4
 #SBATCH --ntasks=4                      
 #SBATCH --gpus-per-node=4
