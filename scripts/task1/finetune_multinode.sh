@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=aggressive_DRIP_4_8
-#SBATCH --output=aggressive_DRIP_4_8.txt
-#SBATCH --time=80:00:00
+#SBATCH --job-name=less_aggressive_DRIP_2_10
+#SBATCH --output=less_aggressive_DRIP_2_10.txt
+#SBATCH --time=79:00:00
 #SBATCH --nodes=4
 #SBATCH --ntasks=4                      
 #SBATCH --gpus-per-node=4

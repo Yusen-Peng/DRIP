@@ -306,8 +306,8 @@ def train_DTP_ViT_from_scratch():
     BATCH_SIZE = 512
     EPOCHS = 300
     #LR = 5e-5
-    LR = 3e-3 # same as ViT
-    #LR = 5e-4 # less aggressive
+    #LR = 3e-3 # same as ViT
+    LR = 5e-4 # less aggressive
 
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
@@ -356,7 +356,7 @@ def train_DTP_ViT_from_scratch():
             patch_size=patch_size,
             embed_dim=768,
             num_heads=12,
-            depth=(4, 8, 0),
+            depth=(2, 10, 0),
             mlp_ratio=4.0,
             drop_rate=0.0,
             attn_drop_rate=0.1,
@@ -379,14 +379,6 @@ def train_DTP_ViT_from_scratch():
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.3)
-
-    # lower learning rate for the boundary predictor
-    # optimizer = torch.optim.AdamW([
-    #     {"params": model.backbone.parameters(), "lr": LR},
-    #     {"params": model.backbone.boundary_predictor.parameters(), "lr": LR * 0.1},
-    # ], weight_decay=0.05)
-    # torch.nn.utils.clip_grad_norm_(model.backbone.boundary_predictor.parameters(), 1.0)
-
     
     total_steps = len(train_loader) * EPOCHS
     warmup_steps = int(0.05 * total_steps)  # 5% warmup

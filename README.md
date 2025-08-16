@@ -161,6 +161,12 @@ tune LR for DRIP:
 
 ![alt text](/DRIP_ImageNet_acc_vis_16.png)
 
+comprehensive results:
+
+![alt text](/ALL_ImageNet_acc_vis_5e_5.png)
+![alt text](/ALL_ImageNet_acc_vis_5e_4.png)
+
+
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
 
 ### LLaVA Benchmark Evaluation
