@@ -304,10 +304,10 @@ def finetuning_DTP_ViT():
 
 def train_DTP_ViT_from_scratch():
     BATCH_SIZE = 512
-    EPOCHS = 100
+    EPOCHS = 300
     #LR = 5e-5
-    #LR = 3e-3 # same as ViT
-    LR = 5e-4 # less aggressive
+    LR = 3e-3 # same as ViT
+    #LR = 5e-4 # less aggressive
 
     local_rank = int(os.environ["LOCAL_RANK"])
     torch.cuda.set_device(local_rank)
@@ -378,7 +378,7 @@ def train_DTP_ViT_from_scratch():
     model = DDP(model, device_ids=[DEVICE], find_unused_parameters=True)    
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.05)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.3)
 
     # lower learning rate for the boundary predictor
     # optimizer = torch.optim.AdamW([
@@ -386,7 +386,6 @@ def train_DTP_ViT_from_scratch():
     #     {"params": model.backbone.boundary_predictor.parameters(), "lr": LR * 0.1},
     # ], weight_decay=0.05)
     # torch.nn.utils.clip_grad_norm_(model.backbone.boundary_predictor.parameters(), 1.0)
-
 
     
     total_steps = len(train_loader) * EPOCHS

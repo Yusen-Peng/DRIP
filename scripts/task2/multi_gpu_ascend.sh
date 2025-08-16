@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=Aug13_DRIP_4_8
-#SBATCH --output=Aug13_DRIP_4_8.log
+#SBATCH --job-name=new_downsample
+#SBATCH --output=new_downsample.log
 #SBATCH --partition=quad
-#SBATCH --time=120:00:00
+#SBATCH --time=80:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
