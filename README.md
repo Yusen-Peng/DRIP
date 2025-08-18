@@ -105,16 +105,6 @@ Train with exact 10 epochs:
 
 ![alt text](/NEW_acc_vis_16.png)
 
-
-### What else?
-
-existing bug: 
-- [ ] not mask **the null token** in the attention mask 
-
-other things to try:
-- [ ] extend training epochs and reduce LR slightly
-- [ ] add temperature annealing for RelaxedBernoulli and start with a high value
-
 ### LAION-280M (178Msamples, 178,918,585) results
 
 | model | GFLOPs (fvcore) | resolution | patch size | #epochs | Top-1 Acc (%) | Top-5 Acc (%) | avg GPU memory (GB) | avg training step time (s) |
@@ -148,7 +138,7 @@ other things to try:
 | ViT-B-16, 5e-4 | N/A | N/A | N/A | 100 | **...** |
 | DRIP-2-10, 5e-4 | N/A | N/A | N/A | 100 | **...** |
 
-![alt text](/NEW_ImageNet_acc_vis_16.png)
+![alt text](/ALL_ImageNet_acc_vis_16.png)
 
 tune LR for ViT:
 

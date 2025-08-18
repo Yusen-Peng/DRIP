@@ -72,7 +72,8 @@ def main():
         model2path = {
             'ViT-B-16': 'Aug13_ViT16.log',
             "DRIP-16-25%, 2+10": 'Aug13_DRIP_2_10.log',
-            "DRIP-16-25%, 4+8": 'Aug13_DRIP_4_8.log'
+            "DRIP-16-25%, 4+8": 'Aug13_DRIP_4_8.log',
+            "DRIP-16-25%, 4+8, no null token": 'new_downsample.log'
         }
 
 

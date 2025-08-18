@@ -37,7 +37,7 @@ def plot_acc_vis(model2acc: Dict, patch_size: int) -> None:
     plt.ylabel("Top-1 Accuracy")
     plt.title(f"patch_size={patch_size}, batch size = 512, 4x4 GPUs")
     plt.legend()
-    plt.savefig(f"ALL_ImageNet_acc_vis_5e_4.png")
+    plt.savefig(f"ALL_ImageNet_acc_vis_16.png")
 
 def main():
     PATCH_SIZE = 16
@@ -48,13 +48,13 @@ def main():
     #     "DRIP-16-25%, 4+8": 'ImageNet_DRIP_4_8.txt'
     # }
     model2path = {
-        #'ViT-B-16, 5e-5': 'ImageNet_ViT16.txt',
+        'ViT-B-16, 5e-5': 'ImageNet_ViT16.txt',
         'ViT-B-16, 5e-4': 'less_aggressive_ViT.txt',
         #'ViT-B-16, 3e-3': 'faithful_ImageNet_ViT16.txt',
         'DRIP-16-25%, 4+8, 5e-4': 'less_aggressive_DRIP_4_8.txt',
         'DRIP-16-25%, 2+10, 5e-4': 'less_aggressive_DRIP_2_10.txt',
-        #"DRIP-16-25%, 2+10, 5e-5": 'ImageNet_DRIP_2_10.txt',
-        #"DRIP-16-25%, 4+8, 5e-5": 'ImageNet_DRIP_4_8.txt'
+        "DRIP-16-25%, 2+10, 5e-5": 'ImageNet_DRIP_2_10.txt',
+        "DRIP-16-25%, 4+8, 5e-5": 'ImageNet_DRIP_4_8.txt'
     }
 
     model2acc = parse_all_accuracies(model2path)

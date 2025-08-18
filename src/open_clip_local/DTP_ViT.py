@@ -3,120 +3,120 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# def downsample(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: torch.Tensor):
-#     B, L = boundaries.shape
-#     _, _, D = hidden.shape
+def downsample(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: torch.Tensor):
+    B, L = boundaries.shape
+    _, _, D = hidden.shape
 
-#     boundaries = boundaries.to(dtype=torch.long).clone()  # [B, L]
+    boundaries = boundaries.to(dtype=torch.long).clone()  # [B, L]
 
-#     # Number of segments per example and across the batch
-#     seg_counts = boundaries.sum(dim=1)                    # [B]
-#     S = int(seg_counts.max().item())
+    # Number of segments per example and across the batch
+    seg_counts = boundaries.sum(dim=1)                    # [B]
+    S = int(seg_counts.max().item())
 
-#     # If no segments at all in the batch, return a single null segment
-#     if S == 0:
-#         # shape [1, B, D]
-#         return null_group.expand(1, B, D).to(hidden.dtype).to(hidden.device)
+    # If no segments at all in the batch, return a single null segment
+    if S == 0:
+        # shape [1, B, D]
+        return null_group.expand(1, B, D).to(hidden.dtype).to(hidden.device)
 
-#     # Build [B, L, S] template of segment indices 0..S-1
-#     seg_ids = torch.arange(S, device=boundaries.device).view(1, 1, S)        # [1,1,S]
-#     seg_ids = seg_ids.expand(B, L, S)                                        # [B,L,S]
+    # Build [B, L, S] template of segment indices 0..S-1
+    seg_ids = torch.arange(S, device=boundaries.device).view(1, 1, S)        # [1,1,S]
+    seg_ids = seg_ids.expand(B, L, S)                                        # [B,L,S]
 
-#     # Segment index for each token position: 0,0,0,1,1,2,... (per-example)
-#     # cumulative_num_boundaries counts boundaries up to and including pos i
-#     cumulative = boundaries.cumsum(dim=1)                                    # [B,L]
-#     real_segment_index = cumulative - boundaries                             # [B,L]
+    # Segment index for each token position: 0,0,0,1,1,2,... (per-example)
+    # cumulative_num_boundaries counts boundaries up to and including pos i
+    cumulative = boundaries.cumsum(dim=1)                                    # [B,L]
+    real_segment_index = cumulative - boundaries                             # [B,L]
 
-#     # One-hot membership mask: token at (b, l) belongs to segment k iff k == real_segment_index[b,l]
-#     membership = (real_segment_index.unsqueeze(-1) == seg_ids).to(hidden.dtype)  # [B,L,S]
+    # One-hot membership mask: token at (b, l) belongs to segment k iff k == real_segment_index[b,l]
+    membership = (real_segment_index.unsqueeze(-1) == seg_ids).to(hidden.dtype)  # [B,L,S]
 
-#     # Normalize over L so each segment’s weights sum to 1
-#     denom = membership.sum(dim=1, keepdim=True).clamp_min(1e-9)              # [B,1,S]
-#     weights = membership / denom                                             # [B,L,S]
+    # Normalize over L so each segment’s weights sum to 1
+    denom = membership.sum(dim=1, keepdim=True).clamp_min(1e-9)              # [B,1,S]
+    weights = membership / denom                                             # [B,L,S]
 
-#     # Weighted average over tokens -> [S, B, D]
-#     shortened_hidden = torch.einsum('lbd,bls->sbd', hidden, weights)
-#     return shortened_hidden
+    # Weighted average over tokens -> [S, B, D]
+    shortened_hidden = torch.einsum('lbd,bls->sbd', hidden, weights)
+    return shortened_hidden
 
 
 ######## CLIP pretraining uses the old downsampling code below ###########
 ##########################################################################
-def final(foo,
-          upsample):
-    """
-        Input:
-            B x L x S
-    """
-    autoregressive = foo != 0
-    lel = 1 - foo
+# def final(foo,
+#           upsample):
+#     """
+#         Input:
+#             B x L x S
+#     """
+#     autoregressive = foo != 0
+#     lel = 1 - foo
 
-    lel[autoregressive] = 0
+#     lel[autoregressive] = 0
 
-    dim = 2 if upsample else 1
+#     dim = 2 if upsample else 1
 
-    lel = lel / (lel.sum(dim=dim, keepdim=True) + 1e-9)
+#     lel = lel / (lel.sum(dim=dim, keepdim=True) + 1e-9)
 
-    return lel
+#     return lel
 
-def common(boundaries, upsample=False):
-    boundaries = boundaries.clone()
+# def common(boundaries, upsample=False):
+#     boundaries = boundaries.clone()
 
-    n_segments = boundaries.sum(dim=-1).max().item()
+#     n_segments = boundaries.sum(dim=-1).max().item()
 
-    if upsample:
-        n_segments += 1
+#     if upsample:
+#         n_segments += 1
 
-    if n_segments == 0:
-        return None
+#     if n_segments == 0:
+#         return None
 
-    tmp = torch.zeros_like(
-        boundaries
-    ).unsqueeze(2) + torch.arange(
-        start=0,
-        end=n_segments,
-        device=boundaries.device
-    )
+#     tmp = torch.zeros_like(
+#         boundaries
+#     ).unsqueeze(2) + torch.arange(
+#         start=0,
+#         end=n_segments,
+#         device=boundaries.device
+#     )
 
-    hh1 = boundaries.cumsum(1)
+#     hh1 = boundaries.cumsum(1)
 
-    if not upsample:
-        hh1 -= boundaries
+#     if not upsample:
+#         hh1 -= boundaries
 
-    foo = tmp - hh1.unsqueeze(-1)
+#     foo = tmp - hh1.unsqueeze(-1)
 
-    return foo
+#     return foo
 
-def downsample(boundaries, hidden, null_group):
-    """
-        Downsampling
+# def downsample(boundaries, hidden, null_group):
+#     """
+#         Downsampling
 
-        - The first element of boundaries tensor is always 0 and doesn't matter
-        - 1 starts a new group
-        - We append an extra "null" group at the beginning
-        - We discard last group because it won't be used (in terms of upsampling)
+#         - The first element of boundaries tensor is always 0 and doesn't matter
+#         - 1 starts a new group
+#         - We append an extra "null" group at the beginning
+#         - We discard last group because it won't be used (in terms of upsampling)
 
-        Input:
-            boundaries: B x L
-            hidden: L x B x D
-        Output:
-            shortened_hidden: S x B x D
-    """
+#         Input:
+#             boundaries: B x L
+#             hidden: L x B x D
+#         Output:
+#             shortened_hidden: S x B x D
+#     """
 
-    foo = common(boundaries, upsample=False)  # B x L x S
+#     foo = common(boundaries, upsample=False)  # B x L x S
 
-    if foo is None:
-        return null_group.repeat(1, hidden.size(1), 1)
-    else:
-        bar = final(foo=foo, upsample=False)  # B x L x S
+#     if foo is None:
+#         return null_group.repeat(1, hidden.size(1), 1)
+#     else:
+#         bar = final(foo=foo, upsample=False)  # B x L x S
 
-        bar = bar.to(hidden.dtype)  # ensure same dtype
+#         bar = bar.to(hidden.dtype)  # ensure same dtype
 
-        shortened_hidden = torch.einsum('lbd,bls->sbd', hidden, bar)
-        shortened_hidden = torch.cat(
-            [null_group.repeat(1, hidden.size(1), 1), shortened_hidden], dim=0
-        )
+#         shortened_hidden = torch.einsum('lbd,bls->sbd', hidden, bar)
+#         shortened_hidden = torch.cat(
+#             [null_group.repeat(1, hidden.size(1), 1), shortened_hidden], dim=0
+#         )
 
-        return shortened_hidden
+#         return shortened_hidden
 
 @torch.jit.script
 def add_and_scale(tensor1, tensor2, alpha: float) -> torch.Tensor:

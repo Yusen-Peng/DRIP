@@ -64,7 +64,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "S-DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT"
+    MODE = "DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT"
 
     img_size = 224
     width = 768
@@ -77,7 +77,7 @@ def main():
             patch_size=patch_size,
             in_chans=3,
             embed_dim=width,
-            depth=(5, 7, 0),
+            depth=(4, 8, 0),
             num_heads=width // 64,
             mlp_ratio=mlp_ratio,
             drop_rate=patch_dropout,
