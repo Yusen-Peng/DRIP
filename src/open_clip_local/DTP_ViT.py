@@ -38,86 +38,6 @@ def downsample(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: torch
     shortened_hidden = torch.einsum('lbd,bls->sbd', hidden, weights)
     return shortened_hidden
 
-
-######## CLIP pretraining uses the old downsampling code below ###########
-##########################################################################
-# def final(foo,
-#           upsample):
-#     """
-#         Input:
-#             B x L x S
-#     """
-#     autoregressive = foo != 0
-#     lel = 1 - foo
-
-#     lel[autoregressive] = 0
-
-#     dim = 2 if upsample else 1
-
-#     lel = lel / (lel.sum(dim=dim, keepdim=True) + 1e-9)
-
-#     return lel
-
-# def common(boundaries, upsample=False):
-#     boundaries = boundaries.clone()
-
-#     n_segments = boundaries.sum(dim=-1).max().item()
-
-#     if upsample:
-#         n_segments += 1
-
-#     if n_segments == 0:
-#         return None
-
-#     tmp = torch.zeros_like(
-#         boundaries
-#     ).unsqueeze(2) + torch.arange(
-#         start=0,
-#         end=n_segments,
-#         device=boundaries.device
-#     )
-
-#     hh1 = boundaries.cumsum(1)
-
-#     if not upsample:
-#         hh1 -= boundaries
-
-#     foo = tmp - hh1.unsqueeze(-1)
-
-#     return foo
-
-# def downsample(boundaries, hidden, null_group):
-#     """
-#         Downsampling
-
-#         - The first element of boundaries tensor is always 0 and doesn't matter
-#         - 1 starts a new group
-#         - We append an extra "null" group at the beginning
-#         - We discard last group because it won't be used (in terms of upsampling)
-
-#         Input:
-#             boundaries: B x L
-#             hidden: L x B x D
-#         Output:
-#             shortened_hidden: S x B x D
-#     """
-
-#     foo = common(boundaries, upsample=False)  # B x L x S
-
-#     if foo is None:
-#         return null_group.repeat(1, hidden.size(1), 1)
-#     else:
-#         bar = final(foo=foo, upsample=False)  # B x L x S
-
-#         bar = bar.to(hidden.dtype)  # ensure same dtype
-
-#         shortened_hidden = torch.einsum('lbd,bls->sbd', hidden, bar)
-#         shortened_hidden = torch.cat(
-#             [null_group.repeat(1, hidden.size(1), 1), shortened_hidden], dim=0
-#         )
-
-#         return shortened_hidden
-
 @torch.jit.script
 def add_and_scale(tensor1, tensor2, alpha: float) -> torch.Tensor:
     return alpha * (tensor1 + tensor2)
@@ -307,9 +227,6 @@ class RelPartialLearnableDecoderLayer(nn.Module):
 
         return output
 
-########### This is the version used for CLIP pretraining ###########
-#####################################################################
-#####################################################################
 class BoundaryPredictor(nn.Module):
     def __init__(self, d_model, d_inner, activation_function,
                  temp, prior, bp_type, threshold=0.5,
