@@ -95,15 +95,29 @@ GPU = 4
 
 ![alt text](/incomplete_acc_vis_16.png)
 
-Train with exact 10 epochs:
-
-| model details | GFLOPs | epochs | top-1 zero-shot | top-5 zero-shot |
-| ----- | ------ | ------ | ----- | ----- |
-| ViT-B-16 | 11.29 | **10** | **?** | **?** |
-| 💧DRIP-4X-16, 4+8 | 9.61🔥 | **10** | **?** | **?** |
-| 💧DRIP-4X-16, 2+10 | 7.21 | **10** | **?** | **?** |
-
 ![alt text](/NEW_acc_vis_16.png)
+
+
+### more CLIP experiments
+
+how did we get here?
+
+- [x] attention mask to ignore padded tokens (~1% accuracy boost)
+- [x] delay pooling (~2% accuracy boost)
+- [x] discard the null token (~1% accuracy boost)
+
+
+Train with **15** epochs:
+
+| model details | GFLOPs | training | top-1 zero-shot | top-5 zero-shot |
+| ----- | ------ | ------ | ----- | ----- |
+| ViT-B-16 | **11.29** | 15 epochs on 26M | **running** | **running** |
+| 💧DRIP-4X-16, 4+8 | **9.55🔥** | 15 epochs on 26M | **running** | **running** |
+| 💧DRIP-4X-16, 2+10 | **7.13🔥** | 15 epochs on 26M | **running** | **running** |
+| 💧DRIP-10X-16, 5+7 | **9.11🔥** | 15 epochs on 26M | **running** | **running** |
+| 💧DRIP-10X-16, 4+8 | **7.66🔥** | 15 epochs on 26M | **running** | **running** |
+| ViT-B-16 | **11.29** | 8 epochs on 178M | **running** | **running** |
+| 💧DRIP-4X-16, 4+8 | **9.55🔥** | 8 epochs on 178M | **running** | **running** |
 
 ### LAION-280M (178Msamples, 178,918,585) results
 

@@ -71,7 +71,7 @@ def main():
     mlp_ratio = 4.0
     patch_dropout = 0.1
     if MODE == "DRIP":
-        COMPRESSION_RATE = 0.25
+        COMPRESSION_RATE = 0.1
         model = DTPViT(
             image_size=img_size,
             patch_size=patch_size,
