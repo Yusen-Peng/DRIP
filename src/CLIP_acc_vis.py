@@ -34,7 +34,7 @@ def plot_acc_vis(model2acc: Dict, patch_size: int) -> None:
         plt.plot(accs, label=model)
     plt.xlabel("Epoch")
     plt.ylabel("Top-1 Accuracy")
-    plt.title(f"26M samples, patch_size={patch_size}, lr=5e-5, after 10 epochs")
+    plt.title(f"26M samples, patch_size={patch_size}, lr=5e-5, after 15 epochs")
     plt.legend()
     plt.savefig(f"NEW_acc_vis_{patch_size}.png")
 
@@ -70,10 +70,11 @@ def main():
         #     "S-DRIP-16-20%-30%, 2+10": 'Aug6_S-DRIP.log',
         # }
         model2path = {
-            'ViT-B-16': 'Aug13_ViT16.log',
-            "DRIP-16-25%, 2+10": 'Aug13_DRIP_2_10.log',
-            "DRIP-16-25%, 4+8": 'Aug13_DRIP_4_8.log',
-            "DRIP-16-25%, 4+8, no null token": 'new_downsample.log'
+            'ViT-B-16': 'AUG_20_VIT_15_epochs.log',
+            "DRIP-16-25%, 2+10": 'AUG_20_4x_2_10_15_epochs.log',
+            "DRIP-16-25%, 4+8": 'AUG_20_4x_4_8_15_epochs.log',
+            "DRIP-16-10%, 4+8": 'AUG_20_10x_4_8_15_epochs.log',
+            "DRIP-16-10%, 5+7": 'AUG_20_10x_5_7_15_epochs.log',
         }
 
 

@@ -59,13 +59,13 @@ def main():
     #     "DRIP-16-25%, 4+8": 'ImageNet_DRIP_4_8.txt'
     # }
     model2path = {
-        'ViT-B-16, 5e-5': 'ImageNet_ViT16.txt',
+        #'ViT-B-16, 5e-5': 'ImageNet_ViT16.txt',
         'ViT-B-16, 5e-4': 'less_aggressive_ViT.txt',
         #'ViT-B-16, 3e-3': 'faithful_ImageNet_ViT16.txt',
-        'DRIP-16-25%, 4+8, 5e-4': 'less_aggressive_DRIP_4_8.txt',
-        'DRIP-16-25%, 2+10, 5e-4': 'less_aggressive_DRIP_2_10.txt',
-        "DRIP-16-25%, 2+10, 5e-5": 'ImageNet_DRIP_2_10.txt',
-        "DRIP-16-25%, 4+8, 5e-5": 'ImageNet_DRIP_4_8.txt',
+        #'DRIP-16-25%, 4+8, 5e-4': 'less_aggressive_DRIP_4_8.txt',
+        #'DRIP-16-25%, 2+10, 5e-4': 'less_aggressive_DRIP_2_10.txt',
+        #"DRIP-16-25%, 2+10, 5e-5": 'ImageNet_DRIP_2_10.txt',
+        #"DRIP-16-25%, 4+8, 5e-5": 'ImageNet_DRIP_4_8.txt',
         'ViT-B-16 (new repo)': 'AUG_20_new_imagenet_codebase.txt',
     }
 
