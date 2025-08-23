@@ -136,21 +136,23 @@ Train with **15** epochs:
 
 ### train ViTs on ImageNet-1K (1.28M images)
 
-| model | dataset pretrained on | zero-shot | freeze the backbone? | epoch | classification accuracy |
-| ----- | --------------------- | -------------------- | ---------- | ----- | ----------------------- |
-| <tr><td colspan="6" align="center"> pretrained ViT </td></tr> |
-| ViT-B-32 | laion2b_s34b_b79k | 66.53% | yes | 30 | 🟢76.81% |
-| ViT-B-32 | laion2b_s34b_b79k | 66.53% | no | 30 | 🟠60.98% |
-| <tr><td colspan="6" align="center"> pretrained DRIP </td></tr> |
-| DRIP-2X-16 | 3 epochs of 280M LAION | **36.71%** | no | 100 | **🟢42.30%** |
-| | <tr><td colspan="6" align="center"> training from scratch </td></tr> |
-| ViT-B-16 | N/A | N/A | N/A | 100 | **27.56%** |
-| DRIP-2X-16, 4+8  | N/A | N/A | N/A | 100 | **42.31%** |
-| DRIP-2X-16, 2+10 | N/A | N/A | N/A | 100 | **34.88%** |
-| | <tr><td colspan="6" align="center"> different LR </td></tr> |
-| ViT-B-16, 3e-3 | N/A | N/A | N/A | 100 | **...** |
-| ViT-B-16, 5e-4 | N/A | N/A | N/A | 100 | **...** |
-| DRIP-2-10, 5e-4 | N/A | N/A | N/A | 100 | **...** |
+![alt text](docs/ViT_full_results.png)
+
+one reviewer's comment:
+
+*My major concern is that the pre-training conducted in this paper is fully supervised. This is different to BERT that ... would be great to explore self-supervised pre-training in the future as also pointed out by the authors.*
+
+Now, moving from 224x224 (**196** patches) to 384x384 (**576** patches):
+
+![alt text](docs/high_resolution.png)
+
+| model | pretraining config | finetuning config | accuracy | source/checkpoint |  
+| ----- | ------ | -- | -------- | ------ |
+| official ViT-B-16 | ? | ? | **77.91%** | [ViT](https://arxiv.org/pdf/2010.11929), [DynamicViT](https://arxiv.org/pdf/2106.02034) |
+| ViT-B-16 | no pretraining | 384x384, 5e-4, 300 epochs | **running** | **running** |
+| DRIP-4x-16, 4+8 | no pretraining | 384x384, 5e-4, 300 epochs | **running** | **running** |
+
+The new repo (from official Pytorch Github repository) FINALLY reached **72.628%** ImageNet accuracy:
 
 ![alt text](/ALL_ImageNet_acc_vis_16.png)
 

@@ -66,6 +66,7 @@ def main():
         #'DRIP-16-25%, 2+10, 5e-4': 'less_aggressive_DRIP_2_10.txt',
         #"DRIP-16-25%, 2+10, 5e-5": 'ImageNet_DRIP_2_10.txt',
         #"DRIP-16-25%, 4+8, 5e-5": 'ImageNet_DRIP_4_8.txt',
+        'ViT-B-16, 5e-4, 384x384': 'AUG_22_384_resolution_ViT.txt',
         'ViT-B-16 (new repo)': 'AUG_20_new_imagenet_codebase.txt',
     }
 

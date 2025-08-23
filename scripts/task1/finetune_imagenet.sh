@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=AUG_20_new_imagenet_codebase
-#SBATCH --output=AUG_20_new_imagenet_codebase.txt
+#SBATCH --job-name=AUG_22_384_resolution
+#SBATCH --output=AUG_22_384_resolution.txt
 #SBATCH --time=80:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,7 +20,7 @@ cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
 #python src/train_CLIP.py
 torchrun --nproc_per_node=4 src/task1_newcodebase.py \
-    --model vit_b_16 --epochs 300 --batch-size 512 --opt adamw --lr 0.003 --wd 0.3 \
+    --model vit_b_16 --epochs 300 --batch-size 256 --opt adamw --lr 0.003 --wd 0.3 \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 --model-ema

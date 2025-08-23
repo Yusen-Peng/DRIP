@@ -1046,6 +1046,8 @@ def main(args):
 
     init_distributed_mode(args)
     print(args)
+    print(f"args.train_crop_size: {args.train_crop_size}", flush=True)
+    print(f"args.val_crop_size: {args.val_crop_size}", flush=True)
 
     device = torch.device(args.device)
 
@@ -1237,8 +1239,9 @@ def get_args_parser(add_help=True):
     parser.add_argument("--data-path", default="/fs/scratch/PAS2836/yusenpeng_dataset/", type=str, help="dataset path")
     parser.add_argument("--model", default="resnet18", type=str, help="model name")
     parser.add_argument("--device", default="cuda", type=str, help="device (Use cuda or cpu Default: cuda)")
+    #### we need a smaller batch size for higher resolution
     parser.add_argument(
-        "-b", "--batch-size", default=32, type=int, help="images per gpu, the total batch size is $NGPU x batch_size"
+        "-b", "--batch-size", default=16, type=int, help="images per gpu, the total batch size is $NGPU x batch_size"
     )
     parser.add_argument("--epochs", default=90, type=int, metavar="N", help="number of total epochs to run")
     parser.add_argument(
@@ -1345,11 +1348,12 @@ def get_args_parser(add_help=True):
     parser.add_argument(
         "--val-resize-size", default=256, type=int, help="the resize size used for validation (default: 256)"
     )
+    ### HIGHER image resolution (384 instead of 224)
     parser.add_argument(
-        "--val-crop-size", default=224, type=int, help="the central crop size used for validation (default: 224)"
+        "--val-crop-size", default=384, type=int, help="the central crop size used for validation (default: 224)"
     )
     parser.add_argument(
-        "--train-crop-size", default=224, type=int, help="the random crop size used for training (default: 224)"
+        "--train-crop-size", default=384, type=int, help="the random crop size used for training (default: 224)"
     )
     parser.add_argument("--clip-grad-norm", default=None, type=float, help="the maximum gradient norm (default None)")
     parser.add_argument("--ra-sampler", action="store_true", help="whether to use Repeated Augmentation in training")
