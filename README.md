@@ -95,9 +95,6 @@ GPU = 4
 
 ![alt text](/incomplete_acc_vis_16.png)
 
-![alt text](/NEW_acc_vis_16.png)
-
-
 ### more CLIP experiments
 
 how did we get here?
@@ -118,6 +115,8 @@ Train with **15** epochs:
 | 💧DRIP-10X-16, 4+8 | **7.66🔥** | 15 epochs on 26M | **running** | **running** |
 | ViT-B-16 | **11.29** | 8 epochs on 178M | **running** | **running** |
 | 💧DRIP-4X-16, 4+8 | **9.55🔥** | 8 epochs on 178M | **running** | **running** |
+
+![alt text](/NEW_acc_vis_16.png)
 
 ### LAION-280M (178Msamples, 178,918,585) results
 
