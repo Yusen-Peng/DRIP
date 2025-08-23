@@ -9,7 +9,38 @@ from typing import List, Optional, Tuple
 from tqdm import tqdm
 import torch
 import torch.distributed as dist
+import torch.nn as nn
+import torch.optim as optim
+from torchvision import datasets
+from torch.utils.data import DataLoader
+from open_clip_local import create_model_and_transforms
+from open_clip_local.model import DTPViT, VisionTransformer
+from boundary_vis import load_dtpx_from_clip_checkpoint
+from open_clip_local import CLIP
+from torch.cuda.amp import GradScaler
+from torch.cuda.amp import autocast
+import os
+import random
+import numpy as np
+from tqdm import trange, tqdm
+from torch.utils.data.distributed import DistributedSampler
+from torch.nn.parallel import DistributedDataParallel as DDP
+import torch.distributed as dist
+import torch.multiprocessing as mp
+from transformers import get_cosine_schedule_with_warmup
 
+class VisionClassifier(nn.Module):
+    def __init__(self, backbone: DTPViT | VisionTransformer, num_classes):
+        super().__init__()
+        self.backbone = backbone
+        if isinstance(backbone, DTPViT):
+            self.fc = nn.Linear(backbone.num_classes, num_classes)
+        elif isinstance(backbone, VisionTransformer):
+            self.fc = nn.Linear(backbone.output_dim, num_classes)
+
+    def forward(self, x):
+        feats = self.backbone(x)
+        return self.fc(feats)
 
 class SmoothedValue:
     """Track a series of values and provide access to smoothed values over a
@@ -966,7 +997,6 @@ def load_data(traindir, valdir, args):
     if args.cache_dataset and os.path.exists(cache_path):
         # Attention, as the transforms are also cached!
         print(f"Loading dataset_train from {cache_path}")
-        # TODO: this could probably be weights_only=True
         dataset, _ = torch.load(cache_path, weights_only=False)
     else:
         # We need a default value for the variables below because args may come
@@ -999,7 +1029,6 @@ def load_data(traindir, valdir, args):
     if args.cache_dataset and os.path.exists(cache_path):
         # Attention, as the transforms are also cached!
         print(f"Loading dataset_test from {cache_path}")
-        # TODO: this could probably be weights_only=True
         dataset_test, _ = torch.load(cache_path, weights_only=False)
     else:
         if args.weights and args.test_only:
@@ -1086,8 +1115,35 @@ def main(args):
     )
 
     print("Creating model")
-    model = torchvision.models.get_model(args.model, weights=args.weights, num_classes=num_classes)
-    model.to(device)
+
+    ##### TODO: integrate DRIP too #####
+    use_DRIP = False
+    if use_DRIP:
+        RESOLUTION = 224
+        patch_size = 16
+        compression_rate = 0.5
+        empty_backbone = DTPViT(
+                image_size=RESOLUTION,
+                patch_size=patch_size,
+                embed_dim=768,
+                num_heads=12,
+                depth=(4, 8, 0),
+                mlp_ratio=4.0,
+                drop_rate=0.0,
+                attn_drop_rate=0.1,
+                num_classes=512,
+                temp=0.5,
+                compression_rate=compression_rate,
+                threshold=0.5,
+                activation_function='gelu',
+                flop_measure=False
+            )
+        backbone = empty_backbone
+        model = VisionClassifier(backbone, num_classes).to(device)
+
+    else:
+        model = torchvision.models.get_model(args.model, weights=args.weights, num_classes=num_classes)
+        model.to(device)
 
     if args.distributed and args.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
@@ -1348,12 +1404,11 @@ def get_args_parser(add_help=True):
     parser.add_argument(
         "--val-resize-size", default=256, type=int, help="the resize size used for validation (default: 256)"
     )
-    ### HIGHER image resolution (384 instead of 224)
     parser.add_argument(
-        "--val-crop-size", default=384, type=int, help="the central crop size used for validation (default: 224)"
+        "--val-crop-size", default=224, type=int, help="the central crop size used for validation (default: 224)"
     )
     parser.add_argument(
-        "--train-crop-size", default=384, type=int, help="the random crop size used for training (default: 224)"
+        "--train-crop-size", default=224, type=int, help="the random crop size used for training (default: 224)"
     )
     parser.add_argument("--clip-grad-norm", default=None, type=float, help="the maximum gradient norm (default None)")
     parser.add_argument("--ra-sampler", action="store_true", help="whether to use Repeated Augmentation in training")

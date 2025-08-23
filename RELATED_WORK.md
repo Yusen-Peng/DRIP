@@ -503,3 +503,20 @@ else:
 | ViT-B-16, 3e-3 | N/A | N/A | N/A | 100 | **...** |
 | ViT-B-16, 5e-4 | N/A | N/A | N/A | 100 | **...** |
 | DRIP-2-10, 5e-4 | N/A | N/A | N/A | 100 | **...** |
+
+
+tune LR for ViT:
+
+![alt text](/ViT_ImageNet_acc_vis_16.png)
+
+A similar GitHub issue (other folks only got 47% on ViT-B-16, too): [https://github.com/google-research/vision_transformer/issues/153]
+
+
+tune LR for DRIP:
+
+![alt text](/DRIP_ImageNet_acc_vis_16.png)
+
+comprehensive results:
+
+![alt text](/ALL_ImageNet_acc_vis_5e_5.png)
+![alt text](/ALL_ImageNet_acc_vis_5e_4.png)

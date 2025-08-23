@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=AUG_22_384_resolution
-#SBATCH --output=AUG_22_384_resolution.txt
+#SBATCH --job-name=AUG_23_ViT_recheck
+#SBATCH --output=AUG_23_ViT_recheck.txt
 #SBATCH --time=80:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,7 +18,6 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
-#python src/train_CLIP.py
 torchrun --nproc_per_node=4 src/task1_newcodebase.py \
     --model vit_b_16 --epochs 300 --batch-size 256 --opt adamw --lr 0.003 --wd 0.3 \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30 \

@@ -148,29 +148,15 @@ Now, moving from 224x224 (**196** patches) to 384x384 (**576** patches):
 
 | model | pretraining config | finetuning config | accuracy | source/checkpoint |  
 | ----- | ------ | -- | -------- | ------ |
-| official ViT-B-16 | ? | ? | **77.91%** | [ViT](https://arxiv.org/pdf/2010.11929), [DynamicViT](https://arxiv.org/pdf/2106.02034) |
-| ViT-B-16 | no pretraining | 384x384, 5e-4, 300 epochs | **running** | **running** |
-| DRIP-4x-16, 4+8 | no pretraining | 384x384, 5e-4, 300 epochs | **running** | **running** |
+| official ViT-B-16 | 224x224 | 384x384 | **77.91%** | [ViT](https://arxiv.org/pdf/2010.11929), [DynamicViT](https://arxiv.org/pdf/2106.02034) |
+| ViT-B-16, old repo | no pretraining | 224x224, 5e-4, 98 epochs | **50.96%** | N/A |
+| ViT-B-16, old repo | no pretraining | 384x384, 5e-4, 72 epochs | **54.84%** | N/A |
+| ViT-B-16, new repo | no pretraining | [training config](scripts/task1/configs/imagenet_new.sh) | **72.628%🔥** | ImageNet_72/model_299.pth |
+| DRIP-4x-16, 4+8, new repo | no pretraining | [training config](scripts/task1/configs/imagenet_new.sh) | **pending** | N/A |
 
 The new repo (from official Pytorch Github repository) FINALLY reached **72.628%** ImageNet accuracy:
 
 ![alt text](/ALL_ImageNet_acc_vis_16.png)
-
-tune LR for ViT:
-
-![alt text](/ViT_ImageNet_acc_vis_16.png)
-
-A similar GitHub issue (other folks only got 47% on ViT-B-16, too): [https://github.com/google-research/vision_transformer/issues/153]
-
-
-tune LR for DRIP:
-
-![alt text](/DRIP_ImageNet_acc_vis_16.png)
-
-comprehensive results:
-
-![alt text](/ALL_ImageNet_acc_vis_5e_5.png)
-![alt text](/ALL_ImageNet_acc_vis_5e_4.png)
 
 
 ## TASK 3 - Visual Instruction Tuning (LLaVA)
