@@ -1117,7 +1117,7 @@ def main(args):
     print("Creating model")
 
     ##### TODO: integrate DRIP too #####
-    use_DRIP = False
+    use_DRIP = True
     if use_DRIP:
         RESOLUTION = 224
         patch_size = 16

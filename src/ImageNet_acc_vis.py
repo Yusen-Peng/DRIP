@@ -34,7 +34,7 @@ def parse_all_accuracies(model2path: Dict) -> Dict:
     """Parses all files in the model2path dictionary to extract accuracies."""
     model2acc = {}
     for model, path in model2path.items():
-        if model == 'ViT-B-16 (new repo)':
+        if 'new repo' in model:
             model2acc[model] = parse_one_accuracy(path, newcodebase=True)
         else:
             model2acc[model] = parse_one_accuracy(path, newcodebase=False)
@@ -47,8 +47,14 @@ def plot_acc_vis(model2acc: Dict, patch_size: int) -> None:
     plt.xlabel("Epoch")
     plt.ylabel("Top-1 Accuracy")
     plt.title(f"patch_size={patch_size}, batch size = 512, 4x4 GPUs")
-    plt.legend()
-    plt.savefig(f"ALL_ImageNet_acc_vis_16.png")
+    
+    # Place legend outside below plot
+    plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=2)
+    
+    plt.tight_layout()
+    plt.savefig(f"ALL_ImageNet_acc_vis_{patch_size}.png", bbox_inches="tight")
+    plt.close()
+
 
 def main():
     PATCH_SIZE = 16
@@ -68,6 +74,7 @@ def main():
         #"DRIP-16-25%, 4+8, 5e-5": 'ImageNet_DRIP_4_8.txt',
         'ViT-B-16, 5e-4, 384x384': 'AUG_22_384_resolution_ViT.txt',
         'ViT-B-16 (new repo)': 'AUG_20_new_imagenet_codebase.txt',
+        'ViT-B-16 (new repo, recheck)': 'AUG_23_ViT_recheck.txt'
     }
 
     model2acc = parse_all_accuracies(model2path)

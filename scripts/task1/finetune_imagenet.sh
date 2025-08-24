@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=AUG_23_ViT_recheck
-#SBATCH --output=AUG_23_ViT_recheck.txt
+#SBATCH --job-name=AUG_23_DRIP_4x_4_8
+#SBATCH --output=AUG_23_DRIP_4x_4_8.txt
 #SBATCH --time=80:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
