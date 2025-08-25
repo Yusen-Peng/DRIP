@@ -46,7 +46,7 @@ def plot_acc_vis(model2acc: Dict, patch_size: int) -> None:
         plt.plot(accs, label=model)
     plt.xlabel("Epoch")
     plt.ylabel("Top-1 Accuracy")
-    plt.title(f"patch_size={patch_size}, batch size = 512, 4x4 GPUs")
+    plt.title(f"patch_size={patch_size}, batch size = 512, 1x4 GPUs")
     
     # Place legend outside below plot
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=2)
@@ -74,7 +74,8 @@ def main():
         #"DRIP-16-25%, 4+8, 5e-5": 'ImageNet_DRIP_4_8.txt',
         'ViT-B-16, 5e-4, 384x384': 'AUG_22_384_resolution_ViT.txt',
         'ViT-B-16 (new repo)': 'AUG_20_new_imagenet_codebase.txt',
-        'ViT-B-16 (new repo, recheck)': 'AUG_23_ViT_recheck.txt'
+        'ViT-B-16 (new repo, recheck)': 'AUG_23_ViT_recheck.txt',
+        'DRIP-4X-16, 4+8 (new repo)': 'AUG_23_DRIP_4x_4_8.txt'
     }
 
     model2acc = parse_all_accuracies(model2path)
