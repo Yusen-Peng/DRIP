@@ -1219,7 +1219,18 @@ def main(args):
 
     model_without_ddp = model
     if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+        if not use_DRIP:
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+        else:
+            # we need to tolerate conditional execution for DRIP, but we don't need it for ViT
+            model = torch.nn.parallel.DistributedDataParallel(
+                model,
+                device_ids=[args.gpu],
+                output_device=args.gpu,
+                find_unused_parameters=True,
+                gradient_as_bucket_view=True
+            )
+
         model_without_ddp = model.module
 
     model_ema = None
