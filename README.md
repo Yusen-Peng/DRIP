@@ -117,7 +117,7 @@ how did we get here?
 | ----- | ------ | ------ | ----- | ----- |
 | ViT-B-16 | **11.29** | 15 epochs on 26M, lr=5e-4 | **running** | **running** |
 | 💧DRIP-4X-16, 4+8 | 9.55🔥 | 15 epochs on 26M, lr=5e-4 | running | running |
-| 💧DRIP-4X-16, 2+10 | 7.13 | 15 epochs on 26M, lr=5e-4 | running | running |
+| 💧DRIP-4X-16, 2+10 | 7.13 | 15 epochs on 26M, lr=5e-4 | crashed... | crashed... |
 | 💧DRIP-10X-16, 5+7 | 9.11 | 15 epochs on 26M, lr=5e-4 | running | running |
 | 💧DRIP-10X-16, 4+8 | 7.66 | 15 epochs on 26M, lr=5e-4 | running | running |
 
@@ -153,10 +153,8 @@ Now, moving from 224x224 (**196** patches) to 384x384 (**576** patches):
 | model | pretraining config | finetuning config | accuracy | source/checkpoint |  
 | ----- | ------ | -- | -------- | ------ |
 | official ViT-B-16 | 224x224 | 384x384 | **77.91%** | [ViT](https://arxiv.org/pdf/2010.11929), [DynamicViT](https://arxiv.org/pdf/2106.02034) |
-| ViT-B-16, old repo | no pretraining | 224x224, 5e-4, 98 epochs | **50.96%** | N/A |
-| ViT-B-16, old repo | no pretraining | 384x384, 5e-4, 72 epochs | **54.84%** | N/A |
-| ViT-B-16, new repo | no pretraining | [training config](scripts/task1/configs/imagenet_new.sh) | **72.628%🔥** | ImageNet_72/model_299.pth |
-| DRIP-4x-16, 4+8, new repo | no pretraining | [training config](scripts/task1/configs/imagenet_new.sh) | **78.340% after 280 epochs** | N/A |
+| ViT-B-16, new repo | no pretraining | [training config](scripts/task1/configs/imagenet_new.sh) | **72.628%🔥** | ImageNet_ViT_72/model_299.pth |
+| DRIP-4x-16, 4+8, new repo | no pretraining | [training config](scripts/task1/configs/imagenet_new.sh) | **78.470%** | ImageNet_DRIP_78/model_299.pth |
 
 The new repo (from official Pytorch Github repository) FINALLY reached **72.628%** ImageNet accuracy:
 
