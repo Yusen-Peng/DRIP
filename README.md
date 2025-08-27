@@ -103,20 +103,25 @@ how did we get here?
 - [x] delay pooling (~2% accuracy boost)
 - [x] discard the null token (~1% accuracy boost)
 
+| model details | GFLOPs | training | top-1 zero-shot | top-5 zero-shot |
+| ----- | ------ | ------ | ----- | ----- |
+| ViT-B-16 | **11.29** | 15 epochs on 26M, lr=5e-5 | **33.68%** | **61.19%** |
+| 💧DRIP-4X-16, 4+8 | 9.55🔥 | 15 epochs on 26M, lr=5e-5 | 32.38%🔥 | 59.91%🔥 |
+| 💧DRIP-4X-16, 2+10 | 7.13 | 15 epochs on 26M, lr=5e-5 | 31.01% | 57.70% |
+| 💧DRIP-10X-16, 5+7 | 9.11 | 15 epochs on 26M, lr=5e-5 | 31.87% | 59.37% |
+| 💧DRIP-10X-16, 4+8 | 7.66 | 15 epochs on 26M, lr=5e-5 | 31.90% | 59.20% |
 
-Train with **15** epochs:
+![alt text](/NEW_acc_vis_16_5e_5.png)
 
 | model details | GFLOPs | training | top-1 zero-shot | top-5 zero-shot |
 | ----- | ------ | ------ | ----- | ----- |
-| ViT-B-16 | **11.29** | 15 epochs on 26M | **33.68%** | **61.19%** |
-| 💧DRIP-4X-16, 4+8 | 9.55🔥 | 15 epochs on 26M | 32.38%🔥 | 59.91%🔥 |
-| 💧DRIP-4X-16, 2+10 | 7.13 | 15 epochs on 26M | 31.01% | 57.70% |
-| 💧DRIP-10X-16, 5+7 | 9.11 | 15 epochs on 26M | 31.87% | 59.37% |
-| 💧DRIP-10X-16, 4+8 | 7.66 | 15 epochs on 26M | 31.90% | 59.20% |
-<!-- | ViT-B-16 | 11.29 | 8 epochs on 178M | **running** | **running** |
-| 💧DRIP-4X-16, 4+8 | 9.55🔥 | 8 epochs on 178M | **running** | **running** | -->
+| ViT-B-16 | **11.29** | 15 epochs on 26M, lr=5e-4 | **running** | **running** |
+| 💧DRIP-4X-16, 4+8 | 9.55🔥 | 15 epochs on 26M, lr=5e-4 | running | running |
+| 💧DRIP-4X-16, 2+10 | 7.13 | 15 epochs on 26M, lr=5e-4 | running | running |
+| 💧DRIP-10X-16, 5+7 | 9.11 | 15 epochs on 26M, lr=5e-4 | running | running |
+| 💧DRIP-10X-16, 4+8 | 7.66 | 15 epochs on 26M, lr=5e-4 | running | running |
 
-![alt text](/NEW_acc_vis_16.png)
+
 
 ### LAION-280M (178Msamples, 178,918,585) results
 
@@ -151,7 +156,7 @@ Now, moving from 224x224 (**196** patches) to 384x384 (**576** patches):
 | ViT-B-16, old repo | no pretraining | 224x224, 5e-4, 98 epochs | **50.96%** | N/A |
 | ViT-B-16, old repo | no pretraining | 384x384, 5e-4, 72 epochs | **54.84%** | N/A |
 | ViT-B-16, new repo | no pretraining | [training config](scripts/task1/configs/imagenet_new.sh) | **72.628%🔥** | ImageNet_72/model_299.pth |
-| DRIP-4x-16, 4+8, new repo | no pretraining | [training config](scripts/task1/configs/imagenet_new.sh) | **76.644% after 220 epochs** | N/A |
+| DRIP-4x-16, 4+8, new repo | no pretraining | [training config](scripts/task1/configs/imagenet_new.sh) | **78.340% after 280 epochs** | N/A |
 
 The new repo (from official Pytorch Github repository) FINALLY reached **72.628%** ImageNet accuracy:
 

@@ -69,9 +69,11 @@ def main():
     # 1024 for ViT-B-32
     batch_size = 512
     patch_size = 16
-    lr = 5e-5 # this learning rate is safe for the boundary predictor for now
+    #lr = 5e-5 # this learning rate is safe for the boundary predictor for now
+    lr = 5e-4 # this learning rate is safe for the boundary predictor for now
+
     wd = 0.1
-    epochs = 8        # 8 epochs
+    epochs = 15       # 15 epochs
     workers = 8       # CPU utilization
     model = f"ViT-B-{patch_size}"
     warmup = 50
@@ -84,8 +86,8 @@ def main():
         train_num_samples = None
 
     elif dataset_name == "LAION":
-        PATH = "/fs/scratch/PAS2836/yusenpeng_dataset/LAION_280M/"
-        #PATH = "/fs/scratch/PAS2836/laion2b-data/"
+        #PATH = "/fs/scratch/PAS2836/yusenpeng_dataset/LAION_280M/"
+        PATH = "/fs/scratch/PAS2836/laion2b-data/"
         use_webdataset = True
         train_data_path = "::".join(sorted(glob.glob(f"{PATH}*.tar")))
         val_data_path = None  # no val needed for now

@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=AUG_20_4x_4_8_8_epochs_BIG
-#SBATCH --output=AUG_20_4x_4_8_8_epochs_BIG.log
+#SBATCH --job-name=AUG_27_DRIP_10x_5_7_5e_4
+#SBATCH --output=AUG_27_DRIP_10x_5_7_5e_4.log
 #SBATCH --partition=quad
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1

@@ -153,9 +153,9 @@ def _build_vision_tower(
         HIERARCHICAL = False  # whether to use hierarchical DTP-ViT
         SOFT = False  # whether to use soft DTP-ViT
         if DTP_ViT and not HIERARCHICAL and not SOFT: 
-            compression_rate = 0.25
+            compression_rate = 0.1
             print(f"Using DTP ViT with compression rate {compression_rate}")
-            depth = (4, 8, 0)
+            depth = (5, 7, 0)
             print(f"Depth for each stage: {depth}")
             visual = DTPViT(
                 image_size=vision_cfg.image_size,

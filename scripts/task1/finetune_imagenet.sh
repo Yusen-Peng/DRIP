@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=AUG_23_DRIP_4x_4_8_0.0003
-#SBATCH --output=AUG_23_DRIP_4x_4_8_0.0003.txt
-#SBATCH --time=80:00:00
+#SBATCH --job-name=AUG_27_Vit_0.0003_imagenet
+#SBATCH --output=AUG_27_Vit_0.0003_imagenet.txt
+#SBATCH --time=100:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
