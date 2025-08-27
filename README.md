@@ -109,12 +109,12 @@ Train with **15** epochs:
 | model details | GFLOPs | training | top-1 zero-shot | top-5 zero-shot |
 | ----- | ------ | ------ | ----- | ----- |
 | ViT-B-16 | **11.29** | 15 epochs on 26M | **running** | **running** |
-| 💧DRIP-4X-16, 4+8 | **9.55🔥** | 15 epochs on 26M | **running** | **running** |
-| 💧DRIP-4X-16, 2+10 | **7.13🔥** | 15 epochs on 26M | **running** | **running** |
-| 💧DRIP-10X-16, 5+7 | **9.11🔥** | 15 epochs on 26M | **running** | **running** |
-| 💧DRIP-10X-16, 4+8 | **7.66🔥** | 15 epochs on 26M | **running** | **running** |
-| ViT-B-16 | **11.29** | 8 epochs on 178M | **running** | **running** |
-| 💧DRIP-4X-16, 4+8 | **9.55🔥** | 8 epochs on 178M | **running** | **running** |
+| 💧DRIP-4X-16, 4+8 | 9.55🔥 | 15 epochs on 26M | 32.38%🔥 | 59.91%🔥 |
+| 💧DRIP-4X-16, 2+10 | 7.13 | 15 epochs on 26M | 31.01% | 57.70% |
+| 💧DRIP-10X-16, 5+7 | 9.11 | 15 epochs on 26M | 31.87% | 59.37% |
+| 💧DRIP-10X-16, 4+8 | 7.66 | 15 epochs on 26M | 31.90% | 59.20% |
+| ViT-B-16 | 11.29 | 8 epochs on 178M | **running** | **running** |
+| 💧DRIP-4X-16, 4+8 | 9.55🔥 | 8 epochs on 178M | **running** | **running** |
 
 ![alt text](/NEW_acc_vis_16.png)
 
