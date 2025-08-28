@@ -154,7 +154,7 @@ Now, moving from 224x224 (**196** patches) to 384x384 (**576** patches):
 | ----- | ------ | -- | -------- | ------ |
 | official ViT-B-16 | 224x224 | 384x384 | **77.91%** | [ViT](https://arxiv.org/pdf/2010.11929), [DynamicViT](https://arxiv.org/pdf/2106.02034) |
 | ViT-B-16, new repo | no pretraining | [training config](scripts/task1/configs/imagenet_new.sh) | **72.628%🔥** | ImageNet_ViT_72/model_299.pth |
-| DRIP-4x-16, 4+8, new repo | no pretraining | [training config](scripts/task1/configs/imagenet_new.sh) | **78.470%** | ImageNet_DRIP_78/model_299.pth |
+| DRIP-4x-16, 4+8, new repo | no pretraining | [training config](scripts/task1/configs/imagenet_new.sh) | **78.470%🔥** | ImageNet_DRIP_78/model_299.pth |
 
 The new repo (from official Pytorch Github repository) FINALLY reached **72.628%** ImageNet accuracy:
 
@@ -171,6 +171,7 @@ The new repo (from official Pytorch Github repository) FINALLY reached **72.628%
 | --------------------- | -------- | ------------ |
 | llava-v1.5-13b from HuggingFace | 68.43% | 70.45% |
 | DRIP-2X-16 (**36.71%** zero-shot, 1 epoch pretrain + 1 epoch finetune) | 67.20% | 61.92% |
+| DRIP-4X-16, 4+8 (**78.470%** ImageNet, 1 epoch pretrain + 1 epoch finetune) | running | running |
 
 #### LLaVA-Bench-in-the-Wild (LLM-judge AND rule-based)
 

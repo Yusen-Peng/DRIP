@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=LLaVA_pretrain
-#SBATCH --output=LLaVA_pretrain.txt
-#SBATCH --time=20:00:00
+#SBATCH --job-name=LLaVA_pretrain_78_DRIP
+#SBATCH --output=LLaVA_pretrain_78_DRIP.txt
+#SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
