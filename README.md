@@ -97,11 +97,13 @@ GPU = 4
 
 ### more CLIP experiments
 
-how did we get here?
+how did we get here (nearly matching the performance after 10 epochs)
 
 - [x] attention mask to ignore padded tokens (~1% accuracy boost)
 - [x] delay pooling (~2% accuracy boost)
 - [x] discard the null token (~1% accuracy boost)
+
+![alt text](/NEW_acc_vis_16_10_epochs.png)
 
 | model details | GFLOPs | training | top-1 zero-shot | top-5 zero-shot |
 | ----- | ------ | ------ | ----- | ----- |
