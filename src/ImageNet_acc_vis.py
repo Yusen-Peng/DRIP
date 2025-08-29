@@ -58,24 +58,9 @@ def plot_acc_vis(model2acc: Dict, patch_size: int) -> None:
 
 def main():
     PATCH_SIZE = 16
-
-    # model2path = {
-    #     'ViT-B-16': 'ImageNet_ViT16.txt',
-    #     "DRIP-16-25%, 2+10": 'ImageNet_DRIP_2_10.txt',
-    #     "DRIP-16-25%, 4+8": 'ImageNet_DRIP_4_8.txt'
-    # }
     model2path = {
-        #'ViT-B-16, 5e-5': 'ImageNet_ViT16.txt',
-        #'ViT-B-16, 5e-4': 'less_aggressive_ViT.txt',
-        #'ViT-B-16, 3e-3': 'faithful_ImageNet_ViT16.txt',
-        #'DRIP-16-25%, 4+8, 5e-4': 'less_aggressive_DRIP_4_8.txt',
-        #'DRIP-16-25%, 2+10, 5e-4': 'less_aggressive_DRIP_2_10.txt',
-        #"DRIP-16-25%, 2+10, 5e-5": 'ImageNet_DRIP_2_10.txt',
-        #"DRIP-16-25%, 4+8, 5e-5": 'ImageNet_DRIP_4_8.txt',
-        #'ViT-B-16, 5e-4, 384x384': 'AUG_22_384_resolution_ViT.txt',
         'ViT-B-16, 3e-3, (new repo)': 'AUG_20_new_imagenet_codebase.txt',
-        'ViT-B-16, 3e-3, (new repo, recheck)': 'AUG_23_ViT_recheck.txt',
-        'DRIP-4X-16, 4+8, 3e-3 (new repo)': 'AUG_23_DRIP_4x_4_8.txt',
+        'ViT-B-16, 3e-4, (new repo)': 'AUG_27_Vit_0.0003_imagenet.txt',
         'DRIP-4X-16, 4+8, 3e-4 (new repo)': 'AUG_23_DRIP_4x_4_8_0.0003.txt'
     }
 
