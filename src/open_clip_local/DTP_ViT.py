@@ -1087,7 +1087,17 @@ class XL_Baseline(nn.Module):
         Full forward pass including pooling to class logits.
         """
         features_out = self.encode(x, return_loss=return_loss)
-        x = features_out
+
+        # pool across sequence dimension with mean pooling
+        pad_mask = features_out.abs().sum(-1).eq(0).float()           # S x B
+        valid_mask = 1.0 - pad_mask                        # S x B
+        valid_mask_exp = valid_mask.unsqueeze(-1)          # S x B x 1
+
+        x = features_out * valid_mask_exp                             # Mask padded tokens
+        sum_x = x.sum(dim=0)                               # B x D
+        valid_counts = valid_mask.sum(dim=0).clamp(min=1e-6).unsqueeze(-1)  # B x 1
+        x = sum_x / valid_counts                           # B x D (masked mean)
+
         logits = self.head(x)
         return logits
     

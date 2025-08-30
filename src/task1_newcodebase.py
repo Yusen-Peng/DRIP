@@ -31,10 +31,10 @@ import torch.multiprocessing as mp
 from transformers import get_cosine_schedule_with_warmup
 
 class VisionClassifier(nn.Module):
-    def __init__(self, backbone: DTPViT | VisionTransformer, num_classes):
+    def __init__(self, backbone: DTPViT | VisionTransformer | XL_Baseline, num_classes):
         super().__init__()
         self.backbone = backbone
-        if isinstance(backbone, DTPViT):
+        if isinstance(backbone, DTPViT) or isinstance(backbone, XL_Baseline):
             self.fc = nn.Linear(backbone.num_classes, num_classes)
         elif isinstance(backbone, VisionTransformer):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
@@ -1149,7 +1149,8 @@ def main(args):
         print(f"are we using XL backbone? {use_XL_backbone}", flush=True)
         if use_XL_backbone:
             print("use XL backbone!")
-            model = XL_Baseline(
+            patch_size = 16
+            empty_backbone = XL_Baseline(
                 image_size=224,
                 patch_size=patch_size,
                 in_chans=3,
@@ -1163,6 +1164,9 @@ def main(args):
                 activation_function="gelu",
                 num_classes=512,
             )
+            backbone = empty_backbone
+            model = VisionClassifier(backbone, num_classes).to(device)
+
         else:
             print("use ViT!")
             model = torchvision.models.get_model(args.model, weights=args.weights, num_classes=num_classes)
@@ -1242,10 +1246,10 @@ def main(args):
 
     model_without_ddp = model
     if args.distributed:
-        if not use_DRIP:
+        if not use_DRIP and not use_XL_backbone:
             model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
         else:
-            # we need to tolerate conditional execution for DRIP, but we don't need it for ViT
+            # we need to tolerate conditional execution for DRIP
             model = torch.nn.parallel.DistributedDataParallel(
                 model,
                 device_ids=[args.gpu],

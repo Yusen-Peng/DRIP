@@ -34,10 +34,7 @@ def parse_all_accuracies(model2path: Dict) -> Dict:
     """Parses all files in the model2path dictionary to extract accuracies."""
     model2acc = {}
     for model, path in model2path.items():
-        if 'new repo' in model:
-            model2acc[model] = parse_one_accuracy(path, newcodebase=True)
-        else:
-            model2acc[model] = parse_one_accuracy(path, newcodebase=False)
+        model2acc[model] = parse_one_accuracy(path, newcodebase=True)
     return model2acc
 
 def plot_acc_vis(model2acc: Dict, patch_size: int) -> None:
@@ -59,9 +56,11 @@ def plot_acc_vis(model2acc: Dict, patch_size: int) -> None:
 def main():
     PATCH_SIZE = 16
     model2path = {
-        'ViT-B-16, 3e-3, (new repo)': 'AUG_20_new_imagenet_codebase.txt',
-        'ViT-B-16, 3e-4, (new repo)': 'AUG_27_Vit_0.0003_imagenet.txt',
-        'DRIP-4X-16, 4+8, 3e-4 (new repo)': 'AUG_23_DRIP_4x_4_8_0.0003.txt'
+        'ViT-B-16, 3e-4': 'AUG_27_Vit_0.0003_imagenet.txt',
+        'DRIP-2X-16*, 4+8, 3e-4': 'AUG_23_DRIP_4x_4_8_0.0003.txt',
+        'DRIP-4X-16, 4+8, 3e-4': 'AUG_29_DRIP_ViTbased_4x_4_8.txt',
+        'DRIP-4X-16, 5+7, 3e-4': 'AUG_29_DRIP_ViTbased_4x_5_7.txt',
+        'DRIP-10X-16, 4+8, 3e-4': 'AUG_29_DRIP_ViTbased_10x_4_8.txt'
     }
 
     model2acc = parse_all_accuracies(model2path)
