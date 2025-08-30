@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=AUG_29_DRIP_XLbased_4x_4_8
-#SBATCH --output=AUG_29_DRIP_XLbased_4x_4_8.txt
+#SBATCH --job-name=AUG_29_DRIP_XL_baseline
+#SBATCH --output=AUG_29_DRIP_XL_baseline.txt
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

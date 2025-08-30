@@ -15,6 +15,7 @@ from torchvision import datasets
 from torch.utils.data import DataLoader
 from open_clip_local import create_model_and_transforms
 from open_clip_local.model import DTPViT, VisionTransformer
+from open_clip_local.DTP_ViT import XL_Baseline
 from boundary_vis import load_dtpx_from_clip_checkpoint
 from open_clip_local import CLIP
 from torch.cuda.amp import GradScaler
@@ -1117,7 +1118,7 @@ def main(args):
     print("Creating model")
 
     ##### TODO: integrate DRIP too #####
-    use_DRIP = True
+    use_DRIP = False
     print(f"are we using DRIP? {use_DRIP}", flush=True)
     if use_DRIP:
         RESOLUTION = 224
@@ -1143,7 +1144,28 @@ def main(args):
         model = VisionClassifier(backbone, num_classes).to(device)
 
     else:
-        model = torchvision.models.get_model(args.model, weights=args.weights, num_classes=num_classes)
+        
+        use_XL_backbone = True
+        print(f"are we using XL backbone? {use_XL_backbone}", flush=True)
+        if use_XL_backbone:
+            print("use XL backbone!")
+            model = XL_Baseline(
+                image_size=224,
+                patch_size=patch_size,
+                in_chans=3,
+                embed_dim=768,
+                num_heads=12,
+                mlp_ratio=4.0,
+                drop_rate=0.0,
+                attn_drop_rate=0.1,
+                temp=0.5,
+                threshold=0.5,
+                activation_function="gelu",
+                num_classes=512,
+            )
+        else:
+            print("use ViT!")
+            model = torchvision.models.get_model(args.model, weights=args.weights, num_classes=num_classes)
         model.to(device)
 
     if args.distributed and args.sync_bn:
