@@ -1117,12 +1117,12 @@ def main(args):
     print("Creating model")
 
     ##### TODO: integrate DRIP too #####
-    use_DRIP = False
+    use_DRIP = True
     print(f"are we using DRIP? {use_DRIP}", flush=True)
     if use_DRIP:
         RESOLUTION = 224
         patch_size = 16
-        compression_rate = 0.5
+        compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
         empty_backbone = DTPViT(
                 image_size=RESOLUTION,
                 patch_size=patch_size,

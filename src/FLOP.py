@@ -9,7 +9,7 @@ from numbers import Number
 from typing import Any, List
 import numpy as np
 from fvcore.nn import FlopCountAnalysis
-from open_clip_local.DTP_ViT import DTPViT, HierarchicalDTPViT, SoftDTPViT
+from open_clip_local.DTP_ViT import DTPViT, HierarchicalDTPViT, SoftDTPViT, XL_Baseline
 from open_clip_local.transformer import VisionTransformer
 
 DROPOUT_FLOPS = 4
@@ -64,20 +64,20 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT"
+    MODE = "DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline'
 
     img_size = 224
     width = 768
     mlp_ratio = 4.0
     patch_dropout = 0.1
     if MODE == "DRIP":
-        COMPRESSION_RATE = 0.1
+        COMPRESSION_RATE = 0.5
         model = DTPViT(
             image_size=img_size,
             patch_size=patch_size,
             in_chans=3,
             embed_dim=width,
-            depth=(4, 8, 0),
+            depth=(6, 6, 0),
             num_heads=width // 64,
             mlp_ratio=mlp_ratio,
             drop_rate=patch_dropout,
@@ -140,6 +140,23 @@ def main():
             mlp_ratio=mlp_ratio,
             output_dim=512
         )
+    elif MODE == "XL_Baseline":
+        model = XL_Baseline(
+            image_size=img_size,
+            patch_size=patch_size,
+            in_chans=3,
+            embed_dim=width,
+            num_heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            drop_rate=patch_dropout,
+            attn_drop_rate=0.1,
+            temp=0.5,
+            threshold=0.5,
+            activation_function="gelu",
+            num_classes=width,
+            flop_measure=True,  # simulating fake boundaries for reproducible GFLOPs
+        )
+
     else:
         raise ValueError("Unknown model mode: {}".format(MODE))
 

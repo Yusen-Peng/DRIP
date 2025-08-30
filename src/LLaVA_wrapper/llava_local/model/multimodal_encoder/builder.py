@@ -4,8 +4,8 @@ from .clip_encoder import CLIPVisionTower, CLIPVisionTowerS2, DRIPVisionTower
 
 def build_vision_tower(vision_tower_cfg, **kwargs):
 
-    # FIXME: all hardcoded bullshit. Need to be fixed later.
-    USE_DTP = False
+    # FIXME: all hardcoded. Need to be fixed later.
+    USE_DTP = True 
     FINETUNING_MODE = False
     if USE_DTP:
         print("🍟" * 20)
@@ -28,6 +28,9 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         if use_s2:
             return CLIPVisionTowerS2(vision_tower, args=vision_tower_cfg, **kwargs)
         elif USE_DTP:
+            print("🍟" * 20)
+            print(f"Using DTP-ViT from the path {checkpoint_path}")
+            print("🍟" * 20)
             return DRIPVisionTower(
                 checkpoint_path=checkpoint_path, 
                 vision_tower=vision_tower,

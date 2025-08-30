@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=LLaVA_pretrain_78_DRIP
-#SBATCH --output=LLaVA_pretrain_78_DRIP.txt
+#SBATCH --job-name=Aug29_LLaVA_pretrain_78_DRIP
+#SBATCH --output=Aug29_LLaVA_pretrain_78_DRIP.txt
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
