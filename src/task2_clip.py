@@ -39,6 +39,7 @@ def train_runner(
         "--imagenet-val", imagenet_val_path,
         "--save-frequency", "1",
         "--zeroshot-frequency", "1",
+        "--pretrained", "openai", # FIXME: only use this for continual pretraining
         "--report-to", "tensorboard",
         "--batch-size", str(batch_size),
         "--warmup", str(warmup),
@@ -62,7 +63,7 @@ def main():
     # dataset parameters - "COCO" or "LAION" or "CC12"
     dataset_name = "LAION"
 
-    use_DTP = True # DTP (Dynamic Token Pruning) is not used by default
+    use_DTP = False # DTP (Dynamic Token Pruning) is not used by default
 
     # experiment with batch size
     # batch size:
@@ -70,10 +71,13 @@ def main():
     batch_size = 512
     patch_size = 16
     #lr = 5e-5 # this learning rate is safe for the boundary predictor for now
-    lr = 5e-4 # this learning rate is safe for the boundary predictor for now
+    lr = 5e-6 # FIXME: 5e-6 for continual pretraining
 
     wd = 0.1
-    epochs = 15       # 15 epochs
+    #epochs = 15       # 15 epochs
+    epochs = 5 # FIXME: 5 epochs for continual pretraining
+    
+    
     workers = 8       # CPU utilization
     model = f"ViT-B-{patch_size}"
     warmup = 50

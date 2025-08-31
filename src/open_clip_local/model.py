@@ -238,11 +238,7 @@ def _build_vision_tower(
                 output_dim=embed_dim,
                 act_layer=act_layer,
                 norm_layer=norm_layer,
-            )
-
-            # sanity check to print every single model hyperparameter
-            logging.debug(f"Vision Transformer config: {vision_cfg}")
-            logging.debug(f"Vision Transformer model: {visual}")
+            )    
 
     return visual
 

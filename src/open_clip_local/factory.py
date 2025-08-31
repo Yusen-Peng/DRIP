@@ -501,6 +501,10 @@ def create_model_and_transforms(
         resize_mode=image_resize_mode,
     )
 
+    print(f"are we used pretrained models? {pretrained is not None}", flush=True)
+    if pretrained is not None:
+        print(f"aha! what's the pretrained dataset? {pretrained}")
+
     model = create_model(
         model_name,
         DTP_ViT,

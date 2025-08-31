@@ -56,10 +56,9 @@ def plot_acc_vis(model2acc: Dict, patch_size: int) -> None:
 def main():
     PATCH_SIZE = 16
     model2path = {
-        'ViT-B-16': 'AUG_27_Vit_0.0003_imagenet.txt',
         'DRIP-2X-16*, 4+8': 'AUG_23_DRIP_4x_4_8_0.0003.txt',
+        'DRIP-4X-16*, 4+8': 'AUG_29_DRIP_XLbased_4x_4_8.txt',
         'DRIP-4X-16, 4+8': 'AUG_29_DRIP_ViTbased_4x_4_8.txt',
-        'DRIP-4X-16, 5+7': 'AUG_29_DRIP_ViTbased_4x_5_7.txt',
         'DRIP-10X-16, 4+8': 'AUG_29_DRIP_ViTbased_10x_4_8.txt',
         'Transformer-XL-16': 'AUG_29_DRIP_XL_baseline.txt'
     }
