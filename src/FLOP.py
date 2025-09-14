@@ -64,7 +64,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "Swin" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin"
+    MODE = "DynamicViT" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT"
 
     img_size = 224
     width = 768
@@ -170,6 +170,28 @@ def main():
             drop_rate=0.0, attn_drop_rate=0.1, drop_path_rate=0.1,
             norm_layer=torch.nn.LayerNorm, ape=False, patch_norm=True,
             use_checkpoint=False, fused_window_process=False,
+        )
+    elif MODE == "DynamicViT":
+        from dynamicViT import VisionTransformerDiffPruning
+        print("Calculating GFLOPs for DynamicViT...")
+        model = VisionTransformerDiffPruning(
+            img_size=img_size,
+            patch_size=patch_size,
+            in_chans=3,
+            num_classes=1000,
+            embed_dim=width,
+            depth=12, # total 12 layers - keep everything consistent
+            num_heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            qkv_bias=True,
+            drop_rate=patch_dropout,
+            attn_drop_rate=0.1,
+            drop_path_rate=0.1,
+            norm_layer=torch.nn.LayerNorm,
+            pruning_loc=[2],
+            token_ratio=[0.25], # keep 25% patches at the only pruning location
+            distill=False,
+            training=False, # for GFLOPs calculation we set it to False to avoid randomness
         )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
