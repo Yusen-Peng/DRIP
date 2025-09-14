@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=AUG_29_DRIP_XL_baseline
-#SBATCH --output=AUG_29_DRIP_XL_baseline.txt
+#SBATCH --job-name=SEP_1_DRIP_ViTbased_10x_5_7
+#SBATCH --output=SEP_1_DRIP_ViTbased_10x_5_7.txt
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -23,7 +23,7 @@ torchrun --nproc_per_node=4 src/task1_newcodebase.py \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --model-ema --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ImageNet_DRIP
+    --model-ema --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ImageNet_DynamicViT
 
 conda deactivate
 # End of script

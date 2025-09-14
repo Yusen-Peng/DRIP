@@ -21,7 +21,7 @@ from .modified_resnet import ModifiedResNet
 from .timm_model import TimmModel
 from .transformer import LayerNormFp32, LayerNorm, QuickGELU, Attention, VisionTransformer, TextTransformer,\
     text_global_pool
-from .DTP_ViT import DTPViT, HierarchicalDTPViT, SoftDTPViT
+from .DTP_ViT import DTPViT, HierarchicalDTPViT, SoftDTPViT, XL_Baseline
 from .utils import to_2tuple
 
 ZERO = 0
@@ -218,27 +218,49 @@ def _build_vision_tower(
                 num_classes=embed_dim
             )
         else:
-            visual = VisionTransformer(
-                image_size=vision_cfg.image_size,
-                patch_size=vision_cfg.patch_size,
-                width=vision_cfg.width,
-                layers=vision_cfg.layers,
-                heads=vision_heads,
-                mlp_ratio=vision_cfg.mlp_ratio,
-                ls_init_value=vision_cfg.ls_init_value,
-                patch_dropout=vision_cfg.patch_dropout,
-                attentional_pool=vision_cfg.attentional_pool,
-                attn_pooler_queries=vision_cfg.attn_pooler_queries,
-                attn_pooler_heads=vision_cfg.attn_pooler_heads,
-                pos_embed_type=vision_cfg.pos_embed_type,
-                no_ln_pre=vision_cfg.no_ln_pre,
-                final_ln_after_pool=vision_cfg.final_ln_after_pool,
-                pool_type=vision_cfg.pool_type,
-                output_tokens=vision_cfg.output_tokens,
-                output_dim=embed_dim,
-                act_layer=act_layer,
-                norm_layer=norm_layer,
-            )    
+            use_XL_backbone = True
+            print(f"are we using XL backbone? {use_XL_backbone}", flush=True)
+            if use_XL_backbone:
+                print("use XL backbone!")
+                patch_size = 16
+                visual = XL_Baseline(
+                    image_size=224,
+                    patch_size=patch_size,
+                    in_chans=3,
+                    embed_dim=768,
+                    num_heads=12,
+                    mlp_ratio=4.0,
+                    drop_rate=0.0,
+                    attn_drop_rate=0.1,
+                    temp=0.5,
+                    threshold=0.5,
+                    activation_function="gelu",
+                    num_classes=512,
+                )
+
+            else:
+                print("use ViT!")
+                visual = VisionTransformer(
+                    image_size=vision_cfg.image_size,
+                    patch_size=vision_cfg.patch_size,
+                    width=vision_cfg.width,
+                    layers=vision_cfg.layers,
+                    heads=vision_heads,
+                    mlp_ratio=vision_cfg.mlp_ratio,
+                    ls_init_value=vision_cfg.ls_init_value,
+                    patch_dropout=vision_cfg.patch_dropout,
+                    attentional_pool=vision_cfg.attentional_pool,
+                    attn_pooler_queries=vision_cfg.attn_pooler_queries,
+                    attn_pooler_heads=vision_cfg.attn_pooler_heads,
+                    pos_embed_type=vision_cfg.pos_embed_type,
+                    no_ln_pre=vision_cfg.no_ln_pre,
+                    final_ln_after_pool=vision_cfg.final_ln_after_pool,
+                    pool_type=vision_cfg.pool_type,
+                    output_tokens=vision_cfg.output_tokens,
+                    output_dim=embed_dim,
+                    act_layer=act_layer,
+                    norm_layer=norm_layer,
+                )    
 
     return visual
 

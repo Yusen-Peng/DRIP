@@ -64,20 +64,20 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline'
+    MODE = "Swin" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin"
 
     img_size = 224
     width = 768
     mlp_ratio = 4.0
     patch_dropout = 0.1
     if MODE == "DRIP":
-        COMPRESSION_RATE = 0.5
+        COMPRESSION_RATE = 0.1
         model = DTPViT(
             image_size=img_size,
             patch_size=patch_size,
             in_chans=3,
             embed_dim=width,
-            depth=(6, 6, 0),
+            depth=(5, 7, 0),
             num_heads=width // 64,
             mlp_ratio=mlp_ratio,
             drop_rate=patch_dropout,
@@ -157,8 +157,20 @@ def main():
             flop_measure=True,  # simulating fake boundaries for reproducible GFLOPs
         )
 
-    else:
-        raise ValueError("Unknown model mode: {}".format(MODE))
+    elif MODE == "Swin":
+        from swin import SwinTransformer
+        print("Calculating GFLOPs for Swin Transformer...")
+        model = SwinTransformer(
+            img_size=img_size, 
+            patch_size=patch_size, 
+            embed_dim=480, # this is TUNED for fair performance/GFLOP comparison
+            depths=[2, 10],
+            num_heads=[12, 12],
+            window_size=7, mlp_ratio=4.0, qkv_bias=True,
+            drop_rate=0.0, attn_drop_rate=0.1, drop_path_rate=0.1,
+            norm_layer=torch.nn.LayerNorm, ape=False, patch_norm=True,
+            use_checkpoint=False, fused_window_process=False,
+        )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device).eval()

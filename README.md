@@ -101,7 +101,7 @@ how did we get here (nearly matching the performance after 10 epochs)
 
 - [x] attention mask to ignore padded tokens (~1% accuracy boost)
 - [x] delay pooling (~2% accuracy boost)
-- [x] discard the null token (~1% accuracy boost)
+- [x] discard the null token (~1%caccuracy boost)
 
 ![alt text](/NEW_acc_vis_16_10_epochs.png)
 

@@ -1,7 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Sep_8_XL_baseline
-#SBATCH --output=Sep_8_XL_baseline.log
-#SBATCH --partition=quad
+#SBATCH --job-name=cadinal_test
+#SBATCH --output=cadinal_test.log
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

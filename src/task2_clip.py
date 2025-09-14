@@ -39,7 +39,7 @@ def train_runner(
         "--imagenet-val", imagenet_val_path,
         "--save-frequency", "1",
         "--zeroshot-frequency", "1",
-        "--pretrained", "openai", # FIXME: only use this for continual pretraining
+        #"--pretrained", "openai", # FIXME: only use this for continual pretraining
         "--report-to", "tensorboard",
         "--batch-size", str(batch_size),
         "--warmup", str(warmup),
@@ -70,13 +70,10 @@ def main():
     # 1024 for ViT-B-32
     batch_size = 512
     patch_size = 16
-    #lr = 5e-5 # this learning rate is safe for the boundary predictor for now
-    lr = 5e-6 # FIXME: 5e-6 for continual pretraining
+    lr = 5e-5 # this learning rate is safe for the boundary predictor for now
 
     wd = 0.1
-    #epochs = 15       # 15 epochs
-    epochs = 5 # FIXME: 5 epochs for continual pretraining
-    
+    epochs = 15       # 15 epochs    
     
     workers = 8       # CPU utilization
     model = f"ViT-B-{patch_size}"
