@@ -115,7 +115,7 @@ def load_dtpx_from_clip_checkpoint(model: nn.Module, ckpt_path: str) -> DTPViT:
     }
 
     model.load_state_dict(dtpvit_state_dict, strict=False)
-    return model.to("cuda")
+    return model
 
 
 def load_dtpx_from_clip_checkpoint_float(model: nn.Module, ckpt_path: str) -> DTPViT:
@@ -149,111 +149,112 @@ def visualize_boundaries_enhanced(model: DTPViT, image_tensor: torch.Tensor, sav
     import matplotlib.pyplot as plt
     import numpy as np
     from PIL import Image
+    import os
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    # ---- input ----
-    x_img = image_tensor.unsqueeze(0).to(device)  # [B=1, 3, H, W]
+    # --- normalize input shape to [N,3,H,W] ---
+    if image_tensor.dim() == 3:   # [3,H,W]
+        batch = image_tensor.unsqueeze(0)
+    elif image_tensor.dim() == 4: # [N,3,H,W]
+        batch = image_tensor
+    else:
+        raise ValueError(f"image_tensor must be [3,H,W] or [N,3,H,W], got {tuple(image_tensor.shape)}")
 
-    # ---- patch embed: Conv2d -> [B, D, Hg, Wg] ----
-    feat = model.patch_embed(x_img)
-    B, D, Hg, Wg = feat.shape
-    grid_h, grid_w = Hg, Wg                     # grid size for masks
+    batch = batch.to(device)
+    N = batch.size(0)
 
-    # tokens [B, L, D] with L = Hg*Wg
-    x = feat.flatten(2).transpose(1, 2).contiguous()   # [B, L, D]
+    # --- helper: build hard-overlay image for a single item ---
+    def overlay_hard(img_3chw: torch.Tensor) -> Image.Image:
+        # patch embed
+        feat = model.patch_embed(img_3chw.unsqueeze(0))     # [1, D, Hg, Wg]
+        _, D, Hg, Wg = feat.shape
+        grid_h, grid_w = Hg, Wg
 
-    # optional dropout / pos-drop
-    drop = getattr(model, "dropout", None) or getattr(model, "pos_drop", None)
-    if drop is not None:
-        x = drop(x)
+        # tokens [B=1, L, D]
+        x = feat.flatten(2).transpose(1, 2).contiguous()
 
-    # ---- positional encoding for pre-blocks ----
-    # your DTPViT uses a callable pos_emb(seq) that returns [L, 1, D]
-    # If your seq length is exactly L (no CLS), make 'pos_seq' of length L:
-    L = x.size(1)
-    pos_seq = torch.arange(L-1, -1, -1.0, device=x.device, dtype=x.dtype)  # mirrors your code
-    r = model.pos_emb(pos_seq)   # [L, 1, D]
+        # optional drop
+        drop = getattr(model, "dropout", None) or getattr(model, "pos_drop", None)
+        if drop is not None:
+            x = drop(x)
 
-    # ---- run pre_blocks (they expect seq-first [L, B, D]) ----
-    x = x.transpose(0, 1)  # [L, B, D]
-    for block in model.pre_blocks:
-        x = block(x, r, model.r_w_bias, model.r_r_bias)  # still [L, B, D]
+        # positional encoding (no CLS assumed)
+        L = x.size(1)
+        pos_seq = torch.arange(L - 1, -1, -1.0, device=x.device, dtype=x.dtype)
+        r = model.pos_emb(pos_seq)  # [L,1,D]
 
-    # ---- boundary predictor ----
-    soft_boundaries, hard_boundaries = model.boundary_predictor(x)  # could be [L,B] or [B,L] depending on impl
+        # pre_blocks expect [L,B,D]
+        x = x.transpose(0, 1)  # [L,1,D]
+        for block in getattr(model, "pre_blocks", []):
+            x = block(x, r, model.r_w_bias, model.r_r_bias)  # [L,1,D]
 
-    # normalize to [B, L]
-    if soft_boundaries.dim() == 2 and soft_boundaries.shape[0] == L:   # [L,B]
-        soft_boundaries = soft_boundaries.transpose(0, 1).contiguous() # [B,L]
-        hard_boundaries = hard_boundaries.transpose(0, 1).contiguous() # [B,L]
+        # boundary predictor
+        _, hard_boundaries = model.boundary_predictor(x)  # shapes vary
 
-    # No CLS token in this path → use all L tokens
-    soft_mask = soft_boundaries[0].detach().cpu().view(grid_h, grid_w).numpy()
-    hard_mask = hard_boundaries[0].detach().cpu().view(grid_h, grid_w).numpy()
+        # ensure [B,L]
+        if hard_boundaries.dim() == 2 and hard_boundaries.shape[0] == L:  # [L,B]
+            hard_boundaries = hard_boundaries.transpose(0, 1).contiguous()  # [B,L]
 
-    # ---- recover original image ----
-    orig_img = TF.normalize(image_tensor.clone(),
-                            mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
-                            std=[1/0.229, 1/0.224, 1/0.225])
-    orig_img = TF.to_pil_image(orig_img.cpu().clamp(0, 1)).convert("RGB")
-    orig_np = np.array(orig_img).astype(np.uint8)
+        hard_mask = hard_boundaries[0].detach().float().view(grid_h, grid_w).cpu().numpy()
 
-    image_size = getattr(model, "image_size", orig_np.shape[0])
-    patch_h = image_size // grid_h
-    patch_w = image_size // grid_w
+        # recover original (undo ImageNet norm if applied)
+        orig = TF.normalize(
+            img_3chw.detach().clone().cpu(),
+            mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
+            std=[1/0.229, 1/0.224, 1/0.225]
+        ).clamp(0, 1)
+        orig_img = TF.to_pil_image(orig).convert("RGB")
+        orig_np = np.array(orig_img).astype(np.uint8)
 
-    # ---- overlays ----
-    import cv2
-    cmap = plt.get_cmap("hot")
-    heatmap_soft = cv2.resize(soft_mask, (image_size, image_size))
-    heatmap_colored = (cmap(heatmap_soft)[..., :3] * 255).astype(np.uint8)
-    soft_img = Image.fromarray(heatmap_colored)
+        image_size = getattr(model, "image_size", orig_np.shape[0])
+        # If the model’s image_size differs from current image, resize for clean tiling
+        if orig_np.shape[0] != image_size or orig_np.shape[1] != image_size:
+            orig_img = orig_img.resize((image_size, image_size), Image.BILINEAR)
+            orig_np = np.array(orig_img).astype(np.uint8)
 
-    red_overlay_np = orig_np.copy()
-    for i in range(grid_h):
-        for j in range(grid_w):
-            if hard_mask[i, j] > 0.5:
-                y0, y1 = i*patch_h, (i+1)*patch_h
-                x0, x1 = j*patch_w, (j+1)*patch_w
-                patch = red_overlay_np[y0:y1, x0:x1]
-                red = np.zeros_like(patch); red[..., 0] = 255
-                red_overlay_np[y0:y1, x0:x1] = (0.6*patch + 0.4*red).astype(np.uint8)
-    hard_overlay_img = Image.fromarray(red_overlay_np)
+        patch_h = image_size // grid_h
+        patch_w = image_size // grid_w
 
-    # ---- 1D raster strip ----
-    patch_list = []
-    for i in range(grid_h):
-        for j in range(grid_w):
-            y0, y1 = i*patch_h, (i+1)*patch_h
-            x0, x1 = j*patch_w, (j+1)*patch_w
-            patch = orig_np[y0:y1, x0:x1].copy()
-            if hard_mask[i, j] > 0.5:
-                red = np.zeros_like(patch); red[..., 0] = 255
-                patch = (0.6*patch + 0.4*red).astype(np.uint8)
-            patch_list.append(Image.fromarray(patch))
+        # red overlay where hard_mask = 1
+        red_overlay_np = orig_np.copy()
+        for i in range(grid_h):
+            for j in range(grid_w):
+                if hard_mask[i, j] == 1.:
+                    y0, y1 = i * patch_h, (i + 1) * patch_h
+                    x0, x1 = j * patch_w, (j + 1) * patch_w
+                    patch = red_overlay_np[y0:y1, x0:x1]
+                    red = np.zeros_like(patch); red[..., 0] = 255
+                    red_overlay_np[y0:y1, x0:x1] = (0.6 * patch + 0.4 * red).astype(np.uint8)
 
-    max_patches = len(patch_list)
-    patch_strip = Image.new("RGB", (patch_w * max_patches, patch_h))
-    for idx in range(max_patches):
-        patch_strip.paste(patch_list[idx], (idx * patch_w, 0))
+        return Image.fromarray(red_overlay_np)
 
-    # ---- plot ----
-    fig = plt.figure(figsize=(15, 8))
-    for i, (title, imgPIL) in enumerate([
-        ("Original", orig_img),
-        ("Soft Boundary Heatmap", soft_img),
-        ("Hard Boundaries (Red Overlay)", hard_overlay_img),
-    ]):
-        ax = plt.subplot2grid((2, 3), (0, i))
-        ax.imshow(imgPIL); ax.set_title(title); ax.axis("off")
+    max_show = min(N, 6)
+    overlays = [overlay_hard(batch[i]) for i in range(max_show)]
 
-    ax_raster = plt.subplot2grid((2, 3), (1, 0), colspan=3)
-    ax_raster.imshow(patch_strip)
-    ax_raster.set_title("1D Rasterized Patches (Red = Boundary)")
-    ax_raster.axis("off")
+    # --- plot in 1×6 grid (fill blanks if fewer than 6) ---
+    fig, axes = plt.subplots(1, 6, figsize=(24, 4))
+    axes = axes.flatten()
 
-    import os
+    for k in range(6):
+        ax = axes[k]
+        ax.axis("off")
+        if k < max_show:
+            ax.imshow(overlays[k])
+            if k == 0:
+                ax.set_title("shark")
+            elif k == 1:
+                ax.set_title("dog")
+            elif k == 2:
+                ax.set_title("parachute")
+            elif k == 3:
+                ax.set_title("phone")
+            elif k == 4:
+                ax.set_title("goat")
+            elif k == 5:
+                ax.set_title("cat")
+            
+
     plt.tight_layout()
     if save_path:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
@@ -264,12 +265,34 @@ def visualize_boundaries_enhanced(model: DTPViT, image_tensor: torch.Tensor, sav
     plt.close(fig)
 
 
+def run_visualization(model, tests, preprocess, batch_size=8, out_dir="unit_visualization"):
+    os.makedirs(out_dir, exist_ok=True)
+
+    batch_tensors, batch_indices = [], []
+    for test_index in tqdm(tests, desc="Visualizing Boundaries"):
+        # load and preprocess
+        img_path = f"unit_inference_images/vis_test_{test_index}.JPEG"
+        img = Image.open(img_path).convert("RGB")
+        input_tensor = preprocess(img)  # [3,H,W]
+
+        batch_tensors.append(input_tensor)
+        batch_indices.append(test_index)
+
+        # when batch is full → visualize and save
+        if len(batch_tensors) == batch_size:
+            save_path = os.path.join(out_dir,
+                f"boundary_visualization_{batch_indices[0]}-{batch_indices[-1]}.png")
+            visualize_boundaries_enhanced(model, torch.stack(batch_tensors), save_path=save_path)
+            batch_tensors, batch_indices = [], []
+
+
+
+
 if __name__ == "__main__":
 
     compression_rate = 0.25
     patch_size = 16
-    checkpoint_type = "imagenet" # imagenet or CLIP
-    tests = ["0", "1", "2", "3", "4", "5", "6", "7"]
+    checkpoint_type = "CLIP" # imagenet or CLIP
 
     set_seed(42)
     preprocess = transforms.Compose([
@@ -298,7 +321,7 @@ if __name__ == "__main__":
         flop_measure=False
     )
 
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ImageNet_DRIP_78/model_299.pth"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_4_8/checkpoints/epoch_15.pt"
     if checkpoint_type == "imagenet":
         model = load_backbone_from_imagenet_checkpoint(model, ckpt_path)
 
@@ -306,14 +329,14 @@ if __name__ == "__main__":
         model = load_dtpx_from_clip_checkpoint(model, ckpt_path)    
     model.eval()
 
-    for test_index in tqdm(tests, desc="Visualizing Boundaries"):
+    # your list of test indices
+    tests = ["0", "1", "2", "3", "4", "5"]
 
-        img_path = f"unit_inference_images/vis_test_{test_index}.jpg"
-        img = Image.open(img_path).convert("RGB")
-        input_tensor = preprocess(img)
-
-        visualize_boundaries_enhanced(
-            model, 
-            input_tensor,
-            save_path=f"unit_visualization/boundary_visualization_{test_index}.png"
-        )
+    # run visualization
+    run_visualization(
+        model=model,
+        tests=tests,
+        preprocess=preprocess,
+        batch_size=6,   # 1x6 grid
+        out_dir="unit_visualization"
+    )
