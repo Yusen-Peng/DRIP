@@ -68,56 +68,178 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-def load_dtpx_from_clip_checkpoint(model: nn.Module, ckpt_path: str) -> DTPViT:
+# @torch.no_grad()
+# def load_dtpx_from_clip_checkpoint(model: nn.Module, ckpt_path: str) -> DTPViT:
+#     """
+#     Loads weights into a DTPViT model from a CLIP-style checkpoint.
+
+#     Args:
+#         model (DTPViT): An uninitialized DTPViT model with the correct config.
+#         ckpt_path (str): Path to a checkpoint with 'module.visual.' prefix in keys.
+
+#     Returns:
+#         model (DTPViT): The same model with loaded weights.
+#     """
+#     ckpt = torch.load(ckpt_path, map_location='cpu')
+#     raw_state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
+
+#     print("Keys in checkpoint:")
+#     for k in raw_state_dict.keys():
+#         print(k)
+
+#     dtpvit_state_dict = {
+#         k.replace("module.visual.", ""): v
+#         for k, v in raw_state_dict.items()
+#         if k.startswith("module.visual.")
+#     }
+
+#     #model.load_state_dict(dtpvit_state_dict, strict=False)
+
+#     # check if model is loaded correctly
+#     missing_keys, unexpected_keys = model.load_state_dict(dtpvit_state_dict, strict=False)
+#     print(f"[CLIP→DTPViT] missing={len(missing_keys)}  unexpected={len(unexpected_keys)}")
+#     if missing_keys:    print("  missing (first 15):", missing_keys[:15])
+
+#     return model
+
+
+import torch
+import torch.nn as nn
+from collections import OrderedDict
+from typing import Dict, Tuple, List
+
+@torch.no_grad()
+def load_dtpx_from_clip_checkpoint(
+    model: nn.Module,
+    ckpt_path: str,
+    map_location: str = "cpu",
+    strict_head: bool = True,   # set False if num_classes differs or you want to re-init the head
+    verbose: bool = True,
+) -> Dict[str, object]:
     """
-    Loads weights into a DTPViT model from a CLIP-style checkpoint.
+    Load ONLY the vision encoder (visual.*) from a CLIP-style checkpoint into DTPViT.
 
-    Args:
-        model (DTPViT): An uninitialized DTPViT model with the correct config.
-        ckpt_path (str): Path to a checkpoint with 'module.visual.' prefix in keys.
+    - Accepts checkpoints with top-level keys like:
+        visual.r_w_bias, visual.r_r_bias, visual.null_token, visual.patch_embed.{weight,bias},
+        visual.pos_emb.inv_freq, visual.pre_blocks.{i}.*, visual.short_blocks.{j}.*,
+        visual.boundary_predictor.boundary_predictor.{0,2}.{weight,bias},
+        visual.down_ln.{weight,bias}, visual.head.{weight,bias}
+      (and ignores text/global keys like positional_embedding, text_projection, logit_scale, transformer.*)
 
-    Returns:
-        model (DTPViT): The same model with loaded weights.
+    - Safe partial load: skips shape-mismatched tensors, logs what happened.
+    - Minimal remapping hook for historical names (extend in `remap_key` if needed).
     """
-    ckpt = torch.load(ckpt_path, map_location='cpu')
-    raw_state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
+    # -------------------------------
+    # 0) Load raw state dict
+    # -------------------------------
+    raw = torch.load(ckpt_path, map_location=map_location)
+    sd = raw.get("state_dict", raw) if isinstance(raw, dict) else raw
+    if not isinstance(sd, dict):
+        raise ValueError("Unsupported checkpoint format: expected a state_dict-like dict.")
 
-    dtpvit_state_dict = {
-        k.replace("module.visual.", ""): v
-        for k, v in raw_state_dict.items()
-        if k.startswith("module.visual.")
+    # -------------------------------
+    # 1) Keep only visual.* keys, strip prefix
+    # -------------------------------
+    def strip_visual_prefix(k: str):
+        if k.startswith("module.visual."):
+            return k[len("module.visual."):]
+        if k.startswith("visual."):
+            return k[len("visual."):]
+        return None
+
+    # -------------------------------
+    # 2) (Optional) remap legacy names
+    # -------------------------------
+    def remap_key(k: str) -> str:
+        # Example legacy: "patch_embed.proj.weight" -> "patch_embed.weight"
+        if k.startswith("patch_embed.proj."):
+            k = k.replace("patch_embed.proj.", "patch_embed.")
+        # If you ever renamed boundary predictor internals, add rules here.
+        return k
+
+    visual_only = OrderedDict()
+    for k, v in sd.items():
+        inner = strip_visual_prefix(k)
+        if inner is None:
+            continue
+        inner = remap_key(inner)
+        if not strict_head and inner.startswith("head."):
+            continue  # skip classifier head if requested
+        visual_only[inner] = v
+
+    # -------------------------------
+    # 3) Quick depth sanity check (optional but helpful)
+    # -------------------------------
+    def _indices_present(prefix: str) -> List[int]:
+        out = []
+        pref = f"{prefix}."
+        for k in visual_only.keys():
+            if k.startswith(pref):
+                # e.g., "pre_blocks.3.dec_attn.qkv_net.weight" -> 3
+                try:
+                    idx = int(k.split(".")[1])
+                    out.append(idx)
+                except Exception:
+                    pass
+        return sorted(set(out))
+
+    pre_idx  = _indices_present("pre_blocks")
+    short_idx = _indices_present("short_blocks")
+
+    # Your model has depth=(4,8,0): pre 0..3, short 0..7
+    expected_pre = set(range(len(getattr(model, "pre_blocks", []))))
+    expected_short = set(range(len(getattr(model, "short_blocks", []))))
+
+    if verbose:
+        print(f"[drip] pre_blocks in ckpt: {pre_idx}  (expected {sorted(expected_pre)})")
+        print(f"[drip] short_blocks in ckpt: {short_idx}  (expected {sorted(expected_short)})")
+
+    # -------------------------------
+    # 4) Shape-safe partial load
+    # -------------------------------
+    model_sd = model.state_dict()
+    loadable = OrderedDict()
+    skipped_shape: List[Tuple[str, Tuple[int, ...], Tuple[int, ...]]] = []
+    unexpected_in_ckpt: List[str] = []
+
+    for k, v in visual_only.items():
+        if k not in model_sd:
+            unexpected_in_ckpt.append(k)  # exists in ckpt but no matching param/buffer in model
+            continue
+        if model_sd[k].shape != v.shape:
+            skipped_shape.append((k, tuple(v.shape), tuple(model_sd[k].shape)))
+            continue
+        loadable[k] = v
+
+    msg = model.load_state_dict(loadable, strict=False)
+
+    info = {
+        "loaded": sorted(loadable.keys()),
+        "skipped_shape_mismatch": skipped_shape,                 # list of (key, ckpt_shape, model_shape)
+        "unexpected_in_checkpoint": sorted(unexpected_in_ckpt),  # extra ckpt tensors not used
+        "missing_keys_reported": sorted(msg.missing_keys),       # model tensors not found in ckpt
+        "unexpected_keys_reported": sorted(msg.unexpected_keys), # should be empty
+        "pre_blocks_indices_ckpt": pre_idx,
+        "short_blocks_indices_ckpt": short_idx,
     }
 
-    model.load_state_dict(dtpvit_state_dict, strict=False)
-    return model.to("cuda")
+    if verbose:
+        print(f"[drip] Loaded {len(loadable)} tensors into DTPViT.")
+        if skipped_shape:
+            print(f"[drip] Skipped {len(skipped_shape)} (shape mismatch). First few:")
+            for k, s_ckpt, s_model in skipped_shape[:8]:
+                print(f"  - {k}: ckpt{s_ckpt} vs model{s_model}")
+        if unexpected_in_ckpt:
+            print(f"[drip] {len(unexpected_in_ckpt)} visual keys in ckpt not present in model (config/depth mismatch likely).")
+        if msg.missing_keys:
+            print(f"[drip] {len(msg.missing_keys)} model keys missing in ckpt (newer modules or different config).")
+
+    return model, info
+    
+    
 
 
-
-
-def load_dtpx_from_clip_checkpoint(model: nn.Module, ckpt_path: str) -> DTPViT:
-    """
-    Loads weights into a DTPViT model from a CLIP-style checkpoint.
-
-    Args:
-        model (DTPViT): An uninitialized DTPViT model with the correct config.
-        ckpt_path (str): Path to a checkpoint with 'module.visual.' prefix in keys.
-
-    Returns:
-        model (DTPViT): The same model with loaded weights.
-    """
-    ckpt = torch.load(ckpt_path, map_location='cpu')
-    raw_state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
-
-    dtpvit_state_dict = {
-        k.replace("module.visual.", ""): v
-        for k, v in raw_state_dict.items()
-        if k.startswith("module.visual.")
-    }
-
-    model.load_state_dict(dtpvit_state_dict, strict=False)
-    return model
-
-
+@torch.no_grad()
 def load_dtpx_from_clip_checkpoint_float(model: nn.Module, ckpt_path: str) -> DTPViT:
     """
     Loads weights into a DTPViT model from a CLIP-style checkpoint.
@@ -278,19 +400,19 @@ def run_visualization(model, tests, preprocess, batch_size=8, out_dir="unit_visu
         batch_tensors.append(input_tensor)
         batch_indices.append(test_index)
 
-        # when batch is full → visualize and save
-        if len(batch_tensors) == batch_size:
-            save_path = os.path.join(out_dir,
-                f"boundary_visualization_{batch_indices[0]}-{batch_indices[-1]}.png")
-            visualize_boundaries_enhanced(model, torch.stack(batch_tensors), save_path=save_path)
-            batch_tensors, batch_indices = [], []
+    # when batch is full → visualize and save
+    if len(batch_tensors) == batch_size:
+        save_path = os.path.join(out_dir,
+            f"boundary_visualization_{batch_indices[0]}-{batch_indices[-1]}.png")
+        visualize_boundaries_enhanced(model, torch.stack(batch_tensors), save_path=save_path)
+        batch_tensors, batch_indices = [], []
 
 
 
 
 if __name__ == "__main__":
 
-    compression_rate = 0.25
+    compression_rate = 0.1
     patch_size = 16
     checkpoint_type = "CLIP" # imagenet or CLIP
 
@@ -322,11 +444,12 @@ if __name__ == "__main__":
     )
 
     ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_4_8/checkpoints/epoch_15.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ImageNet_DRIP_78/model_299.pth"
     if checkpoint_type == "imagenet":
         model = load_backbone_from_imagenet_checkpoint(model, ckpt_path)
 
     elif checkpoint_type == "CLIP":
-        model = load_dtpx_from_clip_checkpoint(model, ckpt_path)    
+        model, info = load_dtpx_from_clip_checkpoint(model, ckpt_path)    
     model.eval()
 
     # your list of test indices

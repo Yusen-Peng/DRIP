@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=SEP_1_DRIP_ViTbased_10x_5_7
-#SBATCH --output=SEP_1_DRIP_ViTbased_10x_5_7.txt
+#SBATCH --job-name=SEP_19_DynamicViT
+#SBATCH --output=SEP_19_DynamicViT.txt
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

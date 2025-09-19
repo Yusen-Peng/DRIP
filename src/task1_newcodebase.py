@@ -1116,20 +1116,19 @@ def main(args):
     )
 
     print("Creating model")
+    MODE = "DynamicViT" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
 
-    ##### TODO: integrate DRIP too #####
-    use_DRIP = True
-    print(f"are we using DRIP? {use_DRIP}", flush=True)
-    if use_DRIP:
+    print(f"are we using DRIP? {MODE == "DRIP"}", flush=True)
+    if MODE == "DRIP":
         RESOLUTION = 224
         patch_size = 16
-        compression_rate = 0.1 # 0.25 for 4x, 0.1 for 10x
+        compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
         empty_backbone = DTPViT(
                 image_size=RESOLUTION,
                 patch_size=patch_size,
                 embed_dim=768,
                 num_heads=12,
-                depth=(5, 7, 0),
+                depth=(4, 8, 0),
                 mlp_ratio=4.0,
                 drop_rate=0.0,
                 attn_drop_rate=0.1,
@@ -1143,8 +1142,75 @@ def main(args):
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
 
-    else:
+
+    elif MODE == "Swin":
+        from swin import SwinTransformer
+        print("Calculating GFLOPs for Swin Transformer...")
+        empty_backbone = SwinTransformer(
+            img_size=RESOLUTION, 
+            patch_size=patch_size, 
+            embed_dim=480, # this is TUNED for fair performance/GFLOP comparison
+            depths=[2, 10],
+            num_heads=[12, 12],
+            window_size=7, mlp_ratio=4.0, qkv_bias=True,
+            drop_rate=0.0, attn_drop_rate=0.1, drop_path_rate=0.1,
+            norm_layer=torch.nn.LayerNorm, ape=False, patch_norm=True,
+            use_checkpoint=False, fused_window_process=False,
+        )
+        backbone = empty_backbone
+        model = VisionClassifier(backbone, num_classes).to(device)
         
+    elif MODE == "DynamicViT":
+        from dynamicViT import VisionTransformerDiffPruning
+        print("Calculating GFLOPs for DynamicViT...")
+        empty_backbone = VisionTransformerDiffPruning(
+            img_size=RESOLUTION,
+            patch_size=patch_size,
+            in_chans=3,
+            num_classes=1000,
+            embed_dim=768,
+            depth=12, # total 12 layers - keep everything consistent
+            num_heads=768 // 64,
+            mlp_ratio=4.0,
+            qkv_bias=True,
+            drop_rate=0.0,
+            attn_drop_rate=0.1,
+            drop_path_rate=0.1,
+            norm_layer=torch.nn.LayerNorm,
+            pruning_loc=[2],
+            token_ratio=[0.25], # keep 25% patches at the only pruning location
+            distill=False,
+            training=False, # for GFLOPs calculation we set it to False to avoid randomness
+        )
+        backbone = empty_backbone
+        model = VisionClassifier(backbone, num_classes).to(device)
+
+    elif MODE == "EViT":
+        from EViT import EViT
+        print("Calculating GFLOPs for EViT...")
+        r = 0.25  # keep 25% of patch tokens at block 2 only
+        keep_rate = [1.0] * 12
+        keep_rate[1] = r
+        empty_backbone = EViT(
+            img_size=RESOLUTION,
+            patch_size=patch_size,
+            in_chans=3,
+            num_classes=1000,
+            embed_dim=768,
+            depth=12,  # total 12 layers - keep everything consistent
+            num_heads=768 // 64,
+            mlp_ratio=4.0,
+            qkv_bias=False,
+            drop_rate=0.0,
+            attn_drop_rate=0.1,
+            drop_path_rate=0.1,
+            norm_layer=torch.nn.LayerNorm,
+            keep_rate=keep_rate
+        )
+        backbone = empty_backbone
+        model = VisionClassifier(backbone, num_classes).to(device)
+    
+    else:
         use_XL_backbone = True
         print(f"are we using XL backbone? {use_XL_backbone}", flush=True)
         if use_XL_backbone:
@@ -1246,7 +1312,7 @@ def main(args):
 
     model_without_ddp = model
     if args.distributed:
-        if not use_DRIP and not use_XL_backbone:
+        if MODE == "ViT" and not use_XL_backbone:
             model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
         else:
             # we need to tolerate conditional execution for DRIP
