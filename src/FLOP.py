@@ -45,21 +45,18 @@ def calc_flops(model, img_size=224, show_details=False, ratios=None):
 @torch.no_grad()
 def throughput(images, model):
     model.eval()
-
-    images = images.cuda(non_blocking=True)
+    images = images
     batch_size = images.shape[0]
-    for i in range(50):
-        model(images)
-    torch.cuda.synchronize()
+    for _ in range(50):
+        model(images) # warm-up
     print(f"throughput averaged with 30 times")
     tic1 = time.time()
-    for i in range(30):
+    for _ in range(30):
         model(images)
-    torch.cuda.synchronize()
     tic2 = time.time()
-    print(f"batch_size {batch_size} throughput {30 * batch_size / (tic2 - tic1)}")
-    MB = 1024.0 * 1024.0
-    print('memory:', torch.cuda.max_memory_allocated() / MB)
+    print(f"batch_size {batch_size} throughput {30 * batch_size / (tic2 - tic1)} images/sec")
+    # MB = 1024.0 * 1024.0
+    # print('memory:', torch.cuda.max_memory_allocated() / MB)
 
 
 def main():
@@ -198,7 +195,7 @@ def main():
         print("Calculating GFLOPs for EViT...")
         r = 0.25  # keep 25% of patch tokens at block 2 only
         keep_rate = [1.0] * 12
-        keep_rate[1] = r
+        keep_rate[2] = r
         model = EViT(
             img_size=img_size,
             patch_size=patch_size,
@@ -225,6 +222,12 @@ def main():
     print('GFLOPs for {}: {}'.format(MODE, round(flops, 2)))
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6
     print(f'number of parameters: {round(n_parameters, 2)} M')
+
+    # throughput test
+    batch_size = 512 # for consistency
+    x = torch.randn(batch_size, 3, img_size, img_size).to(device)
+    throughput(x, model)
+
 
 
 if __name__ == "__main__":

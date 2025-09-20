@@ -25,9 +25,8 @@ def parse_one_accuracy(file_path, newcodebase: bool) -> List[float]:
                 else:
                     val_acc_values.append(float(match.group(1)))
     
-    if len(val_acc_values) < 100:
-        print(f"Warning: incomplete parsing in {file_path}. Found only {len(val_acc_values)} values.")
-
+    # sanity check: exactly 300 epochs
+    assert len(val_acc_values) == 300, f"{file_path} Expected 300 epochs, got {len(val_acc_values)}"
     return val_acc_values
 
 def parse_all_accuracies(model2path: Dict) -> Dict:
@@ -40,27 +39,34 @@ def parse_all_accuracies(model2path: Dict) -> Dict:
 def plot_acc_vis(model2acc: Dict, patch_size: int) -> None:
     """Plots the accuracy visualization for the given model accuracies."""
     for model, accs in model2acc.items():
-        plt.plot(accs, label=model)
+        plt.plot(accs, label=model, linewidth=1)
     plt.xlabel("Epoch")
     plt.ylabel("Top-1 Accuracy")
-    plt.title(f"patch_size={patch_size}, batch size = 512, 1x4 GPUs, LR = 3e-4")
+    plt.title("ImageNet Top-1 Test Accuracy Over Epochs")
     
     # Place legend outside below plot
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=2)
     
     plt.tight_layout()
-    plt.savefig(f"ALL_ImageNet_acc_vis_{patch_size}.png", bbox_inches="tight")
+    plt.savefig(f"FINAL_ImageNet_acc_vis.png", bbox_inches="tight")
     plt.close()
 
 
 def main():
     PATCH_SIZE = 16
     model2path = {
-        'DRIP-2X-16*, 4+8': 'AUG_23_DRIP_4x_4_8_0.0003.txt',
-        'DRIP-4X-16*, 4+8': 'AUG_29_DRIP_XLbased_4x_4_8.txt',
-        'DRIP-4X-16, 4+8': 'AUG_29_DRIP_ViTbased_4x_4_8.txt',
-        'DRIP-10X-16, 4+8': 'AUG_29_DRIP_ViTbased_10x_4_8.txt',
-        'Transformer-XL-16': 'AUG_29_DRIP_XL_baseline.txt'
+        #'ViT-B-16': 'AUG_27_Vit_0.0003_imagenet.txt', # baseline
+        'DRIP-4X-16, 5+7': 'SEP_1_DRIP_ViTbased_4x_5_7.txt', # check
+        'DRIP-4X-16, 4+8': 'AUG_29_DRIP_ViTbased_4x_4_8.txt', # check
+        'DRIP-4X-16, 2+10': 'AUG_29_DRIP_ViTbased_4x_2_10.txt', # check
+        'DRIP-10X-16, 4+8': 'AUG_29_DRIP_ViTbased_10x_4_8.txt', # check
+        'DRIP-10X-16, 5+7': 'SEP_1_DRIP_ViTbased_10x_5_7.txt', # check
+        'Transformer-XL-16': 'AUG_29_DRIP_XL_baseline.txt', # XL baseline
+        'DRIP-2X-16*, 4+8': 'AUG_23_DRIP_4x_4_8_0.0003.txt', # check, start here
+        'DRIP-4X-16*, 4+8': 'AUG_29_DRIP_XLbased_4x_4_8.txt', # check
+        'DRIP-4X-16*, 2+10': 'SEP_1_DRIP_XLbased_4x_2_10.txt', # check
+        'DRIP-10X-16*, 4+8': 'AUG_29_DRIP_ViTbased_10x_4_8.txt', # check
+        'DRIP-10X-16*, 5+7': 'SEP_1_DRIP_XLbased_10x_5_7.txt' # check
     }
 
     model2acc = parse_all_accuracies(model2path)
