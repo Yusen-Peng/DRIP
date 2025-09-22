@@ -673,6 +673,130 @@ def visualize_boundaries_clean_noisy(
         plt.close(fig)
 
 
+
+@torch.no_grad()
+def visualize_boundaries_hard_soft_2x2(
+    model: DTPViT,
+    image_tensor_1: torch.Tensor,  # [3,H,W]
+    image_tensor_2: torch.Tensor,  # [3,H,W]
+    save_path: str | None = None,
+):
+
+    import cv2
+    _use_cv2 = True
+    
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    # -------- helpers --------
+    def denorm_to_pil(img_3chw: torch.Tensor) -> tuple[Image.Image, np.ndarray]:
+        """Un-normalize ImageNet and return (PIL, np.uint8 array)."""
+        orig = TF.normalize(
+            img_3chw.clone(),
+            mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
+            std=[1/0.229, 1/0.224, 1/0.225],
+        ).clamp(0, 1).cpu()
+        pil = TF.to_pil_image(orig).convert("RGB")
+        return pil, np.array(pil).astype(np.uint8)
+
+    def _one_image_overlays(img_3chw: torch.Tensor):
+        """
+        Run the DTPViT path for a single image and build:
+          - hard_overlay_img (PIL): red patches where boundary=1
+          - soft_img (PIL): heatmap
+        """
+        # ---- input ----
+        x_img = img_3chw.unsqueeze(0).to(device)  # [1,3,H,W]
+
+        # ---- patch embed -> [B, D, Hg, Wg] ----
+        feat = model.patch_embed(x_img)
+        B, D, Hg, Wg = feat.shape
+        L = Hg * Wg
+
+        # tokens [B, L, D]
+        x = feat.flatten(2).transpose(1, 2).contiguous()
+
+        # optional dropout / pos-drop
+        drop = getattr(model, "dropout", None) or getattr(model, "pos_drop", None)
+        if drop is not None:
+            x = drop(x)
+
+        # ---- positional encoding for pre_blocks ----
+        # your pos_emb(seq) expects seq-first length L (no CLS)
+        pos_seq = torch.arange(L-1, -1, -1.0, device=x.device, dtype=x.dtype)
+        r = model.pos_emb(pos_seq)  # [L,1,D]
+
+        # ---- run pre_blocks (seq-first) ----
+        x = x.transpose(0, 1)  # [L, B, D]
+        for block in model.pre_blocks:
+            x = block(x, r, model.r_w_bias, model.r_r_bias)  # [L,B,D]
+
+        # ---- boundary predictor ----
+        soft_boundaries, hard_boundaries = model.boundary_predictor(x)  # likely [L,B] or [B,L]
+
+        # normalize shapes to [B,L]
+        if soft_boundaries.dim() == 2 and soft_boundaries.shape[0] == L:
+            soft_boundaries = soft_boundaries.transpose(0, 1).contiguous()
+            hard_boundaries = hard_boundaries.transpose(0, 1).contiguous()
+
+        soft_mask = soft_boundaries[0].detach().float().cpu().view(Hg, Wg).numpy()
+        hard_mask = hard_boundaries[0].detach().float().cpu().view(Hg, Wg).numpy()
+
+        # ---- original image + dims ----
+        orig_pil, orig_np = denorm_to_pil(img_3chw)
+        img_size_attr = getattr(model, "img_size", None) or getattr(model, "image_size", None)
+        image_size = int(img_size_attr) if img_size_attr is not None else orig_np.shape[0]
+
+        patch_h = max(1, image_size // Hg)
+        patch_w = max(1, image_size // Wg)
+
+        # ---- soft heatmap (PIL) ----
+        cmap = plt.get_cmap("hot")
+        if _use_cv2:
+            heat = cv2.resize(soft_mask, (image_size, image_size), interpolation=cv2.INTER_CUBIC)
+        else:
+            heat = np.array(Image.fromarray(soft_mask).resize((image_size, image_size), Image.BICUBIC))
+        heat_colored = (cmap(heat)[..., :3] * 255).astype(np.uint8)
+        soft_img = Image.fromarray(heat_colored)
+
+        # ---- hard red overlay (PIL) ----
+        # ensure base is exactly image_size x image_size for clean patches
+        base_np = np.array(orig_pil.resize((image_size, image_size), Image.BICUBIC))
+        red_overlay_np = base_np.copy()
+        for i in range(Hg):
+            for j in range(Wg):
+                if hard_mask[i, j] > 0.5:
+                    y0, y1 = i * patch_h, min((i + 1) * patch_h, image_size)
+                    x0, x1 = j * patch_w, min((j + 1) * patch_w, image_size)
+                    patch = red_overlay_np[y0:y1, x0:x1]
+                    red = np.zeros_like(patch); red[..., 0] = 255
+                    red_overlay_np[y0:y1, x0:x1] = (0.6 * patch + 0.4 * red).astype(np.uint8)
+        hard_overlay_img = Image.fromarray(red_overlay_np)
+
+        return hard_overlay_img, soft_img
+
+    # -------- run both images --------
+    hard1, soft1 = _one_image_overlays(image_tensor_1)
+    hard2, soft2 = _one_image_overlays(image_tensor_2)
+
+    # -------- plot 2x2 --------
+    fig, axes = plt.subplots(2, 2, figsize=(12, 12))
+    axes[0, 0].imshow(hard1); axes[0, 0].set_title("Hard 1"); axes[0, 0].axis("off")
+    axes[0, 1].imshow(soft1); axes[0, 1].set_title("Soft 1"); axes[0, 1].axis("off")
+    axes[1, 0].imshow(hard2); axes[1, 0].set_title("Hard 2"); axes[1, 0].axis("off")
+    axes[1, 1].imshow(soft2); axes[1, 1].set_title("Soft 2"); axes[1, 1].axis("off")
+
+    plt.tight_layout()
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, bbox_inches="tight")
+        print(f"Saved to {save_path}")
+    else:
+        plt.show()
+    plt.close(fig)
+
+
+
 if __name__ == "__main__":
 
     compression_rate = 0.25
@@ -734,9 +858,22 @@ if __name__ == "__main__":
     #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
     #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/boundary_visualization_2x2.png"
     # )
-    visualize_boundaries_clean_noisy(
-        model, 
-        preprocess=preprocess,
-        root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy", 
-        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy/boundary_visualization_2x2.png"
+    # visualize_boundaries_clean_noisy(
+    #     model, 
+    #     preprocess=preprocess,
+    #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy", 
+    #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy/boundary_visualization_2x2.png"
+    # )
+
+    img1 = preprocess(Image.open("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_1.JPEG").convert("RGB"))  # [3,H,W]
+    img2 = preprocess(Image.open("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_2.JPEG").convert("RGB"))  # [3,H,W]
+
+    visualize_boundaries_hard_soft_2x2(
+        model,
+        image_tensor_1=img1,
+        image_tensor_2=img2,
+        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/boundary_visualization_2x2.png"
     )
+
+
+
