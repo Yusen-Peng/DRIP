@@ -540,6 +540,138 @@ def visualize_boundaries_single_multi(
         plt.show()
         plt.close(fig)
 
+@torch.no_grad()
+def visualize_boundaries_clean_noisy(
+    model: DTPViT, 
+    preprocess,
+    root_dir: str = ".", 
+    save_path: str = None):
+    """
+    Reads four images:
+        root_dir/single_1.JPEG
+        root_dir/multi_1.JPEG
+        root_dir/single_2.JPEG
+        root_dir/multi_2.JPEG
+    and produces a 2x2 boundary visualization figure:
+
+      [ single_1 | multi_1 ]
+      [ Single_2 | multi_2 ]
+
+    If save_path is provided, saves the figure there; otherwise shows it.
+    """
+    import os
+    import torch
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from PIL import Image
+    import torchvision.transforms.functional as TF
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = model.to(device).eval()
+
+    # ---------- helper: load & preprocess (ImageNet norm) ----------
+    def load_img_norm(path: str, preprocess) -> torch.Tensor:
+        img = Image.open(path).convert("RGB")
+        tensor = preprocess(img)  # [3,H,W]
+        return tensor
+
+    # ---------- helper: single-image overlay (same logic as yours) ----------
+    def overlay_hard(img_3chw_norm: torch.Tensor) -> Image.Image:
+        # patch embed
+        feat = model.patch_embed(img_3chw_norm.unsqueeze(0).to(device))  # [1, D, Hg, Wg]
+        _, D, Hg, Wg = feat.shape
+        grid_h, grid_w = Hg, Wg
+
+        # tokens [B=1, L, D]
+        x = feat.flatten(2).transpose(1, 2).contiguous()  # [1, L, D]
+
+        # optional drop
+        drop = getattr(model, "dropout", None) or getattr(model, "pos_drop", None)
+        if drop is not None:
+            x = drop(x)
+
+        # positional enc (no CLS)
+        L = x.size(1)
+        pos_seq = torch.arange(L - 1, -1, -1.0, device=x.device, dtype=x.dtype)
+        r = model.pos_emb(pos_seq)  # [L,1,D]
+
+        # pre_blocks expect [L,B,D]
+        x = x.transpose(0, 1)  # [L,1,D]
+        for block in getattr(model, "pre_blocks", []):
+            x = block(x, r, model.r_w_bias, model.r_r_bias)  # [L,1,D]
+
+        # boundary predictor
+        _, hard_boundaries = model.boundary_predictor(x)  # shapes vary
+
+        # ensure [B,L]
+        if hard_boundaries.dim() == 2 and hard_boundaries.shape[0] == L:  # [L,B]
+            hard_boundaries = hard_boundaries.transpose(0, 1).contiguous()  # [B,L]
+
+        hard_mask = hard_boundaries[0].detach().float().view(grid_h, grid_w).cpu().numpy()
+
+        # reconstruct display image (undo ImageNet norm)
+        disp = TF.normalize(
+            img_3chw_norm.detach().clone().cpu(),
+            mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
+            std=[1/0.229, 1/0.224, 1/0.225]
+        ).clamp(0, 1)
+        orig_img = TF.to_pil_image(disp).convert("RGB")
+        orig_np = np.array(orig_img).astype(np.uint8)
+
+        image_size = getattr(model, "image_size", orig_np.shape[0])
+        if orig_np.shape[0] != image_size or orig_np.shape[1] != image_size:
+            orig_img = orig_img.resize((image_size, image_size), Image.BILINEAR)
+            orig_np = np.array(orig_img).astype(np.uint8)
+
+        patch_h = image_size // grid_h
+        patch_w = image_size // grid_w
+
+        red_overlay_np = orig_np.copy()
+        for i in range(grid_h):
+            for j in range(grid_w):
+                if hard_mask[i, j] == 1.0:
+                    y0, y1 = i * patch_h, (i + 1) * patch_h
+                    x0, x1 = j * patch_w, (j + 1) * patch_w
+                    patch = red_overlay_np[y0:y1, x0:x1]
+                    red = np.zeros_like(patch); red[..., 0] = 255
+                    red_overlay_np[y0:y1, x0:x1] = (0.6 * patch + 0.4 * red).astype(np.uint8)
+
+        return Image.fromarray(red_overlay_np)
+
+    # ---------- read the four files ----------
+    names = ["clean_1", "noisy_1", "clean_2", "noisy_2"]
+    paths = [os.path.join(root_dir, f"{n}.JPEG") for n in names]
+
+    tensors = []
+    for p in paths:
+        if not os.path.exists(p):
+            raise FileNotFoundError(f"Image not found: {p}")
+        tensors.append(load_img_norm(p, preprocess))
+
+    # ---------- build overlays ----------
+    overlays = [overlay_hard(t) for t in tensors]
+
+    # ---------- plot 2x2 ----------
+    fig, axes = plt.subplots(2, 2, figsize=(12, 12))
+    axes = axes.flatten()
+
+    plot_titles = ["clean_1", "noisy_1", "clean_2", "noisy_2"]
+
+    for ax, ov, title in zip(axes, overlays, plot_titles):
+        ax.imshow(ov)
+        ax.set_title(title)
+        ax.axis("off")
+
+    plt.tight_layout()
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, bbox_inches="tight")
+        print(f"Saved to {save_path}")
+        plt.close(fig)
+    else:
+        plt.show()
+        plt.close(fig)
+
 
 if __name__ == "__main__":
 
@@ -596,9 +728,15 @@ if __name__ == "__main__":
     # )
 
     # run 2x2 visualization (for the supplementary material)
-    visualize_boundaries_single_multi(
+    # visualize_boundaries_single_multi(
+    #     model, 
+    #     preprocess=preprocess,
+    #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
+    #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/boundary_visualization_2x2.png"
+    # )
+    visualize_boundaries_clean_noisy(
         model, 
         preprocess=preprocess,
-        root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
-        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/boundary_visualization_2x2.png"
+        root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy", 
+        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy/boundary_visualization_2x2.png"
     )
