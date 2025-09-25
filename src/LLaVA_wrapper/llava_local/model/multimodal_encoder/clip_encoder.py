@@ -9,7 +9,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
 sys.path.insert(0, PROJECT_ROOT)
 from src.open_clip_local.DTP_ViT import DTPViT
 from src.open_clip_local.model import VisionTransformer
-from src.boundary_vis import load_dtpx_from_clip_checkpoint, load_vit_from_clip_checkpoint
+from src.boundary_vis import load_dtpx_from_clip_checkpoint, load_dtp_from_clip_checkpoint, load_vit_from_clip_checkpoint
 
 class CLIPVisionTower(nn.Module):
     def __init__(self, vision_tower, args, delay_load=False):
@@ -249,6 +249,7 @@ class DRIPVisionTower(nn.Module):
     provide a forward method that returns image features.
     """
     def __init__(self, 
+            backbone: str,
             checkpoint_path: str,
             vision_tower: str,
             args, 
@@ -273,7 +274,7 @@ class DRIPVisionTower(nn.Module):
             finetuning_mode: bool = False
             ):
         super().__init__()
-
+        self.backbone = backbone
         self.vision_tower_name = vision_tower
         self.checkpoint_path = checkpoint_path
         self.image_size = image_size
@@ -324,7 +325,13 @@ class DRIPVisionTower(nn.Module):
             num_classes=self.num_classes,
             flop_measure=self.flop_measure
         ) 
-        self.vision_tower, _ = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+
+        if self.backbone == 'ViT':
+            self.vision_tower, _ = load_dtp_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+        elif self.backbone == 'XL':
+            self.vision_tower, _ = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+        else:
+            raise ValueError(f'Unsupported backbone: {self.backbone}')
 
         # if in finetuning mode, change precision into float16
         if self.finetuning_mode:

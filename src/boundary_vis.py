@@ -71,7 +71,7 @@ def set_seed(seed=42):
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-from typing import Dict, Tuple, List
+from typing import Dict, Optional, Tuple, List
 
 @torch.no_grad()
 def load_dtpx_from_clip_checkpoint(
@@ -198,6 +198,163 @@ def load_dtpx_from_clip_checkpoint(
             print(f"[drip] {len(unexpected_in_ckpt)} visual keys in ckpt not present in model (config/depth mismatch likely).")
         if msg.missing_keys:
             print(f"[drip] {len(msg.missing_keys)} model keys missing in ckpt (newer modules or different config).")
+
+    return model, info
+
+
+@torch.no_grad()
+def load_dtp_from_clip_checkpoint(
+    model: nn.Module,
+    ckpt_path: str,
+    map_location: str = "cpu",
+    strict_head: bool = True,   # if False, exclude head.* from BOTH ckpt and model
+    verbose: bool = True,
+) -> Dict[str, object]:
+    """
+    STRICT loader for your new DTPViT from a CLIP-style checkpoint.
+
+    Consumes only visual.* keys and remaps *conditionally* based on the model's state_dict:
+      - patch_embed.* : keep 'patch_embed.proj.*' if the model has it; otherwise flatten to 'patch_embed.*'
+      - boundary_predictor.* : keep nested 'boundary_predictor.boundary_predictor.*' if the model has it;
+                               otherwise collapse one level to 'boundary_predictor.*'
+      - visual.pos_emb -> pos_emb
+      - visual.null_token -> null_token
+      - pre_blocks/short_blocks/down_ln/head : strip the 'visual.' prefix only
+
+    Zero tolerance: missing / unexpected / shape mismatch => RuntimeError.
+    """
+
+    # 0) Read checkpoint
+    raw = torch.load(ckpt_path, map_location=map_location)
+    sd = raw.get("state_dict", raw) if isinstance(raw, dict) else raw
+    if not isinstance(sd, dict):
+        raise ValueError("Unsupported checkpoint format: expected a state_dict-like mapping.")
+
+    # We'll need model keys to choose remap variants
+    model_sd = model.state_dict()
+    model_keys = set(model_sd.keys())
+
+    expects_patch_proj = any(k.startswith("patch_embed.proj.") for k in model_keys)
+    expects_patch_flat = any(k.startswith("patch_embed.weight") or k.startswith("patch_embed.bias") for k in model_keys)
+    expects_bp_nested = any(k.startswith("boundary_predictor.boundary_predictor.") for k in model_keys)
+    expects_bp_flat   = any(k.startswith("boundary_predictor.0.") or k.startswith("boundary_predictor.1.")
+                            or k.startswith("boundary_predictor.2.") for k in model_keys)
+
+    # 1) Keep only visual.* and strip prefix
+    def strip_visual_prefix(k: str) -> Optional[str]:
+        if k.startswith("module.visual."):
+            return k[len("module.visual."):]
+        if k.startswith("visual."):
+            return k[len("visual."):]
+        return None  # drop non-visual (e.g., text tower, globals)
+
+    # 2) Minimal, conditional remap rules for the visual side
+    def remap_visual(inner: str) -> Optional[str]:
+        # ---- patch embed ----
+        if inner.startswith("patch_embed.proj."):
+            # keep 'proj.' form if the model expects it; otherwise flatten
+            return inner if expects_patch_proj else inner.replace("patch_embed.proj.", "patch_embed.", 1)
+        if inner.startswith("patch_embed.") and not inner.startswith("patch_embed.proj."):
+            # if source is flat but model expects proj, expand is impossible; let strict check catch it
+            return inner
+
+        # ---- boundary predictor ----
+        if inner.startswith("boundary_predictor.boundary_predictor."):
+            # keep nested form if model expects it; otherwise collapse one level
+            return (inner if expects_bp_nested else
+                    inner.replace("boundary_predictor.boundary_predictor.", "boundary_predictor.", 1))
+        if inner.startswith("boundary_predictor.") and not inner.startswith("boundary_predictor.boundary_predictor."):
+            # if source is flat but model expects nested, we can't invent a level; let strict check catch it
+            return inner
+
+        # ---- pass-through (already aligned after stripping 'visual.') ----
+        if inner.startswith(("pos_emb", "null_token",
+                             "pre_blocks.", "short_blocks.",
+                             "down_ln.", "head.")):
+            return inner
+
+        # Anything else under visual.* we keep as-is and let strict validation decide.
+        return inner
+
+    mapped: Dict[str, torch.Tensor] = OrderedDict()
+    for k, v in sd.items():
+        inner = strip_visual_prefix(k)
+        if inner is None:
+            continue
+        mk = remap_visual(inner)
+        if mk is None:
+            continue
+        if (not strict_head) and mk.startswith("head."):
+            continue  # drop head from source if strict_head=False
+        mapped[mk] = v
+
+    # 3) Depth sanity: indices must match exactly
+    def _idxs(prefix: str) -> List[int]:
+        out = []
+        pref = prefix + "."
+        for k in mapped.keys():
+            if k.startswith(pref):
+                try:
+                    out.append(int(k.split(".")[1]))
+                except Exception:
+                    pass
+        return sorted(set(out))
+
+    pre_idx  = _idxs("pre_blocks")
+    short_idx = _idxs("short_blocks")
+    exp_pre = list(range(len(getattr(model, "pre_blocks", []))))
+    exp_short = list(range(len(getattr(model, "short_blocks", []))))
+
+    if verbose:
+        print(f"[drip] pre_blocks in ckpt: {pre_idx}  (expected {exp_pre})")
+        print(f"[drip] short_blocks in ckpt: {short_idx}  (expected {exp_short})")
+
+    if pre_idx != exp_pre or short_idx != exp_short:
+        raise RuntimeError(
+            f"[drip] Block index mismatch.\n"
+            f"  ckpt pre_blocks:   {pre_idx} vs expected {exp_pre}\n"
+            f"  ckpt short_blocks: {short_idx} vs expected {exp_short}"
+        )
+
+    # 4) Strict key/shape validation
+    target_keys = set(model_keys)
+    if not strict_head:
+        target_keys = {k for k in target_keys if not k.startswith("head.")}
+
+    src_keys = set(mapped.keys())
+
+    missing = sorted(target_keys - src_keys)
+    unexpected = sorted(src_keys - target_keys)
+
+    shape_mismatch: List[Tuple[str, Tuple[int, ...], Tuple[int, ...]]] = []
+    for k in sorted(src_keys & target_keys):
+        if tuple(model_sd[k].shape) != tuple(mapped[k].shape):
+            shape_mismatch.append((k, tuple(mapped[k].shape), tuple(model_sd[k].shape)))
+
+    if missing or unexpected or shape_mismatch:
+        lines = ["[drip] Checkpoint does not exactly match the model."]
+        if missing:
+            lines.append(f"  - Missing in ckpt ({len(missing)}): {missing[:12]}{' ...' if len(missing)>12 else ''}")
+        if unexpected:
+            lines.append(f"  - Unexpected in ckpt ({len(unexpected)}): {unexpected[:12]}{' ...' if len(unexpected)>12 else ''}")
+        if shape_mismatch:
+            preview = [f"{k}: ckpt{ck} vs model{mk}" for k, ck, mk in shape_mismatch[:12]]
+            lines.append(f"  - Shape mismatches ({len(shape_mismatch)}): " +
+                         "; ".join(preview) + (" ..." if len(shape_mismatch)>12 else ""))
+        raise RuntimeError("\n".join(lines))
+
+    # 5) Load (strictness already enforced)
+    model.load_state_dict({k: mapped[k] for k in sorted(src_keys)}, strict=False)
+
+    if verbose:
+        print(f"[drip] Loaded {len(src_keys)} tensors into DTPViT.")
+
+    info = {
+        "loaded": sorted(src_keys),
+        "pre_blocks_indices_ckpt": pre_idx,
+        "short_blocks_indices_ckpt": short_idx,
+        "strict_head": strict_head,
+    }
 
     return model, info
 
@@ -352,6 +509,7 @@ def load_vit_from_clip_checkpoint(
             print(f"[vit] {len(msg.missing_keys)} model keys missing in ckpt.")
 
     return model, info
+
 
 
 @torch.no_grad()
@@ -920,8 +1078,14 @@ if __name__ == "__main__":
         flop_measure=False
     )
 
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_4_8/checkpoints/epoch_15.pt"
     
+
+
+    ############### TESTING  ####################
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
+    load_dtp_from_clip_checkpoint(model, ckpt_path)
+    ############### TESTING  ####################
+
 
     ############### TESTING  ####################
     # model = VisionTransformer(
@@ -940,49 +1104,49 @@ if __name__ == "__main__":
 
     
     
-        
-    if checkpoint_type == "imagenet":
-        model = load_backbone_from_imagenet_checkpoint(model, ckpt_path)
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_4_8/checkpoints/epoch_15.pt"
+    # if checkpoint_type == "imagenet":
+    #     model = load_backbone_from_imagenet_checkpoint(model, ckpt_path)
 
-    elif checkpoint_type == "CLIP":
-        model, info = load_dtpx_from_clip_checkpoint(model, ckpt_path)    
-    model.eval()
+    # elif checkpoint_type == "CLIP":
+    #     model, info = load_dtpx_from_clip_checkpoint(model, ckpt_path)    
+    # model.eval()
 
-    # your list of test indices
-    tests = ["0", "1", "2", "3", "4", "5"]
+    # # your list of test indices
+    # tests = ["0", "1", "2", "3", "4", "5"]
 
-    # # run visualization (for the main paper)
-    # # run_visualization(
-    # #     model=model,
-    # #     tests=tests,
-    # #     preprocess=preprocess,
-    # #     batch_size=6,   # 1x6 grid
-    # #     out_dir="unit_visualization"
-    # # )
+    # # # run visualization (for the main paper)
+    # # # run_visualization(
+    # # #     model=model,
+    # # #     tests=tests,
+    # # #     preprocess=preprocess,
+    # # #     batch_size=6,   # 1x6 grid
+    # # #     out_dir="unit_visualization"
+    # # # )
 
-    # # run 2x2 visualization (for the supplementary material)
-    # # visualize_boundaries_single_multi(
-    # #     model, 
-    # #     preprocess=preprocess,
-    # #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
-    # #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/boundary_visualization_2x2.png"
-    # # )
-    # # visualize_boundaries_clean_noisy(
-    # #     model, 
-    # #     preprocess=preprocess,
-    # #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy", 
-    # #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy/boundary_visualization_2x2.png"
-    # # )
+    # # # run 2x2 visualization (for the supplementary material)
+    # # # visualize_boundaries_single_multi(
+    # # #     model, 
+    # # #     preprocess=preprocess,
+    # # #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
+    # # #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/boundary_visualization_2x2.png"
+    # # # )
+    # # # visualize_boundaries_clean_noisy(
+    # # #     model, 
+    # # #     preprocess=preprocess,
+    # # #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy", 
+    # # #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy/boundary_visualization_2x2.png"
+    # # # )
 
-    img1 = preprocess(Image.open("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_1.JPEG").convert("RGB"))  # [3,H,W]
-    img2 = preprocess(Image.open("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_2.JPEG").convert("RGB"))  # [3,H,W]
+    # img1 = preprocess(Image.open("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_1.JPEG").convert("RGB"))  # [3,H,W]
+    # img2 = preprocess(Image.open("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_2.JPEG").convert("RGB"))  # [3,H,W]
 
-    visualize_boundaries_hard_soft_2x2(
-        model,
-        image_tensor_1=img1,
-        image_tensor_2=img2,
-        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/boundary_visualization_2x2.png"
-    )
+    # visualize_boundaries_hard_soft_2x2(
+    #     model,
+    #     image_tensor_1=img1,
+    #     image_tensor_2=img2,
+    #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/boundary_visualization_2x2.png"
+    # )
 
 
 

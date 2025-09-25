@@ -159,6 +159,13 @@ class LlavaMetaForCausalLM(ABC):
                 images = [x.unsqueeze(0) if x.ndim == 3 else x for x in images]
             concat_images = torch.cat([image for image in images], dim=0)
             image_features = self.encode_images(concat_images)
+
+            # FIXME: debugging
+            print("Debugging: image features")
+            print("image features shape:", image_features.shape)
+            print(image_features)
+
+
             split_sizes = [image.shape[0] for image in images]
             image_features = torch.split(image_features, split_sizes, dim=0)
             mm_patch_merge_type = getattr(self.config, 'mm_patch_merge_type', 'flat')
