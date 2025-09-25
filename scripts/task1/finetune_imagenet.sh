@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=SEP_19_DynamicViT
-#SBATCH --output=SEP_19_DynamicViT.txt
+#SBATCH --job-name=SEP_19_EViT
+#SBATCH --output=SEP_19_EViT.txt
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=128G
+#SBATCH --mem=256G
 #SBATCH --account=PAS2836
 
 module load miniconda3/24.1.2-py310
@@ -23,7 +23,7 @@ torchrun --nproc_per_node=4 src/task1_newcodebase.py \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --model-ema --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ImageNet_DynamicViT
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ImageNet_EViT
 
 conda deactivate
 # End of script

@@ -6,6 +6,7 @@ from torchvision import datasets
 from torch.utils.data import DataLoader
 from open_clip_local import create_model_and_transforms
 from open_clip_local.model import DTPViT
+from open_clip_local.transformer import VisionTransformer
 from open_clip_local import CLIP
 from torch.cuda.amp import GradScaler
 from torch.cuda.amp import autocast
@@ -59,7 +60,6 @@ def load_backbone_from_imagenet_checkpoint(model, ckpt_path, map_location="cpu")
     if msg.unexpected_keys: print("  unexpected (first 15):", msg.unexpected_keys[:15])
     return model
 
-
 def set_seed(seed=42):
     random.seed(seed)
     np.random.seed(seed)
@@ -67,41 +67,6 @@ def set_seed(seed=42):
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-
-# @torch.no_grad()
-# def load_dtpx_from_clip_checkpoint(model: nn.Module, ckpt_path: str) -> DTPViT:
-#     """
-#     Loads weights into a DTPViT model from a CLIP-style checkpoint.
-
-#     Args:
-#         model (DTPViT): An uninitialized DTPViT model with the correct config.
-#         ckpt_path (str): Path to a checkpoint with 'module.visual.' prefix in keys.
-
-#     Returns:
-#         model (DTPViT): The same model with loaded weights.
-#     """
-#     ckpt = torch.load(ckpt_path, map_location='cpu')
-#     raw_state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
-
-#     print("Keys in checkpoint:")
-#     for k in raw_state_dict.keys():
-#         print(k)
-
-#     dtpvit_state_dict = {
-#         k.replace("module.visual.", ""): v
-#         for k, v in raw_state_dict.items()
-#         if k.startswith("module.visual.")
-#     }
-
-#     #model.load_state_dict(dtpvit_state_dict, strict=False)
-
-#     # check if model is loaded correctly
-#     missing_keys, unexpected_keys = model.load_state_dict(dtpvit_state_dict, strict=False)
-#     print(f"[CLIP→DTPViT] missing={len(missing_keys)}  unexpected={len(unexpected_keys)}")
-#     if missing_keys:    print("  missing (first 15):", missing_keys[:15])
-
-#     return model
-
 
 import torch
 import torch.nn as nn
@@ -235,33 +200,158 @@ def load_dtpx_from_clip_checkpoint(
             print(f"[drip] {len(msg.missing_keys)} model keys missing in ckpt (newer modules or different config).")
 
     return model, info
-    
-    
 
 
 @torch.no_grad()
-def load_dtpx_from_clip_checkpoint_float(model: nn.Module, ckpt_path: str) -> DTPViT:
+def load_vit_from_clip_checkpoint(
+    model: nn.Module,
+    ckpt_path: str,
+    map_location: str = "cpu",
+    strict_proj: bool = True,     # set False to skip loading proj if shapes differ
+    skip_head: bool = True,       # CLIP "head" is usually for classification; VisionTransformer doesn't use it
+    verbose: bool = True,
+) -> Dict[str, object]:
     """
-    Loads weights into a DTPViT model from a CLIP-style checkpoint.
+    Load ONLY the *vision transformer tower* from a CLIP-style checkpoint into VisionTransformer.
 
-    Args:
-        model (DTPViT): An uninitialized DTPViT model with the correct config.
-        ckpt_path (str): Path to a checkpoint with 'module.visual.' prefix in keys.
+    Expected ckpt keys under visual.* (common OpenAI/CLIP/OpenCLIP patterns):
+      - visual.conv1.{weight}
+      - visual.class_embedding
+      - visual.positional_embedding
+      - visual.ln_pre.{weight,bias}
+      - visual.transformer.resblocks.{i}.*   (attn, ln_*, mlp, etc.)
+      - visual.ln_post.{weight,bias}
+      - visual.proj                          (or visual.proj.{weight})
+    Also handles legacy 'visual.patch_embed.*' -> model.conv1.* remap.
 
-    Returns:
-        model (DTPViT): The same model with loaded weights.
+    This function:
+      - strips 'visual.' / 'module.visual.' prefixes
+      - remaps a few historical names (patch_embed -> conv1)
+      - shape-checks everything; skips mismatches
+      - returns a summary dict of what happened
     """
-    ckpt = torch.load(ckpt_path, map_location='cpu')
-    raw_state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
+    # -------------------------------
+    # 0) Load raw state dict
+    # -------------------------------
+    raw = torch.load(ckpt_path, map_location=map_location)
+    sd = raw.get("state_dict", raw) if isinstance(raw, dict) else raw
+    if not isinstance(sd, dict):
+        raise ValueError("Unsupported checkpoint format: expected a state_dict-like dict.")
 
-    dtpvit_state_dict = {
-        k.replace("module.visual.", ""): v.float() 
-        for k, v in raw_state_dict.items()
-        if k.startswith("module.visual.")
+    # -------------------------------
+    # 1) Keep only visual.* keys, strip prefix
+    # -------------------------------
+    def strip_visual_prefix(k: str):
+        if k.startswith("module.visual."):
+            return k[len("module.visual."):]
+        if k.startswith("visual."):
+            return k[len("visual."):]
+        return None
+
+    # -------------------------------
+    # 2) Remap legacy / alternate names to VisionTransformer's names
+    # -------------------------------
+    def remap_key(inner: str) -> str | None:
+        # Map patch embed conv to conv1.*
+        if inner.startswith("patch_embed.proj."):
+            # e.g., patch_embed.proj.weight -> conv1.weight
+            return inner.replace("patch_embed.proj.", "conv1.")
+        if inner.startswith("patch_embed."):
+            # e.g., patch_embed.weight -> conv1.weight
+            return inner.replace("patch_embed.", "conv1.")
+
+        # Some checkpoints store proj as a bare tensor "proj", others "proj.weight"
+        if inner == "proj.weight":
+            return "proj"  # our model registers proj as a Parameter (no .weight)
+        # If it's already "proj" keep it as-is
+        if inner == "proj":
+            return inner
+
+        # Everything else passes through (e.g., conv1.*, class_embedding,
+        # positional_embedding, ln_pre.*, transformer.resblocks.*, ln_post.*)
+        return inner
+
+    visual_only = OrderedDict()
+    for k, v in sd.items():
+        inner = strip_visual_prefix(k)
+        if inner is None:
+            continue
+        inner = remap_key(inner)
+        if inner is None:
+            continue
+        # Optionally skip classification head if present in some variants
+        if skip_head and inner.startswith("head."):
+            continue
+        visual_only[inner] = v
+
+    # -------------------------------
+    # 3) Collect indices for sanity (resblocks)
+    # -------------------------------
+    def _resblock_indices():
+        out = []
+        pref = "transformer.resblocks."
+        for k in visual_only.keys():
+            if k.startswith(pref):
+                try:
+                    idx = int(k.split(".")[2])
+                    out.append(idx)
+                except Exception:
+                    pass
+        return sorted(set(out))
+
+    res_idx = _resblock_indices()
+
+    # -------------------------------
+    # 4) Shape-safe partial load
+    # -------------------------------
+    model_sd = model.state_dict()
+    loadable = OrderedDict()
+    skipped_shape: List[Tuple[str, Tuple[int, ...], Tuple[int, ...]]] = []
+    unexpected_in_ckpt: List[str] = []
+
+    for k, v in visual_only.items():
+        # Optionally require exact match for proj unless strict_proj=False
+        if k == "proj" and k in model_sd and model_sd[k].shape != v.shape:
+            if strict_proj:
+                skipped_shape.append((k, tuple(v.shape), tuple(model_sd[k].shape)))
+                continue
+            else:
+                # Skip proj entirely if shapes differ and strict_proj is False
+                continue
+
+        if k not in model_sd:
+            unexpected_in_ckpt.append(k)
+            continue
+        if model_sd[k].shape != v.shape:
+            skipped_shape.append((k, tuple(v.shape), tuple(model_sd[k].shape)))
+            continue
+        loadable[k] = v
+
+    msg = model.load_state_dict(loadable, strict=False)
+
+    info = {
+        "loaded": sorted(loadable.keys()),
+        "skipped_shape_mismatch": skipped_shape,                 # list of (key, ckpt_shape, model_shape)
+        "unexpected_in_checkpoint": sorted(unexpected_in_ckpt),  # extra ckpt tensors not used
+        "missing_keys_reported": sorted(msg.missing_keys),       # model tensors not found in ckpt
+        "unexpected_keys_reported": sorted(msg.unexpected_keys), # should be empty
+        "resblock_indices_ckpt": res_idx,
     }
 
-    model.load_state_dict(dtpvit_state_dict, strict=False)
-    return model
+    if verbose:
+        print(f"[vit] Loaded {len(loadable)} tensors into VisionTransformer.")
+        if res_idx:
+            print(f"[vit] transformer.resblocks in ckpt: {res_idx} (model has {len(getattr(model.transformer, 'resblocks', []))})")
+        if skipped_shape:
+            print(f"[vit] Skipped {len(skipped_shape)} (shape mismatch). First few:")
+            for k, s_ckpt, s_model in skipped_shape[:8]:
+                print(f"  - {k}: ckpt{s_ckpt} vs model{s_model}")
+        if unexpected_in_ckpt:
+            print(f"[vit] {len(unexpected_in_ckpt)} visual keys in ckpt not present in model.")
+        if msg.missing_keys:
+            print(f"[vit] {len(msg.missing_keys)} model keys missing in ckpt.")
+
+    return model, info
 
 
 @torch.no_grad()
@@ -831,7 +921,26 @@ if __name__ == "__main__":
     )
 
     ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_4_8/checkpoints/epoch_15.pt"
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ImageNet_DRIP_78/model_299.pth"
+    
+
+    ############### TESTING  ####################
+    # model = VisionTransformer(
+    #         image_size=224,
+    #         patch_size=patch_size,
+    #         width=768,
+    #         layers=12,
+    #         heads=12,
+    #         mlp_ratio=4.0
+    # )
+    # ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
+    # load_vit_from_clip_checkpoint(model, ckpt_path)
+    ############### TESTING  ####################
+
+
+
+    
+    
+        
     if checkpoint_type == "imagenet":
         model = load_backbone_from_imagenet_checkpoint(model, ckpt_path)
 
@@ -842,28 +951,28 @@ if __name__ == "__main__":
     # your list of test indices
     tests = ["0", "1", "2", "3", "4", "5"]
 
-    # run visualization (for the main paper)
-    # run_visualization(
-    #     model=model,
-    #     tests=tests,
-    #     preprocess=preprocess,
-    #     batch_size=6,   # 1x6 grid
-    #     out_dir="unit_visualization"
-    # )
+    # # run visualization (for the main paper)
+    # # run_visualization(
+    # #     model=model,
+    # #     tests=tests,
+    # #     preprocess=preprocess,
+    # #     batch_size=6,   # 1x6 grid
+    # #     out_dir="unit_visualization"
+    # # )
 
-    # run 2x2 visualization (for the supplementary material)
-    # visualize_boundaries_single_multi(
-    #     model, 
-    #     preprocess=preprocess,
-    #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
-    #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/boundary_visualization_2x2.png"
-    # )
-    # visualize_boundaries_clean_noisy(
-    #     model, 
-    #     preprocess=preprocess,
-    #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy", 
-    #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy/boundary_visualization_2x2.png"
-    # )
+    # # run 2x2 visualization (for the supplementary material)
+    # # visualize_boundaries_single_multi(
+    # #     model, 
+    # #     preprocess=preprocess,
+    # #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
+    # #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/boundary_visualization_2x2.png"
+    # # )
+    # # visualize_boundaries_clean_noisy(
+    # #     model, 
+    # #     preprocess=preprocess,
+    # #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy", 
+    # #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy/boundary_visualization_2x2.png"
+    # # )
 
     img1 = preprocess(Image.open("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_1.JPEG").convert("RGB"))  # [3,H,W]
     img2 = preprocess(Image.open("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_2.JPEG").convert("RGB"))  # [3,H,W]

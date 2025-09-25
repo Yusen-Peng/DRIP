@@ -29,18 +29,33 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
 import torch.multiprocessing as mp
 from transformers import get_cosine_schedule_with_warmup
+from dynamicViT import VisionTransformerDiffPruning
+from swin import SwinTransformer
+from EViT import EViT
+
+
 
 class VisionClassifier(nn.Module):
-    def __init__(self, backbone: DTPViT | VisionTransformer | XL_Baseline, num_classes):
+    def __init__(self, backbone: DTPViT | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT, num_classes):
         super().__init__()
         self.backbone = backbone
         if isinstance(backbone, DTPViT) or isinstance(backbone, XL_Baseline):
             self.fc = nn.Linear(backbone.num_classes, num_classes)
         elif isinstance(backbone, VisionTransformer):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
+        elif isinstance(backbone, VisionTransformerDiffPruning):
+            self.fc = nn.Linear(backbone.num_classes, num_classes)
+        elif isinstance(backbone, SwinTransformer):
+            self.fc = nn.Linear(backbone.num_classes, num_classes)
+        elif isinstance(backbone, EViT):
+            self.fc = nn.Linear(backbone.num_classes, num_classes)
 
     def forward(self, x):
-        feats = self.backbone(x)
+        outs = self.backbone(x)
+        if isinstance(outs, tuple):
+            feats = outs[0]
+        else:
+            feats = outs
         return self.fc(feats)
 
 class SmoothedValue:
@@ -1114,14 +1129,11 @@ def main(args):
     data_loader_test = torch.utils.data.DataLoader(
         dataset_test, batch_size=args.batch_size, sampler=test_sampler, num_workers=args.workers, pin_memory=True
     )
-
+    RESOLUTION = 224
+    patch_size = 16
     print("Creating model")
-    MODE = "DynamicViT" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
-
-    print(f"are we using DRIP? {MODE == "DRIP"}", flush=True)
+    MODE = "EViT" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
     if MODE == "DRIP":
-        RESOLUTION = 224
-        patch_size = 16
         compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
         empty_backbone = DTPViT(
                 image_size=RESOLUTION,
@@ -1144,7 +1156,6 @@ def main(args):
 
 
     elif MODE == "Swin":
-        from swin import SwinTransformer
         print("Calculating GFLOPs for Swin Transformer...")
         empty_backbone = SwinTransformer(
             img_size=RESOLUTION, 
@@ -1161,7 +1172,6 @@ def main(args):
         model = VisionClassifier(backbone, num_classes).to(device)
         
     elif MODE == "DynamicViT":
-        from dynamicViT import VisionTransformerDiffPruning
         print("Calculating GFLOPs for DynamicViT...")
         empty_backbone = VisionTransformerDiffPruning(
             img_size=RESOLUTION,
@@ -1180,17 +1190,16 @@ def main(args):
             pruning_loc=[2],
             token_ratio=[0.25], # keep 25% patches at the only pruning location
             distill=False,
-            training=False, # for GFLOPs calculation we set it to False to avoid randomness
+            training=True, # here we need to set training=True since we are training the model
         )
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
 
     elif MODE == "EViT":
-        from EViT import EViT
         print("Calculating GFLOPs for EViT...")
         r = 0.25  # keep 25% of patch tokens at block 2 only
         keep_rate = [1.0] * 12
-        keep_rate[1] = r
+        keep_rate[2] = r        # 3 + 9
         empty_backbone = EViT(
             img_size=RESOLUTION,
             patch_size=patch_size,

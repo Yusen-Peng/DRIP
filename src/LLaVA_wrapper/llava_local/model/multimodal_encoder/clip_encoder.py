@@ -8,7 +8,8 @@ FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
 sys.path.insert(0, PROJECT_ROOT)
 from src.open_clip_local.DTP_ViT import DTPViT
-from src.boundary_vis import load_dtpx_from_clip_checkpoint
+from src.open_clip_local.model import VisionTransformer
+from src.boundary_vis import load_dtpx_from_clip_checkpoint, load_vit_from_clip_checkpoint
 
 class CLIPVisionTower(nn.Module):
     def __init__(self, vision_tower, args, delay_load=False):
@@ -94,6 +95,153 @@ class CLIPVisionTower(nn.Module):
         return (self.config.image_size // self.config.patch_size) ** 2
 
 
+class ViTVisionTower(nn.Module):
+    """
+    DTP ViT wrapper for CLIP-like vision tower.
+    This class is designed to load a DTP ViT model from a CLIP checkpoint and
+    provide a forward method that returns image features.
+    """
+    def __init__(self, 
+            checkpoint_path: str,
+            vision_tower: str,
+            args, 
+            image_size: int = 224,
+            patch_size: int = 16,
+            in_chans: int = 3,
+            hidden_size: int = 768,
+            depth: Tuple = (2, 10, 0),
+            num_heads: int = 12,
+            mlp_ratio: float = 4.0,
+            drop_rate: float = 0.1,
+            attn_drop_rate: float = 0.1, 
+            temp: float = 0.5, 
+            compression_rate: float = 0.1,
+            threshold: float = 0.5,
+            lower_bound: bool = False,
+            lambda_val: float = 1.0,
+            activation_function: str = 'gelu',
+            num_classes: int = 512,
+            flop_measure: bool = False,
+            delay_load=False,
+            finetuning_mode: bool = False
+            ):
+        super().__init__()
+
+        self.vision_tower_name = vision_tower
+        self.checkpoint_path = checkpoint_path
+        self.image_size = image_size
+        self.patch_size = patch_size
+        self.in_chans = in_chans
+        self.depth = depth
+        self.num_heads = num_heads
+        self.mlp_ratio = mlp_ratio
+        self.drop_rate = drop_rate
+        self._hidden_size = hidden_size
+        self.attn_drop_rate = attn_drop_rate
+        self.temp = temp
+        self.compression_rate = compression_rate
+        self.threshold = threshold
+        self.lower_bound = lower_bound
+        self.lambda_val = lambda_val
+        self.activation_function = activation_function
+        self.num_classes = num_classes
+        self.flop_measure = flop_measure
+        self.finetuning_mode = finetuning_mode
+
+        self.is_loaded = False
+        if not delay_load or getattr(args, 'unfreeze_mm_vision_tower', False):
+            self.load_model()
+
+    def load_model(self, device_map=None):
+        if self.is_loaded:
+            print(f"{self.checkpoint_path} is already loaded. Skipping.")
+            print(f"btw, device map is {device_map}")
+            return
+
+        self.vision_tower: VisionTransformer = VisionTransformer(
+                image_size=self.image_size,
+                patch_size=self.patch_size,
+                width=self._hidden_size,
+                layers=12,
+                heads=self.num_heads,
+                mlp_ratio=self.mlp_ratio
+        )
+        load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+
+        # if in finetuning mode, change precision into float16
+        if self.finetuning_mode:
+            self.vision_tower = self.vision_tower.half()
+        
+        self.vision_tower.requires_grad_(False)
+        self.image_processor = CLIPImageProcessor.from_pretrained(self.vision_tower_name)
+        self.image_processor.size = {'shortest_edge': 224}
+        self.image_processor.crop_size = {'height': 224, 'width': 224}
+        self.is_loaded = True
+        self.configurations = {
+            'image_size': self.image_size,
+            'patch_size': self.patch_size,
+            'in_chans': self.in_chans,
+            'hidden_size': self._hidden_size,
+            'depth': self.depth,
+            'num_heads': self.num_heads,
+            'mlp_ratio': self.mlp_ratio,
+            'drop_rate': self.drop_rate,
+            'attn_drop_rate': self.attn_drop_rate,
+            'temp': self.temp,
+            'compression_rate': self.compression_rate,
+            'threshold': self.threshold,
+            'lower_bound': self.lower_bound,
+            'lambda_val': self.lambda_val,
+            'activation_function': self.activation_function,
+            'num_classes': self.num_classes,
+            'flop_measure': self.flop_measure
+        }
+    
+    def feature_select(self, image_forward_outs):
+        assert image_forward_outs is not None
+        raise NotImplementedError("DTPViT does not require feature selection like CLIP. Use the full output.")
+
+    @torch.no_grad()
+    def forward(self, images):
+        """
+        images: torch.Tensor of shape [B, C, H, W]
+        returns: torch.Tensor of shape [B, N_tokens, hidden_dim]
+        """
+        # encode images
+        images = images.to("cuda", dtype=self.dtype)
+        features = self.vision_tower.encode(images)
+        features = features.to("cuda", dtype=self.dtype)
+        return features
+
+    @property
+    def dummy_feature(self):
+        return torch.zeros(1, self.hidden_size, device=self.device, dtype=self.dtype)
+
+    @property
+    def dtype(self):
+        return next(self.vision_tower.parameters()).dtype
+
+    @property
+    def device(self):
+        return torch.device("cuda")
+
+    @property
+    def config(self):
+        return self.configurations
+
+    @property
+    def hidden_size(self):
+        return self.vision_tower.width
+
+    @property
+    def num_patches_per_side(self):
+        return self.vision_tower.image_size // self.vision_tower.patch_size
+
+    @property
+    def num_patches(self):
+        return self.num_patches_per_side ** 2
+    
+
 class DRIPVisionTower(nn.Module):
     """
     DTP ViT wrapper for CLIP-like vision tower.
@@ -170,13 +318,13 @@ class DRIPVisionTower(nn.Module):
             temp=self.temp,
             compression_rate=self.compression_rate,
             threshold=self.threshold,
-            lower_bound=self.lower_bound,
-            lambda_val=self.lambda_val,
+            #lower_bound=self.lower_bound,
+            #lambda_val=self.lambda_val,
             activation_function=self.activation_function,
             num_classes=self.num_classes,
             flop_measure=self.flop_measure
         ) 
-        self.vision_tower = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+        self.vision_tower, _ = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
 
         # if in finetuning mode, change precision into float16
         if self.finetuning_mode:
