@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=Sept_24_ViTbased_DRIP_10x_4_8
 #SBATCH --output=Sept_24_ViTbased_DRIP_10x_4_8.txt
-#SBATCH --time=24:00:00
+#SBATCH --time=00:24:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1

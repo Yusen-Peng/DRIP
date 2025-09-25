@@ -159,13 +159,6 @@ class LlavaMetaForCausalLM(ABC):
                 images = [x.unsqueeze(0) if x.ndim == 3 else x for x in images]
             concat_images = torch.cat([image for image in images], dim=0)
             image_features = self.encode_images(concat_images)
-
-            # FIXME: debugging
-            print("Debugging: image features")
-            print("image features shape:", image_features.shape)
-            print(image_features)
-
-
             split_sizes = [image.shape[0] for image in images]
             image_features = torch.split(image_features, split_sizes, dim=0)
             mm_patch_merge_type = getattr(self.config, 'mm_patch_merge_type', 'flat')
@@ -215,6 +208,12 @@ class LlavaMetaForCausalLM(ABC):
                 raise ValueError(f"Unexpected mm_patch_merge_type: {self.config.mm_patch_merge_type}")
         else:
             image_features = self.encode_images(images)
+        
+        # FIXME: debugging
+        # print("Debugging: image features", flush=True)
+        # print("image features shape:", image_features.shape, flush=True)
+        # print(image_features, flush=True)
+
 
         # TODO: image start / end is not implemented here to support pretraining.
         if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_im_start_end', False):
@@ -246,6 +245,7 @@ class LlavaMetaForCausalLM(ABC):
         cur_image_idx = 0
         for batch_idx, cur_input_ids in enumerate(input_ids):
             num_images = (cur_input_ids == IMAGE_TOKEN_INDEX).sum()
+            #print(f"[DEBUG] num_images: {num_images}", flush=True)
             if num_images == 0:
                 cur_image_features = image_features[cur_image_idx]
                 cur_input_embeds_1 = self.get_model().embed_tokens(cur_input_ids)
@@ -271,7 +271,7 @@ class LlavaMetaForCausalLM(ABC):
             for i in range(num_images + 1):
                 cur_new_input_embeds.append(cur_input_embeds_no_im[i])
                 cur_new_labels.append(cur_labels_noim[i])
-                if i < num_images:
+                if i < num_images and cur_image_idx < len(image_features): # fix index error
                     cur_image_features = image_features[cur_image_idx]
                     cur_image_idx += 1
                     cur_new_input_embeds.append(cur_image_features)

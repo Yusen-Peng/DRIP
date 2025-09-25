@@ -5,13 +5,6 @@
 ![alt text](/docs/DRIP.png)
 
 
-
-```csharp
-[vit] Loaded 152 tensors into VisionTransformer.
-[vit] transformer.resblocks in ckpt: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] (model has 12)
-```
-
-
 ## Efficiency Metrics
 
 1. GFLOPs: a different script (adapted from **DynamicViT**), NOT during training
