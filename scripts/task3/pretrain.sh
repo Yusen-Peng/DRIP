@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Sept_24_ViTbased_DRIP_10x_4_8
-#SBATCH --output=Sept_24_ViTbased_DRIP_10x_4_8.txt
-#SBATCH --time=00:24:00
+#SBATCH --job-name=Sept_24_ViTbased_DRIP_10x_5_7
+#SBATCH --output=Sept_24_ViTbased_DRIP_10x_5_7.txt
+#SBATCH --time=24:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
@@ -31,7 +31,7 @@ deepspeed src/task3_llava.py \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-10x-16-4-8-pretrain \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-10x-16-5-7-pretrain \
     --num_train_epochs 1 \
     --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 4 \

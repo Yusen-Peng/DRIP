@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=LLaVA_finetune
-#SBATCH --output=LLaVA_finetune.txt
-#SBATCH --time=90:00:00
+#SBATCH --job-name=Sept25_finetune_ViT_baseline
+#SBATCH --output=Sept25_finetune_ViT_baseline.txt
+#SBATCH --time=72:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
@@ -29,12 +29,12 @@ deepspeed src/task3_llava.py \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning \
     --vision_tower openai/clip-vit-base-patch16 \
     --mm_projector_type mlp2x_gelu \
-    --fp16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/DRIP-2X-16-pretrain/mm_projector.bin \
+    --bf16 True \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/ViT-base-pretrain/mm_projector.bin \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/DRIP-2X-16-finetune \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ViT-base-finetune \
     --num_train_epochs 3 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \
