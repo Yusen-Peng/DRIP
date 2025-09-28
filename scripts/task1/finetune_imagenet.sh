@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=SEP_19_EViT
-#SBATCH --output=SEP_19_EViT.txt
+#SBATCH --job-name=CORRECTED_ViT_16
+#SBATCH --output=CORRECTED_ViT_16.txt
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

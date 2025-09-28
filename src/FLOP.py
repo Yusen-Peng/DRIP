@@ -61,7 +61,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "EViT" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
+    MODE = "ViT" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
 
     img_size = 224
     width = 768
@@ -223,10 +223,10 @@ def main():
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6
     print(f'number of parameters: {round(n_parameters, 2)} M')
 
-    # throughput test
-    batch_size = 512 # for consistency
-    x = torch.randn(batch_size, 3, img_size, img_size).to(device)
-    throughput(x, model)
+    # # throughput test
+    # batch_size = 512 # for consistency
+    # x = torch.randn(batch_size, 3, img_size, img_size).to(device)
+    # throughput(x, model)
 
 
 

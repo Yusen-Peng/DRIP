@@ -338,6 +338,8 @@ class DRIPVisionTower(nn.Module):
             self.vision_tower = self.vision_tower.half()
         
         self.vision_tower.requires_grad_(False)
+        device = "cuda" if torch.cuda.is_available() else "cpu" 
+        self.vision_tower.to(device)
         self.image_processor = CLIPImageProcessor.from_pretrained(self.vision_tower_name)
         self.image_processor.size = {'shortest_edge': 224}
         self.image_processor.crop_size = {'height': 224, 'width': 224}

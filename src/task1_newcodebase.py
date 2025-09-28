@@ -1130,9 +1130,10 @@ def main(args):
         dataset_test, batch_size=args.batch_size, sampler=test_sampler, num_workers=args.workers, pin_memory=True
     )
     RESOLUTION = 224
-    patch_size = 16
+    #patch_size = 16
+    patch_size = 32 # FIXME: 32 only for ablation 
     print("Creating model")
-    MODE = "EViT" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
+    MODE = "ViT" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
     if MODE == "DRIP":
         compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
         empty_backbone = DTPViT(
@@ -1220,7 +1221,7 @@ def main(args):
         model = VisionClassifier(backbone, num_classes).to(device)
     
     else:
-        use_XL_backbone = True
+        use_XL_backbone = False
         print(f"are we using XL backbone? {use_XL_backbone}", flush=True)
         if use_XL_backbone:
             print("use XL backbone!")
@@ -1244,7 +1245,19 @@ def main(args):
 
         else:
             print("use ViT!")
-            model = torchvision.models.get_model(args.model, weights=args.weights, num_classes=num_classes)
+            empty_backbone = VisionTransformer(
+                image_size=224,
+                patch_size=patch_size,
+                width=768,
+                layers=12,
+                heads=768 // 64,
+                mlp_ratio=4.0,
+                output_dim=512
+            )
+            backbone = empty_backbone
+            model = VisionClassifier(backbone, num_classes).to(device)
+            #model = torchvision.models.get_model(args.model, weights=args.weights, num_classes=num_classes)
+        
         model.to(device)
 
     if args.distributed and args.sync_bn:
