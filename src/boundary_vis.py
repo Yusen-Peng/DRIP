@@ -1081,7 +1081,6 @@ if __name__ == "__main__":
     
 
 
-    ############### TESTING  ####################
     ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
     load_dtp_from_clip_checkpoint(model, ckpt_path)
     ############### TESTING  ####################
@@ -1104,42 +1103,46 @@ if __name__ == "__main__":
 
     
     
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_4_8/checkpoints/epoch_15.pt"
+    # #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_4_8/checkpoints/epoch_15.pt"
     # if checkpoint_type == "imagenet":
     #     model = load_backbone_from_imagenet_checkpoint(model, ckpt_path)
 
     # elif checkpoint_type == "CLIP":
     #     model, info = load_dtpx_from_clip_checkpoint(model, ckpt_path)    
-    # model.eval()
+    model.eval()
 
-    # # your list of test indices
-    # tests = ["0", "1", "2", "3", "4", "5"]
+    # your list of test indices
+    tests = ["0", "1", "2", "3", "4", "5"]
 
-    # # # run visualization (for the main paper)
-    # # # run_visualization(
-    # # #     model=model,
-    # # #     tests=tests,
-    # # #     preprocess=preprocess,
-    # # #     batch_size=6,   # 1x6 grid
-    # # #     out_dir="unit_visualization"
-    # # # )
+    # # run visualization (for the main paper)
+    # # run_visualization(
+    # #     model=model,
+    # #     tests=tests,
+    # #     preprocess=preprocess,
+    # #     batch_size=6,   # 1x6 grid
+    # #     out_dir="unit_visualization"
+    # # )
 
-    # # # run 2x2 visualization (for the supplementary material)
-    # # # visualize_boundaries_single_multi(
-    # # #     model, 
-    # # #     preprocess=preprocess,
-    # # #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
-    # # #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/boundary_visualization_2x2.png"
-    # # # )
-    # # # visualize_boundaries_clean_noisy(
-    # # #     model, 
-    # # #     preprocess=preprocess,
-    # # #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy", 
-    # # #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy/boundary_visualization_2x2.png"
-    # # # )
+    # # run 2x2 visualization (for the supplementary material)
+    # # visualize_boundaries_single_multi(
+    # #     model, 
+    # #     preprocess=preprocess,
+    # #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
+    # #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/boundary_visualization_2x2.png"
+    # # )
+    # # visualize_boundaries_clean_noisy(
+    # #     model, 
+    # #     preprocess=preprocess,
+    # #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy", 
+    # #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/clean_noisy/boundary_visualization_2x2.png"
+    # # )
 
-    # img1 = preprocess(Image.open("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_1.JPEG").convert("RGB"))  # [3,H,W]
-    # img2 = preprocess(Image.open("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_2.JPEG").convert("RGB"))  # [3,H,W]
+    img1 = preprocess(Image.open("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_1.JPEG").convert("RGB"))  # [3,H,W]
+    img2 = preprocess(Image.open("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_2.JPEG").convert("RGB"))  # [3,H,W]
+
+    img1 = preprocess(Image.open("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_3.JPEG").convert("RGB"))  # [3,H,W]
+    img2 = preprocess(Image.open("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_3.JPEG").convert("RGB"))  # [3,H,W]
+
 
     # visualize_boundaries_hard_soft_2x2(
     #     model,
@@ -1147,6 +1150,12 @@ if __name__ == "__main__":
     #     image_tensor_2=img2,
     #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/boundary_visualization_2x2.png"
     # )
+
+    visualize_boundaries_enhanced(
+        model,
+        image_tensor=torch.stack([img1]),
+        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/boundary_visualization_enhanced_TEST.png"
+    )
 
 
 

@@ -985,6 +985,12 @@ def train(attn_implementation=None):
 
     data_module = make_supervised_data_module(tokenizer=tokenizer,
                                               data_args=data_args)
+    
+    print(f"check if the vision tower is trainable:", flush=True)
+    for name, param in vision_tower.named_parameters():
+        print(name, param.requires_grad)
+
+
     trainer = LLaVATrainer(model=model,
                     tokenizer=tokenizer,
                     args=training_args,

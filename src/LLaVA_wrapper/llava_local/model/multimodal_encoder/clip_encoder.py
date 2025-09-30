@@ -167,12 +167,17 @@ class ViTVisionTower(nn.Module):
                 mlp_ratio=self.mlp_ratio
         )
         load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.vision_tower.to(device)
 
         # if in finetuning mode, change precision into float16
         if self.finetuning_mode:
             self.vision_tower = self.vision_tower.half()
         
-        self.vision_tower.requires_grad_(False)
+        #self.vision_tower.requires_grad_(False)
+
+        self.vision_tower.requires_grad_(True) # FIXME: unfreeze for finetuning
+
         self.image_processor = CLIPImageProcessor.from_pretrained(self.vision_tower_name)
         self.image_processor.size = {'shortest_edge': 224}
         self.image_processor.crop_size = {'height': 224, 'width': 224}
@@ -201,7 +206,7 @@ class ViTVisionTower(nn.Module):
         assert image_forward_outs is not None
         raise NotImplementedError("DTPViT does not require feature selection like CLIP. Use the full output.")
 
-    @torch.no_grad()
+    #@torch.no_grad()
     def forward(self, images):
         """
         images: torch.Tensor of shape [B, C, H, W]

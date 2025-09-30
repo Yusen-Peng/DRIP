@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=CORRECTED_ViT_16
-#SBATCH --output=CORRECTED_ViT_16.txt
+#SBATCH --job-name=CORRECTED_ViT_16_real
+#SBATCH --output=CORRECTED_ViT_16_real.txt
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

@@ -33,6 +33,11 @@ def eval_model(args):
     disable_torch_init()
     model_path = os.path.expanduser(args.model_path)
     model_name = get_model_name_from_path(model_path)
+
+    print("="*20, flush=True)
+    print(f"Model name: {model_name}", flush=True)
+    print("="*20, flush=True)
+
     tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, args.model_base, model_name)
 
     questions = json.load(open(os.path.expanduser(args.question_file), "r"))

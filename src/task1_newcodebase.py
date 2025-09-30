@@ -1130,8 +1130,8 @@ def main(args):
         dataset_test, batch_size=args.batch_size, sampler=test_sampler, num_workers=args.workers, pin_memory=True
     )
     RESOLUTION = 224
-    #patch_size = 16
-    patch_size = 32 # FIXME: 32 only for ablation 
+    patch_size = 16
+    #patch_size = 32 # FIXME: 32 only for ablation
     print("Creating model")
     MODE = "ViT" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
     if MODE == "DRIP":
@@ -1244,7 +1244,7 @@ def main(args):
             model = VisionClassifier(backbone, num_classes).to(device)
 
         else:
-            print("use ViT!")
+            print(f"use ViT with patch size {patch_size}!")
             empty_backbone = VisionTransformer(
                 image_size=224,
                 patch_size=patch_size,
@@ -1256,7 +1256,6 @@ def main(args):
             )
             backbone = empty_backbone
             model = VisionClassifier(backbone, num_classes).to(device)
-            #model = torchvision.models.get_model(args.model, weights=args.weights, num_classes=num_classes)
         
         model.to(device)
 
