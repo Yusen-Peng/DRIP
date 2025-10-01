@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=Sept30_finetune_ViTall
-#SBATCH --output=Sept30_finetune_ViTall.txt
+#SBATCH --job-name=Oct1_finetune_ViTall
+#SBATCH --output=Oct1_finetune_ViTall.txt
 #SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=4
+#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
@@ -35,7 +35,7 @@ deepspeed src/task3_llava.py \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
     --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ViT-base-finetune-ALL \
-    --num_train_epochs 3 \
+    --num_train_epochs 0 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 1 \

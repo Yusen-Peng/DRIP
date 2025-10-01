@@ -60,21 +60,21 @@ def throughput(images, model):
 
 
 def main():
-    patch_size = 16
-    MODE = "ViT" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
+    patch_size = 32
+    MODE = "DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
 
-    img_size = 224
+    img_size = 384
     width = 768
     mlp_ratio = 4.0
     patch_dropout = 0.1
     if MODE == "DRIP":
-        COMPRESSION_RATE = 0.1
+        COMPRESSION_RATE = 0.25
         model = DTPViT(
             image_size=img_size,
             patch_size=patch_size,
             in_chans=3,
             embed_dim=width,
-            depth=(5, 7, 0),
+            depth=(4, 8, 0),
             num_heads=width // 64,
             mlp_ratio=mlp_ratio,
             drop_rate=patch_dropout,

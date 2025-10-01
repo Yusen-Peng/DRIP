@@ -1091,6 +1091,15 @@ def main(args):
 
     init_distributed_mode(args)
     print(args)
+    
+    #RESOLUTION = 224
+    RESOLUTION = 384 # FIXME: 384 only for ablation
+    #patch_size = 16
+    patch_size = 32 # FIXME: 32 only for ablation
+
+    args.train_crop_size = RESOLUTION
+    args.val_crop_size = RESOLUTION # FIXME: patching so far
+    
     print(f"args.train_crop_size: {args.train_crop_size}", flush=True)
     print(f"args.val_crop_size: {args.val_crop_size}", flush=True)
 
@@ -1129,9 +1138,6 @@ def main(args):
     data_loader_test = torch.utils.data.DataLoader(
         dataset_test, batch_size=args.batch_size, sampler=test_sampler, num_workers=args.workers, pin_memory=True
     )
-    RESOLUTION = 224
-    patch_size = 16
-    #patch_size = 32 # FIXME: 32 only for ablation
     print("Creating model")
     MODE = "ViT" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
     if MODE == "DRIP":
@@ -1227,7 +1233,7 @@ def main(args):
             print("use XL backbone!")
             patch_size = 16
             empty_backbone = XL_Baseline(
-                image_size=224,
+                image_size=RESOLUTION,
                 patch_size=patch_size,
                 in_chans=3,
                 embed_dim=768,
@@ -1244,9 +1250,9 @@ def main(args):
             model = VisionClassifier(backbone, num_classes).to(device)
 
         else:
-            print(f"use ViT with patch size {patch_size}!")
+            print(f"use ViT with patch size {patch_size} and resolution {RESOLUTION}!")
             empty_backbone = VisionTransformer(
-                image_size=224,
+                image_size=RESOLUTION,
                 patch_size=patch_size,
                 width=768,
                 layers=12,

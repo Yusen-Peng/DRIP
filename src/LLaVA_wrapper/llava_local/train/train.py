@@ -927,6 +927,7 @@ def train(attn_implementation=None):
         else:
             conversation_lib.default_conversation = conversation_lib.conv_templates["vicuna_v1"]
 
+    vision_trainable = False
     if model_args.vision_tower is not None:
         model.get_model().initialize_vision_modules(
             model_args=model_args,
@@ -969,6 +970,21 @@ def train(attn_implementation=None):
         training_args.use_im_start_end = model_args.mm_use_im_start_end
         model.config.mm_use_im_patch_token = model_args.mm_use_im_patch_token
         model.initialize_vision_tokenizer(model_args, tokenizer=tokenizer)
+    
+
+        ###################################################################################################
+        # FIXME: we have the option to also FINETUNE THE VISION TOWER
+        for p in model.get_model().vision_tower.parameters():
+            p.requires_grad = True
+        
+        # FIXME: check if it's frozen or trainable
+        print(f"########## check ##########:", flush=True)
+        for name, param in model.get_model().vision_tower.named_parameters():
+            print(name, param.requires_grad)
+        vision_trainable = any(p.requires_grad for p in model.get_model().vision_tower.parameters())
+        print(f"the vision tower is trainable: {vision_trainable}", flush=True)
+        ###################################################################################################
+
 
     if training_args.bits in [4, 8]:
         from peft.tuners.lora import LoraLayer
@@ -985,10 +1001,6 @@ def train(attn_implementation=None):
 
     data_module = make_supervised_data_module(tokenizer=tokenizer,
                                               data_args=data_args)
-    
-    print(f"check if the vision tower is trainable:", flush=True)
-    for name, param in vision_tower.named_parameters():
-        print(name, param.requires_grad)
 
 
     trainer = LLaVATrainer(model=model,
@@ -1018,6 +1030,37 @@ def train(attn_implementation=None):
     else:
         safe_save_model_for_hf_trainer(trainer=trainer,
                                        output_dir=training_args.output_dir)
+    
+
+    if vision_trainable:
+        # Grab the wrapper and the *core* ViT inside it
+        vt_wrapper = model.get_vision_tower()
+        vt_core = getattr(vt_wrapper, "vision_tower", vt_wrapper)  # works for ViTVisionTower/DRIPVisionTower
+
+        # Where to save (reuse HF output_dir)
+        vt_dir = os.path.join(training_args.output_dir, "vision_tower")
+        os.makedirs(vt_dir, exist_ok=True)
+
+        # 1) Weights
+        vt_state = {k: v.detach().cpu() for k, v in vt_core.state_dict().items()}
+        torch.save(vt_state, os.path.join(vt_dir, "vision_tower.pt"))
+
+        # 2) Lightweight config (so you can reconstruct shapes/params)
+        import json
+        vt_cfg = getattr(vt_wrapper, "config", None)
+        if vt_cfg is None:
+            vt_cfg = getattr(vt_wrapper, "configurations", {})  # your wrapper stores this
+        with open(os.path.join(vt_dir, "vision_tower_config.json"), "w") as f:
+            json.dump(vt_cfg, f, indent=2)
+
+        # 3) Image processor (to keep preprocessing identical)
+        if getattr(vt_wrapper, "image_processor", None) is not None:
+            proc_dir = os.path.join(vt_dir, "processor")
+            os.makedirs(proc_dir, exist_ok=True)
+            vt_wrapper.image_processor.save_pretrained(proc_dir)
+
+        if training_args.local_rank in (0, -1):
+            print(f"[vision_tower] Saved finetuned tower to {vt_dir}", flush=True)
 
 
 if __name__ == "__main__":

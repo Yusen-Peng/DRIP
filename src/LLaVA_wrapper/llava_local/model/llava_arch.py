@@ -100,7 +100,6 @@ class LlavaMetaModel:
 
             self.mm_projector.load_state_dict(get_w(mm_projector_weights, 'mm_projector'))
 
-
 def unpad_image(tensor, original_size):
     """
     Unpads a PyTorch tensor of a padded and resized image.
