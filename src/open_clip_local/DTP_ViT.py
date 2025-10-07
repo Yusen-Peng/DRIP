@@ -490,16 +490,16 @@ class BoundaryPredictor(nn.Module):
 class HierarchicalDTPViT(nn.Module):
     def __init__(self,
                  image_size=224,
-                 patch_size=16,
+                 patch_size=4,
                  in_chans=3,
                  embed_dim=768,
-                 depth=(2, 4, 4),
-                 num_heads=12,
+                 depth=(2, 2, 6, 2),
+                 num_heads=[3, 6, 12, 24],
                  mlp_ratio=4.0,
                  drop_rate=0.1,
                  attn_drop_rate=0.1,
                  temp=1.0,
-                 compression_rate=(0.5, 0.5),  # compression at stage 1 and 2
+                 compression_rate=(0.25, 0.25, 0.25),
                  bp_type='gumbel',
                  threshold=0.5,
                  num_classes=1000,
@@ -518,17 +518,28 @@ class HierarchicalDTPViT(nn.Module):
 
         # Positional embedding
         self.pos_emb = PositionalEmbedding(embed_dim)
-        self.r_w_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
-        self.r_r_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
+        self.r_w_bias_list = nn.ParameterList([
+            nn.Parameter(torch.zeros(num_heads[0], embed_dim // num_heads[0])),
+            nn.Parameter(torch.zeros(num_heads[1], embed_dim // num_heads[1])),
+            nn.Parameter(torch.zeros(num_heads[2], embed_dim // num_heads[2])),
+            nn.Parameter(torch.zeros(num_heads[3], embed_dim // num_heads[3])),
+        ])
+        self.r_r_bias_list = nn.ParameterList([
+            nn.Parameter(torch.zeros(num_heads[0], embed_dim // num_heads[0])),
+            nn.Parameter(torch.zeros(num_heads[1], embed_dim // num_heads[1])),
+            nn.Parameter(torch.zeros(num_heads[2], embed_dim // num_heads[2])),
+            nn.Parameter(torch.zeros(num_heads[3], embed_dim // num_heads[3])),
+        ])
 
         # Helper to create decoder layers
-        def create_decoder_layers(n_layers):
+        def create_decoder_layers(n_layers, n_head):
+            d_head = embed_dim // n_head
             return nn.ModuleList(
                 [
                     RelPartialLearnableDecoderLayer(
-                        n_head=num_heads,
+                        n_head=n_head,
                         d_model=embed_dim,
-                        d_head=embed_dim // num_heads,
+                        d_head=d_head,
                         d_inner=int(embed_dim * mlp_ratio),
                         dropout=drop_rate,
                         dropatt=attn_drop_rate,
@@ -540,9 +551,10 @@ class HierarchicalDTPViT(nn.Module):
             )
 
         # Transformer blocks for each stage
-        self.pre_blocks = create_decoder_layers(depth[0])    # before 1st pooling
-        self.mid_blocks = create_decoder_layers(depth[1])    # between 1st and 2nd pooling
-        self.final_blocks = create_decoder_layers(depth[2])  # after 2nd pooling
+        self.pre_blocks = create_decoder_layers(depth[0], n_head=num_heads[0])
+        self.mid_blocks_1 = create_decoder_layers(depth[1], n_head=num_heads[1])
+        self.mid_blocks_2 = create_decoder_layers(depth[2], n_head=num_heads[2])
+        self.final_blocks = create_decoder_layers(depth[3], n_head=num_heads[3])
 
         # Two-stage boundary predictors
         self.bp1 = BoundaryPredictor(
@@ -565,6 +577,16 @@ class HierarchicalDTPViT(nn.Module):
             threshold=threshold
         )
 
+        self.bp3 = BoundaryPredictor(
+            d_model=embed_dim,
+            d_inner=int(embed_dim * mlp_ratio),
+            activation_function=activation_function,
+            temp=temp,
+            prior=compression_rate[2],
+            bp_type=bp_type,
+            threshold=threshold
+        )
+
         # Layer norm
         self.down_ln = nn.LayerNorm(embed_dim)
         self.null_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
@@ -573,7 +595,7 @@ class HierarchicalDTPViT(nn.Module):
         # Final classification head
         self.head = nn.Linear(embed_dim, num_classes)
 
-    def forward_after_pooling_with_attn_masks(self, core_input: torch.Tensor, layers, attention_mask: torch.Tensor):
+    def forward_after_pooling_with_attn_masks(self, core_input: torch.Tensor, layers, attention_mask: torch.Tensor, index: int):
         """
         Process input with relative attention and padding-aware masking.
         """
@@ -583,7 +605,7 @@ class HierarchicalDTPViT(nn.Module):
 
         core_out = core_input
         for layer in layers:
-            core_out = layer(core_out, pos_emb, self.r_w_bias, self.r_r_bias, dec_attn_mask=attention_mask)
+            core_out = layer(core_out, pos_emb, self.r_w_bias_list[index], self.r_r_bias_list[index], dec_attn_mask=attention_mask)
         return core_out
 
     def _make_attn_mask(self, seq: torch.Tensor):
@@ -596,7 +618,7 @@ class HierarchicalDTPViT(nn.Module):
         attn_mask = pad_mask.transpose(0, 1).unsqueeze(1).expand(B, S, S)  # B x S x S
         return attn_mask
 
-    def _downsample_stage(self, x, boundary_predictor):
+    def _downsample_stage(self, x: torch.Tensor, boundary_predictor: BoundaryPredictor):
         """
         One stage of boundary prediction + downsampling
         """
@@ -634,33 +656,36 @@ class HierarchicalDTPViT(nn.Module):
         pos_seq = torch.arange(self.seq_len - 1, -1, -1.0, device=x.device, dtype=x.dtype)
         r = self.pos_emb(pos_seq)  # L x 1 x C
         for block in self.pre_blocks:
-            x = block(x, r, self.r_w_bias, self.r_r_bias)
+            x = block(x, r, self.r_w_bias_list[0], self.r_r_bias_list[0])
 
-        # Stage 1: 1st downsampling
         x, hard_boundaries1 = self._downsample_stage(x, self.bp1)
         attn_mask1 = self._make_attn_mask(x)
 
-        # Stage 1 blocks
-        x = self.forward_after_pooling_with_attn_masks(x, self.mid_blocks, attention_mask=attn_mask1)
+        x = self.forward_after_pooling_with_attn_masks(x, self.mid_blocks_1, attention_mask=attn_mask1, index=1)
 
-        # Stage 2: 2nd downsampling
         x, hard_boundaries2 = self._downsample_stage(x, self.bp2)
         attn_mask2 = self._make_attn_mask(x)
 
-        # Stage 2 blocks (final)
-        x = self.forward_after_pooling_with_attn_masks(x, self.final_blocks, attention_mask=attn_mask2)
+        x = self.forward_after_pooling_with_attn_masks(x, self.mid_blocks_2, attention_mask=attn_mask2, index=2)
 
+        x, hard_boundaries3 = self._downsample_stage(x, self.bp3)
+        attn_mask3 = self._make_attn_mask(x)
+
+        x = self.forward_after_pooling_with_attn_masks(x, self.final_blocks, attention_mask=attn_mask3, index=3)
         features = x  # S x B x D
 
         if return_loss and not self.flop_measure:
             loss1 = self.bp1.calc_loss(hard_boundaries1)
             loss2 = self.bp2.calc_loss(hard_boundaries2)
-            boundary_loss = loss1 + loss2
+            loss3 = self.bp3.calc_loss(hard_boundaries3)
+            boundary_loss = loss1 + loss2 + loss3
             avg_boundaries_per_batch1 = hard_boundaries1.sum(dim=1).float().mean().item()
             avg_boundaries_per_batch2 = hard_boundaries2.sum(dim=1).float().mean().item()
+            avg_boundaries_per_batch3 = hard_boundaries3.sum(dim=1).float().mean().item()
 
             boundary_ratio1 = avg_boundaries_per_batch1 / hard_boundaries1.size(1)
             boundary_ratio2 = avg_boundaries_per_batch2 / hard_boundaries2.size(1)
+            boundary_ratio3 = avg_boundaries_per_batch3 / hard_boundaries3.size(1)
 
             # only report the second boundary ratio
             # this is not really that helpful, but we keep it for consistency
@@ -668,7 +693,7 @@ class HierarchicalDTPViT(nn.Module):
 
             # compute the cumulative boundary ratio (e.g., 0.5 * 0.5 = 0.25)
             # NOTE: this is really important to monitor the cumulative compression ratio!
-            cumulative_boundary_ratio = boundary_ratio1 * boundary_ratio2 
+            cumulative_boundary_ratio = boundary_ratio1 * boundary_ratio2 * boundary_ratio3
 
             return features, boundary_loss, cumulative_avg_boundaries_per_batch, cumulative_boundary_ratio
         else:

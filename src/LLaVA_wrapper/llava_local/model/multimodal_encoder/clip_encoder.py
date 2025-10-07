@@ -195,10 +195,10 @@ class ViTVisionTower(nn.Module):
 
         # FIXME: load the model
         #  option 1: load from the original CLIP checkpoint
-        #load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+        load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
 
         # option 2: load from the finetuned checkpoint
-        load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
+        #load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
 
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -233,33 +233,33 @@ class ViTVisionTower(nn.Module):
             'flop_measure': self.flop_measure
         }
 
-        # check if its vision tower is trainable
-        for param in self.vision_tower.parameters():
-            print("🦷" * 20) 
-            print(f"param.requires_grad: {param.requires_grad}")
-            break
+        # NOTE: check if its vision tower is trainable
+        # for param in self.vision_tower.parameters():
+        #     print("🦷" * 20) 
+        #     print(f"param.requires_grad: {param.requires_grad}")
+        #     break
         
     
     def feature_select(self, image_forward_outs):
         assert image_forward_outs is not None
         raise NotImplementedError("DTPViT does not require feature selection like CLIP. Use the full output.")
 
-    @torch.no_grad() # FIXME: remove this if finetuning
+    #@torch.no_grad() # FIXME: remove this if finetuning
     def forward(self, images):
         """
         images: torch.Tensor of shape [B, C, H, W]
         returns: torch.Tensor of shape [B, N_tokens, hidden_dim]
         """
-        # images = images.to("cuda", dtype=self.dtype)
-        # features = self.vision_tower.encode(images)
-        # features = features.to("cuda", dtype=self.dtype)        
-        # return features
-
-        with torch.no_grad():
-            images = images.to("cuda", dtype=self.dtype)
-            features = self.vision_tower.encode(images)
-            features = features.to("cuda", dtype=self.dtype)        
+        images = images.to("cuda", dtype=self.dtype)
+        features = self.vision_tower.encode(images)
+        features = features.to("cuda", dtype=self.dtype)        
         return features
+
+        # with torch.no_grad():
+        #     images = images.to("cuda", dtype=self.dtype)
+        #     features = self.vision_tower.encode(images)
+        #     features = features.to("cuda", dtype=self.dtype)        
+        # return features
 
     @property
     def dummy_feature(self):
@@ -381,6 +381,10 @@ class DRIPVisionTower(nn.Module):
         else:
             raise ValueError(f'Unsupported backbone: {self.backbone}')
 
+        # NOTE: option 2: load from the finetuned checkpoint
+        #load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
+
+
         # if in finetuning mode, change precision into float16
         if self.finetuning_mode:
             self.vision_tower = self.vision_tower.half()
@@ -416,7 +420,7 @@ class DRIPVisionTower(nn.Module):
         assert image_forward_outs is not None
         raise NotImplementedError("DTPViT does not require feature selection like CLIP. Use the full output.")
 
-    @torch.no_grad()
+    #@torch.no_grad() # FIXME: remove this if finetuning
     def forward(self, images):
         """
         images: torch.Tensor of shape [B, C, H, W]

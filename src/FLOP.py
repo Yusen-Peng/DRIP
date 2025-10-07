@@ -61,7 +61,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 32
-    MODE = "Swin" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
+    MODE = "H-DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
 
     img_size = 224
     width = 768
@@ -87,24 +87,25 @@ def main():
             flop_measure=True, # simulating fake boundaries for reproducible GFLOPs
         )
     elif MODE == "H-DRIP":
-        rate1 = 0.5  # compression rate at stage 1
-        rate2 = 0.5  # compression rate at stage 2
+        rate1 = 0.01  # compression rate at stage 1
+        rate2 = 0.01  # compression rate at stage 2
+        rate3 = 0.01  # compression rate at stage 3
         model = HierarchicalDTPViT(
-            image_size=img_size,
-            patch_size=patch_size,
+            image_size=224,
+            patch_size=4,
             in_chans=3,
-            embed_dim=width,
-            depth=(3, 3, 6),
-            num_heads=width // 64,
+            embed_dim=96,
+            depth=(2, 2, 6, 2),
+            num_heads=[3, 6, 12, 24],
             mlp_ratio=mlp_ratio,
             drop_rate=patch_dropout,
-            attn_drop_rate=0.1,
+            attn_drop_rate=0.0,
             temp=0.5,
-            compression_rate=(rate1, rate2),  # compression at stage 1 and 2
+            compression_rate=(rate1, rate2, rate3),  # compression at stage 1 and 2
             threshold=0.5,
             activation_function="gelu",
             num_classes=width,
-            flop_measure=True,  # simulating fake boundaries for reproducible GFLOPs
+            flop_measure=True,
         )
     elif MODE == "S-DRIP":
         upper_bound = 0.3  # compression rate upper bound
