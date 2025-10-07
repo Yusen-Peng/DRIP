@@ -1259,6 +1259,16 @@ class DTPViT(nn.Module):
             core_out = layer(core_out, src_key_padding_mask=attention_mask)
         return core_out
 
+    def forward_after_pooling_without_attn_masks(self, core_input: torch.Tensor, layers):
+        """
+        Process input with relative attention.
+        """
+        T, B, D = core_input.size()
+        core_out = core_input
+        for layer in layers:
+            core_out = layer(core_out)
+        return core_out
+
     def encode(self, x: torch.Tensor, return_loss: bool = False):
         B = x.size(0)
 
@@ -1296,16 +1306,22 @@ class DTPViT(nn.Module):
         )                                        # S x B x D
 
         # attention mask for post-pooling transformer layers
-        S = shortened_hidden.size(0)
-        pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
+        # S = shortened_hidden.size(0)
+        # pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
 
-        attn_mask = pad_mask.transpose(0, 1)                  # (B, S)  True=PAD
+        # attn_mask = pad_mask.transpose(0, 1)                  # (B, S)  True=PAD
 
         # post-pooling transformer blocks
-        shortened_hidden = self.forward_after_pooling_with_attn_masks(
+        # shortened_hidden = self.forward_after_pooling_with_attn_masks(
+        #     shortened_hidden,
+        #     self.short_blocks,
+        #     attention_mask=attn_mask
+        # )
+
+        # FIXME: ablation
+        shortened_hidden = self.forward_after_pooling_without_attn_masks(
             shortened_hidden,
-            self.short_blocks,
-            attention_mask=attn_mask
+            self.short_blocks
         )
 
         # return features and optional loss

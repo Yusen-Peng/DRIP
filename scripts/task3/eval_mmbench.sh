@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=DRIP_mmbench_eval
-#SBATCH --output=DRIP_mmbench_eval.txt
-#SBATCH --time=00:12:00
+#SBATCH --job-name=FINE_mmb_ViT
+#SBATCH --output=FINE_mmb_ViT_eval.txt
+#SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
@@ -23,13 +23,13 @@ SPLIT="mmbench_dev_20230712"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmbench/answers
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmbench/answers/mmbench_dev_20230712
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmbench/answers/mmbench_dev_20230712/XLbased-DRIP-10x-16-5-7-finetune.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmbench/answers/mmbench_dev_20230712/ViT-base-finetune-ALL.jsonl
 
 python src/model_vqa_mmbench.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/XLbased-DRIP-10x-16-5-7-finetune \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/ViT-base-finetune-ALL \
     --model-base lmsys/vicuna-7b-v1.5 \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmbench/mmbench_dev_20230712.tsv \
-    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmbench/answers/mmbench_dev_20230712/XLbased-DRIP-10x-16-5-7-finetune.jsonl \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmbench/answers/mmbench_dev_20230712/ViT-base-finetune-ALL.jsonl \
     --single-pred-prompt \
     --temperature 0 \
     --conv-mode vicuna_v1
@@ -40,4 +40,4 @@ python src/convert_mmbench_for_submission.py \
     --annotation-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmbench/mmbench_dev_20230712.tsv \
     --result-dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmbench/answers/mmbench_dev_20230712 \
     --upload-dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmbench/answers_upload/mmbench_dev_20230712 \
-    --experiment XLbased-DRIP-10x-16-5-7-finetune
+    --experiment ViT-base-finetune-ALL

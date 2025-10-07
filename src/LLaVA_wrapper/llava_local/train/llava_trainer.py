@@ -147,12 +147,95 @@ class LLaVATrainer(Trainer):
         else:
             return super()._get_train_sampler()
 
+    # def create_optimizer(self):
+    #     """
+    #     Setup the optimizer.
+
+    #     We provide a reasonable default that works well. If you want to use something else, you can pass a tuple in the
+    #     Trainer's init through `optimizers`, or subclass and override this method in a subclass.
+    #     """
+    #     if is_sagemaker_mp_enabled():
+    #         return super().create_optimizer()
+
+    #     opt_model = self.model
+
+    #     if self.optimizer is None:
+    #         decay_parameters = get_parameter_names(opt_model, ALL_LAYERNORM_LAYERS)
+    #         decay_parameters = [name for name in decay_parameters if "bias" not in name]
+    #         if self.args.mm_projector_lr is not None:
+    #             projector_parameters = [name for name, _ in opt_model.named_parameters() if "mm_projector" in name]
+    #             optimizer_grouped_parameters = [
+    #                 {
+    #                     "params": [
+    #                         p for n, p in opt_model.named_parameters() if (n in decay_parameters and n not in projector_parameters and p.requires_grad)
+    #                     ],
+    #                     "weight_decay": self.args.weight_decay,
+    #                 },
+    #                 {
+    #                     "params": [
+    #                         p for n, p in opt_model.named_parameters() if (n not in decay_parameters and n not in projector_parameters and p.requires_grad)
+    #                     ],
+    #                     "weight_decay": 0.0,
+    #                 },
+    #                 {
+    #                     "params": [
+    #                         p for n, p in opt_model.named_parameters() if (n in decay_parameters and n in projector_parameters and p.requires_grad)
+    #                     ],
+    #                     "weight_decay": self.args.weight_decay,
+    #                     "lr": self.args.mm_projector_lr,
+    #                 },
+    #                 {
+    #                     "params": [
+    #                         p for n, p in opt_model.named_parameters() if (n not in decay_parameters and n in projector_parameters and p.requires_grad)
+    #                     ],
+    #                     "weight_decay": 0.0,
+    #                     "lr": self.args.mm_projector_lr,
+    #                 },
+    #             ]
+    #         else:
+    #             optimizer_grouped_parameters = [
+    #                 {
+    #                     "params": [
+    #                         p for n, p in opt_model.named_parameters() if (n in decay_parameters and p.requires_grad)
+    #                     ],
+    #                     "weight_decay": self.args.weight_decay,
+    #                 },
+    #                 {
+    #                     "params": [
+    #                         p for n, p in opt_model.named_parameters() if (n not in decay_parameters and p.requires_grad)
+    #                     ],
+    #                     "weight_decay": 0.0,
+    #                 },
+    #             ]
+
+    #         optimizer_cls, optimizer_kwargs = Trainer.get_optimizer_cls_and_kwargs(self.args)
+
+    #         self.optimizer = optimizer_cls(optimizer_grouped_parameters, **optimizer_kwargs)
+    #         if optimizer_cls.__name__ == "Adam8bit":
+    #             import bitsandbytes
+
+    #             manager = bitsandbytes.optim.GlobalOptimManager.get_instance()
+
+    #             skipped = 0
+    #             for module in opt_model.modules():
+    #                 if isinstance(module, nn.Embedding):
+    #                     skipped += sum({p.data_ptr(): p.numel() for p in module.parameters()}.values())
+    #                     logger.info(f"skipped {module}: {skipped/2**20}M params")
+    #                     manager.register_module_override(module, "weight", {"optim_bits": 32})
+    #                     logger.debug(f"bitsandbytes: will optimize {module} in fp32")
+    #             logger.info(f"skipped: {skipped/2**20}M params")
+
+    #     return self.optimizer
+
+
+    # FIXME: mutual exclusive optimizer setup
     def create_optimizer(self):
         """
-        Setup the optimizer.
-
-        We provide a reasonable default that works well. If you want to use something else, you can pass a tuple in the
-        Trainer's init through `optimizers`, or subclass and override this method in a subclass.
+        Setup the optimizer with mutually-exclusive param buckets:
+        - base (LLM etc.)
+        - mm_projector (optional separate LR via --mm_projector_lr)
+        - vision_tower (optional separate LR via --vision_tower_lr)
+        Buckets are further split into decay / no-decay. No parameter appears in more than one group.
         """
         if is_sagemaker_mp_enabled():
             return super().create_optimizer()
@@ -160,60 +243,87 @@ class LLaVATrainer(Trainer):
         opt_model = self.model
 
         if self.optimizer is None:
-            decay_parameters = get_parameter_names(opt_model, ALL_LAYERNORM_LAYERS)
-            decay_parameters = [name for name in decay_parameters if "bias" not in name]
-            if self.args.mm_projector_lr is not None:
-                projector_parameters = [name for name, _ in opt_model.named_parameters() if "mm_projector" in name]
-                optimizer_grouped_parameters = [
-                    {
-                        "params": [
-                            p for n, p in opt_model.named_parameters() if (n in decay_parameters and n not in projector_parameters and p.requires_grad)
-                        ],
-                        "weight_decay": self.args.weight_decay,
-                    },
-                    {
-                        "params": [
-                            p for n, p in opt_model.named_parameters() if (n not in decay_parameters and n not in projector_parameters and p.requires_grad)
-                        ],
-                        "weight_decay": 0.0,
-                    },
-                    {
-                        "params": [
-                            p for n, p in opt_model.named_parameters() if (n in decay_parameters and n in projector_parameters and p.requires_grad)
-                        ],
-                        "weight_decay": self.args.weight_decay,
-                        "lr": self.args.mm_projector_lr,
-                    },
-                    {
-                        "params": [
-                            p for n, p in opt_model.named_parameters() if (n not in decay_parameters and n in projector_parameters and p.requires_grad)
-                        ],
-                        "weight_decay": 0.0,
-                        "lr": self.args.mm_projector_lr,
-                    },
-                ]
-            else:
-                optimizer_grouped_parameters = [
-                    {
-                        "params": [
-                            p for n, p in opt_model.named_parameters() if (n in decay_parameters and p.requires_grad)
-                        ],
-                        "weight_decay": self.args.weight_decay,
-                    },
-                    {
-                        "params": [
-                            p for n, p in opt_model.named_parameters() if (n not in decay_parameters and p.requires_grad)
-                        ],
-                        "weight_decay": 0.0,
-                    },
-                ]
+            # 1) decay names (HF default) = all except biases + LayerNorms excluded from weight decay
+            decay_names = set(get_parameter_names(opt_model, ALL_LAYERNORM_LAYERS))
+            decay_names = {n for n in decay_names if "bias" not in n}
 
+            # 2) projector by name is fine
+            projector_names = {n for n, _ in opt_model.named_parameters() if "mm_projector" in n}
+
+            # 3) robust vision_tower membership by OBJECT identity (works under wrappers/sharding)
+            inner = getattr(opt_model, "get_model", lambda: opt_model)()
+            vt_module = getattr(inner, "vision_tower", None)
+            vt_param_ids = set()
+            if vt_module is not None:
+                for p in vt_module.parameters():
+                    vt_param_ids.add(id(p))
+
+            def is_decay(n: str) -> bool:
+                return n in decay_names
+
+            def is_projector(n: str) -> bool:
+                return n in projector_names
+
+            def is_vt(p) -> bool:
+                return id(p) in vt_param_ids
+
+            # 4) exclusive buckets
+            base_decay, base_nodecay = [], []
+            proj_decay, proj_nodecay = [], []
+            vt_decay, vt_nodecay     = [], []
+
+            for name, p in opt_model.named_parameters():
+                if not p.requires_grad:
+                    continue
+                if is_projector(name):
+                    (proj_decay if is_decay(name) else proj_nodecay).append(p)
+                elif is_vt(p):
+                    (vt_decay if is_decay(name) else vt_nodecay).append(p)
+                else:
+                    (base_decay if is_decay(name) else base_nodecay).append(p)
+
+            # 5) build optimizer parameter groups
+            groups = []
+            # base
+            if base_decay:
+                groups.append({"params": base_decay, "weight_decay": self.args.weight_decay})
+            if base_nodecay:
+                groups.append({"params": base_nodecay, "weight_decay": 0.0})
+            # projector (custom LR if provided)
+            proj_lr = getattr(self.args, "mm_projector_lr", None)
+            if proj_decay:
+                groups.append(
+                    {"params": proj_decay, "weight_decay": self.args.weight_decay, **({"lr": proj_lr} if proj_lr is not None else {})}
+                )
+            if proj_nodecay:
+                groups.append(
+                    {"params": proj_nodecay, "weight_decay": 0.0, **({"lr": proj_lr} if proj_lr is not None else {})}
+                )
+            # vision tower (custom LR if provided)
+            vt_lr = getattr(self.args, "vision_tower_lr", None)  # add this to TrainingArguments if you want a separate LR
+            if vt_decay:
+                groups.append(
+                    {"params": vt_decay, "weight_decay": self.args.weight_decay, **({"lr": vt_lr} if vt_lr is not None else {})}
+                )
+            if vt_nodecay:
+                groups.append(
+                    {"params": vt_nodecay, "weight_decay": 0.0, **({"lr": vt_lr} if vt_lr is not None else {})}
+                )
+
+            # 6) sanity check: no duplicates / no omissions
+            grouped_ids = {id(p) for g in groups for p in g["params"]}
+            trainable_ids = {id(p) for p in opt_model.parameters() if p.requires_grad}
+            assert grouped_ids == trainable_ids, (
+                f"Param grouping mismatch: grouped={len(grouped_ids)} trainable={len(trainable_ids)}"
+            )
+
+            # 7) instantiate optimizer
             optimizer_cls, optimizer_kwargs = Trainer.get_optimizer_cls_and_kwargs(self.args)
+            self.optimizer = optimizer_cls(groups, **optimizer_kwargs)
 
-            self.optimizer = optimizer_cls(optimizer_grouped_parameters, **optimizer_kwargs)
+            # 8) 8-bit Adam embedding override (unchanged from your original)
             if optimizer_cls.__name__ == "Adam8bit":
                 import bitsandbytes
-
                 manager = bitsandbytes.optim.GlobalOptimManager.get_instance()
 
                 skipped = 0
@@ -222,7 +332,7 @@ class LLaVATrainer(Trainer):
                         skipped += sum({p.data_ptr(): p.numel() for p in module.parameters()}.values())
                         logger.info(f"skipped {module}: {skipped/2**20}M params")
                         manager.register_module_override(module, "weight", {"optim_bits": 32})
-                        logger.debug(f"bitsandbytes: will optimize {module} in fp32")
+                        logger.debug("bitsandbytes: will optimize %s in fp32", module)
                 logger.info(f"skipped: {skipped/2**20}M params")
 
         return self.optimizer

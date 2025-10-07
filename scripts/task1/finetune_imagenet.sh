@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=CORRECTED_ViT_32_384
-#SBATCH --output=CORRECTED_ViT_32_384.txt
+#SBATCH --job-name=Oct6_real_swin
+#SBATCH --output=Oct6_real_swin.txt
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -23,7 +23,7 @@ torchrun --nproc_per_node=4 src/task1_newcodebase.py \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ImageNet_EViT
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ImageNet_Swin_real
 
 conda deactivate
 # End of script

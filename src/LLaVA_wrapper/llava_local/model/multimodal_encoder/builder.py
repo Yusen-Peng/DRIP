@@ -6,7 +6,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     # FIXME: all hardcoded. Need to be fixed later.
     USE_DTP = False
     FINETUNING_MODE = True
-    BACKBONE = 'XL'  # 'ViT' or 'XL'
+    BACKBONE = 'ViT'  # 'ViT' or 'XL'
 
     if USE_DTP:
         print("🍟" * 20)
@@ -17,7 +17,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         print("Using original ViT as the vision tower")
         print("🍟" * 20)
     
-    checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
+    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_5_7/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_2_10/checkpoints/epoch_15.pt"
@@ -30,7 +30,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_XL_2_10/checkpoints/epoch_15.pt"
     
     # trainable vision tower?
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ViT-base-finetune-ALL/vision_tower/vision_tower.pt"
+    checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ViT-base-finetune-ALL/vision_tower.pt"
 
 
     patch_size = 16
@@ -70,7 +70,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             print(f"Using original ViT from the path {checkpoint_path}")
             print("🍟" * 20)
 
-            return ViTVisionTower(
+            vit_loaded: ViTVisionTower = ViTVisionTower(
                 checkpoint_path=checkpoint_path, 
                 vision_tower=vision_tower,
                 args=vision_tower_cfg,
@@ -84,4 +84,6 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
                 **kwargs
             )
 
-    raise ValueError(f'Unknown vision tower: {vision_tower}')
+            return vit_loaded
+    else:
+        raise ValueError(f'Unknown vision tower: {vision_tower}')

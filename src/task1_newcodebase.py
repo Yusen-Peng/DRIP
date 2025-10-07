@@ -1092,10 +1092,10 @@ def main(args):
     init_distributed_mode(args)
     print(args)
     
-    #RESOLUTION = 224
-    RESOLUTION = 384 # FIXME: 384 only for ablation
-    #patch_size = 16
-    patch_size = 32 # FIXME: 32 only for ablation
+    RESOLUTION = 224
+    #RESOLUTION = 384 # FIXME: 384 only for ablation
+    patch_size = 16
+    #patch_size = 32 # FIXME: 32 only for ablation
 
     args.train_crop_size = RESOLUTION
     args.val_crop_size = RESOLUTION # FIXME: patching so far
@@ -1139,9 +1139,9 @@ def main(args):
         dataset_test, batch_size=args.batch_size, sampler=test_sampler, num_workers=args.workers, pin_memory=True
     )
     print("Creating model")
-    MODE = "ViT" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
+    MODE = "Swin" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
     if MODE == "DRIP":
-        compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
+        compression_rate = 0.1 # 0.25 for 4x, 0.1 for 10x
         empty_backbone = DTPViT(
                 image_size=RESOLUTION,
                 patch_size=patch_size,
@@ -1166,12 +1166,12 @@ def main(args):
         print("Calculating GFLOPs for Swin Transformer...")
         empty_backbone = SwinTransformer(
             img_size=RESOLUTION, 
-            patch_size=patch_size, 
-            embed_dim=480, # this is TUNED for fair performance/GFLOP comparison
-            depths=[2, 10],
-            num_heads=[12, 12],
+            patch_size=4, 
+            embed_dim=96,
+            depths=[2, 2, 6, 2],
+            num_heads=[3, 6, 12, 24],
             window_size=7, mlp_ratio=4.0, qkv_bias=True,
-            drop_rate=0.0, attn_drop_rate=0.1, drop_path_rate=0.1,
+            drop_rate=0.0, attn_drop_rate=0.0, drop_path_rate=0.1,
             norm_layer=torch.nn.LayerNorm, ape=False, patch_norm=True,
             use_checkpoint=False, fused_window_process=False,
         )

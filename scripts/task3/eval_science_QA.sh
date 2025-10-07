@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=DRIP_science_QA_eval_ALL
-#SBATCH --output=DRIP_science_QA_eval_ALL.txt
-#SBATCH --time=00:12:00
+#SBATCH --job-name=FINE_science_QA_ViT
+#SBATCH --output=FINE_science_QA_ViT.txt
+#SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1

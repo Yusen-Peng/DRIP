@@ -61,9 +61,9 @@ def throughput(images, model):
 
 def main():
     patch_size = 32
-    MODE = "DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
+    MODE = "Swin" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
 
-    img_size = 384
+    img_size = 224
     width = 768
     mlp_ratio = 4.0
     patch_dropout = 0.1
@@ -158,13 +158,13 @@ def main():
         from swin import SwinTransformer
         print("Calculating GFLOPs for Swin Transformer...")
         model = SwinTransformer(
-            img_size=img_size, 
-            patch_size=patch_size, 
-            embed_dim=480, # this is TUNED for fair performance/GFLOP comparison
-            depths=[2, 10],
-            num_heads=[12, 12],
+            img_size=224, 
+            patch_size=4, 
+            embed_dim=96,
+            depths=[2, 2, 6, 2],
+            num_heads=[3, 6, 12, 24],
             window_size=7, mlp_ratio=4.0, qkv_bias=True,
-            drop_rate=0.0, attn_drop_rate=0.1, drop_path_rate=0.1,
+            drop_rate=0.0, attn_drop_rate=0.0, drop_path_rate=0.1,
             norm_layer=torch.nn.LayerNorm, ape=False, patch_norm=True,
             use_checkpoint=False, fused_window_process=False,
         )

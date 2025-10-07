@@ -16,21 +16,15 @@ def load_finetuned_vision_tower(vt_core, path_or_dir, strict: bool=False, device
     vt_core: the VisionTransformer module itself (NOT a wrapper).
     path_or_dir: directory containing 'vision_tower.pt' OR a direct '.pt' file path.
     """
-    # Accept dir or file
-    ckpt_path = os.path.join(path_or_dir, "vision_tower.pt") if os.path.isdir(path_or_dir) else path_or_dir
-    if not os.path.isfile(ckpt_path):
-        raise FileNotFoundError(f"No vision tower weights at {ckpt_path}")
-
+    print(f"vt_core type: {type(vt_core)}")
     # Load weights on CPU, then into module
-    state = torch.load(ckpt_path, map_location="cpu")
-
-    # If the state was saved with a wrapper prefix by mistake, strip it
-    if any(k.startswith("vision_tower.") for k in state.keys()):
-        state = {k.replace("vision_tower.", "", 1): v for k, v in state.items()}
+    state = torch.load(path_or_dir, map_location="cpu")
 
     missing, unexpected = vt_core.load_state_dict(state, strict=strict)
     if missing or unexpected:
         print(f"[vision_tower] load_state_dict: missing={missing}, unexpected={unexpected}", flush=True)
+
+    vt_core.eval() # no gradients
 
     # Device / dtype placement
     if device is None:
@@ -39,7 +33,7 @@ def load_finetuned_vision_tower(vt_core, path_or_dir, strict: bool=False, device
     if dtype is not None:
         vt_core.to(dtype=dtype)
 
-    print(f"[vision_tower] Loaded finetuned weights from {ckpt_path}", flush=True)
+    print(f"[vision_tower] Loaded finetuned weights from {path_or_dir}", flush=True)
     return vt_core
 
 
@@ -201,10 +195,10 @@ class ViTVisionTower(nn.Module):
 
         # FIXME: load the model
         #  option 1: load from the original CLIP checkpoint
-        load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+        #load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
 
         # option 2: load from the finetuned checkpoint
-        #load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
+        load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
 
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -238,27 +232,33 @@ class ViTVisionTower(nn.Module):
             'num_classes': self.num_classes,
             'flop_measure': self.flop_measure
         }
+
+        # check if its vision tower is trainable
+        for param in self.vision_tower.parameters():
+            print("🦷" * 20) 
+            print(f"param.requires_grad: {param.requires_grad}")
+            break
+        
     
     def feature_select(self, image_forward_outs):
         assert image_forward_outs is not None
         raise NotImplementedError("DTPViT does not require feature selection like CLIP. Use the full output.")
 
+    @torch.no_grad() # FIXME: remove this if finetuning
     def forward(self, images):
         """
         images: torch.Tensor of shape [B, C, H, W]
         returns: torch.Tensor of shape [B, N_tokens, hidden_dim]
         """
-        # encode images
-        FINETUNE = False
-        if not FINETUNE:
-            with torch.no_grad():
-                images = images.to("cuda", dtype=self.dtype)
-                features = self.vision_tower.encode(images)
-                features = features.to("cuda", dtype=self.dtype)
-        else:
+        # images = images.to("cuda", dtype=self.dtype)
+        # features = self.vision_tower.encode(images)
+        # features = features.to("cuda", dtype=self.dtype)        
+        # return features
+
+        with torch.no_grad():
             images = images.to("cuda", dtype=self.dtype)
             features = self.vision_tower.encode(images)
-            features = features.to("cuda", dtype=self.dtype)
+            features = features.to("cuda", dtype=self.dtype)        
         return features
 
     @property

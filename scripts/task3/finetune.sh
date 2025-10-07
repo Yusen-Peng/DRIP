@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Oct1_finetune_ViTall
-#SBATCH --output=Oct1_finetune_ViTall.txt
+#SBATCH --job-name=Oct6_finetune_ViT_all
+#SBATCH --output=Oct6_finetune_ViT_all.txt
 #SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -51,4 +51,4 @@ deepspeed src/task3_llava.py \
     --model_max_length 1024 \
     --gradient_checkpointing True \
     --dataloader_num_workers 4 \
-    --lazy_preprocess True \
+    --lazy_preprocess True
