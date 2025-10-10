@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=Oct6_finetune_DRIP_all
-#SBATCH --output=Oct6_finetune_DRIP_all.txt
+#SBATCH --job-name=Oct10_finetune_ViT_all_3
+#SBATCH --output=Oct10_finetune_ViT_all_3.txt
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=1
+#SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
@@ -35,7 +35,7 @@ deepspeed src/task3_llava.py \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
     --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-finetune-ALL \
-    --num_train_epochs 1 \
+    --num_train_epochs 3 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 1 \

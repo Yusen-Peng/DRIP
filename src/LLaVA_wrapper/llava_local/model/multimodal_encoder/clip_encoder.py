@@ -194,7 +194,7 @@ class ViTVisionTower(nn.Module):
         )
 
         # FIXME: load the model
-        #  option 1: load from the original CLIP checkpoint
+        # option 1: load from the original CLIP checkpoint
         load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
 
         # option 2: load from the finetuned checkpoint

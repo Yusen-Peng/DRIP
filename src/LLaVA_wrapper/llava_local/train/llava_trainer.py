@@ -228,7 +228,7 @@ class LLaVATrainer(Trainer):
     #     return self.optimizer
 
 
-    # FIXME: mutual exclusive optimizer setup
+    # NOTE: mutual exclusive optimizer setup
     def create_optimizer(self):
         """
         Setup the optimizer with mutually-exclusive param buckets:

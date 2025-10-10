@@ -1082,7 +1082,7 @@ def train(attn_implementation=None):
                     **data_module)
     
 
-    # --- DEBUG: ensure ViT params are in the optimizer groups
+    # ensure ViT params are in the optimizer groups
     try:
         vt_wrapper = model.get_model().vision_tower
         vt_core = getattr(vt_wrapper, "vision_tower", vt_wrapper)

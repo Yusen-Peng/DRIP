@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=FINE_mmb_ViT
-#SBATCH --output=FINE_mmb_ViT_eval.txt
+#SBATCH --output=FINE_mmb_ViT.txt
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

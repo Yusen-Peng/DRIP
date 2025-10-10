@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Sept_24_XLbased_DRIP_4x_2_10
-#SBATCH --output=Sept_24_XLbased_DRIP_4x_2_10.txt
+#SBATCH --job-name=Oct10_pretrain_DRIP_all
+#SBATCH --output=Oct10_pretrain_DRIP_all.txt
 #SBATCH --time=24:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -31,7 +31,7 @@ deepspeed src/task3_llava.py \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/XLbased-DRIP-4x-16-2-10-pretrain \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-pretrain-ALL \
     --num_train_epochs 1 \
     --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 4 \
