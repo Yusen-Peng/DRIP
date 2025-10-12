@@ -122,10 +122,10 @@ def _build_vision_tower(
         SOFT = False  # whether to use soft DTP-ViT
 
         # FIXME: infer from the model path if we are using DTP-ViT or not
-        DTP_ViT = False
+        DTP_ViT = True
 
         if DTP_ViT and not HIERARCHICAL and not SOFT: 
-            compression_rate = 0.1
+            compression_rate = 0.1 # compression rate
             print(f"Using DTP ViT with compression rate {compression_rate}")
             depth = (4, 8, 0)
             print(f"Depth for each stage: {depth}")

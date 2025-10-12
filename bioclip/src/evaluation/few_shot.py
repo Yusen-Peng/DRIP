@@ -255,12 +255,31 @@ if __name__ == "__main__":
         logging.info("Model:")
         logging.info(f"{str(model)}")
 
-        # initialize datasets
+        # # initialize datasets
+        # data = {
+        #     "val-unseen": get_dataloader(
+        #         DatasetFromFile(args.data_root, args.label_filename, transform=preprocess_val),
+        #         batch_size=args.batch_size,num_workers=args.workers
+        #     ),
+        # }
+
+        # initialize datasets (evaluate EVERYTHING in metadata.csv)
+        dataset_all = DatasetFromFile(
+            args.data_root,           # e.g., /.../eval/PLK_Mini
+            args.label_filename,      # "metadata.csv"
+            transform=preprocess_val
+        )
+
+        # quick sanity log
+        print(f"[sanity] samples={len(dataset_all)}  classes={len(dataset_all.classes)}")
+        print("[sanity] example classes:", list(dataset_all.classes)[:10])
+
         data = {
-            "val-unseen": get_dataloader(
-                DatasetFromFile(args.data_root, args.label_filename, transform=preprocess_val),
-                batch_size=args.batch_size,num_workers=args.workers
-            ),
+            "all": get_dataloader(
+                dataset_all,
+                batch_size=args.batch_size,
+                num_workers=args.workers,
+            )
         }
 
         start_time = time.monotonic()
