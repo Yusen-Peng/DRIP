@@ -31,6 +31,13 @@ def parse_args(args):
         default=None,
         help="Path to file(s) with training data. When using webdataset, multiple datasources can be combined using the `::` separator.",
     )
+
+    parser.add_argument(
+        "--DTP",
+        action='store_true',
+        help="Use DTP (Dynamic Token Pooling) for image encoder.",
+    )
+
     parser.add_argument(
         "--train-data-upsampling-factors",
         type=str,

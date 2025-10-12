@@ -1,13 +1,32 @@
 #!/bin/bash
+#SBATCH --job-name=PLK_ZERO_SHOT
+#SBATCH --output=PLK_ZERO_SHOT.txt
+#SBATCH --time=00:10:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1                      
+#SBATCH --gpus-per-node=4
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=128G
+#SBATCH --account=PAS2836
 
-export CUDA_VISIBLE_DEVICES=0
-export DATA_ROOT="/local/scratch/imageomics/projects/open_clip/data/rare_species"
-export PRETRAINED="/local/scratch/imageomics/projects/open_clip/model/10m_random/epoch_100.pt"
-# "laion400m_e32" "openai"
-#"/local/scratch/imageomics/projects/open_clip/model/10m_random/epoch_100.pt"
-#"/local/scratch/imageomics/projects/open_clip/model/inat_random/epoch_65.pt"
-export TEXT_TYPE="taxon_com"
-#"com", "sci", "sci_com", "taxon_com"
+module load miniconda3/24.1.2-py310
+conda activate DRIP
+source activate DRIP
+
+export OMP_NUM_THREADS=16
+export MASTER_PORT=$((12000 + RANDOM % 20000))
+
+cd /users/PAS2912/yusenpeng/Fast-CLIP/bioclip
+export PYTHONPATH="$PWD:$PYTHONPATH"
+
+
+export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/PLK_Mini"
+export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
+#export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
+#export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
+
+export TEXT_TYPE="asis"
+#"com", "sci", "sci_com", "taxon_com", "asis"
 export LABEL_FILE="metadata.csv"
 export LOG_FILEPATH="../storage/logs"
 
@@ -19,7 +38,3 @@ python -m src.evaluation.zero_shot_iid \
         --label_filename $LABEL_FILE \
         --log $LOG_FILEPATH \
         --text_type $TEXT_TYPE \
-
-
-# conda activate bioclip-test
-# ./eval_zero_shot.sh &> ../storage/zeroshot_10m_random.txt

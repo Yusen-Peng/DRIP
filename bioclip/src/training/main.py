@@ -219,8 +219,11 @@ def main(args):
         # arg is nargs, single (square) image size list -> int
         args.force_image_size = args.force_image_size[0]
     random_seed(args.seed, 0)
+
+    DTP_ViT = True if args.DTP else False
     model, preprocess_train, preprocess_val = create_model_and_transforms(
         args.model,
+        DTP_ViT,
         args.pretrained,
         precision=args.precision,
         device=device,

@@ -1,5 +1,0 @@
-[tool.isort]
-profile = "black"
-
-[tool.ruff.lint]
-ignore = ["E501"]

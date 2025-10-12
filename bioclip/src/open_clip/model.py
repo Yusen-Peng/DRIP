@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import logging
 import math
 from typing import Optional, Tuple, Union
-
+from functools import partial
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -18,6 +18,8 @@ from .modified_resnet import ModifiedResNet
 from .timm_model import TimmModel
 from .transformer import LayerNormFp32, LayerNorm, QuickGELU, Attention, VisionTransformer, TextTransformer
 from .utils import to_2tuple
+from .DTP_ViT import DTPViT, HierarchicalDTPViT, SoftDTPViT, XL_Baseline
+
 
 
 @dataclass
@@ -76,7 +78,7 @@ def _build_vision_tower(
         embed_dim: int,
         vision_cfg: CLIPVisionCfg,
         quick_gelu: bool = False,
-        cast_dtype: Optional[torch.dtype] = None
+        cast_dtype: Optional[torch.dtype] = None,
 ):
     if isinstance(vision_cfg, dict):
         vision_cfg = CLIPVisionCfg(**vision_cfg)
@@ -95,10 +97,10 @@ def _build_vision_tower(
             proj_bias=vision_cfg.timm_proj_bias,
             drop=vision_cfg.timm_drop,
             drop_path=vision_cfg.timm_drop_path,
+            patch_drop=vision_cfg.patch_dropout if vision_cfg.patch_dropout > 0 else None,
             embed_dim=embed_dim,
             image_size=vision_cfg.image_size,
         )
-        act_layer = nn.GELU  # so that text transformer doesn't use QuickGELU w/ timm models
     elif isinstance(vision_cfg.layers, (tuple, list)):
         vision_heads = vision_cfg.width * 32 // vision_cfg.head_width
         visual = ModifiedResNet(
@@ -111,25 +113,126 @@ def _build_vision_tower(
     else:
         vision_heads = vision_cfg.width // vision_cfg.head_width
         norm_layer = LayerNormFp32 if cast_dtype in (torch.float16, torch.bfloat16) else LayerNorm
-        visual = VisionTransformer(
-            image_size=vision_cfg.image_size,
-            patch_size=vision_cfg.patch_size,
-            width=vision_cfg.width,
-            layers=vision_cfg.layers,
-            heads=vision_heads,
-            mlp_ratio=vision_cfg.mlp_ratio,
-            ls_init_value=vision_cfg.ls_init_value,
-            patch_dropout=vision_cfg.patch_dropout,
-            input_patchnorm=vision_cfg.input_patchnorm,
-            global_average_pool=vision_cfg.global_average_pool,
-            attentional_pool=vision_cfg.attentional_pool,
-            n_queries=vision_cfg.n_queries,
-            attn_pooler_heads=vision_cfg.attn_pooler_heads,
-            output_tokens=vision_cfg.output_tokens,
-            output_dim=embed_dim,
-            act_layer=act_layer,
-            norm_layer=norm_layer,
-        )
+        # if vision_cfg.norm_kwargs:
+        #     norm_layer = partial(norm_layer, **vision_cfg.norm_kwargs)
+        # if vision_cfg.act_kwargs is not None:
+        #     act_layer = partial(act_layer, **vision_cfg.act_kwargs)
+
+        HIERARCHICAL = False  # whether to use hierarchical DTP-ViT
+        SOFT = False  # whether to use soft DTP-ViT
+
+        # FIXME: infer from the model path if we are using DTP-ViT or not
+        DTP_ViT = False
+
+        if DTP_ViT and not HIERARCHICAL and not SOFT: 
+            compression_rate = 0.1
+            print(f"Using DTP ViT with compression rate {compression_rate}")
+            depth = (4, 8, 0)
+            print(f"Depth for each stage: {depth}")
+            visual = DTPViT(
+                image_size=vision_cfg.image_size,
+                patch_size=vision_cfg.patch_size,
+                in_chans=3,
+                embed_dim=vision_cfg.width,
+                depth=depth,
+                num_heads=vision_heads,
+                mlp_ratio=vision_cfg.mlp_ratio,
+                drop_rate=vision_cfg.patch_dropout,
+                attn_drop_rate=0.1,
+                temp=0.5,
+                compression_rate=compression_rate,
+                threshold=0.5,
+                activation_function="gelu",
+                num_classes=embed_dim
+            )
+
+        elif DTP_ViT and HIERARCHICAL and not SOFT:
+            print("Using Hierarchical DTP ViT")
+            rate1 = 0.5  # compression rate at stage 1
+            rate2 = 0.5  # compression rate at stage 2
+            print(f"Compression rates: {rate1}, {rate2}")
+            visual = HierarchicalDTPViT(
+                image_size=vision_cfg.image_size,
+                patch_size=vision_cfg.patch_size,
+                in_chans=3,
+                embed_dim=vision_cfg.width,
+                depth=(3, 3, 6),
+                num_heads=vision_heads,
+                mlp_ratio=vision_cfg.mlp_ratio,
+                drop_rate=vision_cfg.patch_dropout,
+                attn_drop_rate=0.1,
+                temp=0.5,
+                compression_rate=(rate1, rate2),  # compression at stage 1 and 2
+                threshold=0.5,
+                activation_function="gelu",
+                num_classes=embed_dim,
+            )
+        
+        elif DTP_ViT and SOFT:
+            upper_bound = 0.2  # compression rate upper bound
+            lower_bound = 0.3  # compression rate lower bound
+            print(f"Using Soft DTP ViT with compression rate {upper_bound} - {lower_bound}")
+            compression_rate = (lower_bound, upper_bound)
+            visual = SoftDTPViT(
+                image_size=vision_cfg.image_size,
+                patch_size=vision_cfg.patch_size,
+                in_chans=3,
+                embed_dim=vision_cfg.width,
+                depth=(2, 10, 0),
+                num_heads=vision_heads,
+                mlp_ratio=vision_cfg.mlp_ratio,
+                drop_rate=vision_cfg.patch_dropout,
+                attn_drop_rate=0.1,
+                temp=0.5,
+                compression_rate=compression_rate,
+                threshold=0.5,
+                activation_function="gelu",
+                num_classes=embed_dim
+            )
+        else:
+            use_XL_backbone = False
+            print(f"are we using XL backbone? {use_XL_backbone}", flush=True)
+            if use_XL_backbone:
+                print("use XL backbone!")
+                patch_size = 16
+                visual = XL_Baseline(
+                    image_size=224,
+                    patch_size=patch_size,
+                    in_chans=3,
+                    embed_dim=768,
+                    num_heads=12,
+                    mlp_ratio=4.0,
+                    drop_rate=0.0,
+                    attn_drop_rate=0.1,
+                    temp=0.5,
+                    threshold=0.5,
+                    activation_function="gelu",
+                    num_classes=512,
+                )
+
+            else:
+                print("use ViT!")
+                visual = VisionTransformer(
+                    image_size=vision_cfg.image_size,
+                    patch_size=vision_cfg.patch_size,
+                    width=vision_cfg.width,
+                    layers=vision_cfg.layers,
+                    heads=vision_heads,
+                    mlp_ratio=vision_cfg.mlp_ratio,
+                    ls_init_value=vision_cfg.ls_init_value,
+                    patch_dropout=vision_cfg.patch_dropout,
+                    attentional_pool=vision_cfg.attentional_pool,
+                    #attn_pooler_queries=vision_cfg.attn_pooler_queries,
+                    attn_pooler_heads=vision_cfg.attn_pooler_heads,
+                    #pos_embed_type=vision_cfg.pos_embed_type,
+                    #no_ln_pre=vision_cfg.no_ln_pre,
+                    #final_ln_after_pool=vision_cfg.final_ln_after_pool,
+                    #pool_type=vision_cfg.pool_type,
+                    output_tokens=vision_cfg.output_tokens,
+                    output_dim=embed_dim,
+                    act_layer=act_layer,
+                    norm_layer=norm_layer,
+                )    
 
     return visual
 

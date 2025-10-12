@@ -174,8 +174,10 @@ if __name__ == "__main__":
         args.force_image_size = args.force_image_size[0]
 
     random_seed(args.seed, 0)
+    DTP_ViT = True if args.DTP else False
     model, preprocess_train, preprocess_val = create_model_and_transforms(
         args.model,
+        DTP_ViT,
         args.pretrained,
         precision=args.precision,
         device=device,
@@ -212,11 +214,31 @@ if __name__ == "__main__":
                 f.write(f"{name}: {val}\n")
 
     # initialize datasets
+    # data = {
+    #     "val-unseen": get_dataloader(
+    #         DatasetFromFile(args.data_root, args.label_filename, transform=preprocess_val, classes=args.text_type),
+    #         batch_size=args.batch_size,num_workers=args.workers
+    #     ),
+    # }
+
+    # initialize datasets (evaluate EVERYTHING in metadata.csv)
+    dataset_all = DatasetFromFile(
+        args.data_root,           # e.g., /.../eval/PLK_Mini
+        args.label_filename,      # "metadata.csv"
+        transform=preprocess_val,
+        classes=args.text_type    # "com" | "sci" | "sci_com" | "taxon_com" (affects prompts only)
+    )
+
+    # quick sanity log
+    print(f"[sanity] samples={len(dataset_all)}  classes={len(dataset_all.classes)}")
+    print("[sanity] example classes:", list(dataset_all.classes)[:10])
+
     data = {
-        "val-unseen": get_dataloader(
-            DatasetFromFile(args.data_root, args.label_filename, transform=preprocess_val, classes=args.text_type),
-            batch_size=args.batch_size,num_workers=args.workers
-        ),
+        "all": get_dataloader(
+            dataset_all,
+            batch_size=args.batch_size,
+            num_workers=args.workers,
+        )
     }
 
     model.eval()

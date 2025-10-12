@@ -37,6 +37,11 @@ def parse_args(args):
         help="retrieve: retrieve image embeddings from image encoder; eval: evaluate with pickle file containing image embeddings; all: evaluate from scratch which both retrieve image embeddings and evaluate the embeddings in one run.",
     )
     parser.add_argument(
+        "--DTP",
+        action='store_true',
+        help="Use DTP (Dynamic Token Pooling) for image encoder.",
+    )
+    parser.add_argument(
         "--nfold",
         type=int,
         default=5,

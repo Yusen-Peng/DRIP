@@ -106,6 +106,7 @@ def load_checkpoint(model, checkpoint_path, strict=True):
 
 def create_model(
         model_name: str,
+        DTP_ViT: bool,
         pretrained: Optional[str] = None,
         precision: str = 'fp32',
         device: Union[str, torch.device] = 'cpu',
@@ -273,6 +274,7 @@ def create_loss(args):
 
 def create_model_and_transforms(
         model_name: str,
+        DTP_ViT: bool,
         pretrained: Optional[str] = None,
         precision: str = 'fp32',
         device: Union[str, torch.device] = 'cpu',
@@ -291,6 +293,7 @@ def create_model_and_transforms(
 ):
     model = create_model(
         model_name,
+        DTP_ViT,
         pretrained,
         precision=precision,
         device=device,
@@ -308,14 +311,14 @@ def create_model_and_transforms(
     image_mean = image_mean or getattr(model.visual, 'image_mean', None)
     image_std = image_std or getattr(model.visual, 'image_std', None)
     preprocess_train = image_transform(
-        model.visual.image_size,
+        224,
         is_train=True,
         mean=image_mean,
         std=image_std,
         aug_cfg=aug_cfg,
     )
     preprocess_val = image_transform(
-        model.visual.image_size,
+        224,
         is_train=False,
         mean=image_mean,
         std=image_std,
