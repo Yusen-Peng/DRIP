@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Oct10_finetune_ViT_all_3
-#SBATCH --output=Oct10_finetune_ViT_all_3.txt
+#SBATCH --job-name=Oct14_finetune_DRIP_all_3
+#SBATCH --output=Oct14_finetune_DRIP_all_3.txt
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

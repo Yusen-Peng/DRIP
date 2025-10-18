@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Birds_FEW_SHOT
-#SBATCH --output=Birds_FEW_SHOT.txt
+#SBATCH --job-name=ViT_FEW_SHOT
+#SBATCH --output=VIT_FEW_SHOT.txt
 #SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1                      
@@ -23,7 +23,7 @@ export PYTHONPATH="$PWD:$PYTHONPATH"
 #export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_2_10/checkpoints/epoch_15.pt"
 
 
-#export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/PLK_Mini"
+export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/PLK_Mini"
 #export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/INS_Mini"
 #export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/INS_2_Mini"
 #export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/PLT_NET_Mini"
@@ -31,13 +31,16 @@ export PYTHONPATH="$PWD:$PYTHONPATH"
 #export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/PLT_VIL_Mini"
 #export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/MED_LF_Mini"
 #export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/PLT_DOC_Mini"
-export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/birds_525"
+#export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/birds_525"
 
 
 #export PRETRAINED="openai"
-export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
+#export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
 #export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
 #export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
+export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/BioCLIP/ViT/checkpoints/epoch_30.pt"
+
+
 
 export TASK_TYPE="all"
 export LABEL_FILE="metadata.csv"

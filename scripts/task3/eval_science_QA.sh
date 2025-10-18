@@ -19,27 +19,27 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViT-base-finetune-ALL.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-ALL.jsonl
 
 python src/model_vqa_science.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/ViT-base-finetune-ALL \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-finetune-ALL \
     --model-base lmsys/vicuna-7b-v1.5 \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/llava_test_QCM-LEA.json \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/images/test \
-    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViT-base-finetune-ALL.jsonl \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-ALL.jsonl \
     --single-pred-prompt \
     --temperature 0 \
     --conv-mode vicuna_v1
 
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViT-base-finetune-ALL.jsonl
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViT-base-finetune-ALL_output.jsonl
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViT-base-finetune-ALL_result.json
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-ALL.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-ALL_output.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-ALL_result.json
 
 python src/eval_science_qa.py \
     --base-dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa \
-    --result-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViT-base-finetune-ALL.jsonl \
-    --output-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViT-base-finetune-ALL_output.jsonl \
-    --output-result /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViT-base-finetune-ALL_result.json
+    --result-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-ALL.jsonl \
+    --output-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-ALL_output.jsonl \
+    --output-result /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-ALL_result.json
 
 conda deactivate
 # End of script

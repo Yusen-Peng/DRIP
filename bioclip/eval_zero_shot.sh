@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Birds_ZERO_SHOT
-#SBATCH --output=Birds_ZERO_SHOT.txt
+#SBATCH --job-name=VIT_ZERO_SHOT
+#SBATCH --output=VIT_ZERO_SHOT.txt
 #SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1                      
@@ -34,10 +34,11 @@ export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/birds_
 #export PRETRAINED="openai"
 #export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
 #export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
-export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
+#export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
+export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/BioCLIP/ViT/checkpoints/epoch_30.pt"
 
-#export TEXT_TYPE="asis"
-export TEXT_TYPE="taxon_com"
+export TEXT_TYPE="asis"
+#export TEXT_TYPE="taxon_com"
 #"com", "sci", "sci_com", "taxon_com", "asis"
 export LABEL_FILE="metadata.csv"
 export LOG_FILEPATH="../storage/logs"

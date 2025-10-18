@@ -13,7 +13,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-
+import datetime as dt
 import os
 import sys
 import torch.distributed as dist
@@ -791,8 +791,18 @@ def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
 
 
 
-def _is_main(local_rank):
-    return local_rank in (-1, 0)
+def is_dist():
+    return dist.is_available() and dist.is_initialized()
+
+def is_main():
+    return (not is_dist()) or dist.get_rank() == 0
+
+
+def ddp_barrier():
+    if is_dist():
+        torch.cuda.synchronize()
+        dist.barrier()
+
 
 @torch.no_grad()
 def _maybe_materialize(vt_core):
@@ -825,7 +835,7 @@ def gather_vt_state_dict(vt_core, local_rank=-1):
         params = list(vt_core.parameters(recurse=True))
         # Gather param shards on rank0 so that state_dict() returns real shapes
         with deepspeed.zero.GatheredParameters(params, modifier_rank=0):
-            if _is_main(local_rank):
+            if is_main():
                 sd = vt_core.state_dict()  # (buffers included automatically)
                 return {k: v.detach().cpu() for k, v in sd.items()}
         return None
@@ -840,7 +850,7 @@ def gather_vt_state_dict(vt_core, local_rank=-1):
         cfg = FullStateDictConfig(offload_to_cpu=True, rank0_only=True)
         with FSDP.state_dict_type(vt_core, StateDictType.FULL_STATE_DICT, cfg):
             sd = vt_core.state_dict()
-        return sd if _is_main(local_rank) else None
+        return sd if is_main() else None
     except Exception:
         pass
 
@@ -851,7 +861,7 @@ def gather_vt_state_dict(vt_core, local_rank=-1):
 
 def save_vision_tower(vt_core, out_path, local_rank=-1):
     sd_cpu = gather_vt_state_dict(vt_core, local_rank=local_rank)
-    if not _is_main(local_rank) or sd_cpu is None:
+    if not is_main() or sd_cpu is None:
         return
     bad = [k for k, t in sd_cpu.items() if any(d == 0 for d in t.shape)]
     if bad:
@@ -1127,83 +1137,43 @@ def train(attn_implementation=None):
                                        output_dir=training_args.output_dir)
 
 
+    ddp_barrier()  # Barrier #1: everyone finished Trainer/HF/DS saving
+    print(f"[rank {training_args.local_rank}] all done saving!", flush=True)
 
+    engine = trainer.model
+    base   = getattr(engine, "module", engine)
+    llava  = base
 
+    if vision_trainable:
+        vt_wrapper = llava.get_model().vision_tower
+        vt_core    = getattr(vt_wrapper, "vision_tower", vt_wrapper)
+        vt_core.eval()
 
+        sd_cpu = None
+        try:
+            import deepspeed
+            params = list(vt_core.parameters(recurse=True))
+            # All ranks must enter this context (modifier_rank=0 means only rank0 collects)
+            with deepspeed.zero.GatheredParameters(params, modifier_rank=0):
+                _maybe_materialize(vt_core)  # safe to run on all ranks
+                if is_main():  # <-- only here
+                    sd_cpu = {k: v.detach().cpu() for k, v in vt_core.state_dict().items()}
+        except Exception:
+            # FSDP/plain DDP fallback: call on all ranks; returns dict only on rank0
+            sd_cpu = gather_vt_state_dict(vt_core, local_rank=training_args.local_rank)
 
-
-
-
-    if training_args.local_rank == 0 or training_args.local_rank == -1:
-        if vision_trainable:
-            vt_wrapper = model.get_model().vision_tower
-            vt_core = getattr(vt_wrapper, "vision_tower", vt_wrapper)
+        if is_main():
+            if sd_cpu is None or any(t.numel() == 0 for t in sd_cpu.values()):
+                raise RuntimeError("Failed to gather full vision_tower state_dict on rank0")
 
             vt_dir = training_args.output_dir
             os.makedirs(vt_dir, exist_ok=True)
+            torch.save(sd_cpu, os.path.join(vt_dir, "vision_tower.pt"))
+            print(f"[vision_tower] saved {len(sd_cpu)} tensors → {vt_dir}/vision_tower.pt", flush=True)
 
-            # --- Robust path: save the actual ViT core directly (works with ZeRO-3/FSDP/DDP) ---
-            try:
-                save_vision_tower(
-                    vt_core,
-                    os.path.join(vt_dir, "vision_tower.pt"),
-                    local_rank=training_args.local_rank
-                )
-                print(f"[vision_tower] direct-save OK → {vt_dir}/vision_tower.pt", flush=True)
-            except Exception as e:
-                print(f"[vision_tower] direct-save failed, will NOT abort: {e}", flush=True)
+    ddp_barrier()  # Barrier #2: let rank0 finish the save before teardown
+    print(f"[rank {training_args.local_rank}] all done!", flush=True)
 
-            # --- Optional best-effort consolidation (non-fatal). Useful if you need name-matched keys. ---
-            try:
-                full_non_lora = get_peft_state_non_lora_maybe_zero_3(
-                    model.named_parameters(),
-                    require_grad_only=False  # be permissive; we only want non-LoRA
-                ) or {}
-
-                # Prepare a permissive normalizer for possible wrappers
-                import re
-                def norm(k: str) -> str:
-                    k = re.sub(r"^(module\.|model\.|base_model\.|base_model\.model\.|model\.model\.)+", "", k)
-                    k = k.replace("get_model().", "")
-                    k = re.sub(r"^(vision_tower\.)(vision_tower\.)+", r"\1", k)  # collapse duplicates
-                    k = re.sub(r"^(model\.vision_tower\.)(vision_tower\.)+", r"\1", k)
-                    k = re.sub(r"^vision_tower\.", "", k)
-                    k = re.sub(r"^model\.vision_tower\.", "", k)
-                    return k
-
-                core_keys = set(vt_core.state_dict().keys())
-                vt_state = {norm(k): v for k, v in full_non_lora.items() if norm(k) in core_keys}
-
-                if vt_state:
-                    bad = [k for k, t in vt_state.items() if any(d == 0 for d in t.shape)]
-                    if bad:
-                        print(f"[vision_tower] consolidated found zero-sized tensors (ignored): {bad[:5]}", flush=True)
-                    else:
-                        torch.save(vt_state, os.path.join(vt_dir, "vision_tower_consolidated.pt"))
-                        print(f"[vision_tower] consolidated-save OK → {vt_dir}/vision_tower_consolidated.pt "
-                            f"({len(vt_state)} tensors)", flush=True)
-                else:
-                    print("[vision_tower] consolidation empty; using direct-save artifact only.", flush=True)
-            except Exception as e:
-                print(f"[vision_tower] consolidation failed (non-fatal): {e}", flush=True)
-
-            # --- Processor + minimal config snapshot (optional) ---
-            try:
-                vt_cfg = getattr(vt_wrapper, "config", None) or getattr(vt_wrapper, "configurations", {})
-                with open(os.path.join(vt_dir, "vision_tower_config.json"), "w") as f:
-                    json.dump(vt_cfg, f, indent=2)
-
-                if getattr(vt_wrapper, "image_processor", None) is not None:
-                    proc_dir = os.path.join(vt_dir, "processor")
-                    os.makedirs(proc_dir, exist_ok=True)
-                    vt_wrapper.image_processor.save_pretrained(proc_dir)
-
-                # quick check
-                sd = torch.load(os.path.join(vt_dir, "vision_tower.pt"), map_location="cpu")
-                k0 = next(iter(sd))
-                print("[vision_tower] sample:", k0, tuple(sd[k0].shape), flush=True)
-            except Exception as e:
-                print(f"[vision_tower] config/processor dump or quick-check failed (non-fatal): {e}", flush=True)
 
 if __name__ == "__main__":
     train()

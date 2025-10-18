@@ -1,7 +1,17 @@
 
+from typing import Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.checkpoint import checkpoint as ckpt
+import torch.utils.checkpoint as cp
+
+# _orig_ckpt = cp.checkpoint
+# def _force_nonreentrant(fn, *args, **kwargs):
+#     kwargs["use_reentrant"] = False
+#     return _orig_ckpt(fn, *args, **kwargs)
+# cp.checkpoint = _force_nonreentrant
+
 
 def downsample(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: torch.Tensor):
     B, L = boundaries.shape
@@ -1273,6 +1283,25 @@ class DTPViT(nn.Module):
         # final projection
         self.num_classes = num_classes
         self.head = nn.Linear(embed_dim, num_classes)
+        self.grad_checkpointing = True
+    
+    def set_grad_checkpointing(self, enable: bool = True):
+        """
+        Enable/disable gradient checkpointing for transformer blocks.
+        open_clip expects this method to exist on visual backbones.
+        """
+        self.grad_checkpointing = bool(enable)
+    
+    @staticmethod
+    def _ckpt_block(block, x: torch.Tensor, attn_mask: Optional[torch.Tensor]):
+        # Wrap block so kwargs are preserved
+        def fn(inp):
+            if attn_mask is None:
+                return block(inp)
+            else:
+                return block(inp, src_key_padding_mask=attn_mask)
+        # Non-reentrant = DDP-safe
+        return ckpt(fn, x, use_reentrant=False)
     
     def forward_after_pooling_with_attn_masks(self, core_input: torch.Tensor, layers, attention_mask: torch.Tensor):
         """
@@ -1281,7 +1310,11 @@ class DTPViT(nn.Module):
         T, B, D = core_input.size()
         core_out = core_input
         for layer in layers:
-            core_out = layer(core_out, src_key_padding_mask=attention_mask)
+            if self.grad_checkpointing and self.training:
+                core_out = self._ckpt_block(layer, core_out, attention_mask)
+            else:
+                core_out = layer(core_out, src_key_padding_mask=attention_mask)
+            # core_out = layer(core_out, src_key_padding_mask=attention_mask)
         return core_out
 
     def forward_after_pooling_without_attn_masks(self, core_input: torch.Tensor, layers):
@@ -1291,7 +1324,11 @@ class DTPViT(nn.Module):
         T, B, D = core_input.size()
         core_out = core_input
         for layer in layers:
-            core_out = layer(core_out)
+            if self.grad_checkpointing and self.training:
+                core_out = self._ckpt_block(layer, core_out, None)
+            else:
+                core_out = layer(core_out)
+            # core_out = layer(core_out)
         return core_out
 
     def encode(self, x: torch.Tensor, return_loss: bool = False):
@@ -1309,7 +1346,11 @@ class DTPViT(nn.Module):
         # Pre-pooling transformer blocks
         x = x.transpose(0, 1)                    # (L, B, C)
         for block in self.pre_blocks:
-            x = block(x)
+            #x = block(x)
+            if self.grad_checkpointing and self.training:
+                x = self._ckpt_block(block, x, None)
+            else:
+                x = block(x)
 
         # boundary prediction
         if self.flop_measure:
@@ -1331,23 +1372,23 @@ class DTPViT(nn.Module):
         )                                        # S x B x D
 
         # attention mask for post-pooling transformer layers
-        # S = shortened_hidden.size(0)
-        # pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
+        S = shortened_hidden.size(0)
+        pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
 
-        # attn_mask = pad_mask.transpose(0, 1)                  # (B, S)  True=PAD
+        attn_mask = pad_mask.transpose(0, 1)                  # (B, S)  True=PAD
 
         # post-pooling transformer blocks
-        # shortened_hidden = self.forward_after_pooling_with_attn_masks(
-        #     shortened_hidden,
-        #     self.short_blocks,
-        #     attention_mask=attn_mask
-        # )
+        shortened_hidden = self.forward_after_pooling_with_attn_masks(
+            shortened_hidden,
+            self.short_blocks,
+            attention_mask=attn_mask
+        )
 
         # FIXME: ablation
-        shortened_hidden = self.forward_after_pooling_without_attn_masks(
-            shortened_hidden,
-            self.short_blocks
-        )
+        # shortened_hidden = self.forward_after_pooling_without_attn_masks(
+        #     shortened_hidden,
+        #     self.short_blocks
+        # )
 
         # return features and optional loss
         features = shortened_hidden  # S x B x D

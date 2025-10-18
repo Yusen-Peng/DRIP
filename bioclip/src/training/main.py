@@ -103,6 +103,10 @@ def main(args):
         ])
 
     resume_latest = args.resume == 'latest'
+    
+    # NOTE: hard coding log path and checkpoint path here
+    args.logs = '/fs/scratch/PAS2836/yusenpeng_checkpoint/BioCLIP'
+    
     log_base_path = os.path.join(args.logs, args.name)
     args.log_path = None
     if is_master(args, local=args.log_local):
@@ -284,7 +288,14 @@ def main(args):
         if args.ddp_static_graph:
             # this doesn't exist in older PyTorch, arg only added if enabled
             ddp_args['static_graph'] = True
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], **ddp_args)
+
+        find_unused_parameters = ("DRIP" in args.pretrained.upper())
+        print(f"DistributedDataParallel find_unused_parameters={find_unused_parameters}", flush=True)
+        model = torch.nn.parallel.DistributedDataParallel(
+            model, 
+            device_ids=[device], 
+            find_unused_parameters=find_unused_parameters,
+            **ddp_args)
     
         if args.distill:
             dist_model = torch.nn.parallel.DistributedDataParallel(dist_model, device_ids=[device], **ddp_args)

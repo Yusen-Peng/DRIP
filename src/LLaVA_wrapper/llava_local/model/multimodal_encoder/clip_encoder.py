@@ -195,10 +195,10 @@ class ViTVisionTower(nn.Module):
 
         # FIXME: load the model
         # option 1: load from the original CLIP checkpoint
-        load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+        #load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
 
         # option 2: load from the finetuned checkpoint
-        #load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
+        load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
 
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -244,7 +244,7 @@ class ViTVisionTower(nn.Module):
         assert image_forward_outs is not None
         raise NotImplementedError("DTPViT does not require feature selection like CLIP. Use the full output.")
 
-    #@torch.no_grad() # FIXME: remove this if finetuning
+    @torch.no_grad() # FIXME: remove this if finetuning
     def forward(self, images):
         """
         images: torch.Tensor of shape [B, C, H, W]
@@ -374,15 +374,15 @@ class DRIPVisionTower(nn.Module):
             flop_measure=self.flop_measure
         ) 
 
-        if self.backbone == 'ViT':
-            self.vision_tower, _ = load_dtp_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
-        elif self.backbone == 'XL':
-            self.vision_tower, _ = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
-        else:
-            raise ValueError(f'Unsupported backbone: {self.backbone}')
+        # if self.backbone == 'ViT':
+        #     self.vision_tower, _ = load_dtp_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+        # elif self.backbone == 'XL':
+        #     self.vision_tower, _ = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+        # else:
+        #     raise ValueError(f'Unsupported backbone: {self.backbone}')
 
         # NOTE: option 2: load from the finetuned checkpoint
-        #load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
+        load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
 
 
         # if in finetuning mode, change precision into float16
@@ -420,7 +420,7 @@ class DRIPVisionTower(nn.Module):
         assert image_forward_outs is not None
         raise NotImplementedError("DTPViT does not require feature selection like CLIP. Use the full output.")
 
-    #@torch.no_grad() # FIXME: remove this if finetuning
+    @torch.no_grad() # FIXME: remove this if finetuning
     def forward(self, images):
         """
         images: torch.Tensor of shape [B, C, H, W]
