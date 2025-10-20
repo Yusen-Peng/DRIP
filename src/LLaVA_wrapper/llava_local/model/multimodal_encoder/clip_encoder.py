@@ -374,15 +374,15 @@ class DRIPVisionTower(nn.Module):
             flop_measure=self.flop_measure
         ) 
 
-        if self.backbone == 'ViT':
-            self.vision_tower, _ = load_dtp_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
-        elif self.backbone == 'XL':
-            self.vision_tower, _ = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
-        else:
-            raise ValueError(f'Unsupported backbone: {self.backbone}')
+        # if self.backbone == 'ViT':
+        #     self.vision_tower, _ = load_dtp_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+        # elif self.backbone == 'XL':
+        #     self.vision_tower, _ = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+        # else:
+        #     raise ValueError(f'Unsupported backbone: {self.backbone}')
 
         # NOTE: option 2: load from the finetuned checkpoint
-        #load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
+        load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
 
 
         # if in finetuning mode, change precision into float16

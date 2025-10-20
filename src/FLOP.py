@@ -87,9 +87,9 @@ def main():
             flop_measure=True, # simulating fake boundaries for reproducible GFLOPs
         )
     elif MODE == "H-DRIP":
-        rate1 = 0.01  # compression rate at stage 1
-        rate2 = 0.01  # compression rate at stage 2
-        rate3 = 0.01  # compression rate at stage 3
+        rate1 = 0.25  # compression rate at stage 1
+        rate2 = 0.25  # compression rate at stage 2
+        rate3 = 0.25  # compression rate at stage 3
         model = HierarchicalDTPViT(
             image_size=224,
             patch_size=4,
@@ -168,6 +168,22 @@ def main():
             drop_rate=0.0, attn_drop_rate=0.0, drop_path_rate=0.1,
             norm_layer=torch.nn.LayerNorm, ape=False, patch_norm=True,
             use_checkpoint=False, fused_window_process=False,
+        )
+    
+    elif MODE == "adapted_Swin":
+        from swin import HierarchicalAdaptedSwin
+        print("Calculating GFLOPs for Adapted Swin Transformer...")
+        model = HierarchicalAdaptedSwin(
+            image_size=224, 
+            patch_size=4, 
+            in_chans=3,
+            embed_dim=96,
+            depth=(2, 2, 6, 2),
+            num_heads=(3, 6, 12, 24),
+            mlp_ratio=4.0,
+            drop_rate=0.0, 
+            num_classes=768,
+            norm_layer=torch.nn.LayerNorm
         )
     elif MODE == "DynamicViT":
         from dynamicViT import VisionTransformerDiffPruning

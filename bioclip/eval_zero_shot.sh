@@ -1,13 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=VIT_ZERO_SHOT
-#SBATCH --output=VIT_ZERO_SHOT.txt
-#SBATCH --time=00:10:00
+#SBATCH --job-name=DRIP_ZERO_SHOT
+#SBATCH --output=DRIP_ZERO_SHOT.txt
+#SBATCH --time=00:02:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1                      
-#SBATCH --gpus-per-node=4
+#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
+#SBATCH --partition=nextgen
 
 module load miniconda3/24.1.2-py310
 conda activate DRIP
@@ -27,15 +28,17 @@ export PYTHONPATH="$PWD:$PYTHONPATH"
 #export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/FNG_Mini"
 #export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/PLT_VIL_Mini"
 #export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/MED_LF_Mini"
-#export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/PLT_DOC_Mini"
-export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/birds_525"
+export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/PLT_DOC_Mini"
+#export DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/bioclip/data/eval/birds_525"
 
 
 #export PRETRAINED="openai"
 #export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
 #export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
 #export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
-export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/BioCLIP/ViT/checkpoints/epoch_30.pt"
+#export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/BioCLIP/ViT/checkpoints/epoch_30.pt"
+#export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/BioCLIP/DRIP-10x/checkpoints/epoch_30.pt"
+export PRETRAINED="/fs/scratch/PAS2836/yusenpeng_checkpoint/BioCLIP/DRIP-4x/checkpoints/epoch_30.pt"
 
 export TEXT_TYPE="asis"
 #export TEXT_TYPE="taxon_com"

@@ -612,3 +612,218 @@ class SwinTransformer(nn.Module):
         flops += self.num_features * self.patches_resolution[0] * self.patches_resolution[1] // (2 ** self.num_layers)
         flops += self.num_features * self.num_classes
         return flops
+
+
+class PatchEmbedding(nn.Module):
+    def __init__(self, image_size: int, patch_size: int, in_chans: int = 3, embed_dim: int = 768):
+        """
+        Patch Embedding Layer
+        Args:
+            image_size (int): Size of the input image (assumed square).
+            patch_size (int): Size of each patch (assumed square).
+            in_chans (int): Number of input channels (e.g., 3 for RGB).
+            embed_dim (int): Dimension of the embedding space.
+        """
+        super().__init__()
+        self.img_size = image_size
+        self.patch_size = patch_size
+        self.grid_size = (image_size // patch_size, image_size // patch_size)
+        self.num_patches = self.grid_size[0] * self.grid_size[1]
+
+        self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
+
+    def forward(self, x: torch.Tensor):
+        """
+            input: [batch size, # channels, height, width]
+            output: [batch size, # patches, embed_dim]
+        """
+        x = self.proj(x)
+        x = x.flatten(2).transpose(1, 2)
+        return x
+
+
+
+class PatchMergeAvg(nn.Module):
+    """
+    Fixed 2x2 spatial downsampling WITHOUT channel concat/projection.
+    Input:  x (B, L, C) with L = H*W
+    Output: (B, (H/2)*(W/2), C)
+    """
+    def __init__(self, input_resolution, dim):
+        super().__init__()
+        self.input_resolution = input_resolution  # (H, W)
+        self.dim = dim
+
+    def forward(self, x):
+        B, L, C = x.shape
+        H, W = self.input_resolution
+        assert L == H * W, f"Expected L=H*W, got L={L}, H*W={H*W}"
+        assert H % 2 == 0 and W % 2 == 0, f"H and W must be even, got {H},{W}"
+
+        x = x.view(B, H, W, C)
+        x00 = x[:, 0::2, 0::2, :]  # (B, H/2, W/2, C)
+        x10 = x[:, 1::2, 0::2, :]
+        x01 = x[:, 0::2, 1::2, :]
+        x11 = x[:, 1::2, 1::2, :]
+        x = (x00 + x10 + x01 + x11) * 0.25
+        x = x.reshape(B, (H // 2) * (W // 2), C)
+        return x
+
+
+class HierarchicalAdaptedSwin(nn.Module):
+    """
+    Hierarchical Swin-like FIXED pooling with CONSTANT channel dim:
+      Stage 0: (B, L0, C)
+      Merge -> Stage 1: (B, L1=L0/4, C)
+      Merge -> Stage 2: (B, L2=L0/16, C)
+      Merge -> Stage 3: (B, L3=L0/64, C)
+      Mean pool -> head
+
+    This is a fair fixed-pooling baseline vs DRIP: token count shrinks; channel stays the same.
+    """
+    def __init__(self,
+                 image_size=224,
+                 patch_size=4,
+                 in_chans=3,
+                 embed_dim=96,                 # constant across stages
+                 depth=(2, 2, 6, 2),
+                 num_heads=6,                  # can be int or a 4-tuple; default keeps head_dim constant
+                 mlp_ratio=4.0,
+                 drop_rate=0.1,
+                 num_classes=1000,
+                 activation_function='gelu',
+                 flop_measure: bool = False,
+                 norm_layer=nn.LayerNorm):
+        super().__init__()
+        self.flop_measure = flop_measure
+        self.num_classes = num_classes
+
+        # ----- grid sizes -----
+        Hp = image_size // patch_size
+        Wp = image_size // patch_size
+        assert Hp * patch_size == image_size and Wp * patch_size == image_size
+        assert (Hp % 8 == 0) and (Wp % 8 == 0), "Hp,Wp must be divisible by 8 (3 merges)."
+        self.grid0 = (Hp, Wp)
+        self.grid1 = (Hp // 2, Wp // 2)
+        self.grid2 = (Hp // 4, Wp // 4)
+        self.grid3 = (Hp // 8, Wp // 8)
+
+        L0 = Hp * Wp
+        L1 = self.grid1[0] * self.grid1[1]
+        L2 = self.grid2[0] * self.grid2[1]
+        L3 = self.grid3[0] * self.grid3[1]
+
+        C = embed_dim   # constant across stages
+
+        # ----- patch embed -----
+        self.patch_embed = PatchEmbedding(image_size, patch_size, in_chans, C)
+        self.dropout = nn.Dropout(drop_rate)
+
+        # ----- positional embeddings per stage (all C) -----
+        self.pos0 = nn.Parameter(torch.zeros(1, 1 + L0, C))
+        self.pos1 = nn.Parameter(torch.zeros(1, 1 + L1, C))
+        self.pos2 = nn.Parameter(torch.zeros(1, 1 + L2, C))
+        self.pos3 = nn.Parameter(torch.zeros(1, 1 + L3, C))
+        for p in [self.pos0, self.pos1, self.pos2, self.pos3]:
+            nn.init.trunc_normal_(p, std=0.02)
+
+        # ----- heads per stage -----
+        if isinstance(num_heads, int):
+            heads = (num_heads, num_heads, num_heads, num_heads)
+        else:
+            assert len(num_heads) == 4
+            heads = num_heads
+
+        # ----- helper: encoder layer stacks -----
+        def make_layers(n_layers, d_model, nhead):
+            return nn.ModuleList([
+                nn.TransformerEncoderLayer(
+                    d_model=d_model,
+                    nhead=nhead,
+                    dim_feedforward=int(d_model * mlp_ratio),
+                    dropout=drop_rate,
+                    activation=activation_function,
+                    batch_first=False,
+                    norm_first=True
+                ) for _ in range(max(0, n_layers))
+            ])
+
+        # ----- stage blocks (all at dim=C) -----
+        self.blocks0 = make_layers(depth[0], C, heads[0])
+        self.blocks1 = make_layers(depth[1], C, heads[1])
+        self.blocks2 = make_layers(depth[2], C, heads[2])
+        self.blocks3 = make_layers(depth[3], C, heads[3])
+
+        # ----- fixed pooling (avg) between stages (preserve C) -----
+        self.merge0 = PatchMergeAvg(self.grid0, dim=C)  # L0 -> L1, C
+        self.merge1 = PatchMergeAvg(self.grid1, dim=C)  # L1 -> L2, C
+        self.merge2 = PatchMergeAvg(self.grid2, dim=C)  # L2 -> L3, C
+
+        # ----- norm + head -----
+        self.norm3 = norm_layer(C)
+        self.head  = nn.Linear(C, num_classes)
+
+    # --- utils ---
+    def _add_pos(self, x, pos_param):
+        B, L, C = x.shape
+        pos = pos_param[:, 1:1+L, :].to(device=x.device, dtype=x.dtype)
+        return x + pos
+
+    def _run_stack(self, x, layers):
+        for blk in layers:
+            x = blk(x)
+        return x
+
+    # --- encode through 4 stages, 3 merges ---
+    def encode(self, x: torch.Tensor, return_loss: bool = False):
+        # Stage 0
+        x = self.patch_embed(x)              # (B, L0, C)
+        x = self.dropout(x)
+        x = self._add_pos(x, self.pos0)
+        x = x.transpose(0, 1)                # (L0, B, C)
+        x = self._run_stack(x, self.blocks0)
+
+        # Merge 0
+        x = x.transpose(0, 1)                # (B, L0, C)
+        x = self.merge0(x)                   # (B, L1, C)
+        x = self._add_pos(x, self.pos1)
+        x = x.transpose(0, 1)                # (L1, B, C)
+        x = self._run_stack(x, self.blocks1)
+
+        # Merge 1
+        x = x.transpose(0, 1)                # (B, L1, C)
+        x = self.merge1(x)                   # (B, L2, C)
+        x = self._add_pos(x, self.pos2)
+        x = x.transpose(0, 1)                # (L2, B, C)
+        x = self._run_stack(x, self.blocks2)
+
+        # Merge 2
+        x = x.transpose(0, 1)                # (B, L2, C)
+        x = self.merge2(x)                   # (B, L3, C)
+        x = self._add_pos(x, self.pos3)
+        x = x.transpose(0, 1)                # (L3, B, C)
+        x = self._run_stack(x, self.blocks3) # (L3, B, C)
+
+        if return_loss:
+            dummy_loss = torch.zeros([], device=x.device)
+            cum_avg_boundaries = 0.0
+            cum_boundary_ratio = 1.0 / 64.0  # L3 = L0 / 64 (3 merges)
+            return x, dummy_loss, cum_avg_boundaries, cum_boundary_ratio
+        else:
+            return x
+
+    def forward(self, x, return_loss: bool = False):
+        out = self.encode(x, return_loss=return_loss)
+        if return_loss:
+            feats, boundary_loss, cum_avg_boundaries, cum_ratio = out
+        else:
+            feats = out
+
+        x = feats.mean(dim=0)                 # (B, C)
+        x = self.norm3(x)
+        logits = self.head(x)
+
+        if return_loss:
+            return logits, boundary_loss, cum_avg_boundaries, cum_ratio
+        else:
+            return logits

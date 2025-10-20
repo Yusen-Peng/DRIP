@@ -14,7 +14,7 @@ import torch.optim as optim
 from torchvision import datasets
 from torch.utils.data import DataLoader
 from open_clip_local import create_model_and_transforms
-from open_clip_local.model import DTPViT, VisionTransformer
+from open_clip_local.model import DTPViT, VisionTransformer, HierarchicalDTPViT, SoftDTPViT
 from open_clip_local.DTP_ViT import XL_Baseline
 from boundary_vis import load_dtpx_from_clip_checkpoint
 from open_clip_local import CLIP
@@ -1139,7 +1139,7 @@ def main(args):
         dataset_test, batch_size=args.batch_size, sampler=test_sampler, num_workers=args.workers, pin_memory=True
     )
     print("Creating model")
-    MODE = "Swin" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
+    MODE = "H-DRIP" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
     if MODE == "DRIP":
         compression_rate = 0.1 # 0.25 for 4x, 0.1 for 10x
         empty_backbone = DTPViT(
@@ -1225,7 +1225,32 @@ def main(args):
         )
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
-    
+
+    elif MODE == "H-DRIP":
+        rate1 = 0.5  # compression rate at stage 1
+        rate2 = 0.5  # compression rate at stage 2
+        rate3 = 0.5  # compression rate at stage 3
+        print("Calculating GFLOPs for H-DRIP...")
+        empty_backbone = HierarchicalDTPViT(
+            image_size=224,
+            patch_size=4,
+            in_chans=3,
+            embed_dim=96,
+            depth=(2, 2, 6, 2),
+            num_heads=[3, 6, 12, 24],
+            mlp_ratio=4.0,
+            drop_rate=0.0,
+            attn_drop_rate=0.0,
+            temp=0.5,
+            compression_rate=(rate1, rate2, rate3),  # compression at stage 1 and 2
+            threshold=0.5,
+            activation_function="gelu",
+            num_classes=768,
+            flop_measure=False
+        )
+        backbone = empty_backbone
+        model = VisionClassifier(backbone, num_classes).to(device)
+
     else:
         use_XL_backbone = False
         print(f"are we using XL backbone? {use_XL_backbone}", flush=True)

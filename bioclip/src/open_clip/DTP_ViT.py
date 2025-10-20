@@ -541,24 +541,23 @@ class HierarchicalDTPViT(nn.Module):
             nn.Parameter(torch.zeros(num_heads[3], embed_dim // num_heads[3])),
         ])
 
-        # Helper to create decoder layers
         def create_decoder_layers(n_layers, n_head):
-            d_head = embed_dim // n_head
-            return nn.ModuleList(
+            layers = nn.ModuleList(
                 [
-                    RelPartialLearnableDecoderLayer(
-                        n_head=n_head,
+                    nn.TransformerEncoderLayer(
                         d_model=embed_dim,
-                        d_head=d_head,
-                        d_inner=int(embed_dim * mlp_ratio),
+                        nhead=n_head,
+                        dim_feedforward=int(embed_dim * mlp_ratio),
                         dropout=drop_rate,
-                        dropatt=attn_drop_rate,
-                        pre_lnorm=False,
-                        activation_function=activation_function,
+                        activation=activation_function,
+                        batch_first=False,
+                        norm_first=True
                     )
                     for _ in range(n_layers)
                 ]
             )
+
+            return layers
 
         # Transformer blocks for each stage
         self.pre_blocks = create_decoder_layers(depth[0], n_head=num_heads[0])

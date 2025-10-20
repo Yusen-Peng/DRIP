@@ -6,7 +6,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     # FIXME: all hardcoded. Need to be fixed later.
     USE_DTP = True
     FINETUNING_MODE = True
-    BACKBONE = 'XL'  # 'ViT' or 'XL'
+    BACKBONE = 'ViT'  # 'ViT' or 'XL'
 
     if USE_DTP:
         print("🍟" * 20)
@@ -27,15 +27,15 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_5_7/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_4_8/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_XL_4_8/checkpoints/epoch_15.pt"
-    checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_XL_2_10/checkpoints/epoch_15.pt"
+    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_XL_2_10/checkpoints/epoch_15.pt"
     
     # trainable vision tower
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ViT-base-finetune-ALL/vision_tower.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-finetune-ALL/vision_tower.pt"
+    checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-finetune-ALL/vision_tower.pt"
 
     patch_size = 16
     compression_rate = 0.25
-    depth = (2, 10, 0)
+    depth = (4, 8, 0)
 
     lower_bound = False
     lambda_val = 1.0

@@ -32,7 +32,8 @@ python src/model_vqa_mmbench.py \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmbench/answers/mmbench_dev_20230712/ViTbased-DRIP-4x-16-4-8-finetune-ALL.jsonl \
     --single-pred-prompt \
     --temperature 0 \
-    --conv-mode vicuna_v1
+    --conv-mode vicuna_v1 \
+    --all-rounds
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmbench/answers_upload/mmbench_dev_20230712
 

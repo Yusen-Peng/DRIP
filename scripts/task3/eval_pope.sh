@@ -22,20 +22,20 @@ cd /users/PAS2912/yusenpeng/Fast-CLIP/
 ##### /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope/answers
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope/answers/DRIP.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope/answers/DRIP-finetune.jsonl
 
 #### /fs/scratch/PAS2836/yusenpeng_checkpoint/ViT-base-finetune
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/XLbased-DRIP-4x-16-2-10-finetune \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-finetune-ALL \
     --model-base lmsys/vicuna-7b-v1.5 \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope/llava_pope_test.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope/ \
-    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope/answers/DRIP.jsonl \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope/answers/DRIP-finetune.jsonl \
     --temperature 0 \
     --conv-mode vicuna_v1
 
 python src/eval_pope.py \
     --annotation-dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope/anno \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope/llava_pope_test.jsonl \
-    --result-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope/answers/DRIP.jsonl
+    --result-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope/answers/DRIP-finetune.jsonl

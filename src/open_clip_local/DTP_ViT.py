@@ -293,199 +293,200 @@ class BoundaryPredictor(nn.Module):
         loss_boundaries = -binomial.log_prob(target_count).mean() / total_count
         return loss_boundaries
 
-class DTPViT(nn.Module):
-    def __init__(self,
-                 image_size=224,
-                 patch_size=16,
-                 in_chans=3,
-                 embed_dim=768,
-                 depth=(2, 8, 0),
-                 num_heads=12,
-                 mlp_ratio=4.0,
-                 drop_rate=0.1,
-                 attn_drop_rate=0.1,
-                 temp=1.0,
-                 compression_rate=0.5,
-                 bp_type='gumbel',
-                 threshold=0.5,
-                 num_classes=1000,
-                 activation_function='gelu',
-                 flop_measure: bool = False,
-        ):
+# class DTPViT(nn.Module):
+#     def __init__(self,
+#                  image_size=224,
+#                  patch_size=16,
+#                  in_chans=3,
+#                  embed_dim=768,
+#                  depth=(2, 8, 0),
+#                  num_heads=12,
+#                  mlp_ratio=4.0,
+#                  drop_rate=0.1,
+#                  attn_drop_rate=0.1,
+#                  temp=1.0,
+#                  compression_rate=0.5,
+#                  bp_type='gumbel',
+#                  threshold=0.5,
+#                  num_classes=1000,
+#                  activation_function='gelu',
+#                  flop_measure: bool = False,
+#         ):
 
-        super().__init__()
-        self.flop_measure = flop_measure
-        self.prior = compression_rate
-        self.embed_dim = embed_dim
-        self.num_patches = (image_size // patch_size) ** 2
-        self.seq_len = self.num_patches
+#         super().__init__()
+#         self.flop_measure = flop_measure
+#         self.prior = compression_rate
+#         self.embed_dim = embed_dim
+#         self.num_patches = (image_size // patch_size) ** 2
+#         self.seq_len = self.num_patches
 
-        # patch embedding
-        self.patch_embed = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
-        self.dropout = nn.Dropout(drop_rate)
+#         # patch embedding
+#         self.patch_embed = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
+#         self.dropout = nn.Dropout(drop_rate)
 
-        # positional embedding
-        self.pos_emb = PositionalEmbedding(embed_dim)
-        self.r_w_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
-        self.r_r_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
+#         # positional embedding
+#         self.pos_emb = PositionalEmbedding(embed_dim)
+#         self.r_w_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
+#         self.r_r_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
         
-        def create_decoder_layers(n_layers):
-            layers = nn.ModuleList(
-                [
-                    RelPartialLearnableDecoderLayer(
-                        n_head=num_heads,
-                        d_model=embed_dim,
-                        d_head=embed_dim // num_heads,
-                        d_inner=int(embed_dim * mlp_ratio),
-                        dropout=drop_rate,
-                        dropatt=attn_drop_rate,
-                        pre_lnorm=False,
-                        activation_function=activation_function,
-                    )
-                    for _ in range(n_layers)
-                ]
-            )
+#         def create_decoder_layers(n_layers):
+#             layers = nn.ModuleList(
+#                 [
+#                     RelPartialLearnableDecoderLayer(
+#                         n_head=num_heads,
+#                         d_model=embed_dim,
+#                         d_head=embed_dim // num_heads,
+#                         d_inner=int(embed_dim * mlp_ratio),
+#                         dropout=drop_rate,
+#                         dropatt=attn_drop_rate,
+#                         pre_lnorm=False,
+#                         activation_function=activation_function,
+#                     )
+#                     for _ in range(n_layers)
+#                 ]
+#             )
 
-            return layers
+#             return layers
 
-        # pre-pooling block
-        self.pre_blocks = create_decoder_layers(depth[0])
+#         # pre-pooling block
+#         self.pre_blocks = create_decoder_layers(depth[0])
 
-        # post-pooling block
-        self.short_blocks = create_decoder_layers(depth[1])
+#         # post-pooling block
+#         self.short_blocks = create_decoder_layers(depth[1])
 
-        # boundary predictor
-        self.boundary_predictor = BoundaryPredictor(
-            d_model=embed_dim,
-            d_inner=int(embed_dim * mlp_ratio),
-            activation_function=activation_function,
-            temp=temp,
-            prior=compression_rate,
-            bp_type=bp_type,
-            threshold=threshold
-        )
+#         # boundary predictor
+#         self.boundary_predictor = BoundaryPredictor(
+#             d_model=embed_dim,
+#             d_inner=int(embed_dim * mlp_ratio),
+#             activation_function=activation_function,
+#             temp=temp,
+#             prior=compression_rate,
+#             bp_type=bp_type,
+#             threshold=threshold
+#         )
 
-        # layer normalization
-        self.down_ln = nn.LayerNorm(embed_dim)
-        self.null_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
-        nn.init.normal_(self.null_token, std=0.02)
+#         # layer normalization
+#         self.down_ln = nn.LayerNorm(embed_dim)
+#         self.null_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+#         nn.init.normal_(self.null_token, std=0.02)
 
-        # final projection
-        self.num_classes = num_classes
-        self.head = nn.Linear(embed_dim, num_classes)
+#         # final projection
+#         self.num_classes = num_classes
+#         self.head = nn.Linear(embed_dim, num_classes)
     
-    def forward_after_pooling_with_attn_masks(self, core_input: torch.Tensor, layers, attention_mask: torch.Tensor):
-        """
-        Process input with relative attention and padding-aware masking.
-        """
-        T, _, _ = core_input.size()
+#     def forward_after_pooling_with_attn_masks(self, core_input: torch.Tensor, layers, attention_mask: torch.Tensor):
+#         """
+#         Process input with relative attention and padding-aware masking.
+#         """
+#         T, _, _ = core_input.size()
 
-        # Compute position embeddings
-        pos_seq = torch.arange(T - 1, -1, -1.0, device=core_input.device, dtype=core_input.dtype)
-        pos_emb = self.pos_emb(pos_seq)
-        pos_emb = self.dropout(pos_emb)
+#         # Compute position embeddings
+#         pos_seq = torch.arange(T - 1, -1, -1.0, device=core_input.device, dtype=core_input.dtype)
+#         pos_emb = self.pos_emb(pos_seq)
+#         pos_emb = self.dropout(pos_emb)
 
-        core_out = core_input
-        for layer in layers:
-            core_out = layer(core_out, pos_emb, self.r_w_bias, self.r_r_bias, dec_attn_mask=attention_mask)
-        return core_out
+#         core_out = core_input
+#         for layer in layers:
+#             core_out = layer(core_out, pos_emb, self.r_w_bias, self.r_r_bias, dec_attn_mask=attention_mask)
+#         return core_out
 
-    def encode(self, x: torch.Tensor, return_loss: bool = False):
-        """
-        Encode input image to feature sequence without final pooling.
-        Returns:
-            features OR (features, boundary_loss, avg_boundaries, boundary_ratio)
-        """
-        B = x.size(0)
+#     def encode(self, x: torch.Tensor, return_loss: bool = False):
+#         """
+#         Encode input image to feature sequence without final pooling.
+#         Returns:
+#             features OR (features, boundary_loss, avg_boundaries, boundary_ratio)
+#         """
+#         B = x.size(0)
 
-        # Patch embedding
-        x = self.patch_embed(x)                  # B x C x H' x W'
-        x = x.flatten(2).transpose(1, 2)         # B x L x C
-        x = self.dropout(x)                      # B x L x C
+#         # Patch embedding
+#         x = self.patch_embed(x)                  # B x C x H' x W'
+#         x = x.flatten(2).transpose(1, 2)         # B x L x C
+#         x = self.dropout(x)                      # B x L x C
 
-        # Positional embedding (for pre-blocks)
-        pos_seq = torch.arange(self.seq_len - 1, -1, -1.0,
-                            device=x.device, dtype=x.dtype)
-        r = self.pos_emb(pos_seq)                # L x 1 x C
+#         # Positional embedding (for pre-blocks)
+#         pos_seq = torch.arange(self.seq_len - 1, -1, -1.0,
+#                             device=x.device, dtype=x.dtype)
+#         r = self.pos_emb(pos_seq)                # L x 1 x C
 
-        # Pre-pooling transformer blocks
-        x = x.transpose(0, 1)                    # L x B x C
-        for block in self.pre_blocks:
-            x = block(x, r, self.r_w_bias, self.r_r_bias)
+#         # Pre-pooling transformer blocks
+#         x = x.transpose(0, 1)                    # L x B x C
+#         for block in self.pre_blocks:
+#             x = block(x, r, self.r_w_bias, self.r_r_bias)
 
-        # boundary prediction
-        if self.flop_measure:
-            # Simulate hard boundaries for FLOP measurement
-            L = x.size(0)
-            num_tokens_to_keep = max(1, int(L * self.prior))
-            indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
-            hard_boundaries = torch.zeros(B, L, device=x.device)
-            hard_boundaries[:, indices] = 1
-        else:
-            _, hard_boundaries = self.boundary_predictor(x)  # B x L
+#         # boundary prediction
+#         if self.flop_measure:
+#             # Simulate hard boundaries for FLOP measurement
+#             L = x.size(0)
+#             num_tokens_to_keep = max(1, int(L * self.prior))
+#             indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
+#             hard_boundaries = torch.zeros(B, L, device=x.device)
+#             hard_boundaries[:, indices] = 1
+#         else:
+#             _, hard_boundaries = self.boundary_predictor(x)  # B x L
 
-        # Downsampling (Dynamic Token Pooling)
-        hidden = self.down_ln(x)               # L x B x D
-        shortened_hidden = downsample(
-            boundaries=hard_boundaries,
-            hidden=hidden,
-            null_group=self.null_token
-        )                                        # S x B x D
+#         # Downsampling (Dynamic Token Pooling)
+#         hidden = self.down_ln(x)               # L x B x D
+#         shortened_hidden = downsample(
+#             boundaries=hard_boundaries,
+#             hidden=hidden,
+#             null_group=self.null_token
+#         )                                        # S x B x D
 
-        # attention mask for post-pooling transformer layers
-        S = shortened_hidden.size(0)
-        pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
+#         # attention mask for post-pooling transformer layers
+#         S = shortened_hidden.size(0)
+#         pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
 
-        attn_mask = pad_mask.transpose(0, 1).unsqueeze(1)     # B x 1 x S
-        attn_mask = attn_mask.expand(B, S, S)                 # B x S x S
+#         attn_mask = pad_mask.transpose(0, 1).unsqueeze(1)     # B x 1 x S
+#         attn_mask = attn_mask.expand(B, S, S)                 # B x S x S
 
-        # post-pooling transformer blocks
-        shortened_hidden = self.forward_after_pooling_with_attn_masks(
-            shortened_hidden,
-            self.short_blocks,
-            attention_mask=attn_mask
-        )
+#         # post-pooling transformer blocks
+#         shortened_hidden = self.forward_after_pooling_with_attn_masks(
+#             shortened_hidden,
+#             self.short_blocks,
+#             attention_mask=attn_mask
+#         )
 
-        # return features and optional loss
-        features = shortened_hidden  # S x B x D
+#         # return features and optional loss
+#         features = shortened_hidden  # S x B x D
 
-        if return_loss and not self.flop_measure:
-            # Binomial boundary loss (no need for mask since all sequences have the same number of tokens)
-            boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
-            avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
-            boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
-            return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
-        else:
-            return features
+#         if return_loss and not self.flop_measure:
+#             # Binomial boundary loss (no need for mask since all sequences have the same number of tokens)
+#             boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
+#             avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
+#             boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
+#             return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+#         else:
+#             return features
 
-    def forward(self, x, return_loss=False):
-        """
-        Full forward pass including pooling to class logits.
-        """
-        features_out = self.encode(x, return_loss=return_loss)
+#     def forward(self, x, return_loss=False):
+#         """
+#         Full forward pass including pooling to class logits.
+#         """
+#         features_out = self.encode(x, return_loss=return_loss)
 
-        if return_loss and not self.flop_measure:
-            # encode returns tuple (features, loss, avg_boundaries, boundary_ratio)
-            x, boundary_loss, avg_boundaries_per_batch, boundary_ratio = features_out
-        else:
-            x = features_out
+#         if return_loss and not self.flop_measure:
+#             # encode returns tuple (features, loss, avg_boundaries, boundary_ratio)
+#             x, boundary_loss, avg_boundaries_per_batch, boundary_ratio = features_out
+#         else:
+#             x = features_out
 
-        # pool across sequence dimension with mean pooling
-        pad_mask = x.abs().sum(-1).eq(0).float()           # S x B
-        valid_mask = 1.0 - pad_mask                        # S x B
-        valid_mask_exp = valid_mask.unsqueeze(-1)          # S x B x 1
+#         # pool across sequence dimension with mean pooling
+#         pad_mask = x.abs().sum(-1).eq(0).float()           # S x B
+#         valid_mask = 1.0 - pad_mask                        # S x B
+#         valid_mask_exp = valid_mask.unsqueeze(-1)          # S x B x 1
 
-        x = x * valid_mask_exp                             # Mask padded tokens
-        sum_x = x.sum(dim=0)                               # B x D
-        valid_counts = valid_mask.sum(dim=0).clamp(min=1e-6).unsqueeze(-1)  # B x 1
-        x = sum_x / valid_counts                           # B x D (masked mean)
+#         x = x * valid_mask_exp                             # Mask padded tokens
+#         sum_x = x.sum(dim=0)                               # B x D
+#         valid_counts = valid_mask.sum(dim=0).clamp(min=1e-6).unsqueeze(-1)  # B x 1
+#         x = sum_x / valid_counts                           # B x D (masked mean)
 
-        logits = self.head(x)
+#         logits = self.head(x)
 
-        if return_loss and not self.flop_measure:
-            return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
-        else:
-            return logits
+#         if return_loss and not self.flop_measure:
+#             return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+#         else:
+#             return logits
+
 
 class HierarchicalDTPViT(nn.Module):
     def __init__(self,
@@ -513,42 +514,29 @@ class HierarchicalDTPViT(nn.Module):
         self.seq_len = self.num_patches
 
         # Patch embedding
-        self.patch_embed = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
+        self.patch_embed = PatchEmbedding(image_size, patch_size, in_chans, embed_dim)
         self.dropout = nn.Dropout(drop_rate)
 
         # Positional embedding
-        self.pos_emb = PositionalEmbedding(embed_dim)
-        self.r_w_bias_list = nn.ParameterList([
-            nn.Parameter(torch.zeros(num_heads[0], embed_dim // num_heads[0])),
-            nn.Parameter(torch.zeros(num_heads[1], embed_dim // num_heads[1])),
-            nn.Parameter(torch.zeros(num_heads[2], embed_dim // num_heads[2])),
-            nn.Parameter(torch.zeros(num_heads[3], embed_dim // num_heads[3])),
-        ])
-        self.r_r_bias_list = nn.ParameterList([
-            nn.Parameter(torch.zeros(num_heads[0], embed_dim // num_heads[0])),
-            nn.Parameter(torch.zeros(num_heads[1], embed_dim // num_heads[1])),
-            nn.Parameter(torch.zeros(num_heads[2], embed_dim // num_heads[2])),
-            nn.Parameter(torch.zeros(num_heads[3], embed_dim // num_heads[3])),
-        ])
+        self.pos_emb = nn.Parameter(torch.zeros(1, 1 + self.patch_embed.num_patches, embed_dim))
 
-        # Helper to create decoder layers
         def create_decoder_layers(n_layers, n_head):
-            d_head = embed_dim // n_head
-            return nn.ModuleList(
+            layers = nn.ModuleList(
                 [
-                    RelPartialLearnableDecoderLayer(
-                        n_head=n_head,
+                    nn.TransformerEncoderLayer(
                         d_model=embed_dim,
-                        d_head=d_head,
-                        d_inner=int(embed_dim * mlp_ratio),
+                        nhead=n_head,
+                        dim_feedforward=int(embed_dim * mlp_ratio),
                         dropout=drop_rate,
-                        dropatt=attn_drop_rate,
-                        pre_lnorm=False,
-                        activation_function=activation_function,
+                        activation=activation_function,
+                        batch_first=False,
+                        norm_first=True
                     )
                     for _ in range(n_layers)
                 ]
             )
+
+            return layers
 
         # Transformer blocks for each stage
         self.pre_blocks = create_decoder_layers(depth[0], n_head=num_heads[0])
@@ -595,27 +583,25 @@ class HierarchicalDTPViT(nn.Module):
         # Final classification head
         self.head = nn.Linear(embed_dim, num_classes)
 
-    def forward_after_pooling_with_attn_masks(self, core_input: torch.Tensor, layers, attention_mask: torch.Tensor, index: int):
+    def forward_after_pooling_with_attn_masks(self, core_input: torch.Tensor, layers, attention_mask: torch.Tensor):
         """
         Process input with relative attention and padding-aware masking.
         """
-        T, _, _ = core_input.size()
-        pos_seq = torch.arange(T - 1, -1, -1.0, device=core_input.device, dtype=core_input.dtype)
-        pos_emb = self.dropout(self.pos_emb(pos_seq))
-
+        T, B, D = core_input.size()
         core_out = core_input
         for layer in layers:
-            core_out = layer(core_out, pos_emb, self.r_w_bias_list[index], self.r_r_bias_list[index], dec_attn_mask=attention_mask)
+            core_out = layer(core_out, src_key_padding_mask=attention_mask)
         return core_out
+    
 
-    def _make_attn_mask(self, seq: torch.Tensor):
+    def _make_attn_mask(self, shortened_hidden: torch.Tensor):
         """
         seq: S x B x D
         return: B x S x S mask (True=mask)
         """
-        S, B, _ = seq.size()
-        pad_mask = seq.abs().sum(-1).eq(0)  # S x B
-        attn_mask = pad_mask.transpose(0, 1).unsqueeze(1).expand(B, S, S)  # B x S x S
+        S = shortened_hidden.size(0)
+        pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
+        attn_mask = pad_mask.transpose(0, 1)                  # (B, S)  True=PAD
         return attn_mask
 
     def _downsample_stage(self, x: torch.Tensor, boundary_predictor: BoundaryPredictor):
@@ -647,31 +633,33 @@ class HierarchicalDTPViT(nn.Module):
     def encode(self, x: torch.Tensor, return_loss: bool = False):
         B = x.size(0)
 
-        # Patch embedding
-        x = self.patch_embed(x)  # B x C x H' x W'
-        x = x.flatten(2).transpose(1, 2)  # B x L x C
-        x = self.dropout(x).transpose(0, 1)  # L x B x C
+        # ✅ Patch embedding already gives (B, L, C)
+        x = self.patch_embed(x)                  # (B, L, C)
+        x = self.dropout(x)                      # (B, L, C)
 
-        # Stage 0: pre-blocks
-        pos_seq = torch.arange(self.seq_len - 1, -1, -1.0, device=x.device, dtype=x.dtype)
-        r = self.pos_emb(pos_seq)  # L x 1 x C
+        # Positional embedding (for pre-blocks)
+        L = x.size(1)
+        pos = self.pos_emb[:, 1:1 + L, :].to(device=x.device, dtype=x.dtype)   # (1, L, C)
+        x = x + pos                                                             # (B, L, C)
+        # Pre-pooling transformer blocks
+        x = x.transpose(0, 1)                    # (L, B, C)
         for block in self.pre_blocks:
-            x = block(x, r, self.r_w_bias_list[0], self.r_r_bias_list[0])
+            x = block(x)
 
         x, hard_boundaries1 = self._downsample_stage(x, self.bp1)
         attn_mask1 = self._make_attn_mask(x)
 
-        x = self.forward_after_pooling_with_attn_masks(x, self.mid_blocks_1, attention_mask=attn_mask1, index=1)
+        x = self.forward_after_pooling_with_attn_masks(x, self.mid_blocks_1, attention_mask=attn_mask1)
 
         x, hard_boundaries2 = self._downsample_stage(x, self.bp2)
         attn_mask2 = self._make_attn_mask(x)
 
-        x = self.forward_after_pooling_with_attn_masks(x, self.mid_blocks_2, attention_mask=attn_mask2, index=2)
+        x = self.forward_after_pooling_with_attn_masks(x, self.mid_blocks_2, attention_mask=attn_mask2)
 
         x, hard_boundaries3 = self._downsample_stage(x, self.bp3)
         attn_mask3 = self._make_attn_mask(x)
 
-        x = self.forward_after_pooling_with_attn_masks(x, self.final_blocks, attention_mask=attn_mask3, index=3)
+        x = self.forward_after_pooling_with_attn_masks(x, self.final_blocks, attention_mask=attn_mask3)
         features = x  # S x B x D
 
         if return_loss and not self.flop_measure:
@@ -1196,196 +1184,190 @@ class TransformerBlock(nn.Module):
 
 
 ##################################### VIT backbone ########################################
-# class DTPViT(nn.Module):
-#     def __init__(self,
-#                  image_size=224,
-#                  patch_size=16,
-#                  in_chans=3,
-#                  embed_dim=768,
-#                  depth=(2, 8, 0),
-#                  num_heads=12,
-#                  mlp_ratio=4.0,
-#                  drop_rate=0.1,
-#                  attn_drop_rate=0.1,
-#                  temp=1.0,
-#                  compression_rate=0.5,
-#                  bp_type='gumbel',
-#                  threshold=0.5,
-#                  num_classes=1000,
-#                  activation_function='gelu',
-#                  flop_measure: bool = False,
-#         ):
+class DTPViT(nn.Module):
+    def __init__(self,
+                 image_size=224,
+                 patch_size=16,
+                 in_chans=3,
+                 embed_dim=768,
+                 depth=(2, 8, 0),
+                 num_heads=12,
+                 mlp_ratio=4.0,
+                 drop_rate=0.1,
+                 attn_drop_rate=0.1,
+                 temp=1.0,
+                 compression_rate=0.5,
+                 bp_type='gumbel',
+                 threshold=0.5,
+                 num_classes=1000,
+                 activation_function='gelu',
+                 flop_measure: bool = False,
+        ):
 
-#         super().__init__()
-#         self.flop_measure = flop_measure
-#         self.prior = compression_rate
-#         self.embed_dim = embed_dim
-#         self.num_patches = (image_size // patch_size) ** 2
-#         self.seq_len = self.num_patches
+        super().__init__()
+        self.flop_measure = flop_measure
+        self.prior = compression_rate
+        self.embed_dim = embed_dim
+        self.num_patches = (image_size // patch_size) ** 2
+        self.seq_len = self.num_patches
 
-#         # patch embedding
-#         self.patch_embed = PatchEmbedding(image_size, patch_size, in_chans, embed_dim)
-#         self.dropout = nn.Dropout(drop_rate)
+        # patch embedding
+        self.patch_embed = PatchEmbedding(image_size, patch_size, in_chans, embed_dim)
+        self.dropout = nn.Dropout(drop_rate)
 
-#         # positional embedding
-#         self.pos_emb = nn.Parameter(torch.zeros(1, 1 + self.patch_embed.num_patches, embed_dim))
-#         nn.init.trunc_normal_(self.pos_emb, std=0.02)
+        # positional embedding
+        self.pos_emb = nn.Parameter(torch.zeros(1, 1 + self.patch_embed.num_patches, embed_dim))
+        nn.init.trunc_normal_(self.pos_emb, std=0.02)
         
-#         def create_decoder_layers(n_layers):
-#             layers = nn.ModuleList(
-#                 [
-#                     nn.TransformerEncoderLayer(
-#                         d_model=embed_dim,
-#                         nhead=num_heads,
-#                         dim_feedforward=int(embed_dim * mlp_ratio),
-#                         dropout=drop_rate,
-#                         activation=activation_function,
-#                         batch_first=False,
-#                         norm_first=True
-#                     )
-#                     for _ in range(n_layers)
-#                 ]
-#             )
+        def create_decoder_layers(n_layers):
+            layers = nn.ModuleList(
+                [
+                    nn.TransformerEncoderLayer(
+                        d_model=embed_dim,
+                        nhead=num_heads,
+                        dim_feedforward=int(embed_dim * mlp_ratio),
+                        dropout=drop_rate,
+                        activation=activation_function,
+                        batch_first=False,
+                        norm_first=True
+                    )
+                    for _ in range(n_layers)
+                ]
+            )
 
-#             return layers
+            return layers
 
-#         # pre-pooling block
-#         self.pre_blocks = create_decoder_layers(depth[0])
+        # pre-pooling block
+        self.pre_blocks = create_decoder_layers(depth[0])
 
-#         # post-pooling block
-#         self.short_blocks = create_decoder_layers(depth[1])
+        # post-pooling block
+        self.short_blocks = create_decoder_layers(depth[1])
 
-#         # boundary predictor
-#         self.boundary_predictor = BoundaryPredictor(
-#             d_model=embed_dim,
-#             d_inner=int(embed_dim * mlp_ratio),
-#             activation_function=activation_function,
-#             temp=temp,
-#             prior=compression_rate,
-#             bp_type=bp_type,
-#             threshold=threshold
-#         )
+        # boundary predictor
+        self.boundary_predictor = BoundaryPredictor(
+            d_model=embed_dim,
+            d_inner=int(embed_dim * mlp_ratio),
+            activation_function=activation_function,
+            temp=temp,
+            prior=compression_rate,
+            bp_type=bp_type,
+            threshold=threshold
+        )
 
-#         # layer normalization
-#         self.down_ln = nn.LayerNorm(embed_dim)
-#         self.null_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        # layer normalization
+        self.down_ln = nn.LayerNorm(embed_dim)
+        self.null_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
 
-#         # final projection
-#         self.num_classes = num_classes
-#         self.head = nn.Linear(embed_dim, num_classes)
+        # final projection
+        self.num_classes = num_classes
+        self.head = nn.Linear(embed_dim, num_classes)
     
-#     def forward_after_pooling_with_attn_masks(self, core_input: torch.Tensor, layers, attention_mask: torch.Tensor):
-#         """
-#         Process input with relative attention and padding-aware masking.
-#         """
-#         T, B, D = core_input.size()
-#         core_out = core_input
-#         for layer in layers:
-#             core_out = layer(core_out, src_key_padding_mask=attention_mask)
-#         return core_out
+    def forward_after_pooling_with_attn_masks(self, core_input: torch.Tensor, layers, attention_mask: torch.Tensor):
+        """
+        Process input with relative attention and padding-aware masking.
+        """
+        T, B, D = core_input.size()
+        core_out = core_input
+        for layer in layers:
+            core_out = layer(core_out, src_key_padding_mask=attention_mask)
+        return core_out
 
-#     def forward_after_pooling_without_attn_masks(self, core_input: torch.Tensor, layers):
-#         """
-#         Process input with relative attention.
-#         """
-#         T, B, D = core_input.size()
-#         core_out = core_input
-#         for layer in layers:
-#             core_out = layer(core_out)
-#         return core_out
+    def forward_after_pooling_without_attn_masks(self, core_input: torch.Tensor, layers):
+        """
+        Process input with relative attention.
+        """
+        T, B, D = core_input.size()
+        core_out = core_input
+        for layer in layers:
+            core_out = layer(core_out)
+        return core_out
 
-#     def encode(self, x: torch.Tensor, return_loss: bool = False):
-#         B = x.size(0)
+    def encode(self, x: torch.Tensor, return_loss: bool = False):
+        B = x.size(0)
 
-#         # ✅ Patch embedding already gives (B, L, C)
-#         x = self.patch_embed(x)                  # (B, L, C)
-#         x = self.dropout(x)                      # (B, L, C)
+        # ✅ Patch embedding already gives (B, L, C)
+        x = self.patch_embed(x)                  # (B, L, C)
+        x = self.dropout(x)                      # (B, L, C)
 
-#         # Positional embedding (for pre-blocks)
-#         L = x.size(1)
-#         pos = self.pos_emb[:, 1:1 + L, :].to(device=x.device, dtype=x.dtype)   # (1, L, C)
-#         x = x + pos                                                             # (B, L, C)
+        # Positional embedding (for pre-blocks)
+        L = x.size(1)
+        pos = self.pos_emb[:, 1:1 + L, :].to(device=x.device, dtype=x.dtype)   # (1, L, C)
+        x = x + pos                                                             # (B, L, C)
 
-#         # Pre-pooling transformer blocks
-#         x = x.transpose(0, 1)                    # (L, B, C)
-#         for block in self.pre_blocks:
-#             x = block(x)
+        # Pre-pooling transformer blocks
+        x = x.transpose(0, 1)                    # (L, B, C)
+        for block in self.pre_blocks:
+            x = block(x)
 
-#         # boundary prediction
-#         if self.flop_measure:
-#             # Simulate hard boundaries for FLOP measurement
-#             L = x.size(0)
-#             num_tokens_to_keep = max(1, int(L * self.prior))
-#             indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
-#             hard_boundaries = torch.zeros(B, L, device=x.device)
-#             hard_boundaries[:, indices] = 1
-#         else:
-#             _, hard_boundaries = self.boundary_predictor(x)  # B x L
+        # boundary prediction
+        if self.flop_measure:
+            # Simulate hard boundaries for FLOP measurement
+            L = x.size(0)
+            num_tokens_to_keep = max(1, int(L * self.prior))
+            indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
+            hard_boundaries = torch.zeros(B, L, device=x.device)
+            hard_boundaries[:, indices] = 1
+        else:
+            _, hard_boundaries = self.boundary_predictor(x)  # B x L
 
-#         # Downsampling (Dynamic Token Pooling)
-#         hidden = self.down_ln(x)               # L x B x D
-#         shortened_hidden = downsample(
-#             boundaries=hard_boundaries,
-#             hidden=hidden,
-#             null_group=self.null_token
-#         )                                        # S x B x D
+        # Downsampling (Dynamic Token Pooling)
+        hidden = self.down_ln(x)               # L x B x D
+        shortened_hidden = downsample(
+            boundaries=hard_boundaries,
+            hidden=hidden,
+            null_group=self.null_token
+        )                                        # S x B x D
 
-#         # attention mask for post-pooling transformer layers
-#         # S = shortened_hidden.size(0)
-#         # pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
+        # attention mask for post-pooling transformer layers
+        S = shortened_hidden.size(0)
+        pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
 
-#         # attn_mask = pad_mask.transpose(0, 1)                  # (B, S)  True=PAD
+        attn_mask = pad_mask.transpose(0, 1)                  # (B, S)  True=PAD
 
-#         # post-pooling transformer blocks
-#         # shortened_hidden = self.forward_after_pooling_with_attn_masks(
-#         #     shortened_hidden,
-#         #     self.short_blocks,
-#         #     attention_mask=attn_mask
-#         # )
+        # post-pooling transformer blocks
+        shortened_hidden = self.forward_after_pooling_with_attn_masks(
+            shortened_hidden,
+            self.short_blocks,
+            attention_mask=attn_mask
+        )
 
-#         # FIXME: ablation
-#         shortened_hidden = self.forward_after_pooling_without_attn_masks(
-#             shortened_hidden,
-#             self.short_blocks
-#         )
+        # return features and optional loss
+        features = shortened_hidden  # S x B x D
 
-#         # return features and optional loss
-#         features = shortened_hidden  # S x B x D
+        if return_loss and not self.flop_measure:
+            # Binomial boundary loss (no need for mask since all sequences have the same number of tokens)
+            boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
+            avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
+            boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
+            return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+        else:
+            return features
 
-#         if return_loss and not self.flop_measure:
-#             # Binomial boundary loss (no need for mask since all sequences have the same number of tokens)
-#             boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
-#             avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
-#             boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
-#             return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
-#         else:
-#             return features
+    def forward(self, x, return_loss=False):
+        """
+        Full forward pass including pooling to class logits.
+        """
+        features_out = self.encode(x, return_loss=return_loss)
 
-#     def forward(self, x, return_loss=False):
-#         """
-#         Full forward pass including pooling to class logits.
-#         """
-#         features_out = self.encode(x, return_loss=return_loss)
+        if return_loss and not self.flop_measure:
+            # encode returns tuple (features, loss, avg_boundaries, boundary_ratio)
+            x, boundary_loss, avg_boundaries_per_batch, boundary_ratio = features_out
+        else:
+            x = features_out
 
-#         if return_loss and not self.flop_measure:
-#             # encode returns tuple (features, loss, avg_boundaries, boundary_ratio)
-#             x, boundary_loss, avg_boundaries_per_batch, boundary_ratio = features_out
-#         else:
-#             x = features_out
+        # pool across sequence dimension with mean pooling
+        pad_mask = x.abs().sum(-1).eq(0).float()           # S x B
+        valid_mask = 1.0 - pad_mask                        # S x B
+        valid_mask_exp = valid_mask.unsqueeze(-1)          # S x B x 1
 
-#         # pool across sequence dimension with mean pooling
-#         pad_mask = x.abs().sum(-1).eq(0).float()           # S x B
-#         valid_mask = 1.0 - pad_mask                        # S x B
-#         valid_mask_exp = valid_mask.unsqueeze(-1)          # S x B x 1
+        x = x * valid_mask_exp                             # Mask padded tokens
+        sum_x = x.sum(dim=0)                               # B x D
+        valid_counts = valid_mask.sum(dim=0).clamp(min=1e-6).unsqueeze(-1)  # B x 1
+        x = sum_x / valid_counts                           # B x D (masked mean)
 
-#         x = x * valid_mask_exp                             # Mask padded tokens
-#         sum_x = x.sum(dim=0)                               # B x D
-#         valid_counts = valid_mask.sum(dim=0).clamp(min=1e-6).unsqueeze(-1)  # B x 1
-#         x = sum_x / valid_counts                           # B x D (masked mean)
+        logits = self.head(x)
 
-#         logits = self.head(x)
-
-#         if return_loss and not self.flop_measure:
-#             return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
-#         else:
-#             return logits
+        if return_loss and not self.flop_measure:
+            return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+        else:
+            return logits

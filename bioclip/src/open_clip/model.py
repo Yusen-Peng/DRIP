@@ -122,7 +122,7 @@ def _build_vision_tower(
         SOFT = False  # whether to use soft DTP-ViT
 
         # FIXME: infer from the model path if we are using DTP-ViT or not
-        DTP_ViT = False
+        DTP_ViT = True
 
         if DTP_ViT and not HIERARCHICAL and not SOFT: 
             compression_rate = 0.25 # compression rate
