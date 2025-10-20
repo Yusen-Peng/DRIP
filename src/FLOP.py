@@ -61,7 +61,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 32
-    MODE = "H-DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
+    MODE = "single_Swin" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
 
     img_size = 224
     width = 768
@@ -185,6 +185,23 @@ def main():
             num_classes=768,
             norm_layer=torch.nn.LayerNorm
         )
+    
+    elif MODE == "single_Swin":
+        from swin import SingleAdaptedSwin
+        print("Calculating GFLOPs for Single-stage Adapted Swin Transformer...")
+        model = SingleAdaptedSwin(
+            image_size=224, 
+            patch_size=16, 
+            in_chans=3,
+            embed_dim=768,
+            depth=(2, 10),
+            num_heads=(12, 12),
+            mlp_ratio=4.0,
+            drop_rate=0.0, 
+            num_classes=768,
+            norm_layer=torch.nn.LayerNorm
+        )
+
     elif MODE == "DynamicViT":
         from dynamicViT import VisionTransformerDiffPruning
         print("Calculating GFLOPs for DynamicViT...")

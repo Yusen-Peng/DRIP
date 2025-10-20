@@ -1227,9 +1227,9 @@ def main(args):
         model = VisionClassifier(backbone, num_classes).to(device)
 
     elif MODE == "H-DRIP":
-        rate1 = 0.5  # compression rate at stage 1
-        rate2 = 0.5  # compression rate at stage 2
-        rate3 = 0.5  # compression rate at stage 3
+        rate1 = 0.25  # compression rate at stage 1
+        rate2 = 0.25  # compression rate at stage 2
+        rate3 = 0.25  # compression rate at stage 3
         print("Calculating GFLOPs for H-DRIP...")
         empty_backbone = HierarchicalDTPViT(
             image_size=224,
