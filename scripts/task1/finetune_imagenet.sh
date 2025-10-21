@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Oct20_H_DRIP
-#SBATCH --output=Oct20_H_DRIP.txt
-#SBATCH --time=90:00:00
+#SBATCH --job-name=Oct20_single_swin_4_8
+#SBATCH --output=Oct20_single_swin_4_8.txt
+#SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4

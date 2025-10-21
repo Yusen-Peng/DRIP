@@ -30,13 +30,13 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from transformers import get_cosine_schedule_with_warmup
 from dynamicViT import VisionTransformerDiffPruning
-from swin import SwinTransformer
+from swin import SingleAdaptedSwin, SwinTransformer
 from EViT import EViT
 
 
 
 class VisionClassifier(nn.Module):
-    def __init__(self, backbone: DTPViT | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT, num_classes):
+    def __init__(self, backbone: DTPViT | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT | SingleAdaptedSwin, num_classes):
         super().__init__()
         self.backbone = backbone
         if isinstance(backbone, DTPViT) or isinstance(backbone, XL_Baseline):
@@ -50,6 +50,8 @@ class VisionClassifier(nn.Module):
         elif isinstance(backbone, EViT):
             self.fc = nn.Linear(backbone.num_classes, num_classes)
         elif isinstance(backbone, HierarchicalDTPViT):
+            self.fc = nn.Linear(backbone.num_classes, num_classes)
+        elif isinstance(backbone, SingleAdaptedSwin):
             self.fc = nn.Linear(backbone.num_classes, num_classes)
 
     def forward(self, x):
@@ -1141,7 +1143,7 @@ def main(args):
         dataset_test, batch_size=args.batch_size, sampler=test_sampler, num_workers=args.workers, pin_memory=True
     )
     print("Creating model")
-    MODE = "H-DRIP" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
+    MODE = "single_swin" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
     if MODE == "DRIP":
         compression_rate = 0.1 # 0.25 for 4x, 0.1 for 10x
         empty_backbone = DTPViT(
@@ -1179,7 +1181,25 @@ def main(args):
         )
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
-        
+    
+
+    elif MODE == "single_swin":
+        from swin import SingleAdaptedSwin
+        print("Calculating GFLOPs for Single-stage Adapted Swin Transformer...")
+        empty_backbone = SingleAdaptedSwin(
+            image_size=224, 
+            patch_size=16, 
+            in_chans=3,
+            embed_dim=768,
+            depth=(4, 8),
+            num_heads=(12, 12),
+            mlp_ratio=4.0,
+            drop_rate=0.0, 
+            num_classes=768,
+            norm_layer=torch.nn.LayerNorm
+        )
+        backbone = empty_backbone
+        model = VisionClassifier(backbone, num_classes).to(device)    
     elif MODE == "DynamicViT":
         print("Calculating GFLOPs for DynamicViT...")
         empty_backbone = VisionTransformerDiffPruning(
