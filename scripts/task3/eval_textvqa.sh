@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/XLbased-DRIP-10x-16-4-8-finetune \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/XLbased-DRIP-10x-16-5-7-finetune \
     --model-base lmsys/vicuna-7b-v1.5 \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textvqa/llava_textvqa_val_v051_ocr.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textvqa/train_images \

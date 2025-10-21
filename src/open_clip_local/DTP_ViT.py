@@ -582,6 +582,7 @@ class HierarchicalDTPViT(nn.Module):
 
         # Final classification head
         self.head = nn.Linear(embed_dim, num_classes)
+        self.num_classes = num_classes
 
     def forward_after_pooling_with_attn_masks(self, core_input: torch.Tensor, layers, attention_mask: torch.Tensor):
         """

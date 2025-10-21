@@ -10,27 +10,21 @@
 
 ## ImageNet classification
 
-Coming soon!
+![alt text](/docs/ImageNet.png)
 
 ## Contrastive Pretraining
 
 ### Pretraining from scratch
 
-![alt text](/docs/CLIP_scratch.png)
+![alt text](/docs/clip.png)
 
 ### Domain-specific Continual Pretraining
 
-Coming soon!
+![alt text](/docs/bioclip.png)
 
 ## Visual Instruction Tuning
 
-### Performance
-
-Coming soon!
-
-### Inference Speedup
-
-Coming soon!
+![alt text](/docs/llava.png)
 
 ## Contacts
 

@@ -61,7 +61,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 32
-    MODE = "single_Swin" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
+    MODE = "adapted_Swin" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
 
     img_size = 224
     width = 768
@@ -175,7 +175,7 @@ def main():
         print("Calculating GFLOPs for Adapted Swin Transformer...")
         model = HierarchicalAdaptedSwin(
             image_size=224, 
-            patch_size=4, 
+            patch_size=8, 
             in_chans=3,
             embed_dim=96,
             depth=(2, 2, 6, 2),

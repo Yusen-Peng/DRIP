@@ -36,7 +36,7 @@ from EViT import EViT
 
 
 class VisionClassifier(nn.Module):
-    def __init__(self, backbone: DTPViT | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT, num_classes):
+    def __init__(self, backbone: DTPViT | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT, num_classes):
         super().__init__()
         self.backbone = backbone
         if isinstance(backbone, DTPViT) or isinstance(backbone, XL_Baseline):
@@ -48,6 +48,8 @@ class VisionClassifier(nn.Module):
         elif isinstance(backbone, SwinTransformer):
             self.fc = nn.Linear(backbone.num_classes, num_classes)
         elif isinstance(backbone, EViT):
+            self.fc = nn.Linear(backbone.num_classes, num_classes)
+        elif isinstance(backbone, HierarchicalDTPViT):
             self.fc = nn.Linear(backbone.num_classes, num_classes)
 
     def forward(self, x):
@@ -1233,7 +1235,7 @@ def main(args):
         print("Calculating GFLOPs for H-DRIP...")
         empty_backbone = HierarchicalDTPViT(
             image_size=224,
-            patch_size=4,
+            patch_size=8,
             in_chans=3,
             embed_dim=96,
             depth=(2, 2, 6, 2),

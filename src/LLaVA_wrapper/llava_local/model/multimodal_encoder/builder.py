@@ -24,8 +24,8 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_5_7/checkpoints/epoch_15.pt"
     
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_5_7/checkpoints/epoch_15.pt"
-    checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_4_8/checkpoints/epoch_15.pt"
+    checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_5_7/checkpoints/epoch_15.pt"
+    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_4_8/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_XL_4_8/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_XL_2_10/checkpoints/epoch_15.pt"
     
@@ -35,7 +35,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
     patch_size = 16
     compression_rate = 0.1
-    depth = (4, 8, 0)
+    depth = (5, 7, 0)
 
     lower_bound = False
     lambda_val = 1.0
