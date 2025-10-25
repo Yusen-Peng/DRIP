@@ -61,7 +61,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 32
-    MODE = "adapted_Swin" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
+    MODE = "single_Swin" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
 
     img_size = 224
     width = 768
@@ -194,7 +194,7 @@ def main():
             patch_size=16, 
             in_chans=3,
             embed_dim=768,
-            depth=(2, 10),
+            depth=(4, 8),
             num_heads=(12, 12),
             mlp_ratio=4.0,
             drop_rate=0.0, 

@@ -61,7 +61,7 @@ def main():
         'DRIP-4X-16, 2+10': 'AUG_29_DRIP_ViTbased_4x_2_10.txt', # check
         'DRIP-10X-16, 4+8': 'AUG_29_DRIP_ViTbased_10x_4_8.txt', # check
         'DRIP-10X-16, 5+7': 'SEP_1_DRIP_ViTbased_10x_5_7.txt', # check
-        'Transformer-XL-16': 'AUG_29_DRIP_XL_baseline.txt', # XL baseline
+        #'Transformer-XL-16': 'AUG_29_DRIP_XL_baseline.txt', # XL baseline
         'DRIP-2X-16*, 4+8': 'AUG_23_DRIP_4x_4_8_0.0003.txt', # check, start here
         'DRIP-4X-16*, 4+8': 'AUG_29_DRIP_XLbased_4x_4_8.txt', # check
         'DRIP-4X-16*, 2+10': 'SEP_1_DRIP_XLbased_4x_2_10.txt', # check

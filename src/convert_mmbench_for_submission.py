@@ -27,7 +27,9 @@ if __name__ == "__main__":
     # report accuracy
     cur_df['correct'] = (cur_df['answer'] == cur_df['prediction']).astype(int)
     acc = cur_df['correct'].sum() / len(cur_df)
+    print("=== Evaluation Results ===")
     print(f"Overall accuracy: {acc*100:.2f}%")
-    
+    print(f"Number of samples: {len(cur_df)}")
+    print(f"Number of correct predictions: {cur_df['correct'].sum()}")
 
     cur_df.to_excel(os.path.join(args.upload_dir, f"{args.experiment}.xlsx"), index=False, engine='openpyxl')

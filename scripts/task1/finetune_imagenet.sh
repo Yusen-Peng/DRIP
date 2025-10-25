@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Oct20_single_swin_4_8
-#SBATCH --output=Oct20_single_swin_4_8.txt
+#SBATCH --job-name=Oct24_FIXED_2_10
+#SBATCH --output=Oct24_FIXED_2_10.txt
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

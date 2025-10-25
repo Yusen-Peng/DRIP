@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=ViT_FEW_SHOT
 #SBATCH --output=VIT_FEW_SHOT.txt
-#SBATCH --time=00:10:00
+#SBATCH --time=00:25:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1                      
-#SBATCH --gpus-per-node=4
+#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836

@@ -1191,7 +1191,7 @@ def main(args):
             patch_size=16, 
             in_chans=3,
             embed_dim=768,
-            depth=(4, 8),
+            depth=(2, 10),
             num_heads=(12, 12),
             mlp_ratio=4.0,
             drop_rate=0.0, 

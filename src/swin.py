@@ -667,6 +667,46 @@ class PatchMergeAvg(nn.Module):
         x = x.reshape(B, (H // 2) * (W // 2), C)
         return x
 
+class TokenPool1DAvg(nn.Module):
+    """
+    Fixed 1-D token pooling (non-spatial-aware).
+    Pools consecutive tokens in the sequence by averaging groups of `pool`.
+    
+    Input:  x (B, L, C)
+    Output: (B, L/pool, C)
+    """
+    def __init__(self, pool: int = 4, handle_tail: str = "trim"):
+        """
+        Args:
+            pool: group size for averaging. Use 4 to mimic 2x2 spatial merge.
+            handle_tail:
+                - "trim": drop leftover tokens if L % pool != 0
+                - "pad":  right-pad with zeros to the next multiple of `pool`
+        """
+        super().__init__()
+        assert handle_tail in ("trim", "pad")
+        self.pool = pool
+        self.handle_tail = handle_tail
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        B, L, C = x.shape
+        p = self.pool
+
+        if L % p != 0:
+            if self.handle_tail == "trim":
+                L_new = (L // p) * p
+                x = x[:, :L_new, :]
+            else:  # pad
+                L_new = ((L + p - 1) // p) * p
+                pad_len = L_new - L
+                pad = x.new_zeros(B, pad_len, C)
+                x = torch.cat([x, pad], dim=1)
+
+        # now length is divisible by p
+        B, L, C = x.shape
+        x = x.view(B, L // p, p, C).mean(dim=2)
+        return x
+
 
 class HierarchicalAdaptedSwin(nn.Module):
     """
@@ -892,7 +932,8 @@ class SingleAdaptedSwin(nn.Module):
         self.post_blocks = make_layers(depth[1], C, heads[1])
 
         # ----- fixed pooling (avg) -----
-        self.merge = PatchMergeAvg(self.grid0, dim=C)  # L0 -> L1, keep C
+        #self.merge = PatchMergeAvg(self.grid0, dim=C)  # L0 -> L1, keep C
+        self.merge = TokenPool1DAvg(pool=4, handle_tail="trim")  # L0 -> L1, keep C
 
         # ----- norm + head -----
         self.post_ln = norm_layer(C)
