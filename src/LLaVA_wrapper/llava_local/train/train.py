@@ -1058,8 +1058,8 @@ def train(attn_implementation=None):
 
         ###################################################################################################
         # FIXME: we have the option to also FINETUNE THE VISION TOWER
-        for p in model.get_model().vision_tower.parameters():
-            p.requires_grad = True
+        # for p in model.get_model().vision_tower.parameters():
+        #     p.requires_grad = True
         
         # FIXME: check if it's frozen or trainable
         print(f"########## check ##########:", flush=True)

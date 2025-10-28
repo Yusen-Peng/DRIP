@@ -5,7 +5,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # FIXME: all hardcoded. Need to be fixed later.
     USE_DTP = True
-    FINETUNING_MODE = True
+    FINETUNING_MODE = False
     BACKBONE = 'ViT'  # 'ViT' or 'XL'
 
     if USE_DTP:

@@ -249,12 +249,6 @@ class ViTVisionTower(nn.Module):
         features = features.to("cuda", dtype=self.dtype)        
         return features
 
-        # with torch.no_grad():
-        #     images = images.to("cuda", dtype=self.dtype)
-        #     features = self.vision_tower.encode(images)
-        #     features = features.to("cuda", dtype=self.dtype)        
-        # return features
-
     @property
     def dummy_feature(self):
         return torch.zeros(1, self.hidden_size, device=self.device, dtype=self.dtype)

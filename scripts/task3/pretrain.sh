@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Oct10_pretrain_DRIP_all
-#SBATCH --output=Oct10_pretrain_DRIP_all.txt
-#SBATCH --time=24:00:00
+#SBATCH --job-name=Oct27_pretrain_last_layer_1e_4_3epochs
+#SBATCH --output=Oct27_pretrain_last_layer_1e_4_3epochs.txt
+#SBATCH --time=20:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
@@ -28,18 +28,18 @@ deepspeed src/task3_llava.py \
     --vision_tower openai/clip-vit-base-patch16 \
     --mm_projector_type mlp2x_gelu \
     --tune_mm_mlp_adapter True \
-    --mm_vision_select_layer -2 \
+    --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-pretrain-ALL \
-    --num_train_epochs 1 \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-pretrain-last-layer-1e-4-3epochs \
+    --num_train_epochs 3 \
     --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 1 \
     --save_strategy "steps" \
     --save_steps 24000 \
     --save_total_limit 1 \
-    --learning_rate 1e-3 \
+    --learning_rate 1e-4 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
     --lr_scheduler_type "cosine" \
