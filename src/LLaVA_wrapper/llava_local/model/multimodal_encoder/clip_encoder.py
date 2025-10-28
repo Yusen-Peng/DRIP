@@ -184,21 +184,28 @@ class ViTVisionTower(nn.Module):
             print(f"btw, device map is {device_map}")
             return
 
-        self.vision_tower: VisionTransformer = VisionTransformer(
-                image_size=self.image_size,
-                patch_size=self.patch_size,
-                width=self._hidden_size,
-                layers=12,
-                heads=self.num_heads,
-                mlp_ratio=self.mlp_ratio
-        )
+        if self.checkpoint_path.startswith("openai"):
+        
+            self.vision_tower = CLIPVisionModel.from_pretrained(self.checkpoint_path, device_map=device_map)
+            self.vision_tower.requires_grad_(False)
+        
+        else:
+            
+            self.vision_tower: VisionTransformer = VisionTransformer(
+                    image_size=self.image_size,
+                    patch_size=self.patch_size,
+                    width=self._hidden_size,
+                    layers=12,
+                    heads=self.num_heads,
+                    mlp_ratio=self.mlp_ratio
+            )
 
-        # FIXME: load the model
-        # option 1: load from the original CLIP checkpoint
-        load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+            # FIXME: load the model
+            # option 1: load from the original CLIP checkpoint
+            load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
 
-        # option 2: load from the finetuned checkpoint
-        #load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
+            # option 2: load from the finetuned checkpoint
+            #load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
 
 
         device = "cuda" if torch.cuda.is_available() else "cpu"

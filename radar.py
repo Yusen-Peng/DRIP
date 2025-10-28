@@ -28,10 +28,11 @@ def main(csv_path: Path):
 
     # --- styling: global rcParams + vibrant palette ---
     plt.rcParams.update({
-        "font.size": 12,
-        "axes.linewidth": 0.9,
-        "grid.linewidth": 0.8,
-        "grid.alpha": 0.6,
+        "font.size": 13,
+        "font.weight": "bold",         
+        "axes.linewidth": 3.0,
+        "grid.linewidth": 3.0,
+        "grid.alpha": 1.0,
     })
     palette = ["#E64B35", "#4DBBD5", "#00A087", "#3C5488",
                "#F39B7F", "#91D1C2", "#7E6148", "#B09C85"]
@@ -60,9 +61,9 @@ def main(csv_path: Path):
     # minimal rings + dashed reference at 0
     ax.set_yticks([-1, 0, 1])     # keep just a few rounds
     ax.set_yticklabels([])        # number-free
-    ax.yaxis.grid(True, linestyle=(0, (3, 3)), linewidth=0.8, alpha=0.6)
+    ax.yaxis.grid(True, linestyle=(0, (3, 3)), linewidth=2, alpha=0.6)
     theta = np.linspace(0, 2*np.pi, 512)
-    ax.plot(theta, np.full_like(theta, 0), linestyle="--", linewidth=1.0, alpha=0.7)
+    ax.plot(theta, np.full_like(theta, 0), linestyle="--", linewidth=2.0, alpha=0.7)
 
     # soften frame and tighten layout area
     ax.spines["polar"].set_visible(False)
@@ -73,20 +74,17 @@ def main(csv_path: Path):
     for _, row in df_z.iterrows():
         vals = row[metrics].astype(float).to_numpy()
         v_closed = close_loop(vals)
-        line, = ax.plot(angles_closed, v_closed, linewidth=2)
+        line, = ax.plot(angles_closed, v_closed, linewidth=3)
         handles.append(line)
         labels.append(row["Model"])
 
     # legend polish
-    leg = ax.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5, -0.08),
+    leg = ax.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5, -0.03),
                     ncol=min(3, len(labels)), frameon=False, handlelength=2.8, handletextpad=0.6)
-    for t in leg.get_texts():
-        t.set_fontsize(11)
 
     # save (tight crop)
     plt.savefig(f"{OUTPUT_STEM}.png", dpi=300, bbox_inches='tight', pad_inches=0.05)
-    plt.savefig(f"{OUTPUT_STEM}.svg", bbox_inches='tight', pad_inches=0.05)
-    print(f"✅ Saved: {OUTPUT_STEM}.png, {OUTPUT_STEM}.svg")
+    print(f"✅ Saved: {OUTPUT_STEM}.png")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

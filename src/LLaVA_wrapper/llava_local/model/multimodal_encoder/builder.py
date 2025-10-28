@@ -5,7 +5,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # FIXME: all hardcoded. Need to be fixed later.
     USE_DTP = True
-    FINETUNING_MODE = False
+    FINETUNING_MODE = True
     BACKBONE = 'ViT'  # 'ViT' or 'XL'
 
     if USE_DTP:
@@ -17,6 +17,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         print("Using original ViT as the vision tower")
         print("🍟" * 20)
     
+    #checkpoint_path = "openai/clip-vit-base-patch16"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_5_7/checkpoints/epoch_15.pt"
     checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
