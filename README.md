@@ -2,7 +2,7 @@
 
 ## News/Updates
 
-<!-- - [August 31, 2025] paper available on [arXiv](https://arxiv.org/abs/2509.00692)! -->
+- [October 29, 2025] paper available on [arXiv](https://arxiv.org/abs/2510.25067)!
 - [October 27, 2025] model checkpoints pretrained on CLIP/BioCLIP are publicly available on [HuggingFace](https://huggingface.co/YusenPeng/DRIP_checkpoints) for further finetuning!
 
 ## DRIP Architecture

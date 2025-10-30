@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=Oct28_finetune_long_pretrained_DRIP
 #SBATCH --output=Oct28_finetune_long_pretrained_DRIP.txt
-#SBATCH --time=00:55:00
+#SBATCH --time=55:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
