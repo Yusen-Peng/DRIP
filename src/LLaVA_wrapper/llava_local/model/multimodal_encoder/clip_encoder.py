@@ -9,7 +9,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
 sys.path.insert(0, PROJECT_ROOT)
 from src.open_clip_local.DTP_ViT import DTPViT
 from src.open_clip_local.model import VisionTransformer
-from src.boundary_vis import load_dtpx_from_clip_checkpoint, load_dtp_from_clip_checkpoint, load_vit_from_clip_checkpoint
+from src.boundary_vis import load_dtpx_from_clip_checkpoint, load_dtp_from_clip_checkpoint, load_vit_from_clip_checkpoint, weight_transfer
 
 def load_finetuned_vision_tower(vt_core, path_or_dir, strict: bool=False, device: str=None, dtype=None):
     """
@@ -183,29 +183,22 @@ class ViTVisionTower(nn.Module):
             print(f"{self.checkpoint_path} is already loaded. Skipping.")
             print(f"btw, device map is {device_map}")
             return
-
-        if self.checkpoint_path.startswith("openai"):
         
-            self.vision_tower = CLIPVisionModel.from_pretrained(self.checkpoint_path, device_map=device_map)
-            self.vision_tower.requires_grad_(False)
-        
-        else:
-            
-            self.vision_tower: VisionTransformer = VisionTransformer(
-                    image_size=self.image_size,
-                    patch_size=self.patch_size,
-                    width=self._hidden_size,
-                    layers=12,
-                    heads=self.num_heads,
-                    mlp_ratio=self.mlp_ratio
-            )
+        self.vision_tower: VisionTransformer = VisionTransformer(
+                image_size=self.image_size,
+                patch_size=self.patch_size,
+                width=self._hidden_size,
+                layers=12,
+                heads=self.num_heads,
+                mlp_ratio=self.mlp_ratio
+        )
 
-            # FIXME: load the model
-            # option 1: load from the original CLIP checkpoint
-            load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+        # FIXME: load the model
+        # option 1: load from the original CLIP checkpoint
+        load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
 
-            # option 2: load from the finetuned checkpoint
-            #load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
+        # option 2: load from the finetuned checkpoint
+        #load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
 
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -373,6 +366,8 @@ class DRIPVisionTower(nn.Module):
             self.vision_tower, _ = load_dtp_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
         elif self.backbone == 'XL':
             self.vision_tower, _ = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
+        elif self.backbone == 'ViT-with-weights':
+            weight_transfer(self.vision_tower)
         else:
             raise ValueError(f'Unsupported backbone: {self.backbone}')
 

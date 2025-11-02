@@ -218,7 +218,7 @@ def _build_vision_tower(
                 num_classes=embed_dim
             )
         else:
-            use_XL_backbone = True
+            use_XL_backbone = False
             print(f"are we using XL backbone? {use_XL_backbone}", flush=True)
             if use_XL_backbone:
                 print("use XL backbone!")

@@ -1,12 +1,13 @@
 import os
-from .clip_encoder import CLIPVisionTowerS2, DRIPVisionTower, ViTVisionTower
+from transformers import CLIPVisionModel, CLIPImageProcessor, CLIPVisionConfig
+from .clip_encoder import CLIPVisionTowerS2, DRIPVisionTower, ViTVisionTower, CLIPVisionTower
 
 def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # FIXME: all hardcoded. Need to be fixed later.
     USE_DTP = True
-    FINETUNING_MODE = True
-    BACKBONE = 'ViT'  # 'ViT' or 'XL'
+    FINETUNING_MODE = False
+    BACKBONE = 'ViT-with-weights'  # 'ViT' or 'XL' or "ViT-with-weights"
 
     if USE_DTP:
         print("🍟" * 20)
@@ -17,10 +18,10 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         print("Using original ViT as the vision tower")
         print("🍟" * 20)
     
-    #checkpoint_path = "openai/clip-vit-base-patch16"
+    checkpoint_path = "openai"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_5_7/checkpoints/epoch_15.pt"
-    checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
+    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_2_10/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_5_7/checkpoints/epoch_15.pt"
@@ -70,6 +71,13 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             print("🍟" * 20)
             print(f"Using original ViT from the path {checkpoint_path}")
             print("🍟" * 20)
+
+            if checkpoint_path.startswith("openai"):
+                # shortcut for using openai pretrained weights
+                print("🥶" * 20)
+                print(f"Using OpenAI pretrained ViT: {vision_tower}")
+                print("🥶" * 20)
+                return CLIPVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
 
             vit_loaded: ViTVisionTower = ViTVisionTower(
                 checkpoint_path=checkpoint_path, 
