@@ -1061,6 +1061,12 @@ def train(attn_implementation=None):
         # for p in model.get_model().vision_tower.parameters():
         #     p.requires_grad = True
         
+        for p in model.get_model().vision_tower.vision_tower.boundary_predictor.parameters():
+            p.requires_grad = True
+
+
+
+        
         # FIXME: check if it's frozen or trainable
         print(f"########## check ##########:", flush=True)
         vision_trainable = any(p.requires_grad for p in model.get_model().vision_tower.parameters())

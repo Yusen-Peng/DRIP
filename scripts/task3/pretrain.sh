@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Nov2_pretrain_openai_weights
-#SBATCH --output=Nov2_pretrain_openai_weights.txt
-#SBATCH --time=00:10:00
+#SBATCH --job-name=Nov2_pretrain_openai_weights_BP_only
+#SBATCH --output=Nov2_pretrain_openai_weights_BP_only.txt
+#SBATCH --time=08:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
@@ -31,7 +31,7 @@ deepspeed src/task3_llava.py \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-openai-weights \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-openai-weights-BP-only \
     --num_train_epochs 1 \
     --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 4 \
