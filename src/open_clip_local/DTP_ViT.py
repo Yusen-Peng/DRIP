@@ -1372,3 +1372,204 @@ class DTPViT(nn.Module):
             return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
         else:
             return logits
+        
+
+####################################
+### more baselines #################
+####################################
+
+class PatchMergeAvg(nn.Module):
+    """
+    Fixed 2x2 spatial downsampling WITHOUT channel concat/projection.
+    Input:  x (B, L, C) with L = H*W
+    Output: (B, (H/2)*(W/2), C)
+    """
+    def __init__(self, input_resolution, dim):
+        super().__init__()
+        self.input_resolution = input_resolution  # (H, W)
+        self.dim = dim
+
+    def forward(self, x):
+        B, L, C = x.shape
+        H, W = self.input_resolution
+        assert L == H * W, f"Expected L=H*W, got L={L}, H*W={H*W}"
+        assert H % 2 == 0 and W % 2 == 0, f"H and W must be even, got {H},{W}"
+
+        x = x.view(B, H, W, C)
+        x00 = x[:, 0::2, 0::2, :]  # (B, H/2, W/2, C)
+        x10 = x[:, 1::2, 0::2, :]
+        x01 = x[:, 0::2, 1::2, :]
+        x11 = x[:, 1::2, 1::2, :]
+        x = (x00 + x10 + x01 + x11) * 0.25
+        x = x.reshape(B, (H // 2) * (W // 2), C)
+        return x
+
+class TokenPool1DAvg(nn.Module):
+    """
+    Fixed 1-D token pooling (non-spatial-aware).
+    Pools consecutive tokens in the sequence by averaging groups of `pool`.
+    
+    Input:  x (B, L, C)
+    Output: (B, L/pool, C)
+    """
+    def __init__(self, pool: int = 4, handle_tail: str = "trim"):
+        """
+        Args:
+            pool: group size for averaging. Use 4 to mimic 2x2 spatial merge.
+            handle_tail:
+                - "trim": drop leftover tokens if L % pool != 0
+                - "pad":  right-pad with zeros to the next multiple of `pool`
+        """
+        super().__init__()
+        assert handle_tail in ("trim", "pad")
+        self.pool = pool
+        self.handle_tail = handle_tail
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        B, L, C = x.shape
+        p = self.pool
+
+        if L % p != 0:
+            if self.handle_tail == "trim":
+                L_new = (L // p) * p
+                x = x[:, :L_new, :]
+            else:  # pad
+                L_new = ((L + p - 1) // p) * p
+                pad_len = L_new - L
+                pad = x.new_zeros(B, pad_len, C)
+                x = torch.cat([x, pad], dim=1)
+
+        # now length is divisible by p
+        B, L, C = x.shape
+        x = x.view(B, L // p, p, C).mean(dim=2)
+        return x
+
+
+
+
+class SingleAdaptedFixed(nn.Module):
+    def __init__(self,
+                 image_size=224,
+                 patch_size=16,
+                 in_chans=3,
+                 embed_dim=768,            # constant across pre/post
+                 depth=(2, 8),             # (pre_depth, post_depth)
+                 num_heads=(12, 12),       # (pre_heads, post_heads) or single int
+                 mlp_ratio=4.0,
+                 drop_rate=0.1,
+                 num_classes=1000,
+                 activation_function='gelu',
+                 flop_measure: bool = False,
+                 norm_layer=nn.LayerNorm):
+        super().__init__()
+        self.flop_measure = flop_measure
+        self.num_classes = num_classes
+        C = embed_dim
+
+        # ----- grids -----
+        Hp = image_size // patch_size
+        Wp = image_size // patch_size
+        assert Hp * patch_size == image_size and Wp * patch_size == image_size
+        assert (Hp % 2 == 0) and (Wp % 2 == 0), "Need even H/ W (one 2x merge)."
+        self.grid0 = (Hp, Wp)
+        self.grid1 = (Hp // 2, Wp // 2)
+
+        L0 = Hp * Wp
+        L1 = (Hp // 2) * (Wp // 2)
+
+        # ----- heads -----
+        if isinstance(num_heads, int):
+            heads = (num_heads, num_heads)
+        else:
+            assert len(num_heads) == 2
+            heads = num_heads
+
+        # ----- patch embed -----
+        self.patch_embed = PatchEmbedding(image_size, patch_size, in_chans, C)
+        self.dropout = nn.Dropout(drop_rate)
+
+        # ----- pos embeddings (both C, constant width) -----
+        self.pos_pre  = nn.Parameter(torch.zeros(1, 1 + L0, C))
+        self.pos_post = nn.Parameter(torch.zeros(1, 1 + L1, C))
+        nn.init.trunc_normal_(self.pos_pre,  std=0.02)
+        nn.init.trunc_normal_(self.pos_post, std=0.02)
+
+        # ----- transformer stacks -----
+        def make_layers(n_layers, d_model, nhead):
+            return nn.ModuleList([
+                nn.TransformerEncoderLayer(
+                    d_model=d_model,
+                    nhead=nhead,
+                    dim_feedforward=int(d_model * mlp_ratio),
+                    dropout=drop_rate,
+                    activation=activation_function,
+                    batch_first=False,
+                    norm_first=True
+                )
+                for _ in range(max(0, n_layers))
+            ])
+
+        self.pre_blocks  = make_layers(depth[0], C, heads[0])
+        self.post_blocks = make_layers(depth[1], C, heads[1])
+
+        # ----- fixed pooling (avg) -----
+        self.merge = TokenPool1DAvg(pool=4, handle_tail="trim")  # L0 -> L1, keep C
+
+        # ----- norm + head -----
+        self.post_ln = norm_layer(C)
+        self.head    = nn.Linear(C, num_classes)
+
+    # utils
+    def _add_pos(self, x, pos_param):
+        B, L, C = x.shape
+        pos = pos_param[:, 1:1+L, :].to(device=x.device, dtype=x.dtype)
+        return x + pos
+
+    def _run_stack(self, x, layers):
+        for blk in layers:
+            x = blk(x)
+        return x
+
+    def encode(self, x: torch.Tensor, return_loss: bool = False):
+        # pre
+        x = self.patch_embed(x)                 # (B, L0, C)
+        x = self.dropout(x)
+        x = self._add_pos(x, self.pos_pre)
+        x = x.transpose(0, 1)                   # (L0, B, C)
+        x = self._run_stack(x, self.pre_blocks) # (L0, B, C)
+
+        # merge (no channel change)
+        x = x.transpose(0, 1)                   # (B, L0, C)
+        x = self.merge(x)                       # (B, L1, C)
+        x = self._add_pos(x, self.pos_post)
+        x = x.transpose(0, 1)                   # (L1, B, C)
+
+        # post
+        x = self._run_stack(x, self.post_blocks)  # (L1, B, C)
+
+        if return_loss:
+            # keep DTPViT API
+            dummy_loss = torch.zeros([], device=x.device)
+            # single fixed merge → tokens /4
+            avg_boundaries = 0.0
+            boundary_ratio = 1.0 / 4.0
+            return x, dummy_loss, avg_boundaries, boundary_ratio
+        else:
+            return x
+
+    def forward(self, x, return_loss: bool = False):
+        out = self.encode(x, return_loss=return_loss)
+        if return_loss:
+            feats, boundary_loss, avg_boundaries, boundary_ratio = out
+        else:
+            feats = out
+
+        # mean pool over sequence (dense)
+        x = feats.mean(dim=0)   # (B, C)
+        x = self.post_ln(x)
+        logits = self.head(x)
+
+        if return_loss:
+            return logits, boundary_loss, avg_boundaries, boundary_ratio
+        else:
+            return logits

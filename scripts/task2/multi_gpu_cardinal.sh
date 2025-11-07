@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=cadinal_test
 #SBATCH --output=cadinal_test.log
-#SBATCH --time=168:00:00
+#SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4

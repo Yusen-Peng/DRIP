@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Sep_17_XL_base_2x
-#SBATCH --output=Sep_17_XL_base_2x.log
+#SBATCH --job-name=NOV6_FIXED_POOLING
+#SBATCH --output=NOV6_FIXED_POOLING.log
 #SBATCH --partition=quad
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1

@@ -21,7 +21,7 @@ from .modified_resnet import ModifiedResNet
 from .timm_model import TimmModel
 from .transformer import LayerNormFp32, LayerNorm, QuickGELU, Attention, VisionTransformer, TextTransformer,\
     text_global_pool
-from .DTP_ViT import DTPViT, HierarchicalDTPViT, SoftDTPViT, XL_Baseline
+from .DTP_ViT import DTPViT, HierarchicalDTPViT, SoftDTPViT, XL_Baseline, SingleAdaptedFixed
 from .utils import to_2tuple
 
 ZERO = 0
@@ -150,29 +150,53 @@ def _build_vision_tower(
         if vision_cfg.act_kwargs is not None:
             act_layer = partial(act_layer, **vision_cfg.act_kwargs)
 
+
+        ######## HP tuning ########
         HIERARCHICAL = False  # whether to use hierarchical DTP-ViT
         SOFT = False  # whether to use soft DTP-ViT
+        POOLING = "Fixed" # "DRIP" or "Fixed" or "Swin"
+
         if DTP_ViT and not HIERARCHICAL and not SOFT: 
             compression_rate = 0.5  # compression rate
             print(f"Using DTP ViT with compression rate {compression_rate}")
             depth = (4, 8, 0)
             print(f"Depth for each stage: {depth}")
-            visual = DTPViT(
-                image_size=vision_cfg.image_size,
-                patch_size=vision_cfg.patch_size,
-                in_chans=3,
-                embed_dim=vision_cfg.width,
-                depth=depth,
-                num_heads=vision_heads,
-                mlp_ratio=vision_cfg.mlp_ratio,
-                drop_rate=vision_cfg.patch_dropout,
-                attn_drop_rate=0.1,
-                temp=0.5,
-                compression_rate=compression_rate,
-                threshold=0.5,
-                activation_function="gelu",
-                num_classes=embed_dim
-            )
+            
+
+            if POOLING == "DRIP":
+                print("Using DRIP pooling")
+                visual = DTPViT(
+                    image_size=vision_cfg.image_size,
+                    patch_size=vision_cfg.patch_size,
+                    in_chans=3,
+                    embed_dim=vision_cfg.width,
+                    depth=depth,
+                    num_heads=vision_heads,
+                    mlp_ratio=vision_cfg.mlp_ratio,
+                    drop_rate=vision_cfg.patch_dropout,
+                    attn_drop_rate=0.1,
+                    temp=0.5,
+                    compression_rate=compression_rate,
+                    threshold=0.5,
+                    activation_function="gelu",
+                    num_classes=embed_dim
+                )
+            elif POOLING == "Fixed":
+                print("Using Fixed pooling")
+                visual = SingleAdaptedFixed(
+                    image_size=vision_cfg.image_size,
+                    patch_size=vision_cfg.patch_size,
+                    in_chans=3,
+                    embed_dim=vision_cfg.width,
+                    depth=depth,
+                    num_heads=vision_heads,
+                    mlp_ratio=vision_cfg.mlp_ratio,
+                    drop_rate=vision_cfg.patch_dropout,
+                    activation_function="gelu",
+                    num_classes=embed_dim
+                )
+            else:
+                raise NotImplementedError("Only DRIP and Fixed pooling are implemented for DTP-ViT")
 
         elif DTP_ViT and HIERARCHICAL and not SOFT:
             print("Using Hierarchical DTP ViT")
