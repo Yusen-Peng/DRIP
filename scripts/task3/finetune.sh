@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Oct28_finetune_long_pretrained_DRIP
-#SBATCH --output=Oct28_finetune_long_pretrained_DRIP.txt
-#SBATCH --time=55:00:00
+#SBATCH --job-name=Nov17_finetune_fixed_pooling
+#SBATCH --output=Nov17_finetune_fixed_pooling.txt
+#SBATCH --time=65:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
@@ -30,11 +30,11 @@ deepspeed src/task3_llava.py \
     --vision_tower openai/clip-vit-base-patch16 \
     --mm_projector_type mlp2x_gelu \
     --bf16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-pretrain-last-layer-1e-4-3epochs/mm_projector.bin \
-    --mm_vision_select_layer -2 \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/fixed-pooling/mm_projector.bin \
+    --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-finetune-last-layer-1e-4-3epochs \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/fixed-pooling-finetune \
     --num_train_epochs 3 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \

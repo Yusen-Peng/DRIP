@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=NOV6_FIXED_POOLING
-#SBATCH --output=NOV6_FIXED_POOLING.log
+#SBATCH --job-name=NOV16_SWIN_POOLING
+#SBATCH --output=NOV16_SWIN_POOLING.log
 #SBATCH --partition=quad
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1

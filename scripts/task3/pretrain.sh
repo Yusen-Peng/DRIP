@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Nov4_pretrain_drip_10epochs
-#SBATCH --output=Nov4_pretrain_drip_10epochs.txt
-#SBATCH --time=64:00:00
+#SBATCH --job-name=Nov16_pretrain_fixed_pooling
+#SBATCH --output=Nov16_pretrain_fixed_pooling.txt
+#SBATCH --time=07:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
@@ -31,8 +31,8 @@ deepspeed src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-pretrain-10-epochs \
-    --num_train_epochs 10 \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/fixed-pooling \
+    --num_train_epochs 1 \
     --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 1 \

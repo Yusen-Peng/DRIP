@@ -1,12 +1,14 @@
 import os
 from transformers import CLIPVisionModel, CLIPImageProcessor, CLIPVisionConfig
-from .clip_encoder import CLIPVisionTowerS2, DRIPVisionTower, ViTVisionTower, CLIPVisionTower
+from .clip_encoder import CLIPVisionTowerS2, DRIPVisionTower, ViTVisionTower, CLIPVisionTower, BaselineVisionTower
 
 def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # FIXME: all hardcoded. Need to be fixed later.
-    USE_DTP = True
-    FINETUNING_MODE = False
+    USE_DTP = False
+    USE_COMPRESSION_BASELINE = True
+    BASELINE_TYPE = 'Fixed'  # 'Fixed' or 'Swin'
+    FINETUNING_MODE = True
     BACKBONE = 'ViT'  # 'ViT' or 'XL' or "ViT-with-weights"
 
     if USE_DTP:
@@ -18,10 +20,11 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         print("Using original ViT as the vision tower")
         print("🍟" * 20)
     
+    checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/fixed_pooling_4x/checkpoints/epoch_15.pt"
     #checkpoint_path = "openai"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_5_7/checkpoints/epoch_15.pt"
-    checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
+    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_2_10/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_5_7/checkpoints/epoch_15.pt"
@@ -67,6 +70,29 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
                 num_classes=num_classes,
                 finetuning_mode=FINETUNING_MODE,
                 **kwargs)
+        
+        elif not USE_DTP and USE_COMPRESSION_BASELINE:
+            print("🍟" * 20)
+            print(f"Using Compression Baseline ViT from the path {checkpoint_path}")
+            print("🍟" * 20)
+
+            vit_loaded: BaselineVisionTower = BaselineVisionTower(
+                baseline_type=BASELINE_TYPE,
+                checkpoint_path=checkpoint_path, 
+                vision_tower=vision_tower,
+                args=vision_tower_cfg,
+                patch_size=patch_size,
+                compression_rate=compression_rate,
+                lower_bound=lower_bound,
+                lambda_val=lambda_val,
+                depth=depth,
+                num_classes=num_classes,
+                finetuning_mode=FINETUNING_MODE,
+                **kwargs
+            )
+
+            return vit_loaded
+
         else:
             print("🍟" * 20)
             print(f"Using original ViT from the path {checkpoint_path}")

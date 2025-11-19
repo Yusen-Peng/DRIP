@@ -21,7 +21,7 @@ from .modified_resnet import ModifiedResNet
 from .timm_model import TimmModel
 from .transformer import LayerNormFp32, LayerNorm, QuickGELU, Attention, VisionTransformer, TextTransformer,\
     text_global_pool
-from .DTP_ViT import DTPViT, HierarchicalDTPViT, SoftDTPViT, XL_Baseline, SingleAdaptedFixed
+from .DTP_ViT import DTPViT, HierarchicalDTPViT, SoftDTPViT, XL_Baseline, SingleAdaptedFixed, SingleAdaptedSwin
 from .utils import to_2tuple
 
 ZERO = 0
@@ -154,7 +154,7 @@ def _build_vision_tower(
         ######## HP tuning ########
         HIERARCHICAL = False  # whether to use hierarchical DTP-ViT
         SOFT = False  # whether to use soft DTP-ViT
-        POOLING = "Fixed" # "DRIP" or "Fixed" or "Swin"
+        POOLING = "Swin" # "DRIP" or "Fixed" or "Swin"
 
         if DTP_ViT and not HIERARCHICAL and not SOFT: 
             compression_rate = 0.5  # compression rate
@@ -195,8 +195,23 @@ def _build_vision_tower(
                     activation_function="gelu",
                     num_classes=embed_dim
                 )
+
+            elif POOLING == "Swin":
+                print("🚑🚑🚑🚑🚑 Using Swin pooling 🚑🚑🚑🚑🚑")
+                visual = SingleAdaptedSwin(
+                    image_size=vision_cfg.image_size,
+                    patch_size=vision_cfg.patch_size,
+                    in_chans=3,
+                    embed_dim=vision_cfg.width,
+                    depth=depth,
+                    num_heads=vision_heads,
+                    mlp_ratio=vision_cfg.mlp_ratio,
+                    drop_rate=vision_cfg.patch_dropout,
+                    activation_function="gelu",
+                    num_classes=embed_dim
+                )
             else:
-                raise NotImplementedError("Only DRIP and Fixed pooling are implemented for DTP-ViT")
+                raise NotImplementedError("Pooling method not implemented. Choose from 'DRIP', 'Fixed', or 'Swin'.")
 
         elif DTP_ViT and HIERARCHICAL and not SOFT:
             print("Using Hierarchical DTP ViT")
