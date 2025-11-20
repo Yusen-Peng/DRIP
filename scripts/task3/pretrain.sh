@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Nov16_pretrain_fixed_pooling
-#SBATCH --output=Nov16_pretrain_fixed_pooling.txt
+#SBATCH --job-name=Nov19_BP_at_the_end_only_ft_BP
+#SBATCH --output=Nov19_BP_at_the_end_only_ft_BP.txt
 #SBATCH --time=07:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -31,7 +31,7 @@ deepspeed src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/fixed-pooling \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/BP-at-the-end-only-ft-BP \
     --num_train_epochs 1 \
     --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 4 \

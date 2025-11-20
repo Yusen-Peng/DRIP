@@ -9,7 +9,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     USE_COMPRESSION_BASELINE = True
     BASELINE_TYPE = 'Fixed'  # 'Fixed' or 'Swin'
     FINETUNING_MODE = True
-    BACKBONE = 'ViT'  # 'ViT' or 'XL' or "ViT-with-weights"
+    BACKBONE = 'ViT-with-weights'  # 'ViT' or 'XL' or "ViT-with-weights"
 
     if USE_DTP:
         print("🍟" * 20)
@@ -41,6 +41,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     patch_size = 16
     compression_rate = 0.25
     depth = (4, 8, 0)
+    #depth = (12, 0, 0) # NOTE: put the boundary predictor at the end and load OpenAI pretrained weights
 
     lower_bound = False
     lambda_val = 1.0
