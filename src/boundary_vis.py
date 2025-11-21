@@ -724,7 +724,9 @@ if __name__ == "__main__":
         flop_measure=False
     )
 
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_4_8/checkpoints/epoch_15.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_4_8/checkpoints/epoch_15.pt"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_XL_4_8/checkpoints/epoch_15.pt"
+
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ImageNet_DRIP_78/model_299.pth"
     if checkpoint_type == "imagenet":
         model = load_backbone_from_imagenet_checkpoint(model, ckpt_path)
@@ -740,18 +742,18 @@ if __name__ == "__main__":
     tests = ["8", "9"]
 
     # run visualization (for the main paper)
-    run_visualization(
-        model=model,
-        tests=tests,
-        preprocess=preprocess,
-        batch_size=2,   # 1x6 grid
-        out_dir="unit_further_vis/mmbench_image"
-    )
+    # run_visualization(
+    #     model=model,
+    #     tests=tests,
+    #     preprocess=preprocess,
+    #     batch_size=2,   # 1x6 grid
+    #     out_dir="unit_further_vis/mmbench_image"
+    # )
 
     # run 2x2 visualization (for the supplementary material)
-    # visualize_boundaries_single_multi(
-    #     model, 
-    #     preprocess=preprocess,
-    #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
-    #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/TransformerXL_based_boundary_visualization_2x2.png"
-    # )
+    visualize_boundaries_single_multi(
+        model, 
+        preprocess=preprocess,
+        root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
+        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/TransformerXL_based_boundary_visualization_2x2_4x.png"
+    )

@@ -223,8 +223,8 @@ def load_dtp_from_clip_checkpoint(
         if inner is not None:
 
             # skip the boundary predictor so far
-            if "boundary_predictor.boundary_predictor." in inner:
-                continue
+            # if "boundary_predictor.boundary_predictor." in inner:
+            #     continue
 
             # if verbose:
             #     print(f"[drip] ckpt key: {k} -> inner: {inner}")
@@ -654,23 +654,24 @@ if __name__ == "__main__":
         flop_measure=False
     )
 
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
     model, _ = load_dtp_from_clip_checkpoint(model_empty, ckpt_path)
     model.eval()
-    # visualize_boundaries_single_multi(
-    #     model, 
-    #     preprocess=preprocess,
-    #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
-    #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_visualization_2x2.png"
-    # )
+    visualize_boundaries_single_multi(
+        model, 
+        preprocess=preprocess,
+        root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
+        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_visualization_2x2.png"
+    )
     # run visualization (for the main paper)
     #tests = ["0", "1"]
     tests = ["6", "7"]
 
-    run_visualization(
-        model=model,
-        tests=tests,
-        preprocess=preprocess,
-        batch_size=2,   # 1x2 grid
-        out_dir="unit_further_vis/mmbench_image"
-    )
+    # run_visualization(
+    #     model=model,
+    #     tests=tests,
+    #     preprocess=preprocess,
+    #     batch_size=2,   # 1x2 grid
+    #     out_dir="unit_further_vis/mmbench_image"
+    # )
