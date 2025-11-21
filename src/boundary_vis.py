@@ -32,6 +32,156 @@ import random
 # Allow argprse.Namespace for safe weights-only unpickling in PyTorch 2.6+
 torch.serialization.add_safe_globals([argparse.Namespace])
 
+
+@torch.no_grad()
+def weight_transfer(backbone: DTPViT):
+    # 1) Load giver (OpenAI CLIP ViT-B/16) via open_clip
+    clip_model, _, _ = create_model_and_transforms(
+        model_name="ViT-B-16",
+        pretrained="openai",
+        DTP_ViT=False  # IMPORTANT: load the standard CLIP weights
+    )
+    clip_state_dict = clip_model.visual.state_dict()
+
+    # Keep only vision-tower tensors we actually need
+    clip_vit_state_dict = {
+        k: v for k, v in clip_state_dict.items()
+        if not k.startswith("proj")              # skip final projection
+        and not k.startswith("ln_post")          # skip ln_post
+        and "attn_mask" not in k                 # not a parameter
+    }
+
+    # 2) Receiver (your model)
+    dtp_state_dict = backbone.state_dict()
+
+    # --- Optional: quick previews you already printed ---
+    # print("CLIP ViT-B/16 state dict keys:", flush=True)
+    # print(clip_vit_state_dict.keys(), flush=True)
+    # print("DTPViT state dict keys:", flush=True)
+    # print(dtp_state_dict.keys(), flush=True)
+
+    transferred, missing, mismatched = 0, [], []
+
+    # 3) Patch embedding
+    if "conv1.weight" not in clip_vit_state_dict:
+        raise KeyError("Giver missing conv1.weight")
+    if "patch_embed.proj.weight" not in dtp_state_dict:
+        raise KeyError("Receiver missing patch_embed.proj.weight")
+
+    if dtp_state_dict["patch_embed.proj.weight"].shape != clip_vit_state_dict["conv1.weight"].shape:
+        mismatched.append(("patch_embed.proj.weight", tuple(dtp_state_dict["patch_embed.proj.weight"].shape),
+                           "conv1.weight", tuple(clip_vit_state_dict["conv1.weight"].shape)))
+    else:
+        dtp_state_dict["patch_embed.proj.weight"].copy_(clip_vit_state_dict["conv1.weight"])
+        if "patch_embed.proj.bias" in dtp_state_dict:
+            dtp_state_dict["patch_embed.proj.bias"].zero_()
+        transferred += 1
+        print("✅ Transferred: patch_embed.proj (weight) and zeroed bias", flush=True)
+
+    # 4) Positional embedding (CLS + patches)
+    if "positional_embedding" not in clip_vit_state_dict:
+        raise KeyError("Giver missing positional_embedding")
+    if "pos_emb" not in dtp_state_dict:
+        raise KeyError("Receiver missing pos_emb")
+
+
+    src = clip_vit_state_dict["positional_embedding"]            # (197, 768)
+    dst = dtp_state_dict["pos_emb"]                          # (1, 197, 768)
+
+    if dst.shape[1:] != src.shape:                   # compare (197,768)
+        # (You'd interpolate here if token count differs; not needed for 224/16.)
+        raise ValueError(f"PosEmb token/dim mismatch: dst {dst.shape} vs src {src.shape}")
+
+    dtp_state_dict["pos_emb"].copy_(src.unsqueeze(0))        # <- fix: add batch dim
+    print("✅ Transferred: pos_emb (with unsqueeze(0))", flush=True)
+    
+
+    # 5) Blocks mapping
+    # DTPViT uses:
+    #   pre_blocks.{i}.(norm1/norm2, self_attn.in_proj_*, self_attn.out_proj.*, linear1/linear2)
+    #   short_blocks.{j}.(...)
+    n_pre = len(getattr(backbone, "pre_blocks", []))
+    n_short = len(getattr(backbone, "short_blocks", []))
+    total_needed = n_pre + n_short
+
+    def dst_prefix_for_layer(i: int) -> str:
+        if i < n_pre:
+            return f"pre_blocks.{i}"
+        else:
+            j = i - n_pre
+            return f"short_blocks.{j}"
+
+    # Each OpenAI CLIP ViT-B/16 has 12 resblocks
+    total_giver = 12
+    max_layers = min(total_needed, total_giver)
+
+    # Pairs: (giver_key_suffix, receiver_key_suffix)
+    # CLIP:   ln_1 / ln_2, attn.in_proj_weight/bias, attn.out_proj.*, mlp.c_fc, mlp.c_proj
+    # DTPViT: norm1/norm2, self_attn.in_proj_*    , self_attn.out_proj.*, linear1  , linear2
+    pairs = [
+        ("ln_1.weight",           "norm1.weight"),
+        ("ln_1.bias",             "norm1.bias"),
+        ("attn.in_proj_weight",   "self_attn.in_proj_weight"),
+        ("attn.in_proj_bias",     "self_attn.in_proj_bias"),
+        ("attn.out_proj.weight",  "self_attn.out_proj.weight"),
+        ("attn.out_proj.bias",    "self_attn.out_proj.bias"),
+        ("ln_2.weight",           "norm2.weight"),
+        ("ln_2.bias",             "norm2.bias"),
+        ("mlp.c_fc.weight",       "linear1.weight"),
+        ("mlp.c_fc.bias",         "linear1.bias"),
+        ("mlp.c_proj.weight",     "linear2.weight"),
+        ("mlp.c_proj.bias",       "linear2.bias"),
+    ]
+
+    for i in range(max_layers):
+        base = f"transformer.resblocks.{i}"
+        dst_prefix = dst_prefix_for_layer(i)
+
+        # sanity: receiver has this block?
+        needs = [f"{dst_prefix}.{r}" for _, r in pairs]
+        has_block = any(k.startswith(f"{dst_prefix}.") for k in dtp_state_dict.keys())
+        if not has_block:
+            missing.append((dst_prefix, "entire block missing in receiver"))
+            print(f"⚠️ Skipping {dst_prefix}: block not found in receiver state_dict.", flush=True)
+            continue
+
+        copied_this_block = 0
+        for g_suf, r_suf in pairs:
+            g_key = f"{base}.{g_suf}"
+            r_key = f"{dst_prefix}.{r_suf}"
+            g_val = clip_vit_state_dict.get(g_key, None)
+            r_val = dtp_state_dict.get(r_key, None)
+
+            if g_val is None or r_val is None:
+                missing.append((g_key if g_val is None else r_key, "missing"))
+                continue
+
+            if r_val.shape != g_val.shape:
+                mismatched.append((r_key, tuple(r_val.shape), g_key, tuple(g_val.shape)))
+                continue
+
+            r_val.copy_(g_val)
+            transferred += 1
+            copied_this_block += 1
+
+        print(f"✅ Transferred block {i:02d} → {dst_prefix}  (copied {copied_this_block}/{len(pairs)})", flush=True)
+
+    # 6) Commit into model (allow leftovers that DTPViT owns)
+    backbone.load_state_dict(dtp_state_dict, strict=False)
+
+    # 7) Summary
+    print("\n=== Transfer Summary ===", flush=True)
+    print(f"Needed layers (receiver): {total_needed}  |  Giver layers available: {total_giver}  |  Mapped: {max_layers}", flush=True)
+    print(f"Transferred tensors: {transferred}", flush=True)
+    if missing:
+        print(f"Missing ({len(missing)}): first few -> {missing[:8]}", flush=True)
+    if mismatched:
+        print(f"Mismatched ({len(mismatched)}): first few -> {mismatched[:8]}", flush=True)
+    print("========================\n", flush=True)
+
+
+
+
 def _consume_prefix(sd, prefix):
     if not any(k.startswith(prefix) for k in sd):  # nothing to do
         return sd
@@ -586,7 +736,8 @@ if __name__ == "__main__":
     # your list of test indices
     #tests = ["0", "1", "2", "3", "4", "5"]
     # tests = ["0", "1"]
-    tests = ["2", "3"]
+    # tests = ["2", "3"]
+    tests = ["8", "9"]
 
     # run visualization (for the main paper)
     run_visualization(
