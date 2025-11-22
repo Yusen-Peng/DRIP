@@ -1263,25 +1263,32 @@ class DTPViT(nn.Module):
         self.num_classes = num_classes
         self.head = nn.Linear(embed_dim, num_classes)
     
-    def forward_after_pooling_with_attn_masks(self, core_input: torch.Tensor, layers, attention_mask: torch.Tensor):
-        """
-        Process input with relative attention and padding-aware masking.
-        """
+    def forward_after_pooling_with_attn_masks(self, core_input, layers, attention_mask):
         T, B, D = core_input.size()
-        core_out = core_input
+        # take patch pos emb only (drop cls slot)
+        patch_pos = self.pos_emb[:, 1:, :]          # (1, N, D), N = original num_patches
+
+        # interpolate to new length T
+        patch_pos = patch_pos.transpose(1, 2)       # (1, D, N)
+        patch_pos: torch.Tensor = F.interpolate(patch_pos, size=T, mode="linear", align_corners=False)
+        patch_pos = patch_pos.transpose(1, 2)       # (1, T, D)
+        pos_emb: torch.Tensor = self.dropout(patch_pos)
+        pos_emb = pos_emb.transpose(0, 1)  # (T, 1, D)
+        core_out = core_input + pos_emb
+
         for layer in layers:
             core_out = layer(core_out, src_key_padding_mask=attention_mask)
         return core_out
 
-    def forward_after_pooling_without_attn_masks(self, core_input: torch.Tensor, layers):
-        """
-        Process input with relative attention.
-        """
-        T, B, D = core_input.size()
-        core_out = core_input
-        for layer in layers:
-            core_out = layer(core_out)
-        return core_out
+    # def forward_after_pooling_without_attn_masks(self, core_input: torch.Tensor, layers):
+    #     """
+    #     Process input with relative attention.
+    #     """
+    #     T, B, D = core_input.size()
+    #     core_out = core_input
+    #     for layer in layers:
+    #         core_out = layer(core_out)
+    #     return core_out
 
     def encode(self, x: torch.Tensor, return_loss: bool = False):
         B = x.size(0)

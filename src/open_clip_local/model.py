@@ -154,10 +154,10 @@ def _build_vision_tower(
         ######## HP tuning ########
         HIERARCHICAL = False  # whether to use hierarchical DTP-ViT
         SOFT = False  # whether to use soft DTP-ViT
-        POOLING = "Swin" # "DRIP" or "Fixed" or "Swin"
+        POOLING = "DRIP" # "DRIP" or "Fixed" or "Swin"
 
         if DTP_ViT and not HIERARCHICAL and not SOFT: 
-            compression_rate = 0.5  # compression rate
+            compression_rate = 0.25  # compression rate
             print(f"Using DTP ViT with compression rate {compression_rate}")
             depth = (4, 8, 0)
             print(f"Depth for each stage: {depth}")
