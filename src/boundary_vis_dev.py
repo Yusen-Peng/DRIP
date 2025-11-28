@@ -226,8 +226,8 @@ def load_dtp_from_clip_checkpoint(
             # if "boundary_predictor.boundary_predictor." in inner:
             #     continue
 
-            # if verbose:
-            #     print(f"[drip] ckpt key: {k} -> inner: {inner}")
+            if verbose:
+                print(f"[drip] ckpt key: {k} -> inner: {inner}")
             mapped[inner] = v
     model.load_state_dict(mapped, strict=False)
     if verbose:
@@ -654,8 +654,9 @@ if __name__ == "__main__":
         flop_measure=False
     )
 
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8_NEW/checkpoints/epoch_15.pt"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
     model, _ = load_dtp_from_clip_checkpoint(model_empty, ckpt_path)
     model.eval()
     visualize_boundaries_single_multi(
