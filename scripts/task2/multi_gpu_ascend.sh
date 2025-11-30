@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=NOV28_XLbased_DRIP_2x
-#SBATCH --output=NOV28_XLbased_DRIP_2x.log
+#SBATCH --job-name=NOV30_faithful_vitbased_drip_4epoch
+#SBATCH --output=NOV30_faithful_vitbased_drip_4epoch.log
 #SBATCH --partition=quad
-#SBATCH --time=168:00:00
+#SBATCH --time=50:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
