@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=NOV22_ViTbased_DRIP_fixed
-#SBATCH --output=NOV22_ViTbased_DRIP_fixed.log
+#SBATCH --job-name=NOV28_XLbased_DRIP_2x
+#SBATCH --output=NOV28_XLbased_DRIP_2x.log
 #SBATCH --partition=quad
 #SBATCH --time=168:00:00
 #SBATCH --nodes=1
