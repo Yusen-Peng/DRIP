@@ -507,7 +507,7 @@ def run_visualization(model, tests, preprocess, batch_size=4, out_dir="unit_furt
         batch_indices.append(test_index)
 
     save_path = os.path.join(out_dir,
-        f"boundary_visualization_{batch_indices[0]}-{batch_indices[-1]}.png")
+        f"NEW_VIT_boundary_visualization_{batch_indices[0]}-{batch_indices[-1]}.png")
     visualize_boundaries_enhanced(model, torch.stack(batch_tensors), save_path=save_path)
     batch_tensors, batch_indices = [], []
 
@@ -654,25 +654,26 @@ if __name__ == "__main__":
         flop_measure=False
     )
 
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8_NEW/checkpoints/epoch_2.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8_NEW/checkpoints/epoch_2.pt"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_vitbased_DRIP_4epoch/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
     model, _ = load_dtp_from_clip_checkpoint(model_empty, ckpt_path)
     model.eval()
-    visualize_boundaries_single_multi(
-        model, 
-        preprocess=preprocess,
-        root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
-        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_visualization_2x2.png"
-    )
-    # run visualization (for the main paper)
-    #tests = ["0", "1"]
-    tests = ["6", "7"]
-
-    # run_visualization(
-    #     model=model,
-    #     tests=tests,
+    # visualize_boundaries_single_multi(
+    #     model, 
     #     preprocess=preprocess,
-    #     batch_size=2,   # 1x2 grid
-    #     out_dir="unit_further_vis/mmbench_image"
+    #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
+    #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_visualization_2x2.png"
     # )
+    # run visualization (for the main paper)
+    tests = ["4", "5"]
+    # tests = ["6", "7"]
+
+    run_visualization(
+        model=model,
+        tests=tests,
+        preprocess=preprocess,
+        batch_size=2,   # 1x2 grid
+        out_dir="unit_further_vis/mmbench_image"
+    )

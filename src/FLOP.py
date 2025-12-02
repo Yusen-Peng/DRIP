@@ -60,7 +60,7 @@ def throughput(images, model):
 
 
 def main():
-    patch_size = 32
+    patch_size = 16
     MODE = "DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
 
     img_size = 224

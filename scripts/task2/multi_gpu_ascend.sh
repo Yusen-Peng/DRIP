@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=NOV30_faithful_vitbased_drip_4epoch
-#SBATCH --output=NOV30_faithful_vitbased_drip_4epoch.log
+#SBATCH --job-name=Dec2_faithful_vitbased_drip_full
+#SBATCH --output=Dec2_faithful_vitbased_drip_full.log
 #SBATCH --partition=quad
-#SBATCH --time=50:00:00
+#SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
