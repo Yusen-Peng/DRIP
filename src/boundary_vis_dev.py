@@ -226,8 +226,8 @@ def load_dtp_from_clip_checkpoint(
             # if "boundary_predictor.boundary_predictor." in inner:
             #     continue
 
-            # if verbose:
-            #     print(f"[drip] ckpt key: {k} -> inner: {inner}")
+            if verbose:
+                print(f"[drip] ckpt key: {k} -> inner: {inner}")
             mapped[inner] = v
     model.load_state_dict(mapped, strict=False)
     if verbose:
@@ -541,7 +541,8 @@ def visualize_boundaries_single_multi(
         grid_size = int(math.sqrt(L))
         assert grid_size * grid_size == L, f"L={L} is not a perfect square"
         grid_h = grid_w = grid_size
-        pos = model.pos_emb[:, 1:1 + L, :].to(device=x.device, dtype=x.dtype)  # (1, L, C)
+        # pos = model.pos_emb[:, 1:1 + L, :].to(device=x.device, dtype=x.dtype)  # (1, L, C)
+        pos = model.pos_emb.to(device=x.device, dtype=x.dtype)  # (1, L, C)
         x = x + pos                                                            # (1, L, C)
         x = x.transpose(0, 1)  # (L, 1, C)
         for block in model.pre_blocks:
@@ -651,29 +652,32 @@ if __name__ == "__main__":
         compression_rate=compression_rate,
         threshold=0.5,
         activation_function='gelu',
+        sinusoidal_pos_emb=True,
         flop_measure=False
     )
 
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8_NEW/checkpoints/epoch_2.pt"
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_vitbased_DRIP_4epoch/checkpoints/epoch_4.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_vitbased_DRIP_4epoch/checkpoints/epoch_4.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/vitbased_drip_4epochs_sinusoidal_built_in_nn/checkpoints/epoch_4.pt"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_vitbased_drip_4epochs_sinusoidal/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
     model, _ = load_dtp_from_clip_checkpoint(model_empty, ckpt_path)
     model.eval()
-    # visualize_boundaries_single_multi(
-    #     model, 
-    #     preprocess=preprocess,
-    #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
-    #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_visualization_2x2.png"
-    # )
+    visualize_boundaries_single_multi(
+        model, 
+        preprocess=preprocess,
+        root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
+        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_visualization_2x2.png"
+    )
     # run visualization (for the main paper)
     tests = ["4", "5"]
     # tests = ["6", "7"]
 
-    run_visualization(
-        model=model,
-        tests=tests,
-        preprocess=preprocess,
-        batch_size=2,   # 1x2 grid
-        out_dir="unit_further_vis/mmbench_image"
-    )
+    # run_visualization(
+    #     model=model,
+    #     tests=tests,
+    #     preprocess=preprocess,
+    #     batch_size=2,   # 1x2 grid
+    #     out_dir="unit_further_vis/mmbench_image"
+    # )
