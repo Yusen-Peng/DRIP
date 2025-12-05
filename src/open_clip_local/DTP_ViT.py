@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .transformer import ResidualAttentionBlock
+from .pos_embed import get_2d_sincos_pos_embed
 
 def downsample(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: torch.Tensor):
     B, L = boundaries.shape
@@ -1203,6 +1204,7 @@ class DTPViT(nn.Module):
                  threshold=0.5,
                  num_classes=1000,
                  activation_function='gelu',
+                 sinusoidal_pos_emb: bool = True,
                  flop_measure: bool = False,
         ):
 
@@ -1213,39 +1215,53 @@ class DTPViT(nn.Module):
         self.num_patches = (image_size // patch_size) ** 2
         self.grid_size = (image_size // patch_size, image_size // patch_size)
         self.seq_len = self.num_patches
+        self.sinusoidal_pos_emb = sinusoidal_pos_emb
+        if self.sinusoidal_pos_emb:
+            print("🥶🥶🥶🥶🥶Using sinusoidal 2D positional embeddings.")
+        else:
+            print("😹😹😹😹😹Using learnable positional embeddings.")
 
         # patch embedding
         self.patch_embed = PatchEmbedding(image_size, patch_size, in_chans, embed_dim)
         self.dropout = nn.Dropout(drop_rate)
 
         # positional embedding
-        # self.pos_emb = nn.Parameter(torch.zeros(1, 1 + self.patch_embed.num_patches, embed_dim))
-        # nn.init.trunc_normal_(self.pos_emb, std=0.02)
-        scale = embed_dim ** -0.5
-        self.pos_emb = nn.Parameter(
-            scale * torch.randn(1, 
-                            self.grid_size[0] * self.grid_size[1] + 1, 
-                            embed_dim)
-                    )
+        if not self.sinusoidal_pos_emb:
+            # self.pos_emb = nn.Parameter(torch.zeros(1, 1 + self.patch_embed.num_patches, embed_dim))
+            # nn.init.trunc_normal_(self.pos_emb, std=0.02)
+            scale = embed_dim ** -0.5
+            self.pos_emb = nn.Parameter(
+                scale * torch.randn(1, 
+                                self.grid_size[0] * self.grid_size[1], 
+                                embed_dim)
+                        )
+        else:
+            # FIXME: try sinusoidal 2d pos embedding
+            assert self.grid_size[0] == self.grid_size[1],\
+                    'currently sin cos 2d pos embedding only supports square input'
+            self.pos_emb = nn.Parameter(
+                torch.zeros(self.grid_size[0] * self.grid_size[1], embed_dim), requires_grad=False)
+            pos_embed_type = get_2d_sincos_pos_embed(embed_dim, self.grid_size[0], cls_token=False)
+            self.pos_emb.data.copy_(torch.from_numpy(pos_embed_type).float())
 
         
         def create_decoder_layers(n_layers):
             layers = nn.ModuleList(
                 [
-                    # nn.TransformerEncoderLayer(
-                    #     d_model=embed_dim,
-                    #     nhead=num_heads,
-                    #     dim_feedforward=int(embed_dim * mlp_ratio),
-                    #     dropout=drop_rate,
-                    #     activation=activation_function,
-                    #     batch_first=False,
-                    #     norm_first=True
-                    # )
-                    ResidualAttentionBlock(
+                    nn.TransformerEncoderLayer(
                         d_model=embed_dim,
-                        n_head=num_heads,
-                        mlp_ratio=mlp_ratio
-                    ) # follow CLIP ViT design (GFLOP drops from 2.19 to 1.5)
+                        nhead=num_heads,
+                        dim_feedforward=int(embed_dim * mlp_ratio),
+                        dropout=drop_rate,
+                        activation=activation_function,
+                        batch_first=False,
+                        norm_first=True
+                    )
+                    # ResidualAttentionBlock(
+                    #     d_model=embed_dim,
+                    #     n_head=num_heads,
+                    #     mlp_ratio=mlp_ratio
+                    # ) # follow CLIP ViT design (GFLOP drops from 2.19 to 1.5)
                     for _ in range(n_layers) 
                 ]
             )
@@ -1281,16 +1297,20 @@ class DTPViT(nn.Module):
     
     def forward_after_pooling_with_attn_masks(self, core_input, layers, attention_mask):
         T, B, D = core_input.size()
-        # take patch pos emb only (drop cls slot)
-        patch_pos = self.pos_emb[:, 1:, :]          # (1, N, D), N = original num_patches
 
-        # interpolate to new length T
-        patch_pos = patch_pos.transpose(1, 2)       # (1, D, N)
-        patch_pos: torch.Tensor = F.interpolate(patch_pos, size=T, mode="linear", align_corners=False)
-        patch_pos = patch_pos.transpose(1, 2)       # (1, T, D)
-        pos_emb: torch.Tensor = self.dropout(patch_pos)
-        pos_emb = pos_emb.transpose(0, 1)  # (T, 1, D)
-        core_out = core_input + pos_emb
+        if not self.sinusoidal_pos_emb: # only add pos emb when not using sin cos
+            # take patch pos emb only (drop cls slot)
+            patch_pos = self.pos_emb[:, 1:, :]          # (1, N, D), N = original num_patches
+
+            # interpolate to new length T
+            patch_pos = patch_pos.transpose(1, 2)       # (1, D, N)
+            patch_pos: torch.Tensor = F.interpolate(patch_pos, size=T, mode="linear", align_corners=False)
+            patch_pos = patch_pos.transpose(1, 2)       # (1, T, D)
+            pos_emb: torch.Tensor = self.dropout(patch_pos)
+            pos_emb = pos_emb.transpose(0, 1)  # (T, 1, D)
+            core_out = core_input + pos_emb
+        else:
+            core_out = core_input
 
         for layer in layers:
             # core_out = layer(core_out, src_key_padding_mask=attention_mask)
@@ -1304,8 +1324,11 @@ class DTPViT(nn.Module):
 
         # Positional embedding (for pre-blocks)
         L = x.size(1)
-        pos = self.pos_emb[:, 1:1 + L, :].to(device=x.device, dtype=x.dtype)   # (1, L, C)
-        x = x + pos                                                             # (B, L, C)
+        # pos = self.pos_emb[:, 1:1 + L, :].to(device=x.device, dtype=x.dtype)   # (1, L, C)
+        # x = x + pos                                                             # (B, L, C)
+        
+        # FIXME: just fixed unnecessary slicing
+        x = x + self.pos_emb.to(device=x.device, dtype=x.dtype)
 
         # Pre-pooling transformer blocks
         x = x.transpose(0, 1)                    # (L, B, C)
@@ -1469,7 +1492,7 @@ class SingleAdaptedFixed(nn.Module):
                  num_heads=(12, 12),       # (pre_heads, post_heads) or single int
                  mlp_ratio=4.0,
                  drop_rate=0.1,
-                 num_classes=1000,
+                 num_classes=512,
                  activation_function='gelu',
                  flop_measure: bool = False,
                  norm_layer=nn.LayerNorm):
@@ -1503,7 +1526,12 @@ class SingleAdaptedFixed(nn.Module):
 
         # ----- pos embeddings (both C, constant width) -----
         self.pos_pre  = nn.Parameter(torch.zeros(1, 1 + L0, C))
-        self.pos_post = nn.Parameter(torch.zeros(1, 1 + L1, C))
+        # self.pos_post = nn.Parameter(torch.zeros(1, 1 + L1, C))
+
+        # FIXME: ablation - pool=1        
+        self.pos_post = nn.Parameter(torch.zeros(1, 1 + L0, C))
+
+
         nn.init.trunc_normal_(self.pos_pre,  std=0.02)
         nn.init.trunc_normal_(self.pos_post, std=0.02)
 
@@ -1526,11 +1554,18 @@ class SingleAdaptedFixed(nn.Module):
         self.post_blocks = make_layers(depth[1], C, heads[1])
 
         # ----- fixed pooling (avg) -----
-        self.merge = TokenPool1DAvg(pool=4, handle_tail="trim")  # L0 -> L1, keep C
+        # self.merge = TokenPool1DAvg(pool=4, handle_tail="trim")  # L0 -> L1, keep C
+
+        # FIXME: ablation - pool=1        
+        self.merge = TokenPool1DAvg(pool=1, handle_tail="trim")  # L0 -> L1, keep C
+
 
         # ----- norm + head -----
         self.post_ln = norm_layer(C)
-        self.head    = nn.Linear(C, num_classes)
+        # self.head    = nn.Linear(C, num_classes)
+        self.head = nn.Parameter(torch.empty(C, num_classes))  # matches CLIP's proj shape
+        self.head_bias = None   # optional, CLIP has no bias
+
 
     # utils
     def _add_pos(self, x, pos_param):

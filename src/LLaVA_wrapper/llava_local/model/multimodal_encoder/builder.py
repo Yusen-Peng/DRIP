@@ -8,20 +8,21 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     USE_DTP = False
     USE_COMPRESSION_BASELINE = True
     BASELINE_TYPE = 'Fixed'  # 'Fixed' or 'Swin'
+    BACKBONE_NAME = 'pretrained'
+
+
     FINETUNING_MODE = True
     BACKBONE = 'ViT-with-weights'  # 'ViT' or 'XL' or "ViT-with-weights"
 
-    if USE_DTP:
-        print("🍟" * 20)
-        print("Using DTP-ViT as the vision tower")
-        print("🍟" * 20)
-    else:
-        print("🍟" * 20)
-        print("Using original ViT as the vision tower")
-        print("🍟" * 20)
-    
-    checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/fixed_pooling_4x/checkpoints/epoch_15.pt"
-    #checkpoint_path = "openai"
+    ############ Original depth settings: ############
+    # depth = (4, 8, 0)
+    ######### FIXME: ######
+    depth = (12, 0, 0) # NOTE: put the boundary predictor at the end and load OpenAI pretrained weights
+
+
+
+    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/fixed_pooling_4x/checkpoints/epoch_15.pt"
+    checkpoint_path = "openai"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_5_7/checkpoints/epoch_15.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
@@ -38,15 +39,12 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ViT-base-finetune-ALL/vision_tower.pt"
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-finetune-ALL/vision_tower.pt"
 
+
     patch_size = 16
     compression_rate = 0.25
-    depth = (4, 8, 0)
-    #depth = (12, 0, 0) # NOTE: put the boundary predictor at the end and load OpenAI pretrained weights
-
     lower_bound = False
     lambda_val = 1.0
     num_classes = 512
-
 
     vision_tower = getattr(vision_tower_cfg, 'mm_vision_tower', getattr(vision_tower_cfg, 'vision_tower', None))
     is_absolute_path_exists = os.path.exists(vision_tower)
@@ -79,6 +77,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
             vit_loaded: BaselineVisionTower = BaselineVisionTower(
                 baseline_type=BASELINE_TYPE,
+                backbone=BACKBONE_NAME,
                 checkpoint_path=checkpoint_path, 
                 vision_tower=vision_tower,
                 args=vision_tower_cfg,

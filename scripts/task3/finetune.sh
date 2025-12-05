@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Nov17_finetune_fixed_pooling
-#SBATCH --output=Nov17_finetune_fixed_pooling.txt
+#SBATCH --job-name=Dec4_ABLATION_pool1_finetune
+#SBATCH --output=Dec4_finetune_openai_baseline.txt
 #SBATCH --time=65:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -30,11 +30,11 @@ deepspeed src/task3_llava.py \
     --vision_tower openai/clip-vit-base-patch16 \
     --mm_projector_type mlp2x_gelu \
     --bf16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/fixed-pooling/mm_projector.bin \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/ABLATION_pool1/mm_projector.bin \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/fixed-pooling-finetune \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ABLATION_pool1_finetune \
     --num_train_epochs 3 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \

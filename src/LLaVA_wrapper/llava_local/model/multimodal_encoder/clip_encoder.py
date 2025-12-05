@@ -10,7 +10,8 @@ PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
 sys.path.insert(0, PROJECT_ROOT)
 from src.open_clip_local.DTP_ViT import DTPViT, SingleAdaptedFixed, SingleAdaptedSwin
 from src.open_clip_local.model import VisionTransformer
-from src.boundary_vis import load_dtpx_from_clip_checkpoint, load_dtp_from_clip_checkpoint, load_vit_from_clip_checkpoint, weight_transfer
+from src.boundary_vis import load_dtpx_from_clip_checkpoint, weight_transfer, weight_transfer_baseline
+from src.boundary_vis_dev import load_dtp_from_clip_checkpoint, load_vit_from_clip_checkpoint
 
 @torch.no_grad()
 def load_fixed_pooling(
@@ -650,6 +651,7 @@ class DRIPVisionTower(nn.Module):
 class BaselineVisionTower(nn.Module):
     def __init__(self, 
             baseline_type: str,
+            backbone: str,
             checkpoint_path: str,
             vision_tower: str,
             args, 
@@ -675,6 +677,7 @@ class BaselineVisionTower(nn.Module):
             ):
         super().__init__()
         self.backbone_type = baseline_type
+        self.backbone = backbone
         self.vision_tower_name = vision_tower
         self.checkpoint_path = checkpoint_path
         self.image_size = image_size
@@ -721,7 +724,14 @@ class BaselineVisionTower(nn.Module):
                 activation_function=self.activation_function,
                 flop_measure=self.flop_measure
             )
-            self.vision_tower, _ = load_fixed_pooling(self.vision_tower, self.checkpoint_path)
+
+            if self.backbone == 'own':
+                self.vision_tower, _ = load_fixed_pooling(self.vision_tower, self.checkpoint_path)
+            elif self.backbone == 'pretrained':
+                print("🍌🍌🍌🍌🍌🍌🍌🍌using pretrained weights🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌")
+                weight_transfer_baseline(self.vision_tower)
+            else:
+                raise NotImplementedError(f"Unsupported backbone type: {self.backbone}")
 
         elif self.backbone_type == 'Swin':
             print("🚑🚑🚑🚑🚑 Using Swin pooling 🚑🚑🚑🚑🚑")

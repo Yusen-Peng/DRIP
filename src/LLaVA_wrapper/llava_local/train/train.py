@@ -1061,8 +1061,8 @@ def train(attn_implementation=None):
         # for p in model.get_model().vision_tower.parameters():
         #     p.requires_grad = True
         
-        for p in model.get_model().vision_tower.vision_tower.boundary_predictor.parameters():
-            p.requires_grad = True
+        # for p in model.get_model().vision_tower.vision_tower.boundary_predictor.parameters():
+        #     p.requires_grad = True
 
 
 

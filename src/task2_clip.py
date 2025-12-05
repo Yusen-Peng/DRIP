@@ -73,7 +73,7 @@ def main():
     lr = 5e-5 # this learning rate is safe for the boundary predictor for now
 
     wd = 0.1
-    epochs = 15 # 15 epochs always
+    epochs = 4 # 15 epochs always
     
     workers = 8       # CPU utilization
     model = f"ViT-B-{patch_size}"

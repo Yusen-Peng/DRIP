@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=Nov19_BP_at_the_end_only_ft_BP
-#SBATCH --output=Nov19_BP_at_the_end_only_ft_BP.txt
+#SBATCH --job-name=Dec4_ABLATION_pool1
+#SBATCH --output=Dec4_ABLATION_pool1.txt
 #SBATCH --time=07:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=1
+#SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256G
 #SBATCH --account=PAS2836
@@ -31,7 +31,7 @@ deepspeed src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/BP-at-the-end-only-ft-BP \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ABLATION_pool1 \
     --num_train_epochs 1 \
     --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 4 \

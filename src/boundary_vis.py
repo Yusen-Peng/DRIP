@@ -5,9 +5,10 @@ import torch.optim as optim
 from torchvision import datasets
 from torch.utils.data import DataLoader
 from open_clip_local import create_model_and_transforms
-from open_clip_local.model import DTPViT
+from open_clip_local.model import DTPViT, SingleAdaptedFixed
 from open_clip_local import CLIP
 from torch.cuda.amp import GradScaler
+import torch.nn.functional as F
 from torch.cuda.amp import autocast
 from collections import OrderedDict
 import os
@@ -28,6 +29,7 @@ import torchvision.transforms.functional as TF
 from einops import rearrange
 from PIL import Image
 import random
+
 
 # Allow argprse.Namespace for safe weights-only unpickling in PyTorch 2.6+
 torch.serialization.add_safe_globals([argparse.Namespace])
@@ -179,6 +181,248 @@ def weight_transfer(backbone: DTPViT):
         print(f"Mismatched ({len(mismatched)}): first few -> {mismatched[:8]}", flush=True)
     print("========================\n", flush=True)
 
+
+@torch.no_grad()
+def weight_transfer_baseline(backbone: SingleAdaptedFixed):
+    """
+    Initialize SingleAdaptedFixed from OpenAI CLIP ViT-B/16 weights.
+
+    - patch_embed.proj <- conv1
+    - pos_pre  <- full CLIP positional_embedding (CLS + 14x14 patches)
+    - pos_post <- CLS + interpolated 7x7 patch positional embeddings
+    - pre_blocks + post_blocks <- transformer.resblocks[0..]
+    """
+    # 1) Load giver (OpenAI CLIP ViT-B/16) via open_clip
+    clip_model, _, _ = create_model_and_transforms(
+        model_name="ViT-B-16",
+        pretrained="openai",
+        DTP_ViT=False  # IMPORTANT: standard CLIP, not DTPViT variant
+    )
+    clip_state_dict = clip_model.visual.state_dict()
+
+    clip_vit_state_dict = {
+        k: v for k, v in clip_state_dict.items()
+        if "attn_mask" not in k   # only skip non-parameter masks
+    }
+
+    # 2) Receiver (your SingleAdaptedFixed model)
+    sa_state_dict = backbone.state_dict()
+
+    transferred, missing, mismatched = 0, [], []
+
+    # -------------------------------------------------------
+    # 3) Patch embedding: conv1.weight -> patch_embed.proj.weight
+    # -------------------------------------------------------
+    if "conv1.weight" not in clip_vit_state_dict:
+        raise KeyError("Giver missing conv1.weight")
+    if "patch_embed.proj.weight" not in sa_state_dict:
+        raise KeyError("Receiver missing patch_embed.proj.weight")
+
+    if sa_state_dict["patch_embed.proj.weight"].shape != clip_vit_state_dict["conv1.weight"].shape:
+        mismatched.append((
+            "patch_embed.proj.weight",
+            tuple(sa_state_dict["patch_embed.proj.weight"].shape),
+            "conv1.weight",
+            tuple(clip_vit_state_dict["conv1.weight"].shape),
+        ))
+    else:
+        sa_state_dict["patch_embed.proj.weight"].copy_(clip_vit_state_dict["conv1.weight"])
+        if "patch_embed.proj.bias" in sa_state_dict:
+            sa_state_dict["patch_embed.proj.bias"].zero_()
+        transferred += 1
+        print("✅ Transferred: patch_embed.proj (weight) and zeroed bias", flush=True)
+
+    # -------------------------------------------------------
+    # 4) Positional embeddings: pos_pre and pos_post
+    #    CLIP: positional_embedding shape (197, C) [CLS + 196 patches]
+    # -------------------------------------------------------
+    if "positional_embedding" not in clip_vit_state_dict:
+        raise KeyError("Giver missing positional_embedding")
+    if "pos_pre" not in sa_state_dict or "pos_post" not in sa_state_dict:
+        raise KeyError("Receiver missing pos_pre and/or pos_post")
+
+    src = clip_vit_state_dict["positional_embedding"]  # (197, C) or (1,197,C)
+    if src.dim() == 3:
+        # Some CLIP variants store as (1, 197, C)
+        src = src[0]
+    assert src.dim() == 2, f"Unexpected positional_embedding shape: {src.shape}"
+
+    cls_src  = src[:1, :]   # (1, C)
+    patches  = src[1:, :]   # (196, C)
+    num_src_patches, C = patches.shape
+
+    # ----- pos_pre: full resolution (CLS + 196 patches) -----
+    dst_pre = sa_state_dict["pos_pre"]            # (1, 1+L0, C)
+    L0 = dst_pre.shape[1] - 1                    # number of patch tokens pre-merge
+    if L0 != num_src_patches:
+        raise ValueError(
+            f"pos_pre length mismatch: L0={L0}, but CLIP has {num_src_patches} patch tokens"
+        )
+
+    pos_pre_full = torch.cat([cls_src, patches], dim=0)  # (1+L0, C)
+    if pos_pre_full.shape != dst_pre[0].shape:
+        raise ValueError(
+            f"pos_pre shape mismatch: dst {dst_pre.shape}, src {pos_pre_full.shape}"
+        )
+
+    sa_state_dict["pos_pre"].copy_(pos_pre_full.unsqueeze(0))
+    transferred += 1
+    print("✅ Transferred: pos_pre from CLIP positional_embedding", flush=True)
+
+    # ----- pos_post: CLS + downsampled patch positions (e.g., 7x7 = 49) -----
+    dst_post = sa_state_dict["pos_post"]         # (1, 1+L1, C)
+    L1 = dst_post.shape[1] - 1                   # patch tokens after merge
+    if L1 <= 0:
+        raise ValueError(f"pos_post has no patch tokens: shape {dst_post.shape}")
+
+    # Downsample 196 → L1 via 1D linear interpolation over the patch index
+    # patches: (196, C) -> (1, C, 196) -> interpolate -> (1, C, L1) -> (L1, C)
+    patches_t = patches.unsqueeze(0).transpose(1, 2)     # (1, C, 196)
+    patches_down_t = F.interpolate(
+        patches_t,
+        size=L1,
+        mode="linear",
+        align_corners=False,
+    )                                                    # (1, C, L1)
+    patches_down = patches_down_t.transpose(1, 2).squeeze(0)  # (L1, C)
+
+    pos_post_full = torch.cat([cls_src, patches_down], dim=0)  # (1+L1, C)
+    if pos_post_full.shape != dst_post[0].shape:
+        raise ValueError(
+            f"pos_post shape mismatch: dst {dst_post.shape}, src {pos_post_full.shape}"
+        )
+
+    sa_state_dict["pos_post"].copy_(pos_post_full.unsqueeze(0))
+    transferred += 1
+    print(f"✅ Transferred: pos_post (downsampled {num_src_patches}→{L1} patch tokens)", flush=True)
+
+    # -------------------------------------------------------
+    # 5) Blocks mapping: CLIP transformer.resblocks -> pre_blocks + post_blocks
+    # -------------------------------------------------------
+    n_pre = len(getattr(backbone, "pre_blocks", []))
+    n_post = len(getattr(backbone, "post_blocks", []))
+    total_needed = n_pre + n_post
+
+    def dst_prefix_for_layer(i: int) -> str:
+        if i < n_pre:
+            return f"pre_blocks.{i}"
+        else:
+            j = i - n_pre
+            return f"post_blocks.{j}"
+
+    # CLIP ViT-B/16 has 12 resblocks
+    total_giver = 12
+    max_layers = min(total_needed, total_giver)
+
+    # Pairs: (giver_key_suffix, receiver_key_suffix)
+    # CLIP:   ln_1 / ln_2, attn.in_proj_weight/bias, attn.out_proj.*, mlp.c_fc, mlp.c_proj
+    # SingleAdaptedFixed (nn.TransformerEncoderLayer):
+    #         norm1/norm2, self_attn.in_proj_*, self_attn.out_proj.*, linear1/linear2
+    pairs = [
+        ("ln_1.weight",           "norm1.weight"),
+        ("ln_1.bias",             "norm1.bias"),
+        ("attn.in_proj_weight",   "self_attn.in_proj_weight"),
+        ("attn.in_proj_bias",     "self_attn.in_proj_bias"),
+        ("attn.out_proj.weight",  "self_attn.out_proj.weight"),
+        ("attn.out_proj.bias",    "self_attn.out_proj.bias"),
+        ("ln_2.weight",           "norm2.weight"),
+        ("ln_2.bias",             "norm2.bias"),
+        ("mlp.c_fc.weight",       "linear1.weight"),
+        ("mlp.c_fc.bias",         "linear1.bias"),
+        ("mlp.c_proj.weight",     "linear2.weight"),
+        ("mlp.c_proj.bias",       "linear2.bias"),
+    ]
+
+    for i in range(max_layers):
+        base = f"transformer.resblocks.{i}"
+        dst_prefix = dst_prefix_for_layer(i)
+
+        # sanity: receiver has this block?
+        has_block = any(k.startswith(f"{dst_prefix}.") for k in sa_state_dict.keys())
+        if not has_block:
+            missing.append((dst_prefix, "entire block missing in receiver"))
+            print(f"⚠️ Skipping {dst_prefix}: block not found in receiver state_dict.", flush=True)
+            continue
+
+        copied_this_block = 0
+        for g_suf, r_suf in pairs:
+            g_key = f"{base}.{g_suf}"
+            r_key = f"{dst_prefix}.{r_suf}"
+            g_val = clip_vit_state_dict.get(g_key, None)
+            r_val = sa_state_dict.get(r_key, None)
+
+            if g_val is None or r_val is None:
+                missing.append((g_key if g_val is None else r_key, "missing"))
+                continue
+
+            if r_val.shape != g_val.shape:
+                mismatched.append((r_key, tuple(r_val.shape), g_key, tuple(g_val.shape)))
+                continue
+
+            r_val.copy_(g_val)
+            transferred += 1
+            copied_this_block += 1
+
+        print(f"✅ Transferred block {i:02d} → {dst_prefix}  (copied {copied_this_block}/{len(pairs)})",
+              flush=True)
+
+
+    # -------------------------------------------------------
+    # Map CLIP ln_post -> SingleAdaptedFixed.post_ln
+    # -------------------------------------------------------
+    ln_w = clip_vit_state_dict.get("ln_post.weight", None)
+    ln_b = clip_vit_state_dict.get("ln_post.bias", None)
+
+    post_ln_w = sa_state_dict.get("post_ln.weight", None)
+    post_ln_b = sa_state_dict.get("post_ln.bias", None)
+
+    if ln_w is None or ln_b is None:
+        print("⚠️ CLIP ln_post not found; cannot init post_ln from CLIP.", flush=True)
+    elif post_ln_w is None or post_ln_b is None:
+        print("⚠️ Receiver post_ln.* not found; skipping ln_post init.", flush=True)
+    else:
+        if post_ln_w.shape != ln_w.shape or post_ln_b.shape != ln_b.shape:
+            print(
+                f"⚠️ post_ln shape mismatch: post_ln.weight {tuple(post_ln_w.shape)} "
+                f"vs ln_post.weight {tuple(ln_w.shape)}; not copying.",
+                flush=True,
+            )
+        else:
+            post_ln_w.copy_(ln_w)
+            post_ln_b.copy_(ln_b)
+            transferred += 2
+            print("✅ Transferred: CLIP ln_post -> post_ln (weight + bias)", flush=True)
+
+    # -------------------------------------------------------
+    # Use CLIP visual.proj directly as our final mapping
+    # -------------------------------------------------------
+    proj: torch.Tensor = clip_vit_state_dict.get("proj", None)   # shape: (pool_dim, output_dim)
+
+    if proj is None:
+        print("⚠️ CLIP proj not found; cannot attach proj.", flush=True)
+    else:
+        # Attach CLIP's proj directly onto the backbone
+        backbone.head = nn.Parameter(proj.clone())
+        transferred += 1
+        print(f"✅ Attached CLIP visual.proj directly to backbone as backbone.head", flush=True)
+
+
+    # -------------------------------------------------------
+    # 6) Commit into model (allow leftovers that SingleAdaptedFixed owns)
+    # -------------------------------------------------------
+    backbone.load_state_dict(sa_state_dict, strict=False)
+
+    # -------------------------------------------------------
+    # 7) Summary
+    # -------------------------------------------------------
+    print("\n=== SingleAdaptedFixed Transfer Summary ===", flush=True)
+    print(f"Needed layers (receiver): {total_needed}  |  Giver layers available: {total_giver}  |  Mapped: {max_layers}", flush=True)
+    print(f"Transferred tensors: {transferred}", flush=True)
+    if missing:
+        print(f"Missing ({len(missing)}): first few -> {missing[:8]}", flush=True)
+    if mismatched:
+        print(f"Mismatched ({len(mismatched)}): first few -> {mismatched[:8]}", flush=True)
+    print("==========================================\n", flush=True)
 
 
 
