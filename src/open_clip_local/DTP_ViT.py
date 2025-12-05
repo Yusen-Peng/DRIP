@@ -1547,6 +1547,11 @@ class SingleAdaptedFixed(nn.Module):
                     batch_first=False,
                     norm_first=True
                 )
+                # ResidualAttentionBlock(
+                #     d_model=embed_dim,
+                #     n_head=num_heads,
+                #     mlp_ratio=mlp_ratio
+                # ) # follow CLIP ViT design (GFLOP drops from 2.19 to 1.5)
                 for _ in range(max(0, n_layers))
             ])
 
@@ -1615,7 +1620,11 @@ class SingleAdaptedFixed(nn.Module):
         # mean pool over sequence (dense)
         x = feats.mean(dim=0)   # (B, C)
         x = self.post_ln(x)
-        logits = self.head(x)
+        
+        # FIXME: not a linear layer, but a projection matrix like CLIP
+        # logits = self.head(x)
+        logits = x @ self.head  # (B, num_classes == output_dim)
+
 
         if return_loss:
             return logits, boundary_loss, avg_boundaries, boundary_ratio

@@ -15,9 +15,9 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     BACKBONE = 'ViT-with-weights'  # 'ViT' or 'XL' or "ViT-with-weights"
 
     ############ Original depth settings: ############
-    # depth = (4, 8, 0)
+    depth = (4, 8, 0)
     ######### FIXME: ######
-    depth = (12, 0, 0) # NOTE: put the boundary predictor at the end and load OpenAI pretrained weights
+    # depth = (12, 0, 0) # NOTE: put the boundary predictor at the end and load OpenAI pretrained weights
 
 
 

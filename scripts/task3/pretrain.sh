@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Dec4_ABLATION_pool1
-#SBATCH --output=Dec4_ABLATION_pool1.txt
+#SBATCH --job-name=Dec4_BP-at-the-end-fixed-pooling-baseline
+#SBATCH --output=Dec4_BP-at-the-end-fixed-pooling-baseline.txt
 #SBATCH --time=07:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -31,7 +31,7 @@ deepspeed src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/ABLATION_pool1 \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/Dec4_BP-at-the-end-fixed-pooling-baseline \
     --num_train_epochs 1 \
     --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 4 \

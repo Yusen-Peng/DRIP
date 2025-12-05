@@ -393,18 +393,27 @@ def weight_transfer_baseline(backbone: SingleAdaptedFixed):
             transferred += 2
             print("✅ Transferred: CLIP ln_post -> post_ln (weight + bias)", flush=True)
 
+
     # -------------------------------------------------------
-    # Use CLIP visual.proj directly as our final mapping
+    # Map CLIP visual.proj -> SingleAdaptedFixed.head
     # -------------------------------------------------------
-    proj: torch.Tensor = clip_vit_state_dict.get("proj", None)   # shape: (pool_dim, output_dim)
+    proj = clip_vit_state_dict.get("proj", None)   # (C, output_dim)
 
     if proj is None:
-        print("⚠️ CLIP proj not found; cannot attach proj.", flush=True)
+        print("⚠️ CLIP proj not found; cannot init head.", flush=True)
     else:
-        # Attach CLIP's proj directly onto the backbone
-        backbone.head = nn.Parameter(proj.clone())
-        transferred += 1
-        print(f"✅ Attached CLIP visual.proj directly to backbone as backbone.head", flush=True)
+        head = sa_state_dict.get("head", None)
+        if head is None:
+            print("⚠️ Receiver 'head' not found in state_dict; skipping.", flush=True)
+        elif head.shape != proj.shape:
+            print(
+                f"⚠️ head shape mismatch: head {tuple(head.shape)} vs proj {tuple(proj.shape)}; not copying.",
+                flush=True,
+            )
+        else:
+            sa_state_dict["head"].copy_(proj)
+            transferred += 1
+            print("✅ Transferred: CLIP proj -> head", flush=True)
 
 
     # -------------------------------------------------------
