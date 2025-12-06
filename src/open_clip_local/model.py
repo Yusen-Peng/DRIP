@@ -158,29 +158,25 @@ def _build_vision_tower(
 
         if DTP_ViT and not HIERARCHICAL and not SOFT: 
             compression_rate = 0.25  # compression rate
-            print(f"Using DTP ViT with compression rate {compression_rate}")
             depth = (4, 8, 0)
-            print(f"Depth for each stage: {depth}")
-            
-
+    
             if POOLING == "DRIP":
                 print("Using DRIP pooling")
+                print(f"Using DTP ViT with compression rate {compression_rate}")
+                print(f"Depth for each stage: {depth}")
                 visual = DTPViT(
                     image_size=vision_cfg.image_size,
                     patch_size=vision_cfg.patch_size,
-                    in_chans=3,
-                    embed_dim=vision_cfg.width,
+                    width=vision_cfg.width,
+                    layers=12,
                     depth=depth,
-                    num_heads=vision_heads,
-                    mlp_ratio=vision_cfg.mlp_ratio,
-                    drop_rate=vision_cfg.patch_dropout,
-                    attn_drop_rate=0.1,
-                    temp=0.5,
                     compression_rate=compression_rate,
-                    threshold=0.5,
-                    activation_function="gelu",
-                    num_classes=embed_dim
+                    heads=vision_cfg.width // 64,
+                    mlp_ratio=vision_cfg.mlp_ratio,
+                    temp=0.5,
+                    flop_measure=False # need to learn real boundaries
                 )
+
             elif POOLING == "Fixed":
                 print("Using Fixed pooling")
                 visual = SingleAdaptedFixed(

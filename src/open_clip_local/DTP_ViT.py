@@ -102,6 +102,7 @@ class DTPViT(nn.Module):
             act_layer=act_layer,
             norm_layer=norm_layer,
         )
+
         self.transformer_post = Transformer(
             width,
             self.depth[1],
@@ -213,7 +214,7 @@ class DTPViT(nn.Module):
 
         return pooled, tokens
     
-    def encode(self, x: torch.Tensor, return_loss: bool = False):
+    def encode(self, x: torch.Tensor, return_loss: bool):
         x = self._embeds(x) # [B, 3, H, W] -> [B, L, D]
         x = self.transformer_pre(x) # [B, L, D] -> [B, L, D]
 
@@ -222,9 +223,12 @@ class DTPViT(nn.Module):
             num_tokens_to_keep = max(1, int(L * self.prior))
             indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
             hard_boundaries = torch.zeros(B, L, device=x.device)
-            hard_boundaries[:, indices] = 1 # hard boundaries: [B, L]
+            # hard boundaries: [B, L]
+            hard_boundaries[:, indices] = 1 
         else:
-            _, hard_boundaries = self.boundary_predictor(x) # hard boundaries: [B, L]
+            x_transposed = x.transpose(0, 1) # [B, L, D] -> [L, B, D]
+            # hard boundaries: [B, L]
+            _, hard_boundaries = self.boundary_predictor(x_transposed) # input is [L, B, D]
 
         hidden: torch.Tensor = self.down_ln(x) # [B, L, D] -> [B, L, D]
         hidden = hidden.transpose(0, 1) # [B, L, D] -> [L, B, D]
@@ -245,16 +249,25 @@ class DTPViT(nn.Module):
         else:
             return features # [B, S, D]
 
-    def forward(self, x: torch.Tensor):
-        x = self.encode(x) # [B, 3, H, W] -> [B, S, D]
-        pooled, tokens = self._pool(x) # [B, S, D] -> [B, D], [B, S, D]
+    def forward(self, x: torch.Tensor, return_loss: bool = False):
+        features_out = self.encode(x, return_loss=return_loss) # [B, 3, H, W] -> [B, S, D]
 
+        if return_loss and not self.flop_measure:
+            # encode returns tuple (features, loss, avg_boundaries, boundary_ratio)
+            tensor, boundary_loss, avg_boundaries_per_batch, boundary_ratio = features_out
+        else:
+            tensor = features_out
+        
+        pooled, tokens = self._pool(tensor) # [B, S, D] -> [B, D], [B, S, D]
         pooled = pooled @ self.proj # [B, D] -> [B, output_dim]
 
         if self.output_tokens:
             return pooled, tokens
-        
-        return pooled # [B, output_dim]
+
+        if return_loss and not self.flop_measure:
+            return pooled, boundary_loss, avg_boundaries_per_batch, boundary_ratio # [B, output_dim]
+        else:
+            return pooled # [B, output_dim]
 
 
 
