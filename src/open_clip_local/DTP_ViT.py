@@ -2,9 +2,266 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .transformer import ResidualAttentionBlock
+from typing import Callable, Tuple
+from .transformer import LayerNorm, PatchDropout, AttentionalPooler, Transformer, _expand_token
 from .pos_embed import get_2d_sincos_pos_embed
 from .BP import BoundaryPredictor, downsample
+from .utils import to_2tuple
+
+class DTPViT(nn.Module):
+    output_tokens: torch.jit.Final[bool]
+
+    def __init__(
+            self,
+            image_size: int,
+            patch_size: int,
+            width: int,
+            layers: int,
+            depth: tuple[int],
+            compression_rate: float,
+            heads: int,
+            mlp_ratio: float,
+            temp: float,
+            flop_measure: bool = False,
+            threshold: float = 0.5,
+            ls_init_value: float = None,
+            attentional_pool: bool = False,
+            attn_pooler_queries: int = 256,
+            attn_pooler_heads: int = 8,
+            output_dim: int = 512,
+            patch_dropout: float = 0.,
+            no_ln_pre: bool = False,
+            pos_embed_type: str = 'learnable', # 'learnable' or 'sin_cos_2d'
+            pool_type: str = 'tok',
+            final_ln_after_pool: bool = False,
+            act_layer: Callable = nn.GELU,
+            norm_layer: Callable = LayerNorm,
+            output_tokens: bool = False,
+    ):
+        super().__init__()
+        assert pool_type in ('tok', 'avg', 'none')
+        self.output_tokens = output_tokens
+        image_height, image_width = self.image_size = to_2tuple(image_size)
+        patch_height, patch_width = self.patch_size = to_2tuple(patch_size)
+        self.grid_size = (image_height // patch_height, image_width // patch_width)
+        self.final_ln_after_pool = final_ln_after_pool  # currently ignored w/ attn pool enabled
+        self.output_dim = output_dim
+        self.width = width
+        self.layers = layers
+        self.depth = depth
+        self.prior = compression_rate
+        self.threshold = threshold
+        self.temp = temp
+        self.flop_measure = flop_measure
+        self.null_token = nn.Parameter(torch.zeros(1, 1, width))
+        self.conv1 = nn.Conv2d(
+            in_channels=3,
+            out_channels=width,
+            kernel_size=patch_size,
+            stride=patch_size,
+            bias=False
+        )
+
+        # class embeddings and positional embeddings
+        scale = width ** -0.5
+        self.class_embedding = nn.Parameter(scale * torch.randn(width))
+        if pos_embed_type == 'learnable':
+            self.positional_embedding = nn.Parameter(
+                scale * torch.randn(self.grid_size[0] * self.grid_size[1] + 1, width))
+        elif pos_embed_type == 'sin_cos_2d':
+            # fixed sin-cos embedding
+            assert self.grid_size[0] == self.grid_size[1],\
+                'currently sin cos 2d pos embedding only supports square input'
+            self.positional_embedding = nn.Parameter(
+                torch.zeros(self.grid_size[0] * self.grid_size[1] + 1, width), requires_grad=False)
+            pos_embed_type = get_2d_sincos_pos_embed(width, self.grid_size[0], cls_token=True)
+            self.positional_embedding.data.copy_(torch.from_numpy(pos_embed_type).float())
+        else:
+            raise ValueError
+
+        # setting a patch_dropout of 0. would mean it is disabled and this function would be the identity fn
+        self.patch_dropout = PatchDropout(patch_dropout) if patch_dropout > 0. else nn.Identity()
+        self.ln_pre = nn.Identity() if no_ln_pre else norm_layer(width)
+        self.down_ln = norm_layer(width)
+        self.boundary_predictor = BoundaryPredictor(
+            d_model=width,
+            d_inner=int(width * mlp_ratio),
+            activation_function="gelu",
+            temp=temp,
+            prior=compression_rate,
+            bp_type='gumbel',
+            threshold=threshold
+        )
+
+        self.transformer_pre = Transformer(
+            width,
+            self.depth[0],
+            heads,
+            mlp_ratio,
+            ls_init_value=ls_init_value,
+            act_layer=act_layer,
+            norm_layer=norm_layer,
+        )
+        self.transformer_post = Transformer(
+            width,
+            self.depth[1],
+            heads,
+            mlp_ratio,
+            ls_init_value=ls_init_value,
+            act_layer=act_layer,
+            norm_layer=norm_layer,
+        )
+
+        if attentional_pool:
+            if isinstance(attentional_pool, str):
+                self.attn_pool_type = attentional_pool
+                self.pool_type = 'none'
+                if attentional_pool in ('parallel', 'cascade'):
+                    self.attn_pool = AttentionalPooler(
+                        output_dim,
+                        width,
+                        n_head=attn_pooler_heads,
+                        n_queries=attn_pooler_queries,
+                    )
+                    self.attn_pool_contrastive = AttentionalPooler(
+                        output_dim,
+                        width,
+                        n_head=attn_pooler_heads,
+                        n_queries=1,
+                    )
+                else:
+                    assert False
+            else:
+                self.attn_pool_type = ''
+                self.pool_type = pool_type
+                self.attn_pool = AttentionalPooler(
+                    output_dim,
+                    width,
+                    n_head=attn_pooler_heads,
+                    n_queries=attn_pooler_queries,
+                )
+                self.attn_pool_contrastive = None
+            pool_dim = output_dim
+        else:
+            self.attn_pool = None
+            pool_dim = width
+            self.pool_type = pool_type
+
+        self.ln_post = norm_layer(pool_dim)
+        self.proj = nn.Parameter(scale * torch.randn(pool_dim, output_dim))
+
+    @torch.jit.ignore
+    def set_grad_checkpointing(self, enable: bool = True):
+        self.transformer_pre.grad_checkpointing = enable
+        self.transformer_post.grad_checkpointing = enable
+    
+    @torch.jit.ignore
+    def no_weight_decay(self):
+        # for timm optimizers, 1d params like logit_scale, logit_bias, ln/bn scale, biases are excluded by default
+        no_wd = {'positional_embedding', 'class_embedding'}
+        return no_wd
+
+    def _global_pool(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if self.pool_type == 'avg':
+            pooled, tokens = x[:, 1:].mean(dim=1), x[:, 1:]
+        elif self.pool_type == 'tok':
+            pooled, tokens = x[:, 0], x[:, 1:]
+        else:
+            pooled = tokens = x
+
+        return pooled, tokens
+
+    def _embeds(self, x:torch.Tensor) -> torch.Tensor:
+        x = self.conv1(x)  # shape = [*, dim, grid, grid]
+        x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
+        x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
+
+        # class embeddings and positional embeddings
+        x = torch.cat([_expand_token(self.class_embedding, x.shape[0]).to(x.dtype), x], dim=1)
+        # shape = [*, grid ** 2 + 1, width]
+        x = x + self.positional_embedding.to(x.dtype)
+
+        # patch dropout (if active)
+        x = self.patch_dropout(x)
+
+        # apply norm before transformer
+        x = self.ln_pre(x)
+        return x
+
+    def _pool(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if self.attn_pool is not None:
+            if self.attn_pool_contrastive is not None:
+                # This is untested, WIP pooling that should match paper
+                x = self.ln_post(x)  # TBD LN first or separate one after each pool?
+                tokens = self.attn_pool(x)
+                if self.attn_pool_type == 'parallel':
+                    pooled = self.attn_pool_contrastive(x)
+                else:
+                    assert self.attn_pool_type == 'cascade'
+                    pooled = self.attn_pool_contrastive(tokens)
+            else:
+                # this is the original OpenCLIP CoCa setup, does not match paper
+                x = self.attn_pool(x)
+                x = self.ln_post(x)
+                pooled, tokens = self._global_pool(x)
+        elif self.final_ln_after_pool:
+            pooled, tokens = self._global_pool(x)
+            pooled = self.ln_post(pooled)
+        else:
+            x = self.ln_post(x)
+            pooled, tokens = self._global_pool(x)
+
+        return pooled, tokens
+    
+    def encode(self, x: torch.Tensor, return_loss: bool = False):
+        x = self._embeds(x) # [B, 3, H, W] -> [B, L, D]
+        x = self.transformer_pre(x) # [B, L, D] -> [B, L, D]
+
+        if self.flop_measure:
+            B, L, _ = x.shape
+            num_tokens_to_keep = max(1, int(L * self.prior))
+            indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
+            hard_boundaries = torch.zeros(B, L, device=x.device)
+            hard_boundaries[:, indices] = 1 # hard boundaries: [B, L]
+        else:
+            _, hard_boundaries = self.boundary_predictor(x) # hard boundaries: [B, L]
+
+        hidden: torch.Tensor = self.down_ln(x) # [B, L, D] -> [B, L, D]
+        hidden = hidden.transpose(0, 1) # [B, L, D] -> [L, B, D]
+        shortened_hidden = downsample(
+            boundaries=hard_boundaries,
+            hidden=hidden,
+            null_group=self.null_token
+        ) # [L, B, D] -> [S, B, D]
+        shortened_hidden = shortened_hidden.transpose(0, 1) # [S, B, D] -> [B, S, D]
+
+        features = self.transformer_post(shortened_hidden) # [B, S, D] -> [B, S, D]
+        
+        if return_loss and not self.flop_measure:
+            boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
+            avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
+            boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
+            return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+        else:
+            return features # [B, S, D]
+
+    def forward(self, x: torch.Tensor):
+        x = self.encode(x) # [B, 3, H, W] -> [B, S, D]
+        pooled, tokens = self._pool(x) # [B, S, D] -> [B, D], [B, S, D]
+
+        pooled = pooled @ self.proj # [B, D] -> [B, output_dim]
+
+        if self.output_tokens:
+            return pooled, tokens
+        
+        return pooled # [B, output_dim]
+
+
+
+########################################################################################################
+########################################################################################################
+# legacy code below --- IGNORE ---
+########################################################################################################
 
 @torch.jit.script
 def add_and_scale(tensor1, tensor2, alpha: float) -> torch.Tensor:
@@ -194,204 +451,6 @@ class RelPartialLearnableDecoderLayer(nn.Module):
         output = self.pos_ff(output)
 
         return output
-
-
-
-class DTPViT(nn.Module):
-    def __init__(self,
-                 image_size=224,
-                 patch_size=16,
-                 in_chans=3,
-                 embed_dim=768,
-                 depth=(2, 8, 0),
-                 num_heads=12,
-                 mlp_ratio=4.0,
-                 drop_rate=0.1,
-                 attn_drop_rate=0.1,
-                 temp=1.0,
-                 compression_rate=0.5,
-                 bp_type='gumbel',
-                 threshold=0.5,
-                 num_classes=1000,
-                 activation_function='gelu',
-                 flop_measure: bool = False,
-        ):
-
-        super().__init__()
-        self.flop_measure = flop_measure
-        self.prior = compression_rate
-        self.embed_dim = embed_dim
-        self.num_patches = (image_size // patch_size) ** 2
-        self.seq_len = self.num_patches
-
-        # patch embedding
-        self.patch_embed = nn.Conv2d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
-        self.dropout = nn.Dropout(drop_rate)
-
-        # positional embedding
-        self.pos_emb = PositionalEmbedding(embed_dim)
-        self.r_w_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
-        self.r_r_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
-        
-        def create_decoder_layers(n_layers):
-            layers = nn.ModuleList(
-                [
-                    RelPartialLearnableDecoderLayer(
-                        n_head=num_heads,
-                        d_model=embed_dim,
-                        d_head=embed_dim // num_heads,
-                        d_inner=int(embed_dim * mlp_ratio),
-                        dropout=drop_rate,
-                        dropatt=attn_drop_rate,
-                        pre_lnorm=False,
-                        activation_function=activation_function,
-                    )
-                    for _ in range(n_layers)
-                ]
-            )
-
-            return layers
-
-        # pre-pooling block
-        self.pre_blocks = create_decoder_layers(depth[0])
-
-        # post-pooling block
-        self.short_blocks = create_decoder_layers(depth[1])
-
-        # boundary predictor
-        self.boundary_predictor = BoundaryPredictor(
-            d_model=embed_dim,
-            d_inner=int(embed_dim * mlp_ratio),
-            activation_function=activation_function,
-            temp=temp,
-            prior=compression_rate,
-            bp_type=bp_type,
-            threshold=threshold
-        )
-
-        # layer normalization
-        self.down_ln = nn.LayerNorm(embed_dim)
-        self.null_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
-        nn.init.normal_(self.null_token, std=0.02)
-
-        # final projection
-        self.num_classes = num_classes
-        self.head = nn.Linear(embed_dim, num_classes)
-    
-    def forward_after_pooling_with_attn_masks(self, core_input: torch.Tensor, layers, attention_mask: torch.Tensor):
-        """
-        Process input with relative attention and padding-aware masking.
-        """
-        T, _, _ = core_input.size()
-
-        # Compute position embeddings
-        pos_seq = torch.arange(T - 1, -1, -1.0, device=core_input.device, dtype=core_input.dtype)
-        pos_emb = self.pos_emb(pos_seq)
-        pos_emb = self.dropout(pos_emb)
-
-        core_out = core_input
-        for layer in layers:
-            core_out = layer(core_out, pos_emb, self.r_w_bias, self.r_r_bias, dec_attn_mask=attention_mask)
-        return core_out
-
-    def encode(self, x: torch.Tensor, return_loss: bool = False):
-        """
-        Encode input image to feature sequence without final pooling.
-        Returns:
-            features OR (features, boundary_loss, avg_boundaries, boundary_ratio)
-        """
-        B = x.size(0)
-
-        # Patch embedding
-        x = self.patch_embed(x)                  # B x C x H' x W'
-        x = x.flatten(2).transpose(1, 2)         # B x L x C
-        x = self.dropout(x)                      # B x L x C
-
-        # Positional embedding (for pre-blocks)
-        pos_seq = torch.arange(self.seq_len - 1, -1, -1.0,
-                            device=x.device, dtype=x.dtype)
-        r = self.pos_emb(pos_seq)                # L x 1 x C
-
-        # Pre-pooling transformer blocks
-        x = x.transpose(0, 1)                    # L x B x C
-        for block in self.pre_blocks:
-            x = block(x, r, self.r_w_bias, self.r_r_bias)
-
-        # boundary prediction
-        if self.flop_measure:
-            # Simulate hard boundaries for FLOP measurement
-            L = x.size(0)
-            num_tokens_to_keep = max(1, int(L * self.prior))
-            indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
-            hard_boundaries = torch.zeros(B, L, device=x.device)
-            hard_boundaries[:, indices] = 1
-        else:
-            _, hard_boundaries = self.boundary_predictor(x)  # B x L
-
-        # Downsampling (Dynamic Token Pooling)
-        hidden = self.down_ln(x)               # L x B x D
-        shortened_hidden = downsample(
-            boundaries=hard_boundaries,
-            hidden=hidden,
-            null_group=self.null_token
-        )                                        # S x B x D
-
-        # attention mask for post-pooling transformer layers
-        S = shortened_hidden.size(0)
-        pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
-
-        attn_mask = pad_mask.transpose(0, 1).unsqueeze(1)     # B x 1 x S
-        attn_mask = attn_mask.expand(B, S, S)                 # B x S x S
-
-        # post-pooling transformer blocks
-        shortened_hidden = self.forward_after_pooling_with_attn_masks(
-            shortened_hidden,
-            self.short_blocks,
-            attention_mask=attn_mask
-        )
-
-        # return features and optional loss
-        features = shortened_hidden  # S x B x D
-
-        if return_loss and not self.flop_measure:
-            # Binomial boundary loss (no need for mask since all sequences have the same number of tokens)
-            boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
-            avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
-            boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
-            return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
-        else:
-            return features
-
-    def forward(self, x, return_loss=False):
-        """
-        Full forward pass including pooling to class logits.
-        """
-        features_out = self.encode(x, return_loss=return_loss)
-
-        if return_loss and not self.flop_measure:
-            # encode returns tuple (features, loss, avg_boundaries, boundary_ratio)
-            x, boundary_loss, avg_boundaries_per_batch, boundary_ratio = features_out
-        else:
-            x = features_out
-
-        # pool across sequence dimension with mean pooling
-        pad_mask = x.abs().sum(-1).eq(0).float()           # S x B
-        valid_mask = 1.0 - pad_mask                        # S x B
-        valid_mask_exp = valid_mask.unsqueeze(-1)          # S x B x 1
-
-        x = x * valid_mask_exp                             # Mask padded tokens
-        sum_x = x.sum(dim=0)                               # B x D
-        valid_counts = valid_mask.sum(dim=0).clamp(min=1e-6).unsqueeze(-1)  # B x 1
-        x = sum_x / valid_counts                           # B x D (masked mean)
-
-        logits = self.head(x)
-
-        if return_loss and not self.flop_measure:
-            return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
-        else:
-            return logits
-
-
 
 class HierarchicalDTPViT(nn.Module):
     def __init__(self,
@@ -1087,230 +1146,6 @@ class TransformerBlock(nn.Module):
         x = x + self.drop_path(attn_out)
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         return x
-
-
-##################################### VIT backbone ########################################
-class DTPViT(nn.Module):
-    def __init__(self,
-                 image_size=224,
-                 patch_size=16,
-                 in_chans=3,
-                 embed_dim=768,
-                 depth=(2, 8, 0),
-                 num_heads=12,
-                 mlp_ratio=4.0,
-                 drop_rate=0.1,
-                 attn_drop_rate=0.1,
-                 temp=1.0,
-                 compression_rate=0.5,
-                 bp_type='gumbel',
-                 threshold=0.5,
-                 num_classes=1000,
-                 activation_function='gelu',
-                 sinusoidal_pos_emb: bool = True,
-                 flop_measure: bool = False,
-        ):
-
-        super().__init__()
-        self.flop_measure = flop_measure
-        self.prior = compression_rate
-        self.embed_dim = embed_dim
-        self.num_patches = (image_size // patch_size) ** 2
-        self.grid_size = (image_size // patch_size, image_size // patch_size)
-        self.seq_len = self.num_patches
-        self.sinusoidal_pos_emb = sinusoidal_pos_emb
-        if self.sinusoidal_pos_emb:
-            print("🥶🥶🥶🥶🥶Using sinusoidal 2D positional embeddings.")
-        else:
-            print("😹😹😹😹😹Using learnable positional embeddings.")
-
-        # patch embedding
-        self.patch_embed = PatchEmbedding(image_size, patch_size, in_chans, embed_dim)
-        self.dropout = nn.Dropout(drop_rate)
-
-        # positional embedding
-        if not self.sinusoidal_pos_emb:
-            # self.pos_emb = nn.Parameter(torch.zeros(1, 1 + self.patch_embed.num_patches, embed_dim))
-            # nn.init.trunc_normal_(self.pos_emb, std=0.02)
-            scale = embed_dim ** -0.5
-            self.pos_emb = nn.Parameter(
-                scale * torch.randn(1, 
-                                self.grid_size[0] * self.grid_size[1], 
-                                embed_dim)
-                        )
-        else:
-            # FIXME: try sinusoidal 2d pos embedding
-            assert self.grid_size[0] == self.grid_size[1],\
-                    'currently sin cos 2d pos embedding only supports square input'
-            self.pos_emb = nn.Parameter(
-                torch.zeros(self.grid_size[0] * self.grid_size[1], embed_dim), requires_grad=False)
-            pos_embed_type = get_2d_sincos_pos_embed(embed_dim, self.grid_size[0], cls_token=False)
-            self.pos_emb.data.copy_(torch.from_numpy(pos_embed_type).float())
-
-        
-        def create_decoder_layers(n_layers):
-            layers = nn.ModuleList(
-                [
-                    # nn.TransformerEncoderLayer(
-                    #     d_model=embed_dim,
-                    #     nhead=num_heads,
-                    #     dim_feedforward=int(embed_dim * mlp_ratio),
-                    #     dropout=drop_rate,
-                    #     activation=activation_function,
-                    #     batch_first=False,
-                    #     norm_first=True
-                    # )
-                    ResidualAttentionBlock(
-                        d_model=embed_dim,
-                        n_head=num_heads,
-                        mlp_ratio=mlp_ratio
-                    ) # follow CLIP ViT design (GFLOP drops from 2.19 to 1.5)
-                    for _ in range(n_layers) 
-                ]
-            )
-
-            return layers
-
-        # pre-pooling block
-        self.pre_blocks = create_decoder_layers(depth[0])
-
-        # post-pooling block
-        self.short_blocks = create_decoder_layers(depth[1])
-
-        # boundary predictor
-        self.boundary_predictor = BoundaryPredictor(
-            d_model=embed_dim,
-            d_inner=int(embed_dim * mlp_ratio),
-            activation_function=activation_function,
-            temp=temp,
-            prior=compression_rate,
-            bp_type=bp_type,
-            threshold=threshold
-        )
-
-        # layer normalization
-        self.down_ln = nn.LayerNorm(embed_dim)
-        self.null_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
-
-        # final projection
-        self.num_classes = num_classes
-        self.head = nn.Linear(embed_dim, num_classes)
-
-        print(f"Initialized DTPViT with compression rate: {compression_rate}")
-    
-    def forward_after_pooling_with_attn_masks(self, core_input, layers, attention_mask):
-        T, B, D = core_input.size()
-
-        if not self.sinusoidal_pos_emb: # only add pos emb when not using sin cos
-            # take patch pos emb only (drop cls slot)
-            patch_pos = self.pos_emb[:, 1:, :]          # (1, N, D), N = original num_patches
-
-            # interpolate to new length T
-            patch_pos = patch_pos.transpose(1, 2)       # (1, D, N)
-            patch_pos: torch.Tensor = F.interpolate(patch_pos, size=T, mode="linear", align_corners=False)
-            patch_pos = patch_pos.transpose(1, 2)       # (1, T, D)
-            pos_emb: torch.Tensor = self.dropout(patch_pos)
-            pos_emb = pos_emb.transpose(0, 1)  # (T, 1, D)
-            core_out = core_input + pos_emb
-        else:
-            core_out = core_input
-
-        for layer in layers:
-            # core_out = layer(core_out, src_key_padding_mask=attention_mask)
-            core_out = layer(core_out)
-        return core_out
-
-    def encode(self, x: torch.Tensor, return_loss: bool = False):
-        B = x.size(0)
-        x = self.patch_embed(x)                  # (B, L, C)
-        x = self.dropout(x)                      # (B, L, C)
-
-        # Positional embedding (for pre-blocks)
-        L = x.size(1)
-        # pos = self.pos_emb[:, 1:1 + L, :].to(device=x.device, dtype=x.dtype)   # (1, L, C)
-        # x = x + pos                                                             # (B, L, C)
-        
-        # FIXME: just fixed unnecessary slicing
-        x = x + self.pos_emb.to(device=x.device, dtype=x.dtype)
-
-        # Pre-pooling transformer blocks
-        x = x.transpose(0, 1)                    # (L, B, C)
-        for block in self.pre_blocks:
-            x = block(x)
-
-        # boundary prediction
-        if self.flop_measure:
-            # Simulate hard boundaries for FLOP measurement
-            L = x.size(0)
-            num_tokens_to_keep = max(1, int(L * self.prior))
-            indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
-            hard_boundaries = torch.zeros(B, L, device=x.device)
-            hard_boundaries[:, indices] = 1
-        else:
-            _, hard_boundaries = self.boundary_predictor(x)  # B x L
-
-        # Downsampling (Dynamic Token Pooling)
-        hidden = self.down_ln(x)               # L x B x D
-        shortened_hidden = downsample(
-            boundaries=hard_boundaries,
-            hidden=hidden,
-            null_group=self.null_token
-        )                                        # S x B x D
-
-        # attention mask for post-pooling transformer layers
-        S = shortened_hidden.size(0)
-        pad_mask = shortened_hidden.abs().sum(-1).eq(0)       # S x B (1 where padded, 0 where regular)
-
-        attn_mask = pad_mask.transpose(0, 1)                  # (B, S)  True=PAD
-
-        # post-pooling transformer blocks
-        shortened_hidden = self.forward_after_pooling_with_attn_masks(
-            shortened_hidden,
-            self.short_blocks,
-            attention_mask=attn_mask
-        )
-
-        # return features and optional loss
-        features = shortened_hidden  # S x B x D
-
-        if return_loss and not self.flop_measure:
-            # Binomial boundary loss (no need for mask since all sequences have the same number of tokens)
-            boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
-            avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
-            boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
-            return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
-        else:
-            return features
-
-    def forward(self, x, return_loss=False):
-        """
-        Full forward pass including pooling to class logits.
-        """
-        features_out = self.encode(x, return_loss=return_loss)
-
-        if return_loss and not self.flop_measure:
-            # encode returns tuple (features, loss, avg_boundaries, boundary_ratio)
-            x, boundary_loss, avg_boundaries_per_batch, boundary_ratio = features_out
-        else:
-            x = features_out
-
-        # pool across sequence dimension with mean pooling
-        pad_mask = x.abs().sum(-1).eq(0).float()           # S x B
-        valid_mask = 1.0 - pad_mask                        # S x B
-        valid_mask_exp = valid_mask.unsqueeze(-1)          # S x B x 1
-
-        x = x * valid_mask_exp                             # Mask padded tokens
-        sum_x = x.sum(dim=0)                               # B x D
-        valid_counts = valid_mask.sum(dim=0).clamp(min=1e-6).unsqueeze(-1)  # B x 1
-        x = sum_x / valid_counts                           # B x D (masked mean)
-
-        logits = self.head(x)
-
-        if return_loss and not self.flop_measure:
-            return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
-        else:
-            return logits
-        
 
 ####################################
 ### more baselines #################

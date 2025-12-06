@@ -68,23 +68,19 @@ def main():
     mlp_ratio = 4.0
     patch_dropout = 0.1
     if MODE == "DRIP":
-        COMPRESSION_RATE = 0.25
+        COMPRESSION_RATE = 0.1  # e.g., 0.1 means keeping 10% patches
+        print(f"🥶🥶🥶🥶Calculating GFLOPs for DRIP with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
         model = DTPViT(
             image_size=img_size,
             patch_size=patch_size,
-            in_chans=3,
-            embed_dim=width,
-            depth=(4, 8, 0),
-            num_heads=width // 64,
-            mlp_ratio=mlp_ratio,
-            drop_rate=patch_dropout,
-            attn_drop_rate=0.1,
-            temp=0.5,
+            width=width,
+            layers=12,
+            depth=(2, 10, 0),
             compression_rate=COMPRESSION_RATE,
-            threshold=0.5,
-            activation_function="gelu",
-            num_classes=width,
-            flop_measure=True, # simulating fake boundaries for reproducible GFLOPs
+            heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            temp=0.5,
+            flop_measure=True
         )
     elif MODE == "H-DRIP":
         rate1 = 0.25  # compression rate at stage 1

@@ -69,8 +69,6 @@ class BoundaryPredictor(nn.Module):
         return loss_boundaries
 
 
-
-
 def downsample(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: torch.Tensor):
     B, L = boundaries.shape
     _, _, D = hidden.shape
