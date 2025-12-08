@@ -533,30 +533,37 @@ def visualize_boundaries_single_multi(
         tensor = preprocess(img)  # [3,H,W]
         return tensor
 
-    # ---------- helper: single-image overlay (same logic as yours) ----------
+    @torch.no_grad()
     def overlay_hard(img_3chw: torch.Tensor) -> Image.Image:
-        x: torch.Tensor = model.patch_embed(img_3chw.unsqueeze(0))   # (1, L, C)
-        x = model.dropout(x)                           # (1, L, C)
-        B, L, C = x.shape
-        grid_size = int(math.sqrt(L))
-        assert grid_size * grid_size == L, f"L={L} is not a perfect square"
-        grid_h = grid_w = grid_size
-        # pos = model.pos_emb[:, 1:1 + L, :].to(device=x.device, dtype=x.dtype)  # (1, L, C)
-        pos = model.pos_emb.to(device=x.device, dtype=x.dtype)  # (1, L, C)
-        x = x + pos                                                            # (1, L, C)
-        x = x.transpose(0, 1)  # (L, 1, C)
-        for block in model.pre_blocks:
-            x = block(x)       # (L, 1, C)
-        _, hard_boundaries = model.boundary_predictor(x)
+        device = next(model.parameters()).device
 
-        print("hard boundaries:")
-        print(hard_boundaries)
+        # [3, H, W] -> [1, 3, H, W]
+        x: torch.Tensor = img_3chw.unsqueeze(0).to(device)
 
-        # now shape should be [1, L]
-        hard_mask = hard_boundaries[0].detach().float().view(grid_h, grid_w).cpu().numpy()
-        print(f"hard mask:")
+        # [B, 3, H, W] -> [B, L, D]
+        x = model._embeds(x)
+        x = model.transformer_pre(x)  # [B, L, D]
+
+        # boundary_predictor expects [L, B, D]
+        x_transposed = x.transpose(0, 1)  # [L, B, D]
+        _, hard_boundaries = model.boundary_predictor(x_transposed)  # [B, L]
+
+        print("hard boundaries shape:", hard_boundaries.shape)
+
+        grid_h, grid_w = model.grid_size  # e.g. (14, 14)
+
+        # ---- drop CLS token before reshaping ----
+        hard_1d = hard_boundaries[0].detach().float()  # [L = 1 + grid_h * grid_w]
+        hard_1d_patches = hard_1d[1:]                  # [grid_h * grid_w]
+
+        assert hard_1d_patches.numel() == grid_h * grid_w, \
+            f"Expected {grid_h * grid_w} patch tokens, got {hard_1d_patches.numel()}"
+
+        hard_mask = hard_1d_patches.view(grid_h, grid_w).cpu().numpy()
+        print("hard mask:")
         print(hard_mask)
 
+        # ---- unnormalize and resize image ----
         orig = TF.normalize(
             img_3chw.detach().clone().cpu(),
             mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.225],
@@ -565,13 +572,21 @@ def visualize_boundaries_single_multi(
         orig_img = TF.to_pil_image(orig).convert("RGB")
         orig_np = np.array(orig_img).astype(np.uint8)
 
-        image_size = getattr(model, "image_size", orig_np.shape[0])
-        if orig_np.shape[0] != image_size or orig_np.shape[1] != image_size:
-            orig_img = orig_img.resize((image_size, image_size), Image.BILINEAR)
+        # model.image_size is now (H, W)
+        model_image_size = getattr(model, "image_size", (orig_np.shape[0], orig_np.shape[1]))
+        if isinstance(model_image_size, (list, tuple)):
+            img_h, img_w = model_image_size
+        else:
+            # if for some reason it's a single int, assume square
+            img_h = img_w = int(model_image_size)
+
+        if orig_np.shape[0] != img_h or orig_np.shape[1] != img_w:
+            orig_img = orig_img.resize((img_w, img_h), Image.BILINEAR)
             orig_np = np.array(orig_img).astype(np.uint8)
 
-        patch_h = image_size // grid_h
-        patch_w = image_size // grid_w
+        # patch sizes
+        patch_h = img_h // grid_h
+        patch_w = img_w // grid_w
 
         red_overlay_np = orig_np.copy()
         for i in range(grid_h):
@@ -584,8 +599,7 @@ def visualize_boundaries_single_multi(
                     red[..., 0] = 255  # red channel
                     red_overlay_np[y0:y1, x0:x1] = (0.6 * patch + 0.4 * red).astype(np.uint8)
 
-        return Image.fromarray(red_overlay_np)
-    
+        return Image.fromarray(red_overlay_np)    
 
     # ---------- read the four files ----------
     names = ["single_1", "multi_1", "single_2", "multi_2"]
@@ -638,28 +652,31 @@ if __name__ == "__main__":
         )
     ])
 
+    
     model_empty = DTPViT(
         image_size=224,
         patch_size=patch_size,
-        embed_dim=768,
-        num_heads=12,
+        width=768,
+        layers=12,
         depth=(4, 8, 0),
-        mlp_ratio=4.0,
-        drop_rate=0.0,
-        attn_drop_rate=0.1,
-        num_classes=512,
-        temp=0.5,
         compression_rate=compression_rate,
-        threshold=0.5,
-        activation_function='gelu',
-        sinusoidal_pos_emb=True,
-        flop_measure=False
+        heads=768 // 64,
+        mlp_ratio=4.0,
+        temp=0.5,
+        flop_measure=False # need to learn real boundaries
     )
+
+
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-3/checkpoints/epoch_4.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_5e-5/checkpoints/epoch_4.pt"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-4/checkpoints/epoch_4.pt"
+
+
 
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8_NEW/checkpoints/epoch_2.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_vitbased_DRIP_4epoch/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/vitbased_drip_4epochs_sinusoidal_built_in_nn/checkpoints/epoch_4.pt"
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_vitbased_drip_4epochs_sinusoidal/checkpoints/epoch_4.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_vitbased_drip_4epochs_sinusoidal/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
     model, _ = load_dtp_from_clip_checkpoint(model_empty, ckpt_path)

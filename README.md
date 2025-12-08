@@ -4,6 +4,14 @@
 
 - [October 27, 2025] model checkpoints pretrained on CLIP/BioCLIP are publicly available on [HuggingFace](https://huggingface.co/YusenPeng/DRIP_checkpoints) for further finetuning!
 
+
+## DRIP Implementation
+
+
+
+
+
+
 ## Contacts
 
 If you have any questions or suggestions, feel free to contact:
