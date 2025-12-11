@@ -17,9 +17,9 @@ class PositionalEmbedding(nn.Module):
         self.register_buffer("inv_freq", inv_freq)
 
     def forward(self, pos_seq):
-        sinusoid_inp = torch.ger(pos_seq, self.inv_freq)
-        pos_emb = torch.cat([sinusoid_inp.sin(), sinusoid_inp.cos()], dim=-1)
-        return pos_emb[:, None, :]
+        sinusoid_inp = torch.ger(pos_seq, self.inv_freq) # (L x 1) * (1 x (D/2)) = L x (D/2)
+        pos_emb = torch.cat([sinusoid_inp.sin(), sinusoid_inp.cos()], dim=-1) # L x D
+        return pos_emb[:, None, :] # L x 1 x D
 
 class PositionwiseFF(nn.Module):
     def __init__(self, d_model, d_inner, dropout, pre_lnorm, activation_function):
@@ -84,48 +84,50 @@ class RelPartialLearnableMultiHeadAttn(nn.Module):
 
     def _rel_shift(self, x):
         zero_pad = torch.zeros((x.size(0), x.size(1), x.size(2), 1),
-                               device=x.device, dtype=x.dtype)
-        x_padded = torch.cat([zero_pad, x], dim=3)
+                               device=x.device, dtype=x.dtype) # [B, n_head, L, 1]
+        x_padded = torch.cat([zero_pad, x], dim=3) # [B, n_head, L, L+1]
 
-        x_padded = x_padded.view(x.size(0), x.size(1), x.size(3) + 1, x.size(2))
+        x_padded = x_padded.view(x.size(0), x.size(1), x.size(3) + 1, x.size(2)) # [B, n_head, L+1, L]
 
-        x = x_padded.narrow(2, 1, x_padded.size(2) - 1).view_as(x)
+        x = x_padded.narrow(2, 1, x_padded.size(2) - 1).view_as(x) # [B, n_head, L, L]
+        # where BD'{b, n, i, j} = BD{b, n, i, j-i}
 
         return x
 
     def forward(self, w, r, r_w_bias, r_r_bias, attn_mask):
-        # w is of size: T x B x C
-        # r is of size: T x 1 x C
+        # w is of size: L x B x D
+        # r is of size: L x 1 x D
         # biases are of size: (n_head x d_head), we add the same bias to each token
         # attn_mask is of size (q_len x k_len)
-        qlen, rlen, bsz = w.size(0), r.size(0), w.size(1)
+        qlen, rlen, bsz = w.size(0), r.size(0), w.size(1) # qlen=L, rlen=L, bsz=B
 
         if self.pre_lnorm:
-            w_head_q, w_head_k, w_head_v = self.qkv_net(self.layer_norm(w))
+            # NOTE: always set self.pre_lnorm=False, NOT used
+            w_head_q, w_head_k, w_head_v = self.qkv_net(self.layer_norm(w)) 
         else:
-            w_heads = self.qkv_net(w)
+            w_heads = self.qkv_net(w) # [L, B, 3 * D] 
 
-        r_head_k = self.r_net(r)
-        w_head_q, w_head_k, w_head_v = torch.chunk(w_heads, 3, dim=-1)
+        r_head_k = self.r_net(r) # [L, 1, D]
+        w_head_q, w_head_k, w_head_v = torch.chunk(w_heads, 3, dim=-1) # [L, B, D] for each
 
-        klen = w_head_k.size(0)
+        klen = w_head_k.size(0) # klen=L
 
-        w_head_q = w_head_q.view(qlen, bsz, self.n_head, self.d_head)
-        w_head_k = w_head_k.view(klen, bsz, self.n_head, self.d_head)
-        w_head_v = w_head_v.view(klen, bsz, self.n_head, self.d_head)
+        w_head_q = w_head_q.view(qlen, bsz, self.n_head, self.d_head) # [L, B, n_head, d_head]
+        w_head_k = w_head_k.view(klen, bsz, self.n_head, self.d_head) # [L, B, n_head, d_head]
+        w_head_v = w_head_v.view(klen, bsz, self.n_head, self.d_head) # [L, B, n_head, d_head]
 
-        r_head_k = r_head_k.view(rlen, self.n_head, self.d_head)       # qlen x n_head x d_head
+        r_head_k = r_head_k.view(rlen, self.n_head, self.d_head) # [L, n_head, d_head]
 
         # compute attention score
-        rw_head_q = w_head_q + r_w_bias                                # qlen x bsz x n_head x d_head
-        AC = torch.einsum('ibnd,jbnd->bnij', rw_head_q, w_head_k)      # bsz x n_head x qlen x klen
+        rw_head_q = w_head_q + r_w_bias # [L, B, n_head, d_head]
+        AC = torch.einsum('ibnd,jbnd->bnij', rw_head_q, w_head_k) # [B, n_head, L, L]
 
-        rr_head_q = w_head_q + r_r_bias
-        BD = torch.einsum('ibnd,jnd->bnij', rr_head_q, r_head_k)       # bsz x n_head x qlen x klen
-        BD = self._rel_shift(BD)
+        rr_head_q = w_head_q + r_r_bias # [L, B, n_head, d_head]
+        BD = torch.einsum('ibnd,jnd->bnij', rr_head_q, r_head_k) # [B, n_head, L, L]
+        BD = self._rel_shift(BD) # where BD'{b, n, i, j} = BD{b, n, i, j-i}
 
         # [bsz x n_head x qlen x klen]
-        attn_score = add_and_scale(AC, BD, self.scale)
+        attn_score = add_and_scale(AC, BD, self.scale) # [B, n_head, L, L]
 
         # compute attention probability
         if attn_mask is not None:
@@ -137,23 +139,23 @@ class RelPartialLearnableMultiHeadAttn(nn.Module):
             pass
         
         # [bsz x n_head x qlen x klen]
-        attn_prob = F.softmax(attn_score, dim=3)
-        attn_prob = self.dropatt(attn_prob)
+        attn_prob = F.softmax(attn_score, dim=3) # [B, n_head, L, L]
+        attn_prob = self.dropatt(attn_prob) # [B, n_head, L, L]
 
         # compute attention vector
-        attn_vec = torch.einsum('bnij,jbnd->ibnd', attn_prob, w_head_v)
+        attn_vec = torch.einsum('bnij,jbnd->ibnd', attn_prob, w_head_v) # [L, B, n_head, d_head]
 
         # [qlen x bsz x n_head x d_head]
         attn_vec = attn_vec.contiguous().view(
-            attn_vec.size(0), attn_vec.size(1), self.n_head * self.d_head)
+            attn_vec.size(0), attn_vec.size(1), self.n_head * self.d_head) # [L, B, D]
 
         # linear projection
-        attn_out = self.o_net(attn_vec)
-        attn_out = self.drop(attn_out)
+        attn_out = self.o_net(attn_vec) # [L, B, D]
+        attn_out = self.drop(attn_out) # [L, B, D]
 
         if self.pre_lnorm:
             # residual connection
-            output = w + attn_out
+            output = w + attn_out # NOTE: not actually used!
         else:
             # residual connection + layer normalization
             output = self.layer_norm(w + attn_out)
@@ -297,20 +299,19 @@ class DTPViT(nn.Module):
         Returns:
             features OR (features, boundary_loss, avg_boundaries, boundary_ratio)
         """
-        B = x.size(0)
+        B = x.size(0) # B x 3 x H x W
 
         # Patch embedding
-        x = self.patch_embed(x)                  # B x C x H' x W'
-        x = x.flatten(2).transpose(1, 2)         # B x L x C
-        x = self.dropout(x)                      # B x L x C
+        x = self.patch_embed(x)
+        x = x.flatten(2).transpose(1, 2) # B x L x D
+        x = self.dropout(x) # B x L x D
 
         # Positional embedding (for pre-blocks)
-        pos_seq = torch.arange(self.seq_len - 1, -1, -1.0,
-                            device=x.device, dtype=x.dtype)
-        r = self.pos_emb(pos_seq)                # L x 1 x C
+        pos_seq = torch.arange(self.seq_len - 1, -1, -1.0, device=x.device, dtype=x.dtype) # [L-1, L-2, ..., 1, 0]
+        r = self.pos_emb(pos_seq) # L x 1 x D
 
         # Pre-pooling transformer blocks
-        x = x.transpose(0, 1)                    # L x B x C
+        x = x.transpose(0, 1) # L x B x D
         for block in self.pre_blocks:
             x = block(x, r, self.r_w_bias, self.r_r_bias)
 
