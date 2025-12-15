@@ -78,7 +78,7 @@ def main():
 
 
     wd = 0.1
-    epochs = 15
+    epochs = 4
     
     workers = 8       # CPU utilization
     model = f"ViT-B-{patch_size}"

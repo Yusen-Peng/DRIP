@@ -395,121 +395,121 @@ def load_vit_from_clip_checkpoint(
     return model, info
 
 
-@torch.no_grad()
-def visualize_boundaries_enhanced(
-    model: DTPViT,
-    image_tensor: torch.Tensor,
-    save_path: Optional[str] = None,
-    titles: Optional[List[str]] = None,
-):
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = model.to(device)
-    model.eval()
+# @torch.no_grad()
+# def visualize_boundaries_enhanced(
+#     model: DTPViT,
+#     image_tensor: torch.Tensor,
+#     save_path: Optional[str] = None,
+#     titles: Optional[List[str]] = None,
+# ):
+#     device = "cuda" if torch.cuda.is_available() else "cpu"
+#     model = model.to(device)
+#     model.eval()
 
-    if image_tensor.dim() == 3:       # [3, H, W]
-        batch = image_tensor.unsqueeze(0)
-    elif image_tensor.dim() == 4:     # [N, 3, H, W]
-        batch = image_tensor
+#     if image_tensor.dim() == 3:       # [3, H, W]
+#         batch = image_tensor.unsqueeze(0)
+#     elif image_tensor.dim() == 4:     # [N, 3, H, W]
+#         batch = image_tensor
 
-    batch = batch.to(device)
-    N, _, H, W = batch.shape
+#     batch = batch.to(device)
+#     N, _, H, W = batch.shape
 
-    @torch.no_grad()
-    def overlay_hard(img_3chw: torch.Tensor) -> Image.Image:
-        x = img_3chw.unsqueeze(0).to(device) # (1, 3, H, W)
-        x: torch.Tensor = model.patch_embed(x)
-        x = model.dropout(x)
-        B, L, C = x.shape
-        grid_size = int(math.sqrt(L))
-        assert grid_size * grid_size == L, f"L={L} is not a perfect square"
-        grid_h = grid_w = grid_size
-        pos = model.pos_emb[:, 1:1 + L, :].to(device=x.device, dtype=x.dtype)  # (1, L, C)
-        x = x + pos                                                            # (1, L, C)
-        x = x.transpose(0, 1)  # (L, 1, C)
-        for block in model.pre_blocks:
-            x = block(x)       # (L, 1, C)
-        soft_boundaries, hard_boundaries = model.boundary_predictor(x)
+#     @torch.no_grad()
+#     def overlay_hard(img_3chw: torch.Tensor) -> Image.Image:
+#         x = img_3chw.unsqueeze(0).to(device) # (1, 3, H, W)
+#         x: torch.Tensor = model.patch_embed(x)
+#         x = model.dropout(x)
+#         B, L, C = x.shape
+#         grid_size = int(math.sqrt(L))
+#         assert grid_size * grid_size == L, f"L={L} is not a perfect square"
+#         grid_h = grid_w = grid_size
+#         pos = model.pos_emb[:, 1:1 + L, :].to(device=x.device, dtype=x.dtype)  # (1, L, C)
+#         x = x + pos                                                            # (1, L, C)
+#         x = x.transpose(0, 1)  # (L, 1, C)
+#         for block in model.pre_blocks:
+#             x = block(x)       # (L, 1, C)
+#         soft_boundaries, hard_boundaries = model.boundary_predictor(x)
 
-        print("hard boundaries:")
-        print(hard_boundaries)
-        print("soft boundaries:")
-        print(soft_boundaries)
+#         print("hard boundaries:")
+#         print(hard_boundaries)
+#         print("soft boundaries:")
+#         print(soft_boundaries)
 
-        # now shape should be [1, L]
-        hard_mask = hard_boundaries[0].detach().float().view(grid_h, grid_w).cpu().numpy()
-        print(f"hard mask:")
-        print(hard_mask)
+#         # now shape should be [1, L]
+#         hard_mask = hard_boundaries[0].detach().float().view(grid_h, grid_w).cpu().numpy()
+#         print(f"hard mask:")
+#         print(hard_mask)
 
-        orig = TF.normalize(
-            img_3chw.detach().clone().cpu(),
-            mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.225],
-            std=[1 / 0.229, 1 / 0.224, 1 / 0.225],
-        ).clamp(0, 1)
-        orig_img = TF.to_pil_image(orig).convert("RGB")
-        orig_np = np.array(orig_img).astype(np.uint8)
+#         orig = TF.normalize(
+#             img_3chw.detach().clone().cpu(),
+#             mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.225],
+#             std=[1 / 0.229, 1 / 0.224, 1 / 0.225],
+#         ).clamp(0, 1)
+#         orig_img = TF.to_pil_image(orig).convert("RGB")
+#         orig_np = np.array(orig_img).astype(np.uint8)
 
-        image_size = getattr(model, "image_size", orig_np.shape[0])
-        if orig_np.shape[0] != image_size or orig_np.shape[1] != image_size:
-            orig_img = orig_img.resize((image_size, image_size), Image.BILINEAR)
-            orig_np = np.array(orig_img).astype(np.uint8)
+#         image_size = getattr(model, "image_size", orig_np.shape[0])
+#         if orig_np.shape[0] != image_size or orig_np.shape[1] != image_size:
+#             orig_img = orig_img.resize((image_size, image_size), Image.BILINEAR)
+#             orig_np = np.array(orig_img).astype(np.uint8)
 
-        patch_h = image_size // grid_h
-        patch_w = image_size // grid_w
+#         patch_h = image_size // grid_h
+#         patch_w = image_size // grid_w
 
-        red_overlay_np = orig_np.copy()
-        for i in range(grid_h):
-            for j in range(grid_w):
-                if hard_mask[i, j] == 1.0:
-                    y0, y1 = i * patch_h, (i + 1) * patch_h
-                    x0, x1 = j * patch_w, (j + 1) * patch_w
-                    patch = red_overlay_np[y0:y1, x0:x1]
-                    red = np.zeros_like(patch)
-                    red[..., 0] = 255  # red channel
-                    red_overlay_np[y0:y1, x0:x1] = (0.6 * patch + 0.4 * red).astype(np.uint8)
+#         red_overlay_np = orig_np.copy()
+#         for i in range(grid_h):
+#             for j in range(grid_w):
+#                 if hard_mask[i, j] == 1.0:
+#                     y0, y1 = i * patch_h, (i + 1) * patch_h
+#                     x0, x1 = j * patch_w, (j + 1) * patch_w
+#                     patch = red_overlay_np[y0:y1, x0:x1]
+#                     red = np.zeros_like(patch)
+#                     red[..., 0] = 255  # red channel
+#                     red_overlay_np[y0:y1, x0:x1] = (0.6 * patch + 0.4 * red).astype(np.uint8)
 
-        return Image.fromarray(red_overlay_np)
+#         return Image.fromarray(red_overlay_np)
 
-    # ---- build overlays for up to 6 images ----
-    max_show = min(N, 6)
-    overlays = [overlay_hard(batch[i]) for i in range(max_show)]
+#     # ---- build overlays for up to 6 images ----
+#     max_show = min(N, 6)
+#     overlays = [overlay_hard(batch[i]) for i in range(max_show)]
 
-    # ---- plot in 1×6 grid ----
-    fig, axes = plt.subplots(1, 2, figsize=(8, 4))
-    axes = axes.flatten()
+#     # ---- plot in 1×6 grid ----
+#     fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+#     axes = axes.flatten()
 
-    for k in range(2):
-        ax = axes[k]
-        ax.axis("off")
-        if k < max_show:
-            ax.imshow(overlays[k])
-    plt.tight_layout()
-    if save_path is not None:
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        plt.savefig(save_path, bbox_inches="tight")
-        print(f"Saved to {save_path}")
-    else:
-        plt.show()
+#     for k in range(2):
+#         ax = axes[k]
+#         ax.axis("off")
+#         if k < max_show:
+#             ax.imshow(overlays[k])
+#     plt.tight_layout()
+#     if save_path is not None:
+#         os.makedirs(os.path.dirname(save_path), exist_ok=True)
+#         plt.savefig(save_path, bbox_inches="tight")
+#         print(f"Saved to {save_path}")
+#     else:
+#         plt.show()
 
-    plt.close(fig)
+#     plt.close(fig)
 
 
-def run_visualization(model, tests, preprocess, batch_size=4, out_dir="unit_further_vis/mmbench_image"):
-    os.makedirs(out_dir, exist_ok=True)
+# def run_visualization(model, tests, preprocess, batch_size=4, out_dir="unit_further_vis/mmbench_image"):
+#     os.makedirs(out_dir, exist_ok=True)
 
-    batch_tensors, batch_indices = [], []
-    for test_index in tqdm(tests, desc="Visualizing Boundaries"):
-        # load and preprocess
-        img_path = f"unit_further_vis/mmbench_image/mmbench_{test_index}.png"
-        img = Image.open(img_path).convert("RGB")
-        input_tensor = preprocess(img)  # [3,H,W]
+#     batch_tensors, batch_indices = [], []
+#     for test_index in tqdm(tests, desc="Visualizing Boundaries"):
+#         # load and preprocess
+#         img_path = f"unit_further_vis/mmbench_image/mmbench_{test_index}.png"
+#         img = Image.open(img_path).convert("RGB")
+#         input_tensor = preprocess(img)  # [3,H,W]
 
-        batch_tensors.append(input_tensor)
-        batch_indices.append(test_index)
+#         batch_tensors.append(input_tensor)
+#         batch_indices.append(test_index)
 
-    save_path = os.path.join(out_dir,
-        f"NEW_VIT_boundary_visualization_{batch_indices[0]}-{batch_indices[-1]}.png")
-    visualize_boundaries_enhanced(model, torch.stack(batch_tensors), save_path=save_path)
-    batch_tensors, batch_indices = [], []
+#     save_path = os.path.join(out_dir,
+#         f"NEW_VIT_boundary_visualization_{batch_indices[0]}-{batch_indices[-1]}.png")
+#     visualize_boundaries_enhanced(model, torch.stack(batch_tensors), save_path=save_path)
+#     batch_tensors, batch_indices = [], []
 
 @torch.no_grad()
 def visualize_boundaries_single_multi(
@@ -527,12 +527,6 @@ def visualize_boundaries_single_multi(
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = model.to(device).eval()
 
-    # ---------- helper: load & preprocess (ImageNet norm) ----------
-    def load_img_norm(path: str, preprocess) -> torch.Tensor:
-        img = Image.open(path).convert("RGB")
-        tensor = preprocess(img)  # [3,H,W]
-        return tensor
-
     @torch.no_grad()
     def overlay_hard(img_3chw: torch.Tensor) -> Image.Image:
         device = next(model.parameters()).device
@@ -546,7 +540,7 @@ def visualize_boundaries_single_multi(
 
         # boundary_predictor expects [L, B, D]
         x_transposed = x.transpose(0, 1)  # [L, B, D]
-        _, hard_boundaries = model.boundary_predictor(x_transposed)  # [B, L]
+        soft_boundaries, hard_boundaries = model.boundary_predictor(x_transposed)  # [B, L]
 
         print("hard boundaries shape:", hard_boundaries.shape)
 
@@ -556,12 +550,20 @@ def visualize_boundaries_single_multi(
         hard_1d = hard_boundaries[0].detach().float()  # [L = 1 + grid_h * grid_w]
         hard_1d_patches = hard_1d[1:]                  # [grid_h * grid_w]
 
+        soft_1d = soft_boundaries[0].detach().float()
+        soft_1d_patches = soft_1d[1:]
+
         assert hard_1d_patches.numel() == grid_h * grid_w, \
             f"Expected {grid_h * grid_w} patch tokens, got {hard_1d_patches.numel()}"
+        assert soft_1d_patches.numel() == grid_h * grid_w, \
+            f"Expected {grid_h * grid_w} patch tokens, got {soft_1d_patches.numel()}"
 
         hard_mask = hard_1d_patches.view(grid_h, grid_w).cpu().numpy()
+        soft_mask = soft_1d_patches.view(grid_h, grid_w).cpu().numpy()
         print("hard mask:")
         print(hard_mask)
+        print("soft mask:")
+        print(soft_mask)
 
         # ---- unnormalize and resize image ----
         orig = TF.normalize(
@@ -636,6 +638,127 @@ def visualize_boundaries_single_multi(
         plt.show()
         plt.close(fig)
 
+
+@torch.no_grad()
+def visualize_boundaries_hard_soft_2x2(
+    model: DTPViT,
+    image_tensor_1: torch.Tensor,  # [3,H,W]
+    image_tensor_2: torch.Tensor,  # [3,H,W]
+    save_path: str | None = None,
+):
+
+    import cv2
+    _use_cv2 = True
+    
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    # -------- helpers --------
+    def denorm_to_pil(img_3chw: torch.Tensor) -> tuple[Image.Image, np.ndarray]:
+        """Un-normalize ImageNet and return (PIL, np.uint8 array)."""
+        orig = TF.normalize(
+            img_3chw.clone(),
+            mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
+            std=[1/0.229, 1/0.224, 1/0.225],
+        ).clamp(0, 1).cpu()
+        pil = TF.to_pil_image(orig).convert("RGB")
+        return pil, np.array(pil).astype(np.uint8)
+
+    def _one_image_overlays(img_3chw: torch.Tensor):
+        device = next(model.parameters()).device
+        # [3, H, W] -> [1, 3, H, W]
+        x: torch.Tensor = img_3chw.unsqueeze(0).to(device)
+
+        # [B, 3, H, W] -> [B, L, D]
+        x = model._embeds(x)
+        x = model.transformer_pre(x)  # [B, L, D]
+
+        # boundary_predictor expects [L, B, D]
+        x_transposed = x.transpose(0, 1)  # [L, B, D]
+        soft_boundaries, hard_boundaries = model.boundary_predictor(x_transposed)  # [B, L]
+
+        print("hard boundaries shape:", hard_boundaries.shape)
+
+        grid_h, grid_w = model.grid_size  # e.g. (14, 14)
+
+        # ---- drop CLS token before reshaping ----
+        hard_1d = hard_boundaries[0].detach().float()  # [L = 1 + grid_h * grid_w]
+        hard_1d_patches = hard_1d[1:]                  # [grid_h * grid_w]
+
+        soft_1d = soft_boundaries[0].detach().float()
+        soft_1d_patches = soft_1d[1:]
+
+        assert hard_1d_patches.numel() == grid_h * grid_w, \
+            f"Expected {grid_h * grid_w} patch tokens, got {hard_1d_patches.numel()}"
+        assert soft_1d_patches.numel() == grid_h * grid_w, \
+            f"Expected {grid_h * grid_w} patch tokens, got {soft_1d_patches.numel()}"
+
+        hard_mask = hard_1d_patches.view(grid_h, grid_w).cpu().numpy()
+        soft_mask = soft_1d_patches.view(grid_h, grid_w).cpu().numpy()
+        print("hard mask:")
+        print(hard_mask)
+        print("soft mask:")
+        print(soft_mask)
+
+
+        # ---- original image + dims ----
+        orig_pil, orig_np = denorm_to_pil(img_3chw)
+        image_size = 224
+
+        patch_h = max(1, image_size // grid_h)
+        patch_w = max(1, image_size // grid_w)
+
+        # ---- soft heatmap (PIL) ----
+        cmap = plt.get_cmap("hot")
+        if _use_cv2:
+            heat = cv2.resize(soft_mask, (image_size, image_size), interpolation=cv2.INTER_CUBIC)
+        else:
+            heat = np.array(Image.fromarray(soft_mask).resize((image_size, image_size), Image.BICUBIC))
+        heat_colored = (cmap(heat)[..., :3] * 255).astype(np.uint8)
+        soft_img = Image.fromarray(heat_colored)
+
+        # ---- hard red overlay (PIL) ----
+        # ensure base is exactly image_size x image_size for clean patches
+        base_np = np.array(orig_pil.resize((image_size, image_size), Image.BICUBIC))
+        red_overlay_np = base_np.copy()
+        for i in range(grid_h):
+            for j in range(grid_w):
+                if hard_mask[i, j] > 0.5:
+                    y0, y1 = i * patch_h, min((i + 1) * patch_h, image_size)
+                    x0, x1 = j * patch_w, min((j + 1) * patch_w, image_size)
+                    patch = red_overlay_np[y0:y1, x0:x1]
+                    red = np.zeros_like(patch); red[..., 0] = 255
+                    red_overlay_np[y0:y1, x0:x1] = (0.6 * patch + 0.4 * red).astype(np.uint8)
+        hard_overlay_img = Image.fromarray(red_overlay_np)
+
+        return hard_overlay_img, soft_img
+
+    # -------- run both images --------
+    hard1, soft1 = _one_image_overlays(image_tensor_1)
+    hard2, soft2 = _one_image_overlays(image_tensor_2)
+
+    # -------- plot 2x2 --------
+    fig, axes = plt.subplots(2, 2, figsize=(12, 12))
+    axes[0, 0].imshow(hard1); axes[0, 0].set_title("Hard 1"); axes[0, 0].axis("off")
+    axes[0, 1].imshow(soft1); axes[0, 1].set_title("Soft 1"); axes[0, 1].axis("off")
+    axes[1, 0].imshow(hard2); axes[1, 0].set_title("Hard 2"); axes[1, 0].axis("off")
+    axes[1, 1].imshow(soft2); axes[1, 1].set_title("Soft 2"); axes[1, 1].axis("off")
+
+    plt.tight_layout()
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, bbox_inches="tight")
+        print(f"Saved to {save_path}")
+    else:
+        plt.show()
+    plt.close(fig)
+
+
+def load_img_norm(path: str, preprocess) -> torch.Tensor:
+    img = Image.open(path).convert("RGB")
+    tensor = preprocess(img)  # [3,H,W]
+    return tensor
+
+
 if __name__ == "__main__":
 
     compression_rate = 0.25
@@ -663,13 +786,16 @@ if __name__ == "__main__":
         heads=768 // 64,
         mlp_ratio=4.0,
         temp=0.5,
+        pos_embed_type="sin_cos_2d",
         flop_measure=False # need to learn real boundaries
     )
 
 
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-3/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_5e-5/checkpoints/epoch_4.pt"
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-4/checkpoints/epoch_4.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-4/checkpoints/epoch_4.pt"
+
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal/checkpoints/epoch_4.pt"
 
 
 
@@ -681,12 +807,23 @@ if __name__ == "__main__":
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
     model, _ = load_dtp_from_clip_checkpoint(model_empty, ckpt_path)
     model.eval()
-    visualize_boundaries_single_multi(
-        model, 
-        preprocess=preprocess,
-        root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
-        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_visualization_2x2.png"
+    # visualize_boundaries_single_multi(
+    #     model, 
+    #     preprocess=preprocess,
+    #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
+    #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_visualization_2x2.png"
+    # )
+
+
+
+    visualize_boundaries_hard_soft_2x2(
+        model,
+        load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/single_1.JPEG", preprocess),
+        load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/multi_1.JPEG", preprocess),
+        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_hard_soft_2x2.png"
     )
+
+
     # run visualization (for the main paper)
     tests = ["4", "5"]
     # tests = ["6", "7"]

@@ -349,15 +349,35 @@ def main(args):
             rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
 
             if opt == 'adamw':
-                optimizer = optim.AdamW(
-                    [
-                        {"params": gain_or_bias_params, "weight_decay": 0.},
-                        {"params": rest_params, "weight_decay": args.wd},
-                    ],
-                    lr=args.lr,
-                    betas=(args.beta1, args.beta2),
-                    eps=args.eps,
-                )
+                # heterogeneous learning rate support
+                print("=> using AdamW optimizer with heterogeneous learning rates.")
+                if isinstance(model.visual, DTPViT):
+                    bp_params = list(model.visual.boundary_predictor.parameters())
+                    bp_param_ids = {id(p) for p in bp_params}
+                    backbone_params = [p for p in model.parameters() if id(p) not in bp_param_ids]
+                    backbone_params = [p for n, p in backbone_params if include(n, p) and p.requires_grad]
+                    base_lr = args.lr
+                    bp_lr = base_lr * 20  # FIXME: tune this
+
+                    optimizer = torch.optim.AdamW(
+                        [
+                            {"params": gain_or_bias_params, "weight_decay": 0.},
+                            {"params": backbone_params, "lr": base_lr, "weight_decay": args.wd},
+                            {"params": bp_params,       "lr": bp_lr,   "weight_decay": args.wd},
+                        ],
+                        betas=(args.beta1, args.beta2),
+                        eps=args.eps,
+                    )
+                else:
+                    optimizer = optim.AdamW(
+                        [
+                            {"params": gain_or_bias_params, "weight_decay": 0.},
+                            {"params": rest_params, "weight_decay": args.wd},
+                        ],
+                        lr=args.lr,
+                        betas=(args.beta1, args.beta2),
+                        eps=args.eps,
+                    )
             else:
                 assert False, f'Unknown optimizer {opt}'
 

@@ -174,6 +174,8 @@ def _build_vision_tower(
                     heads=vision_cfg.width // 64,
                     mlp_ratio=vision_cfg.mlp_ratio,
                     temp=0.5,
+                    # temp=2.0, # FIXME: ablation
+                    pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
                     flop_measure=False # need to learn real boundaries
                 )
 
