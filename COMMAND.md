@@ -9,7 +9,7 @@ salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00
 
 ## Conda Env
 
-```
+```bash
 module load miniconda3/24.1.2-py310
 conda deactivate
 conda activate DRIP

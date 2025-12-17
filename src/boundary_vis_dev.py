@@ -791,7 +791,10 @@ if __name__ == "__main__":
     )
 
 
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-3/checkpoints/epoch_4.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-3/checkpoints/epoch_4.pt"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp1.0/checkpoints/epoch_4.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp2.0/checkpoints/epoch_4.pt"
+
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_5e-5/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-4/checkpoints/epoch_4.pt"
 
