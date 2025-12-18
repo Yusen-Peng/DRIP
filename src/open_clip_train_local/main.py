@@ -340,88 +340,72 @@ def main(args):
                 **opt_kwargs,
             )
         else:
-            # # If some params are not passed, we use the default values based on model name.
-            # exclude = lambda n, p: p.ndim < 2 or "bn" in n or "ln" in n or "bias" in n or 'logit_scale' in n
-            # include = lambda n, p: not exclude(n, p)
 
-            # named_parameters = list(model.named_parameters())
-            # gain_or_bias_params = [p for n, p in named_parameters if exclude(n, p) and p.requires_grad]
-            # rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
+            ##### Original OpenCLIP implementation of AdamW optimizer #####
+            # If some params are not passed, we use the default values based on model name.
+            exclude = lambda n, p: p.ndim < 2 or "bn" in n or "ln" in n or "bias" in n or 'logit_scale' in n
+            include = lambda n, p: not exclude(n, p)
 
-            # if opt == 'adamw':
-            #     # heterogeneous learning rate support
-            #     print("=> using AdamW optimizer with heterogeneous learning rates.")
-            #     if isinstance(model.visual, DTPViT):
-            #         bp_params = list(model.visual.boundary_predictor.parameters())
-            #         bp_param_ids = {id(p) for p in bp_params}
-            #         backbone_params = [p for p in model.parameters() if id(p) not in bp_param_ids]
-            #         base_lr = args.lr
-            #         bp_lr = base_lr * 20  # FIXME: tune this
+            named_parameters = list(model.named_parameters())
+            gain_or_bias_params = [p for n, p in named_parameters if exclude(n, p) and p.requires_grad]
+            rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
 
-            #         optimizer = torch.optim.AdamW(
-            #             [
-            #                 {"params": gain_or_bias_params, "weight_decay": 0.},
-            #                 {"params": backbone_params, "lr": base_lr, "weight_decay": args.wd},
-            #                 {"params": bp_params, "lr": bp_lr,   "weight_decay": args.wd},
-            #             ],
-            #             betas=(args.beta1, args.beta2),
-            #             eps=args.eps,
-            #         )
-            #     else:
-            #         optimizer = optim.AdamW(
-            #             [
-            #                 {"params": gain_or_bias_params, "weight_decay": 0.},
-            #                 {"params": rest_params, "weight_decay": args.wd},
-            #             ],
-            #             lr=args.lr,
-            #             betas=(args.beta1, args.beta2),
-            #             eps=args.eps,
-            #         )
-            # else:
-            #     assert False, f'Unknown optimizer {opt}'
-
-            exclude = lambda n, p: p.ndim < 2 or "bn" in n or "ln" in n or "bias" in n or "logit_scale" in n
-            named_parameters = [(n, p) for n, p in model.named_parameters() if p.requires_grad]
-
-            if isinstance(model.visual, DTPViT):
-                # heterogeneous learning rate support with DTP boundary predictor
-                print("=> using AdamW optimizer with heterogeneous learning rates for DTP ViT.")
-                bp_params = [p for p in model.visual.boundary_predictor.parameters() if p.requires_grad]
-                bp_ids = {id(p) for p in bp_params}
-
-                gain_or_bias_params = [p for n, p in named_parameters if exclude(n, p) and id(p) not in bp_ids]
-                backbone_params     = [p for n, p in named_parameters if (not exclude(n, p)) and id(p) not in bp_ids]
-
-                bp_gain_or_bias = [p for p in bp_params if p.ndim < 2]   # optional: BP bias/ln/bn no decay
-                bp_rest         = [p for p in bp_params if p.ndim >= 2]
-
-                base_lr = args.lr
-                bp_lr = base_lr * 20 # FIXME: tune this
-
-                optimizer = torch.optim.AdamW(
+            if opt == 'adamw':
+                optimizer = optim.AdamW(
                     [
-                        {"params": gain_or_bias_params, "weight_decay": 0.0},
-                        {"params": backbone_params,     "lr": base_lr, "weight_decay": args.wd},
-                        {"params": bp_gain_or_bias,     "lr": bp_lr,   "weight_decay": 0.0},
-                        {"params": bp_rest,             "lr": bp_lr,   "weight_decay": args.wd},
-                    ],
-                    lr=base_lr,
-                    betas=(args.beta1, args.beta2),
-                    eps=args.eps,
-                )
-            else:
-                gain_or_bias_params = [p for n, p in named_parameters if exclude(n, p)]
-                rest_params         = [p for n, p in named_parameters if not exclude(n, p)]
-
-                optimizer = torch.optim.AdamW(
-                    [
-                        {"params": gain_or_bias_params, "weight_decay": 0.0},
-                        {"params": rest_params,         "weight_decay": args.wd},
+                        {"params": gain_or_bias_params, "weight_decay": 0.},
+                        {"params": rest_params, "weight_decay": args.wd},
                     ],
                     lr=args.lr,
                     betas=(args.beta1, args.beta2),
                     eps=args.eps,
                 )
+            else:
+                assert False, f'Unknown optimizer {opt}'
+
+            ###### if we wannt re-attempt heterogeneous lr for DTP ViT, uncomment below and comment the following simple AdamW optimizer ######
+            # exclude = lambda n, p: p.ndim < 2 or "bn" in n or "ln" in n or "bias" in n or "logit_scale" in n
+            # named_parameters = [(n, p) for n, p in model.named_parameters() if p.requires_grad]
+
+            # if isinstance(model.visual, DTPViT):
+            #     # heterogeneous learning rate support with DTP boundary predictor
+            #     print("=> using AdamW optimizer with heterogeneous learning rates for DTP ViT.")
+            #     bp_params = [p for p in model.visual.boundary_predictor.parameters() if p.requires_grad]
+            #     bp_ids = {id(p) for p in bp_params}
+
+            #     gain_or_bias_params = [p for n, p in named_parameters if exclude(n, p) and id(p) not in bp_ids]
+            #     backbone_params     = [p for n, p in named_parameters if (not exclude(n, p)) and id(p) not in bp_ids]
+
+            #     bp_gain_or_bias = [p for p in bp_params if p.ndim < 2]   # optional: BP bias/ln/bn no decay
+            #     bp_rest         = [p for p in bp_params if p.ndim >= 2]
+
+            #     base_lr = args.lr
+            #     bp_lr = base_lr * 20 # FIXME: tune this
+
+            #     optimizer = torch.optim.AdamW(
+            #         [
+            #             {"params": gain_or_bias_params, "weight_decay": 0.0},
+            #             {"params": backbone_params,     "lr": base_lr, "weight_decay": args.wd},
+            #             {"params": bp_gain_or_bias,     "lr": bp_lr,   "weight_decay": 0.0},
+            #             {"params": bp_rest,             "lr": bp_lr,   "weight_decay": args.wd},
+            #         ],
+            #         lr=base_lr,
+            #         betas=(args.beta1, args.beta2),
+            #         eps=args.eps,
+            #     )
+            # else:
+            #     gain_or_bias_params = [p for n, p in named_parameters if exclude(n, p)]
+            #     rest_params         = [p for n, p in named_parameters if not exclude(n, p)]
+
+            #     optimizer = torch.optim.AdamW(
+            #         [
+            #             {"params": gain_or_bias_params, "weight_decay": 0.0},
+            #             {"params": rest_params,         "weight_decay": args.wd},
+            #         ],
+            #         lr=args.lr,
+            #         betas=(args.beta1, args.beta2),
+            #         eps=args.eps,
+            #     )
 
         if is_master(args):
             if is_master(args):

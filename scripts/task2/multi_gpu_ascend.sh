@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=Dec14_the_most_faithful_vitbased_drip_4x_4_8_with_5e-5_sinusoidal_20fold_lr
-#SBATCH --output=Dec14_the_most_faithful_vitbased_drip_4x_4_8_with_5e-5_sinusoidal_20fold_lr.log
+#SBATCH --job-name=Dec18_the_most_faithful_vitbased_drip_4x_4_8_with_5e-5_sinusoidal_temp1.5_full_15epochs
+#SBATCH --output=Dec18_the_most_faithful_vitbased_drip_4x_4_8_with_5e-5_sinusoidal_temp1.5_full_15epochs.log
 #SBATCH --partition=quad
-#SBATCH --time=60:00:00
+#SBATCH --time=168:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4

@@ -164,6 +164,7 @@ def _build_vision_tower(
                 print("Using DRIP pooling")
                 print(f"Using DTP ViT with compression rate {compression_rate}")
                 print(f"Depth for each stage: {depth}")
+                temp = 1.5  # FIXME: ablation
                 visual = DTPViT(
                     image_size=vision_cfg.image_size,
                     patch_size=vision_cfg.patch_size,
@@ -173,11 +174,11 @@ def _build_vision_tower(
                     compression_rate=compression_rate,
                     heads=vision_cfg.width // 64,
                     mlp_ratio=vision_cfg.mlp_ratio,
-                    temp=0.5,
-                    # temp=2.0, # FIXME: ablation
+                    temp=temp,
                     pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
                     flop_measure=False # need to learn real boundaries
                 )
+                print(f"🍑🍑🍑what is the temperature? {temp}🍑🍑🍑")
 
             elif POOLING == "Fixed":
                 print("Using Fixed pooling")
