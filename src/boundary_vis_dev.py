@@ -792,8 +792,10 @@ if __name__ == "__main__":
 
 
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-3/checkpoints/epoch_4.pt"
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp1.0/checkpoints/epoch_4.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp1.0/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp2.0/checkpoints/epoch_4.pt"
+
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_20fold/checkpoints/epoch_4.pt"
 
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_5e-5/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-4/checkpoints/epoch_4.pt"
@@ -810,21 +812,26 @@ if __name__ == "__main__":
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
     model, _ = load_dtp_from_clip_checkpoint(model_empty, ckpt_path)
     model.eval()
-    # visualize_boundaries_single_multi(
-    #     model, 
-    #     preprocess=preprocess,
-    #     root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
-    #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_visualization_2x2.png"
-    # )
 
 
 
-    visualize_boundaries_hard_soft_2x2(
-        model,
-        load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/single_1.JPEG", preprocess),
-        load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/multi_1.JPEG", preprocess),
-        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_hard_soft_2x2.png"
+
+    
+    visualize_boundaries_single_multi(
+        model, 
+        preprocess=preprocess,
+        root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
+        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_visualization_2x2.png"
     )
+
+
+
+    # visualize_boundaries_hard_soft_2x2(
+    #     model,
+    #     load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/single_1.JPEG", preprocess),
+    #     load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/multi_1.JPEG", preprocess),
+    #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_hard_soft_2x2.png"
+    # )
 
 
     # run visualization (for the main paper)
