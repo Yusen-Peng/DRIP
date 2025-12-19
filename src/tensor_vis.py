@@ -36,11 +36,11 @@ from PIL import Image
 torch.serialization.add_safe_globals([argparse.Namespace])
 
 
-from open_clip_local.model import DTPViT
-from boundary_vis_dev import load_dtp_from_clip_checkpoint, set_seed
+from open_clip_local.model import DTPViT, VisionTransformer
+from boundary_vis_dev import load_dtp_from_clip_checkpoint, set_seed, load_vit_from_clip_checkpoint
 
 
-def main(model: DTPViT):
+def main(model: DTPViT | VisionTransformer):
     model.eval()
     with torch.no_grad():
         pos_emb = model.positional_embedding.detach().cpu().float()  # [L+1, D]
@@ -99,38 +99,50 @@ if __name__ == "__main__":
         )
     ])
 
-    
-    model_empty = DTPViT(
-        image_size=224,
-        patch_size=patch_size,
-        width=768,
-        layers=12,
-        depth=(4, 8, 0),
-        compression_rate=compression_rate,
-        heads=768 // 64,
-        mlp_ratio=4.0,
-        temp=0.5,
-        pos_embed_type="sin_cos_2d",  # "sin_cos_2d" or "learnable"
-        flop_measure=False # need to learn real boundaries
-    )
+
+    MODEL_TYPE = "ViT" # "ViT" or "DRIP"
+
+    if MODEL_TYPE == "ViT":
+        model_empty = VisionTransformer(
+            image_size=224,
+            patch_size=patch_size,
+            width=768,
+            layers=12,
+            heads=768 // 64,
+            mlp_ratio=4.0,
+            pos_embed_type="learnable",  # "sin_cos_2d" or "learnable"
+        )
+
+        ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
+        model, _ = load_vit_from_clip_checkpoint(model_empty, ckpt_path)
 
 
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-3/checkpoints/epoch_4.pt"
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_5e-5/checkpoints/epoch_4.pt"
-    # ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-4/checkpoints/epoch_4.pt"
+    elif MODEL_TYPE == "DRIP":
+        model_empty = DTPViT(
+            image_size=224,
+            patch_size=patch_size,
+            width=768,
+            layers=12,
+            depth=(4, 8, 0),
+            compression_rate=compression_rate,
+            heads=768 // 64,
+            mlp_ratio=4.0,
+            temp=0.5,
+            pos_embed_type="sin_cos_2d",  # "sin_cos_2d" or "learnable"
+            flop_measure=False # need to learn real boundaries
+        )
 
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal/checkpoints/epoch_4.pt"
+        #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-3/checkpoints/epoch_4.pt"
+        #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_5e-5/checkpoints/epoch_4.pt"
+        #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-4/checkpoints/epoch_4.pt"
+        ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal/checkpoints/epoch_4.pt"
+        #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8_NEW/checkpoints/epoch_2.pt"
+        #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_vitbased_DRIP_4epoch/checkpoints/epoch_4.pt"
+        #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/vitbased_drip_4epochs_sinusoidal_built_in_nn/checkpoints/epoch_4.pt"
+        #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_vitbased_drip_4epochs_sinusoidal/checkpoints/epoch_4.pt"
+        #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
+        #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
+        model, _ = load_dtp_from_clip_checkpoint(model_empty, ckpt_path)
 
 
-
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8_NEW/checkpoints/epoch_2.pt"
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_vitbased_DRIP_4epoch/checkpoints/epoch_4.pt"
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/vitbased_drip_4epochs_sinusoidal_built_in_nn/checkpoints/epoch_4.pt"
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_vitbased_drip_4epochs_sinusoidal/checkpoints/epoch_4.pt"
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
-    model, _ = load_dtp_from_clip_checkpoint(model_empty, ckpt_path)
-
-
-    
     main(model)

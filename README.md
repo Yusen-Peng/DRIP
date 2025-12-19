@@ -4,12 +4,30 @@
 
 - [October 27, 2025] model checkpoints pretrained on CLIP/BioCLIP are publicly available on [HuggingFace](https://huggingface.co/YusenPeng/DRIP_checkpoints) for further finetuning!
 
+## Environment Setup
 
-## DRIP Implementation
+```bash
+conda create -n DRIP python=3.11
+conda activate DRIP
+python -m pip install open_clip_torch
+python -m pip install 'open_clip_torch[training]'
+conda install -c conda-forge sentencepiece
+python -m pip install braceexpand
+python -m pip install webdataset
+python -m pip install tensorboard
+python -m pip install pdbpp
+```
 
 
 
+## Activate Conda Env
 
+```bash
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00 # optionally schedule a job
+module load miniconda3/24.1.2-py310
+conda deactivate
+conda activate DRIP
+```
 
 
 ## Contacts
