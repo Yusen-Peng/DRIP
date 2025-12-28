@@ -68,14 +68,14 @@ def main():
     mlp_ratio = 4.0
     patch_dropout = 0.1
     if MODE == "DRIP":
-        COMPRESSION_RATE = 0.1  # e.g., 0.1 means keeping 10% patches
+        COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
         print(f"🥶🥶🥶🥶Calculating GFLOPs for DRIP with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
         model = DTPViT(
             image_size=img_size,
             patch_size=patch_size,
             width=width,
             layers=12,
-            depth=(2, 10, 0),
+            depth=(4, 8, 0),
             compression_rate=COMPRESSION_RATE,
             heads=width // 64,
             mlp_ratio=mlp_ratio,

@@ -785,7 +785,7 @@ if __name__ == "__main__":
         compression_rate=compression_rate,
         heads=768 // 64,
         mlp_ratio=4.0,
-        temp=0.5,
+        temp=1.5, # FIXME: need to match training temp
         pos_embed_type="sin_cos_2d",
         flop_measure=False # need to learn real boundaries
     )
@@ -794,16 +794,15 @@ if __name__ == "__main__":
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-3/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp1.0/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp2.0/checkpoints/epoch_4.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_20fold/checkpoints/epoch_4.pt"
 
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_20fold/checkpoints/epoch_4.pt"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp2.0_15epoch/checkpoints/epoch_15.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp_1.5_15epoch/checkpoints/epoch_15.pt"
 
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_5e-5/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-4/checkpoints/epoch_4.pt"
 
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal/checkpoints/epoch_4.pt"
-
-
-
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8_NEW/checkpoints/epoch_2.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_vitbased_DRIP_4epoch/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/vitbased_drip_4epochs_sinusoidal_built_in_nn/checkpoints/epoch_4.pt"
@@ -812,9 +811,6 @@ if __name__ == "__main__":
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
     model, _ = load_dtp_from_clip_checkpoint(model_empty, ckpt_path)
     model.eval()
-
-
-
 
     
     visualize_boundaries_single_multi(
@@ -825,13 +821,12 @@ if __name__ == "__main__":
     )
 
 
-
-    # visualize_boundaries_hard_soft_2x2(
-    #     model,
-    #     load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/single_1.JPEG", preprocess),
-    #     load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/multi_1.JPEG", preprocess),
-    #     save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_hard_soft_2x2.png"
-    # )
+    visualize_boundaries_hard_soft_2x2(
+        model,
+        load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/single_1.JPEG", preprocess),
+        load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/multi_1.JPEG", preprocess),
+        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_hard_soft_2x2.png"
+    )
 
 
     # run visualization (for the main paper)
