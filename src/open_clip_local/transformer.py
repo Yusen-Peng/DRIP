@@ -506,7 +506,290 @@ class Transformer(nn.Module):
         if not self.batch_first:
             x = x.transpose(0, 1)    # LND -> NLD
         return x
+    
 
+@torch.jit.script
+def add_and_scale(tensor1, tensor2, alpha: float) -> torch.Tensor:
+    return alpha * (tensor1 + tensor2)
+
+class PositionalEmbedding(nn.Module):
+    def __init__(self, demb):
+        super(PositionalEmbedding, self).__init__()
+
+        self.demb = demb
+
+        inv_freq = 1 / (10000 ** (torch.arange(0.0, demb, 2.0) / demb))
+        self.register_buffer("inv_freq", inv_freq)
+
+    def forward(self, pos_seq):
+        sinusoid_inp = torch.ger(pos_seq, self.inv_freq)
+        pos_emb = torch.cat([sinusoid_inp.sin(), sinusoid_inp.cos()], dim=-1)
+        return pos_emb[:, None, :]
+
+class PositionwiseFF(nn.Module):
+    def __init__(self, d_model, d_inner, dropout, pre_lnorm, activation_function):
+        super(PositionwiseFF, self).__init__()
+
+        self.d_model = d_model
+        self.d_inner = d_inner
+        self.dropout = dropout
+
+        if activation_function == 'relu':
+            activation_fn = nn.ReLU(inplace=True)
+        elif activation_function == 'gelu':
+            activation_fn = torch.nn.GELU()
+
+        self.CoreNet = nn.Sequential(
+            nn.Linear(d_model, d_inner),
+            activation_fn,
+            nn.Dropout(dropout),
+            nn.Linear(d_inner, d_model),
+            nn.Dropout(dropout),
+        )
+
+        self.layer_norm = nn.LayerNorm(d_model)
+
+        self.pre_lnorm = pre_lnorm
+
+    def forward(self, inp):
+        if self.pre_lnorm:
+            core_out = self.CoreNet(self.layer_norm(inp))
+            output = core_out + inp
+        else:
+            core_out = self.CoreNet(inp)
+            output = self.layer_norm(inp + core_out)
+
+        return output
+
+
+class RelPartialLearnableMultiHeadAttn(nn.Module):
+    def __init__(
+        self, n_head, d_model, d_head, dropout, dropatt, pre_lnorm, activation_function
+    ):
+        super(RelPartialLearnableMultiHeadAttn, self).__init__()
+
+        del activation_function
+
+        self.n_head = n_head
+        self.d_model = d_model
+        self.d_head = d_head
+        self.dropout = dropout
+
+        self.qkv_net = nn.Linear(self.d_model, 3 * n_head * d_head)
+        self.r_net = nn.Linear(self.d_model, self.n_head * self.d_head)
+
+        self.drop = nn.Dropout(dropout)
+        self.dropatt = nn.Dropout(dropatt)
+        self.o_net = nn.Linear(n_head * d_head, d_model)
+
+        self.layer_norm = nn.LayerNorm(d_model)
+
+        self.scale = 1 / (d_head ** 0.5)
+
+        self.pre_lnorm = pre_lnorm
+
+    def _rel_shift(self, x):
+        zero_pad = torch.zeros((x.size(0), x.size(1), x.size(2), 1),
+                               device=x.device, dtype=x.dtype)
+        x_padded = torch.cat([zero_pad, x], dim=3)
+
+        x_padded = x_padded.view(x.size(0), x.size(1), x.size(3) + 1, x.size(2))
+
+        x = x_padded.narrow(2, 1, x_padded.size(2) - 1).view_as(x)
+
+        return x
+
+    def forward(self, w, r, r_w_bias, r_r_bias, attn_mask):
+        # w is of size: T x B x C
+        # r is of size: T x 1 x C
+        # biases are of size: (n_head x d_head), we add the same bias to each token
+        # attn_mask is of size (q_len x k_len)
+        qlen, rlen, bsz = w.size(0), r.size(0), w.size(1)
+
+        if self.pre_lnorm:
+            w_head_q, w_head_k, w_head_v = self.qkv_net(self.layer_norm(w))
+        else:
+            w_heads = self.qkv_net(w)
+
+        r_head_k = self.r_net(r)
+        w_head_q, w_head_k, w_head_v = torch.chunk(w_heads, 3, dim=-1)
+
+        klen = w_head_k.size(0)
+
+        w_head_q = w_head_q.view(qlen, bsz, self.n_head, self.d_head)
+        w_head_k = w_head_k.view(klen, bsz, self.n_head, self.d_head)
+        w_head_v = w_head_v.view(klen, bsz, self.n_head, self.d_head)
+
+        r_head_k = r_head_k.view(rlen, self.n_head, self.d_head)       # qlen x n_head x d_head
+
+        # compute attention score
+        rw_head_q = w_head_q + r_w_bias                                # qlen x bsz x n_head x d_head
+        AC = torch.einsum('ibnd,jbnd->bnij', rw_head_q, w_head_k)      # bsz x n_head x qlen x klen
+
+        rr_head_q = w_head_q + r_r_bias
+        BD = torch.einsum('ibnd,jnd->bnij', rr_head_q, r_head_k)       # bsz x n_head x qlen x klen
+        BD = self._rel_shift(BD)
+
+        # [bsz x n_head x qlen x klen]
+        attn_score: torch.Tensor = add_and_scale(AC, BD, self.scale)
+
+        # compute attention probability
+        if attn_mask is not None:
+            if attn_mask.dim() == 2:
+                attn_score.masked_fill_(attn_mask[None, None, :, :], -float('inf'))
+            elif attn_mask.dim() == 3:
+                attn_score.masked_fill_(attn_mask[:, None, :, :], -float('inf'))
+        else:
+            pass
+        
+        # [bsz x n_head x qlen x klen]
+        attn_prob = F.softmax(attn_score, dim=3)
+        attn_prob = self.dropatt(attn_prob)
+
+        # compute attention vector
+        attn_vec = torch.einsum('bnij,jbnd->ibnd', attn_prob, w_head_v)
+
+        # [qlen x bsz x n_head x d_head]
+        attn_vec = attn_vec.contiguous().view(
+            attn_vec.size(0), attn_vec.size(1), self.n_head * self.d_head)
+
+        # linear projection
+        attn_out = self.o_net(attn_vec)
+        attn_out = self.drop(attn_out)
+
+        if self.pre_lnorm:
+            # residual connection
+            output = w + attn_out
+        else:
+            # residual connection + layer normalization
+            output = self.layer_norm(w + attn_out)
+
+        return output
+
+class RelPartialLearnableDecoderLayer(nn.Module):
+    def __init__(
+        self,
+        n_head,
+        d_model,
+        d_head,
+        d_inner,
+        dropout,
+        dropatt,
+        pre_lnorm,
+        activation_function,
+    ):
+        super(RelPartialLearnableDecoderLayer, self).__init__()
+
+        self.dec_attn = RelPartialLearnableMultiHeadAttn(
+            n_head, d_model, d_head, dropout, dropatt, pre_lnorm, activation_function
+        )
+        self.pos_ff = PositionwiseFF(
+            d_model,
+            d_inner,
+            dropout,
+            pre_lnorm,
+            activation_function,
+        )
+
+    def forward(self, dec_inp, r, r_w_bias, r_r_bias, dec_attn_mask=None):
+        output = self.dec_attn(dec_inp, r, r_w_bias, r_r_bias,
+                               attn_mask=dec_attn_mask)
+        output = self.pos_ff(output)
+
+        return output
+
+
+class TransformerXL(nn.Module):
+    def __init__(
+            self,
+            width: int,
+            layers: int,
+            heads: int,
+            mlp_ratio: float = 4.0,
+            ls_init_value: float = None,
+            act_layer: Callable = nn.GELU,
+            norm_layer: Callable = LayerNorm,
+            batch_first: bool = True,
+            dropout: float = 0.0,
+            dropatt: float = 0.0
+    ):
+        super().__init__()
+        self.width = width
+        self.layers = layers
+        self.batch_first = batch_first
+        self.grad_checkpointing = False
+
+        self.resblocks = nn.ModuleList([
+            RelPartialLearnableDecoderLayer(
+                n_head=heads,
+                d_model=width,
+                d_head=width // heads,
+                d_inner=int(width * mlp_ratio),
+                dropout=dropout,
+                dropatt=dropatt,
+                pre_lnorm=False, # NOTE: always false; true raises errors with Transformer-XL implementation
+                activation_function='act_relu' if act_layer == nn.ReLU else 'gelu',
+            )
+            for _ in range(layers)
+        ])
+
+    def get_cast_dtype(self) -> torch.dtype:
+        if hasattr(self.resblocks[0].mlp.c_fc, 'int8_original_dtype'):
+            return self.resblocks[0].mlp.c_fc.int8_original_dtype
+        return self.resblocks[0].mlp.c_fc.weight.dtype
+
+    def forward_intermediates(
+            self,
+            x: torch.Tensor,
+            attn_mask: Optional[torch.Tensor] = None,
+            indices: Optional[Union[int, List[int]]] = None,
+            stop_early: bool = False,
+    ):
+        take_indices, max_index = feature_take_indices(len(self.resblocks), indices)
+
+        if not self.batch_first:
+            x = x.transpose(0, 1).contiguous()    # NLD -> LND
+
+        intermediates = []
+        if torch.jit.is_scripting() or not stop_early:  # can't slice blocks in torchscript
+            blocks = self.resblocks
+        else:
+            blocks = self.resblocks[:max_index + 1]
+        for i, blk in enumerate(blocks):
+            if self.grad_checkpointing and not torch.jit.is_scripting():
+                x = checkpoint(blk, x, None, None, attn_mask, use_reentrant=False)
+            else:
+                x = blk(x, attn_mask=attn_mask)
+
+            if i in take_indices:
+                intermediates.append(x.transpose(0, 1) if not self.batch_first else x)
+
+        if not self.batch_first:
+            x = x.transpose(0, 1)    # LND -> NLD
+
+        return x, intermediates
+
+    def prune_intermediate_layers(self, indices: Union[int, List[int]] = 1):
+        """ Prune layers not required for specified intermediates.
+        """
+        take_indices, max_index = feature_take_indices(len(self.resblocks), indices)
+        self.resblocks = self.resblocks[:max_index + 1]  # truncate blocks
+        return take_indices
+
+    def forward(self, x: torch.Tensor, pos_emb, r_w_bias, r_r_bias, attn_mask: Optional[torch.Tensor] = None):
+        if not self.batch_first:
+            x = x.transpose(0, 1).contiguous()    # NLD -> LND
+
+        for r in self.resblocks:
+            if self.grad_checkpointing and not torch.jit.is_scripting():
+                # TODO: handle kwargs https://github.com/pytorch/pytorch/issues/79887#issuecomment-1161758372
+                x = checkpoint(r, x, None, None, attn_mask, use_reentrant=False)
+            else:
+                x = r(x, pos_emb, r_w_bias, r_r_bias, dec_attn_mask=attn_mask)
+
+        if not self.batch_first:
+            x = x.transpose(0, 1)    # LND -> NLD
+        return x
 
 def _expand_token(token, batch_size: int):
     return token.view(1, 1, -1).expand(batch_size, -1, -1)

@@ -3,9 +3,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Callable, Tuple
 from .transformer import LayerNorm, PatchDropout, AttentionalPooler, Transformer, _expand_token
+from .transformer import PositionalEmbedding, RelPartialLearnableDecoderLayer
+from .transformer import TransformerXL
 from .pos_embed import get_2d_sincos_pos_embed
 from .BP import BoundaryPredictor, downsample
 from .utils import to_2tuple
+
+
+############################################################################
+##### NOTE: The version below is DRIP WITH transformer-XL attention ########
+############################################################################
 
 class DTPViT(nn.Module):
     output_tokens: torch.jit.Final[bool]
@@ -30,7 +37,7 @@ class DTPViT(nn.Module):
             output_dim: int = 512,
             patch_dropout: float = 0.,
             no_ln_pre: bool = False,
-            pos_embed_type: str = 'learnable', # 'learnable' or 'sin_cos_2d'
+            pos_embed_type: str = 'transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
             pool_type: str = 'tok',
             final_ln_after_pool: bool = False,
             act_layer: Callable = nn.GELU,
@@ -75,8 +82,17 @@ class DTPViT(nn.Module):
                 torch.zeros(self.grid_size[0] * self.grid_size[1] + 1, width), requires_grad=False)
             pos_embed_type = get_2d_sincos_pos_embed(width, self.grid_size[0], cls_token=True)
             self.positional_embedding.data.copy_(torch.from_numpy(pos_embed_type).float())
+        elif pos_embed_type == 'transformer-xl':
+            self.positional_embedding = PositionalEmbedding(demb=width)
         else:
             raise ValueError
+    
+    
+        # pos-aware attention bias terms
+        num_heads = heads
+        embed_dim = width
+        self.r_w_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
+        self.r_r_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
 
         # setting a patch_dropout of 0. would mean it is disabled and this function would be the identity fn
         self.patch_dropout = PatchDropout(patch_dropout) if patch_dropout > 0. else nn.Identity()
@@ -92,17 +108,17 @@ class DTPViT(nn.Module):
             threshold=threshold
         )
 
-        self.transformer_pre = Transformer(
+        self.transformer_pre = TransformerXL(
             width,
             self.depth[0],
             heads,
             mlp_ratio,
             ls_init_value=ls_init_value,
             act_layer=act_layer,
-            norm_layer=norm_layer,
+            norm_layer=norm_layer, 
         )
 
-        self.transformer_post = Transformer(
+        self.transformer_post = TransformerXL(
             width,
             self.depth[1],
             heads,
@@ -179,7 +195,7 @@ class DTPViT(nn.Module):
         # class embeddings and positional embeddings
         x = torch.cat([_expand_token(self.class_embedding, x.shape[0]).to(x.dtype), x], dim=1)
         # shape = [*, grid ** 2 + 1, width]
-        x = x + self.positional_embedding.to(x.dtype)
+        # x = x + self.positional_embedding.to(x.dtype)
 
         # patch dropout (if active)
         x = self.patch_dropout(x)
@@ -215,7 +231,16 @@ class DTPViT(nn.Module):
     
     def encode(self, x: torch.Tensor, return_loss: bool):
         x = self._embeds(x) # [B, 3, H, W] -> [B, L, D]
-        x = self.transformer_pre(x) # [B, L, D] -> [B, L, D]
+
+        # Compute position embeddings
+        T = x.size(1)
+        pos_seq = torch.arange(T - 1, -1, -1.0, device=x.device, dtype=x.dtype)
+        pos_emb = self.positional_embedding(pos_seq)
+        x = self.transformer_pre(
+            x, 
+            pos_emb=pos_emb, 
+            r_w_bias=self.r_w_bias, 
+            r_r_bias=self.r_r_bias) # [B, L, D] -> [B, L, D]
 
         if self.flop_measure:
             B, L, _ = x.shape
@@ -238,7 +263,15 @@ class DTPViT(nn.Module):
         ) # [L, B, D] -> [S, B, D]
         shortened_hidden = shortened_hidden.transpose(0, 1) # [S, B, D] -> [B, S, D]
 
-        features = self.transformer_post(shortened_hidden) # [B, S, D] -> [B, S, D]
+        S = shortened_hidden.size(1)
+        new_pos_seq = torch.arange(S - 1, -1, -1.0, device=x.device, dtype=x.dtype)
+        new_pos_emb = self.positional_embedding(new_pos_seq)
+
+        features = self.transformer_post(
+            shortened_hidden,
+            pos_emb=new_pos_emb, 
+            r_w_bias=self.r_w_bias, 
+            r_r_bias=self.r_r_bias) # [B, S, D] -> [B, S, D]
         
         if return_loss and not self.flop_measure:
             boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
@@ -270,199 +303,279 @@ class DTPViT(nn.Module):
 
 
 
+
+############################################################################
+##### NOTE: The version below is DRIP WITHOUT transformer-XL attention #####
+############################################################################
+
+# class DTPViT(nn.Module):
+#     output_tokens: torch.jit.Final[bool]
+
+#     def __init__(
+#             self,
+#             image_size: int,
+#             patch_size: int,
+#             width: int,
+#             layers: int,
+#             depth: tuple[int],
+#             compression_rate: float,
+#             heads: int,
+#             mlp_ratio: float,
+#             temp: float,
+#             flop_measure: bool = False,
+#             threshold: float = 0.5,
+#             ls_init_value: float = None,
+#             attentional_pool: bool = False,
+#             attn_pooler_queries: int = 256,
+#             attn_pooler_heads: int = 8,
+#             output_dim: int = 512,
+#             patch_dropout: float = 0.,
+#             no_ln_pre: bool = False,
+#             pos_embed_type: str = 'learnable', # 'learnable' or 'sin_cos_2d'
+#             pool_type: str = 'tok',
+#             final_ln_after_pool: bool = False,
+#             act_layer: Callable = nn.GELU,
+#             norm_layer: Callable = LayerNorm,
+#             output_tokens: bool = False,
+#     ):
+#         super().__init__()
+#         assert pool_type in ('tok', 'avg', 'none')
+#         self.output_tokens = output_tokens
+#         image_height, image_width = self.image_size = to_2tuple(image_size)
+#         patch_height, patch_width = self.patch_size = to_2tuple(patch_size)
+#         self.grid_size = (image_height // patch_height, image_width // patch_width)
+#         self.final_ln_after_pool = final_ln_after_pool  # currently ignored w/ attn pool enabled
+#         self.output_dim = output_dim
+#         self.width = width
+#         self.layers = layers
+#         self.depth = depth
+#         self.prior = compression_rate
+#         self.threshold = threshold
+#         self.temp = temp
+#         self.flop_measure = flop_measure
+#         self.null_token = nn.Parameter(torch.zeros(1, 1, width))
+#         self.conv1 = nn.Conv2d(
+#             in_channels=3,
+#             out_channels=width,
+#             kernel_size=patch_size,
+#             stride=patch_size,
+#             bias=False
+#         )
+
+#         # class embeddings and positional embeddings
+#         scale = width ** -0.5
+#         self.class_embedding = nn.Parameter(scale * torch.randn(width))
+#         if pos_embed_type == 'learnable':
+#             self.positional_embedding = nn.Parameter(
+#                 scale * torch.randn(self.grid_size[0] * self.grid_size[1] + 1, width))
+#         elif pos_embed_type == 'sin_cos_2d':
+#             # fixed sin-cos embedding
+#             assert self.grid_size[0] == self.grid_size[1],\
+#                 'currently sin cos 2d pos embedding only supports square input'
+#             self.positional_embedding = nn.Parameter(
+#                 torch.zeros(self.grid_size[0] * self.grid_size[1] + 1, width), requires_grad=False)
+#             pos_embed_type = get_2d_sincos_pos_embed(width, self.grid_size[0], cls_token=True)
+#             self.positional_embedding.data.copy_(torch.from_numpy(pos_embed_type).float())
+#         else:
+#             raise ValueError
+
+#         # setting a patch_dropout of 0. would mean it is disabled and this function would be the identity fn
+#         self.patch_dropout = PatchDropout(patch_dropout) if patch_dropout > 0. else nn.Identity()
+#         self.ln_pre = nn.Identity() if no_ln_pre else norm_layer(width)
+#         self.down_ln = norm_layer(width)
+#         self.boundary_predictor = BoundaryPredictor(
+#             d_model=width,
+#             d_inner=int(width * mlp_ratio),
+#             activation_function="gelu",
+#             temp=temp,
+#             prior=compression_rate,
+#             bp_type='gumbel',
+#             threshold=threshold
+#         )
+
+#         self.transformer_pre = Transformer(
+#             width,
+#             self.depth[0],
+#             heads,
+#             mlp_ratio,
+#             ls_init_value=ls_init_value,
+#             act_layer=act_layer,
+#             norm_layer=norm_layer,
+#         )
+
+#         self.transformer_post = Transformer(
+#             width,
+#             self.depth[1],
+#             heads,
+#             mlp_ratio,
+#             ls_init_value=ls_init_value,
+#             act_layer=act_layer,
+#             norm_layer=norm_layer,
+#         )
+
+#         if attentional_pool:
+#             if isinstance(attentional_pool, str):
+#                 self.attn_pool_type = attentional_pool
+#                 self.pool_type = 'none'
+#                 if attentional_pool in ('parallel', 'cascade'):
+#                     self.attn_pool = AttentionalPooler(
+#                         output_dim,
+#                         width,
+#                         n_head=attn_pooler_heads,
+#                         n_queries=attn_pooler_queries,
+#                     )
+#                     self.attn_pool_contrastive = AttentionalPooler(
+#                         output_dim,
+#                         width,
+#                         n_head=attn_pooler_heads,
+#                         n_queries=1,
+#                     )
+#                 else:
+#                     assert False
+#             else:
+#                 self.attn_pool_type = ''
+#                 self.pool_type = pool_type
+#                 self.attn_pool = AttentionalPooler(
+#                     output_dim,
+#                     width,
+#                     n_head=attn_pooler_heads,
+#                     n_queries=attn_pooler_queries,
+#                 )
+#                 self.attn_pool_contrastive = None
+#             pool_dim = output_dim
+#         else:
+#             self.attn_pool = None
+#             pool_dim = width
+#             self.pool_type = pool_type
+
+#         self.ln_post = norm_layer(pool_dim)
+#         self.proj = nn.Parameter(scale * torch.randn(pool_dim, output_dim))
+
+#     @torch.jit.ignore
+#     def set_grad_checkpointing(self, enable: bool = True):
+#         self.transformer_pre.grad_checkpointing = enable
+#         self.transformer_post.grad_checkpointing = enable
+    
+#     @torch.jit.ignore
+#     def no_weight_decay(self):
+#         # for timm optimizers, 1d params like logit_scale, logit_bias, ln/bn scale, biases are excluded by default
+#         no_wd = {'positional_embedding', 'class_embedding'}
+#         return no_wd
+
+#     def _global_pool(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+#         if self.pool_type == 'avg':
+#             pooled, tokens = x[:, 1:].mean(dim=1), x[:, 1:]
+#         elif self.pool_type == 'tok':
+#             pooled, tokens = x[:, 0], x[:, 1:]
+#         else:
+#             pooled = tokens = x
+
+#         return pooled, tokens
+
+#     def _embeds(self, x:torch.Tensor) -> torch.Tensor:
+#         x = self.conv1(x)  # shape = [*, dim, grid, grid]
+#         x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
+#         x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
+
+#         # class embeddings and positional embeddings
+#         x = torch.cat([_expand_token(self.class_embedding, x.shape[0]).to(x.dtype), x], dim=1)
+#         # shape = [*, grid ** 2 + 1, width]
+#         x = x + self.positional_embedding.to(x.dtype)
+
+#         # patch dropout (if active)
+#         x = self.patch_dropout(x)
+
+#         # apply norm before transformer
+#         x = self.ln_pre(x)
+#         return x
+
+#     def _pool(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+#         if self.attn_pool is not None:
+#             if self.attn_pool_contrastive is not None:
+#                 # This is untested, WIP pooling that should match paper
+#                 x = self.ln_post(x)  # TBD LN first or separate one after each pool?
+#                 tokens = self.attn_pool(x)
+#                 if self.attn_pool_type == 'parallel':
+#                     pooled = self.attn_pool_contrastive(x)
+#                 else:
+#                     assert self.attn_pool_type == 'cascade'
+#                     pooled = self.attn_pool_contrastive(tokens)
+#             else:
+#                 # this is the original OpenCLIP CoCa setup, does not match paper
+#                 x = self.attn_pool(x)
+#                 x = self.ln_post(x)
+#                 pooled, tokens = self._global_pool(x)
+#         elif self.final_ln_after_pool:
+#             pooled, tokens = self._global_pool(x)
+#             pooled = self.ln_post(pooled)
+#         else:
+#             x = self.ln_post(x)
+#             pooled, tokens = self._global_pool(x)
+
+#         return pooled, tokens
+    
+#     def encode(self, x: torch.Tensor, return_loss: bool):
+#         x = self._embeds(x) # [B, 3, H, W] -> [B, L, D]
+#         x = self.transformer_pre(x) # [B, L, D] -> [B, L, D]
+
+#         if self.flop_measure:
+#             B, L, _ = x.shape
+#             num_tokens_to_keep = max(1, int(L * self.prior))
+#             indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
+#             hard_boundaries = torch.zeros(B, L, device=x.device)
+#             # hard boundaries: [B, L]
+#             hard_boundaries[:, indices] = 1 
+#         else:
+#             x_transposed = x.transpose(0, 1) # [B, L, D] -> [L, B, D]
+#             # hard boundaries: [B, L]
+#             _, hard_boundaries = self.boundary_predictor(x_transposed) # input is [L, B, D]
+
+#         hidden: torch.Tensor = self.down_ln(x) # [B, L, D] -> [B, L, D]
+#         hidden = hidden.transpose(0, 1) # [B, L, D] -> [L, B, D]
+#         shortened_hidden = downsample(
+#             boundaries=hard_boundaries,
+#             hidden=hidden,
+#             null_group=self.null_token
+#         ) # [L, B, D] -> [S, B, D]
+#         shortened_hidden = shortened_hidden.transpose(0, 1) # [S, B, D] -> [B, S, D]
+
+#         features = self.transformer_post(shortened_hidden) # [B, S, D] -> [B, S, D]
+        
+#         if return_loss and not self.flop_measure:
+#             boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
+#             avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
+#             boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
+#             return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+#         else:
+#             return features # [B, S, D]
+
+#     def forward(self, x: torch.Tensor, return_loss: bool = False):
+#         features_out = self.encode(x, return_loss=return_loss) # [B, 3, H, W] -> [B, S, D]
+
+#         if return_loss and not self.flop_measure:
+#             # encode returns tuple (features, loss, avg_boundaries, boundary_ratio)
+#             tensor, boundary_loss, avg_boundaries_per_batch, boundary_ratio = features_out
+#         else:
+#             tensor = features_out
+        
+#         pooled, tokens = self._pool(tensor) # [B, S, D] -> [B, D], [B, S, D]
+#         pooled = pooled @ self.proj # [B, D] -> [B, output_dim]
+
+#         if self.output_tokens:
+#             return pooled, tokens
+
+#         if return_loss and not self.flop_measure:
+#             return pooled, boundary_loss, avg_boundaries_per_batch, boundary_ratio # [B, output_dim]
+#         else:
+#             return pooled # [B, output_dim]
+
+
+
 ########################################################################################################
 ########################################################################################################
 # legacy code below --- IGNORE ---
 ########################################################################################################
 
-@torch.jit.script
-def add_and_scale(tensor1, tensor2, alpha: float) -> torch.Tensor:
-    return alpha * (tensor1 + tensor2)
-
-class PositionalEmbedding(nn.Module):
-    def __init__(self, demb):
-        super(PositionalEmbedding, self).__init__()
-
-        self.demb = demb
-
-        inv_freq = 1 / (10000 ** (torch.arange(0.0, demb, 2.0) / demb))
-        self.register_buffer("inv_freq", inv_freq)
-
-    def forward(self, pos_seq):
-        sinusoid_inp = torch.ger(pos_seq, self.inv_freq)
-        pos_emb = torch.cat([sinusoid_inp.sin(), sinusoid_inp.cos()], dim=-1)
-        return pos_emb[:, None, :]
-
-class PositionwiseFF(nn.Module):
-    def __init__(self, d_model, d_inner, dropout, pre_lnorm, activation_function):
-        super(PositionwiseFF, self).__init__()
-
-        self.d_model = d_model
-        self.d_inner = d_inner
-        self.dropout = dropout
-
-        if activation_function == 'relu':
-            activation_fn = nn.ReLU(inplace=True)
-        elif activation_function == 'gelu':
-            activation_fn = torch.nn.GELU()
-
-        self.CoreNet = nn.Sequential(
-            nn.Linear(d_model, d_inner),
-            activation_fn,
-            nn.Dropout(dropout),
-            nn.Linear(d_inner, d_model),
-            nn.Dropout(dropout),
-        )
-
-        self.layer_norm = nn.LayerNorm(d_model)
-
-        self.pre_lnorm = pre_lnorm
-
-    def forward(self, inp):
-        if self.pre_lnorm:
-            core_out = self.CoreNet(self.layer_norm(inp))
-            output = core_out + inp
-        else:
-            core_out = self.CoreNet(inp)
-            output = self.layer_norm(inp + core_out)
-
-        return output
-
-class RelPartialLearnableMultiHeadAttn(nn.Module):
-    def __init__(
-        self, n_head, d_model, d_head, dropout, dropatt, pre_lnorm, activation_function
-    ):
-        super(RelPartialLearnableMultiHeadAttn, self).__init__()
-
-        del activation_function
-
-        self.n_head = n_head
-        self.d_model = d_model
-        self.d_head = d_head
-        self.dropout = dropout
-
-        self.qkv_net = nn.Linear(self.d_model, 3 * n_head * d_head)
-        self.r_net = nn.Linear(self.d_model, self.n_head * self.d_head)
-
-        self.drop = nn.Dropout(dropout)
-        self.dropatt = nn.Dropout(dropatt)
-        self.o_net = nn.Linear(n_head * d_head, d_model)
-
-        self.layer_norm = nn.LayerNorm(d_model)
-
-        self.scale = 1 / (d_head ** 0.5)
-
-        self.pre_lnorm = pre_lnorm
-
-    def _rel_shift(self, x):
-        zero_pad = torch.zeros((x.size(0), x.size(1), x.size(2), 1),
-                               device=x.device, dtype=x.dtype)
-        x_padded = torch.cat([zero_pad, x], dim=3)
-
-        x_padded = x_padded.view(x.size(0), x.size(1), x.size(3) + 1, x.size(2))
-
-        x = x_padded.narrow(2, 1, x_padded.size(2) - 1).view_as(x)
-
-        return x
-
-    def forward(self, w, r, r_w_bias, r_r_bias, attn_mask):
-        # w is of size: T x B x C
-        # r is of size: T x 1 x C
-        # biases are of size: (n_head x d_head), we add the same bias to each token
-        # attn_mask is of size (q_len x k_len)
-        qlen, rlen, bsz = w.size(0), r.size(0), w.size(1)
-
-        if self.pre_lnorm:
-            w_head_q, w_head_k, w_head_v = self.qkv_net(self.layer_norm(w))
-        else:
-            w_heads = self.qkv_net(w)
-
-        r_head_k = self.r_net(r)
-        w_head_q, w_head_k, w_head_v = torch.chunk(w_heads, 3, dim=-1)
-
-        klen = w_head_k.size(0)
-
-        w_head_q = w_head_q.view(qlen, bsz, self.n_head, self.d_head)
-        w_head_k = w_head_k.view(klen, bsz, self.n_head, self.d_head)
-        w_head_v = w_head_v.view(klen, bsz, self.n_head, self.d_head)
-
-        r_head_k = r_head_k.view(rlen, self.n_head, self.d_head)       # qlen x n_head x d_head
-
-        # compute attention score
-        rw_head_q = w_head_q + r_w_bias                                # qlen x bsz x n_head x d_head
-        AC = torch.einsum('ibnd,jbnd->bnij', rw_head_q, w_head_k)      # bsz x n_head x qlen x klen
-
-        rr_head_q = w_head_q + r_r_bias
-        BD = torch.einsum('ibnd,jnd->bnij', rr_head_q, r_head_k)       # bsz x n_head x qlen x klen
-        BD = self._rel_shift(BD)
-
-        # [bsz x n_head x qlen x klen]
-        attn_score = add_and_scale(AC, BD, self.scale)
-
-        # compute attention probability
-        if attn_mask is not None:
-            if attn_mask.dim() == 2:
-                attn_score.masked_fill_(attn_mask[None, None, :, :], -float('inf'))
-            elif attn_mask.dim() == 3:
-                attn_score.masked_fill_(attn_mask[:, None, :, :], -float('inf'))
-        else:
-            pass
-        
-        # [bsz x n_head x qlen x klen]
-        attn_prob = F.softmax(attn_score, dim=3)
-        attn_prob = self.dropatt(attn_prob)
-
-        # compute attention vector
-        attn_vec = torch.einsum('bnij,jbnd->ibnd', attn_prob, w_head_v)
-
-        # [qlen x bsz x n_head x d_head]
-        attn_vec = attn_vec.contiguous().view(
-            attn_vec.size(0), attn_vec.size(1), self.n_head * self.d_head)
-
-        # linear projection
-        attn_out = self.o_net(attn_vec)
-        attn_out = self.drop(attn_out)
-
-        if self.pre_lnorm:
-            # residual connection
-            output = w + attn_out
-        else:
-            # residual connection + layer normalization
-            output = self.layer_norm(w + attn_out)
-
-        return output
-
-class RelPartialLearnableDecoderLayer(nn.Module):
-    def __init__(
-        self,
-        n_head,
-        d_model,
-        d_head,
-        d_inner,
-        dropout,
-        dropatt,
-        pre_lnorm,
-        activation_function,
-    ):
-        super(RelPartialLearnableDecoderLayer, self).__init__()
-
-        self.dec_attn = RelPartialLearnableMultiHeadAttn(
-            n_head, d_model, d_head, dropout, dropatt, pre_lnorm, activation_function
-        )
-        self.pos_ff = PositionwiseFF(
-            d_model,
-            d_inner,
-            dropout,
-            pre_lnorm,
-            activation_function,
-        )
-
-    def forward(self, dec_inp, r, r_w_bias, r_r_bias, dec_attn_mask=None):
-        output = self.dec_attn(dec_inp, r, r_w_bias, r_r_bias,
-                               attn_mask=dec_attn_mask)
-        output = self.pos_ff(output)
-
-        return output
 
 class HierarchicalDTPViT(nn.Module):
     def __init__(self,
