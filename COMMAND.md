@@ -1,4 +1,11 @@
-# Command
+# command
+
+## Who the heck is using the GPUs?
+
+```bash
+squeue -p quad -o "%.18i %.9P %.20j %.15u %.2t %.10M %.6D %R"
+squeue -p nextgen -o "%.18i %.9P %.20j %.15u %.2t %.10M %.6D %R"
+```
 
 Training a CLIP from scratch:
 
@@ -54,12 +61,7 @@ huggingface-cli login --token [your token]
 quota -s
 ```
 
-## Who the heck is using the GPUs?
 
-```bash
-squeue -p quad -o "%.18i %.9P %.20j %.15u %.2t %.10M %.6D %R"
-squeue -p nextgen -o "%.18i %.9P %.20j %.15u %.2t %.10M %.6D %R"
-```
 
 ## unzip dataset
 
