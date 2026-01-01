@@ -785,7 +785,7 @@ if __name__ == "__main__":
         compression_rate=compression_rate,
         heads=768 // 64,
         mlp_ratio=4.0,
-        temp=1.5, # FIXME: need to match training temp
+        temp=1.0, # FIXME: need to match training temp
         pos_embed_type="sin_cos_2d",
         flop_measure=False # need to learn real boundaries
     )
@@ -796,7 +796,8 @@ if __name__ == "__main__":
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp2.0/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_20fold/checkpoints/epoch_4.pt"
 
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp2.0_15epoch/checkpoints/epoch_15.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp2.0_15epoch/checkpoints/epoch_15.pt"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/non_native_vitbased_drip/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp_1.5_15epoch/checkpoints/epoch_15.pt"
 
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_5e-5/checkpoints/epoch_4.pt"

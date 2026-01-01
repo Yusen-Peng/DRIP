@@ -79,7 +79,7 @@ def main():
             compression_rate=COMPRESSION_RATE,
             heads=width // 64,
             mlp_ratio=mlp_ratio,
-            temp=0.5,
+            temp=1.0,
             flop_measure=True
         )
     elif MODE == "H-DRIP":

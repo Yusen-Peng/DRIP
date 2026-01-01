@@ -87,7 +87,6 @@ from .utils import to_2tuple
 #         else:
 #             raise ValueError
     
-    
 #         # pos-aware attention bias terms
 #         num_heads = heads
 #         embed_dim = width
@@ -115,7 +114,8 @@ from .utils import to_2tuple
 #             mlp_ratio,
 #             ls_init_value=ls_init_value,
 #             act_layer=act_layer,
-#             norm_layer=norm_layer, 
+#             norm_layer=norm_layer,
+#             batch_first=False
 #         )
 
 #         self.transformer_post = TransformerXL(
@@ -126,6 +126,7 @@ from .utils import to_2tuple
 #             ls_init_value=ls_init_value,
 #             act_layer=act_layer,
 #             norm_layer=norm_layer,
+#             batch_first=False
 #         )
 
 #         if attentional_pool:
@@ -194,8 +195,6 @@ from .utils import to_2tuple
 
 #         # class embeddings and positional embeddings
 #         x = torch.cat([_expand_token(self.class_embedding, x.shape[0]).to(x.dtype), x], dim=1)
-#         # shape = [*, grid ** 2 + 1, width]
-#         # x = x + self.positional_embedding.to(x.dtype)
 
 #         # patch dropout (if active)
 #         x = self.patch_dropout(x)
@@ -300,7 +299,6 @@ from .utils import to_2tuple
 #             return pooled, boundary_loss, avg_boundaries_per_batch, boundary_ratio # [B, output_dim]
 #         else:
 #             return pooled # [B, output_dim]
-
 
 
 

@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Dec29_nonnative_attention_drip_4x_4_8_with_5e-5_sinusoidal_temp1.0
-#SBATCH --output=Dec29_nonnative_attention_drip_4x_4_8_with_5e-5_sinusoidal_temp1.0.log
+#SBATCH --job-name=Dec31_nonnative_attention_drip_4x_4_8_with_5e-5_sinusoidal_temp1.5_plain
+#SBATCH --output=Dec31_nonnative_attention_drip_4x_4_8_with_5e-5_sinusoidal_temp1.5_plain.log
 #SBATCH --partition=quad
 #SBATCH --time=60:00:00
 #SBATCH --nodes=1
