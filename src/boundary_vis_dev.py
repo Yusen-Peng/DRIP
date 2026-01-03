@@ -530,17 +530,33 @@ def visualize_boundaries_single_multi(
     @torch.no_grad()
     def overlay_hard(img_3chw: torch.Tensor) -> Image.Image:
         device = next(model.parameters()).device
-
         # [3, H, W] -> [1, 3, H, W]
         x: torch.Tensor = img_3chw.unsqueeze(0).to(device)
 
-        # [B, 3, H, W] -> [B, L, D]
-        x = model._embeds(x)
-        x = model.transformer_pre(x)  # [B, L, D]
+        if model.pos_embed_type == "transformer-xl":
+            x = model._embeds(x) # [B, 3, H, W] -> [B, L, D]
+            # Compute position embeddings
+            T = x.size(1)
+            pos_seq = torch.arange(T - 1, -1, -1.0, device=x.device, dtype=x.dtype)
+            pos_emb = model.positional_embedding(pos_seq)
+            x = model.transformer_pre(
+                x, 
+                pos_emb=pos_emb, 
+                r_w_bias=model.r_w_bias, 
+                r_r_bias=model.r_r_bias) # [B, L, D] -> [B, L, D]
 
-        # boundary_predictor expects [L, B, D]
-        x_transposed = x.transpose(0, 1)  # [L, B, D]
-        soft_boundaries, hard_boundaries = model.boundary_predictor(x_transposed)  # [B, L]
+            x_transposed = x.transpose(0, 1) # [B, L, D] -> [L, B, D]
+            # hard boundaries: [B, L]
+            soft_boundaries, hard_boundaries = model.boundary_predictor(x_transposed) # input is [L, B, D]
+
+        else:
+            # [B, 3, H, W] -> [B, L, D]
+            x = model._embeds(x)
+            x = model.transformer_pre(x)  # [B, L, D]
+
+            # boundary_predictor expects [L, B, D]
+            x_transposed = x.transpose(0, 1)  # [L, B, D]
+            soft_boundaries, hard_boundaries = model.boundary_predictor(x_transposed)  # [B, L]
 
         print("hard boundaries shape:", hard_boundaries.shape)
 
@@ -668,13 +684,30 @@ def visualize_boundaries_hard_soft_2x2(
         # [3, H, W] -> [1, 3, H, W]
         x: torch.Tensor = img_3chw.unsqueeze(0).to(device)
 
-        # [B, 3, H, W] -> [B, L, D]
-        x = model._embeds(x)
-        x = model.transformer_pre(x)  # [B, L, D]
+        if model.pos_embed_type == "transformer-xl":
+            x = model._embeds(x) # [B, 3, H, W] -> [B, L, D]
+            # Compute position embeddings
+            T = x.size(1)
+            pos_seq = torch.arange(T - 1, -1, -1.0, device=x.device, dtype=x.dtype)
+            pos_emb = model.positional_embedding(pos_seq)
+            x = model.transformer_pre(
+                x, 
+                pos_emb=pos_emb, 
+                r_w_bias=model.r_w_bias, 
+                r_r_bias=model.r_r_bias) # [B, L, D] -> [B, L, D]
 
-        # boundary_predictor expects [L, B, D]
-        x_transposed = x.transpose(0, 1)  # [L, B, D]
-        soft_boundaries, hard_boundaries = model.boundary_predictor(x_transposed)  # [B, L]
+            x_transposed = x.transpose(0, 1) # [B, L, D] -> [L, B, D]
+            # hard boundaries: [B, L]
+            soft_boundaries, hard_boundaries = model.boundary_predictor(x_transposed) # input is [L, B, D]
+
+        else:
+            # [B, 3, H, W] -> [B, L, D]
+            x = model._embeds(x)
+            x = model.transformer_pre(x)  # [B, L, D]
+
+            # boundary_predictor expects [L, B, D]
+            x_transposed = x.transpose(0, 1)  # [L, B, D]
+            soft_boundaries, hard_boundaries = model.boundary_predictor(x_transposed)  # [B, L]
 
         print("hard boundaries shape:", hard_boundaries.shape)
 
@@ -785,8 +818,8 @@ if __name__ == "__main__":
         compression_rate=compression_rate,
         heads=768 // 64,
         mlp_ratio=4.0,
-        temp=1.0, # FIXME: need to match training temp
-        pos_embed_type="sin_cos_2d",
+        temp=1.0, # NOTE: need to match training temp
+        pos_embed_type="transformer-xl", # NOTE: sin_cos_2d or transformer-xl
         flop_measure=False # need to learn real boundaries
     )
 
@@ -797,8 +830,20 @@ if __name__ == "__main__":
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_20fold/checkpoints/epoch_4.pt"
 
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp2.0_15epoch/checkpoints/epoch_15.pt"
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/non_native_vitbased_drip/checkpoints/epoch_4.pt"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/non_native_vitbased_drip/checkpoints/epoch_4.pt"
+    
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/non_native_vitbased_drip_temp1.5/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp_1.5_15epoch/checkpoints/epoch_15.pt"
+
+    # ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/new_XLbased_drip_temp1.5/checkpoints/epoch_4.pt"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/new_XLbased_drip/checkpoints/epoch_4.pt"
+
+
+
+
+
+
+
 
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_5e-5/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_4x_4_8_1e-4/checkpoints/epoch_4.pt"
