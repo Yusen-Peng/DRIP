@@ -164,7 +164,7 @@ def _build_vision_tower(
                 print("Using DRIP pooling")
                 print(f"Using DTP ViT with compression rate {compression_rate}")
                 print(f"Depth for each stage: {depth}")
-                temp = 1.5  # temperature for Gumbel Softmax
+                temp = 1.0  # temperature for Gumbel Softmax
                 visual = DTPViT(
                     image_size=vision_cfg.image_size,
                     patch_size=vision_cfg.patch_size,
