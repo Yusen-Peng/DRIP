@@ -164,7 +164,7 @@ def _build_vision_tower(
                 print("Using DRIP pooling")
                 print(f"Using DTP ViT with compression rate {compression_rate}")
                 print(f"Depth for each stage: {depth}")
-                temp = 1.0  # temperature for Gumbel Softmax
+                temp = 0.5  # temperature for Gumbel Softmax - NOTE: 0.5 is the default/best one so far
                 visual = DTPViT(
                     image_size=vision_cfg.image_size,
                     patch_size=vision_cfg.patch_size,
@@ -175,7 +175,7 @@ def _build_vision_tower(
                     heads=vision_cfg.width // 64,
                     mlp_ratio=vision_cfg.mlp_ratio,
                     temp=temp,
-                    pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
+                    pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
                     flop_measure=False # need to learn real boundaries
                 )
                 print(f"🍑🍑🍑what is the temperature? {temp}🍑🍑🍑")

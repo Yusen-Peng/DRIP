@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Jan3_nonnative_attention_drip_4x_4_8_with_5e-5_sinusoidal_temp1.0_plain_alpha1.0_gradient
-#SBATCH --output=Jan3_nonnative_attention_drip_4x_4_8_with_5e-5_sinusoidal_temp1.0_plain_alpha1.0_gradient.log
+#SBATCH --job-name=Jan9_temp0.5_reproduce_XL
+#SBATCH --output=Jan9_temp0.5_reproduce_XL.log
 #SBATCH --partition=quad
 #SBATCH --time=60:00:00
 #SBATCH --nodes=1
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
-torchrun --nproc_per_node=1 src/task2_clip.py 2>&1 | tee what_the_heck.log
+torchrun --nproc_per_node=1 src/task2_clip.py
 
 conda deactivate
 # End of script

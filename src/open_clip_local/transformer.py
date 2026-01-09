@@ -434,7 +434,7 @@ class Transformer(nn.Module):
         self.width = width
         self.layers = layers
         self.batch_first = batch_first
-        self.grad_checkpointing = False
+        self.grad_checkpointing = False # always NOT use gradient checkpointing
 
         self.resblocks = nn.ModuleList([
             # ResidualAttentionBlock(
@@ -718,8 +718,8 @@ class TransformerXL(nn.Module):
             act_layer: Callable = nn.GELU,
             norm_layer: Callable = LayerNorm,
             batch_first: bool = True,
-            dropout: float = 0.0,
-            dropatt: float = 0.0
+            dropout: float = 0.1,
+            dropatt: float = 0.1
     ):
         super().__init__()
         self.width = width

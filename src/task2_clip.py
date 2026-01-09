@@ -76,7 +76,6 @@ def main():
     # lr = 1e-4
     # lr = 1e-3
 
-
     wd = 0.1
     epochs = 4 # NOTE: 4 for small experiment; 15 for full training
     
