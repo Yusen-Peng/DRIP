@@ -10,70 +10,75 @@ from .BP import BoundaryPredictor, downsample
 from .utils import to_2tuple
 import numpy as np
 
-def patch_entropy_gray(patch_rgb: np.ndarray, bins: int = 256) -> float:
-    """
-    Shannon entropy on grayscale histogram.
-    patch_rgb: (ph, pw, 3) uint8
-    """
-    # RGB -> grayscale (luma)
-    gray = (
-        0.2989 * patch_rgb[..., 0] +
-        0.5870 * patch_rgb[..., 1] +
-        0.1140 * patch_rgb[..., 2]
-    ).astype(np.uint8)
-
-    hist = np.bincount(gray.reshape(-1), minlength=bins).astype(np.float64)
-    p = hist / (hist.sum() + 1e-12)
-    p = p[p > 0]
-    return float(-(p * np.log2(p)).sum())
-
-def entropy_boundary_mask(
-    img_rgb: np.ndarray,
+@torch.no_grad()
+def entropy_boundary_mask_torch(
+    img: torch.Tensor,
     grid_h: int,
     grid_w: int,
     top_frac: float = 0.25,
-) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Returns:
-      ent_map: (grid_h, grid_w) entropy values
-      hard_mask: (grid_h, grid_w) {0,1} boundary tokens = top_frac entropy
-    """
-    H, W, _ = img_rgb.shape
+    bins: int = 256,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    assert img.dim() == 4 and img.size(1) == 3, "img must be [B,3,H,W]"
+    B, _, H, W = img.shape
+
     patch_h = H // grid_h
     patch_w = W // grid_w
-
-    # If not divisible, crop to a clean grid
     Hc = patch_h * grid_h
     Wc = patch_w * grid_w
-    img_rgb = img_rgb[:Hc, :Wc]
-    H, W, _ = img_rgb.shape
+    img = img[:, :, :Hc, :Wc]
 
-    ent = np.zeros((grid_h, grid_w), dtype=np.float64)
+    # RGB -> grayscale (luma), still float
+    gray = 0.2989 * img[:, 0] + 0.5870 * img[:, 1] + 0.1140 * img[:, 2]   # [B, Hc, Wc]
+    gray = gray.clamp(0, 1)
 
-    for i in range(grid_h):
-        for j in range(grid_w):
-            y0, y1 = i * patch_h, (i + 1) * patch_h
-            x0, x1 = j * patch_w, (j + 1) * patch_w
-            patch = img_rgb[y0:y1, x0:x1]
-            ent[i, j] = patch_entropy_gray(patch)
+    # quantize to [0, bins-1]
+    q = (gray * (bins - 1)).round().to(torch.long)  # [B, Hc, Wc]
 
-    flat = ent.reshape(-1)
-    k = int(np.ceil(top_frac * flat.size))
-    k = max(1, k)
+    # patchify: [B, grid_h, grid_w, patch_h, patch_w] -> [B, N, P]
+    patches = q.view(B, grid_h, patch_h, grid_w, patch_w).permute(0, 1, 3, 2, 4)
+    patches = patches.reshape(B, grid_h * grid_w, patch_h * patch_w)      # [B, N, P]
+    N, P = grid_h * grid_w, patch_h * patch_w
 
-    # top-k indices by entropy
-    topk_idx = np.argpartition(-flat, k - 1)[:k]
-    hard = np.zeros_like(flat, dtype=np.float32)
-    hard[topk_idx] = 1.0
-    hard_mask = hard.reshape(grid_h, grid_w)
+    # histogram via one_hot + sum: [B, N, P, bins] -> [B, N, bins]
+    hist = torch.zeros((B, N, bins), device=img.device, dtype=torch.float32)
+    ones = torch.ones((B, N, P), device=img.device, dtype=torch.float32)
+    hist.scatter_add_(dim=2, index=patches, src=ones)
 
-    return ent, hard_mask
+    # probability per bin
+    p = hist / (hist.sum(dim=-1, keepdim=True) + 1e-12)                   # [B, N, bins]
 
+    # entropy: -sum p log2 p
+    ent = -(p * (p + 1e-12).log2()).sum(dim=-1)                           # [B, N]
+    ent_map = ent.view(B, grid_h, grid_w)
 
+    # top-k mask per image
+    k = max(1, int(torch.ceil(torch.tensor(top_frac * N)).item()))
+    topk_idx = torch.topk(ent, k=k, dim=1, largest=True).indices          # [B, k]
 
+    hard = torch.zeros((B, N), device=img.device, dtype=torch.float32)
+    hard.scatter_(1, topk_idx, 1.0)
+    hard_mask = hard.view(B, grid_h, grid_w)
 
+    return ent_map, hard_mask
 
+@torch.no_grad()
+def build_entropy_boundaries(
+    x: torch.Tensor,            # [B,3,H,W]
+    grid_h: int,
+    grid_w: int,
+    top_frac: float,
+) -> torch.Tensor:
+    B = x.size(0)
+    L = 1 + grid_h * grid_w
 
+    ent_map, hard_mask = entropy_boundary_mask_torch(
+        img=x, grid_h=grid_h, grid_w=grid_w, top_frac=top_frac
+    )  # hard_mask: [B, gh, gw]
+
+    hard_boundaries = torch.zeros((B, L), device=x.device, dtype=torch.float32)
+    hard_boundaries[:, 0] = 1.0
+    hard_boundaries[:, 1:] = hard_mask.reshape(B, -1)
+    return hard_boundaries, ent_map
 
 
 class DTPViT(nn.Module):
@@ -160,18 +165,18 @@ class DTPViT(nn.Module):
         self.r_r_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
 
         # setting a patch_dropout of 0. would mean it is disabled and this function would be the identity fn
-        self.patch_dropout = PatchDropout(patch_dropout) if patch_dropout > 0. else nn.Identity()
+        self.patch_dropout = nn.Identity()
         self.ln_pre = nn.Identity() if no_ln_pre else norm_layer(width)
         self.down_ln = norm_layer(width)
-        self.boundary_predictor = BoundaryPredictor(
-            d_model=width,
-            d_inner=int(width * mlp_ratio),
-            activation_function="gelu",
-            temp=temp,
-            prior=compression_rate,
-            bp_type='gumbel',
-            threshold=threshold
-        )
+        # self.boundary_predictor = BoundaryPredictor(
+        #     d_model=width,
+        #     d_inner=int(width * mlp_ratio),
+        #     activation_function="gelu",
+        #     temp=temp,
+        #     prior=compression_rate,
+        #     bp_type='gumbel',
+        #     threshold=threshold
+        # )
 
         self.transformer_pre = TransformerXL(
             width,
@@ -297,6 +302,15 @@ class DTPViT(nn.Module):
         return pooled, tokens
     
     def encode(self, x: torch.Tensor, return_loss: bool):
+
+        hard_boundaries, _ = build_entropy_boundaries(
+            x, self.grid_size[0], self.grid_size[1], self.prior
+        )
+        
+        # print(f'[debug] hard_boundaries sum: {hard_boundaries.sum(dim=1)}')
+        # print(f'[debug] hard_boundaries: {hard_boundaries}')
+        # print(f"shape check: hard_boundaries: {hard_boundaries.shape}, x: {x.shape}")
+
         x = self._embeds(x) # [B, 3, H, W] -> [B, L, D]
 
         # Compute position embeddings
@@ -308,18 +322,6 @@ class DTPViT(nn.Module):
             pos_emb=pos_emb, 
             r_w_bias=self.r_w_bias, 
             r_r_bias=self.r_r_bias) # [B, L, D] -> [B, L, D]
-
-        if self.flop_measure:
-            B, L, _ = x.shape
-            num_tokens_to_keep = max(1, int(L * self.prior))
-            indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
-            hard_boundaries = torch.zeros(B, L, device=x.device)
-            # hard boundaries: [B, L]
-            hard_boundaries[:, indices] = 1 
-        else:
-            x_transposed = x.transpose(0, 1) # [B, L, D] -> [L, B, D]
-            # hard boundaries: [B, L]
-            _, hard_boundaries = self.boundary_predictor(x_transposed) # input is [L, B, D]
 
         hidden: torch.Tensor = self.down_ln(x) # [B, L, D] -> [B, L, D]
         hidden = hidden.transpose(0, 1) # [B, L, D] -> [L, B, D]
@@ -341,7 +343,8 @@ class DTPViT(nn.Module):
             r_r_bias=self.r_r_bias) # [B, S, D] -> [B, S, D]
         
         if return_loss and not self.flop_measure:
-            boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
+            boundary_loss = torch.tensor(0.0, device=x.device) # entropy-based method: boundary loss disabled
+            # boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
             avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
             boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
             return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
@@ -358,33 +361,33 @@ class DTPViT(nn.Module):
             tensor = features_out
         
         ###################################### original #######################################
-        # pooled, tokens = self._pool(tensor) # [B, S, D] -> [B, D], [B, S, D]
-        # pooled = pooled @ self.proj # [B, D] -> [B, output_dim]
+        pooled, tokens = self._pool(tensor) # [B, S, D] -> [B, D], [B, S, D]
+        pooled = pooled @ self.proj # [B, D] -> [B, output_dim]
 
-        # if self.output_tokens:
-        #     return pooled, tokens
+        if self.output_tokens:
+            return pooled, tokens
 
-        # if return_loss and not self.flop_measure:
-        #     return pooled, boundary_loss, avg_boundaries_per_batch, boundary_ratio # [B, output_dim]
-        # else:
-        #     return pooled # [B, output_dim]
+        if return_loss and not self.flop_measure:
+            return pooled, boundary_loss, avg_boundaries_per_batch, boundary_ratio # [B, output_dim]
+        else:
+            return pooled # [B, output_dim]
 
 
         ###################################### ablation #######################################
         # pool across sequence dimension with mean pooling
         # tensor: [B, S, D]
-        pad_mask = tensor.abs().sum(dim=-1).eq(0)          # [B, S]  True where padded
-        valid_mask = (~pad_mask).float()                  # [B, S]
-        valid_mask_exp = valid_mask.unsqueeze(-1)         # [B, S, 1]
+        # pad_mask = tensor.abs().sum(dim=-1).eq(0)          # [B, S]  True where padded
+        # valid_mask = (~pad_mask).float()                  # [B, S]
+        # valid_mask_exp = valid_mask.unsqueeze(-1)         # [B, S, 1]
 
-        x = tensor * valid_mask_exp                       # [B, S, D]
-        sum_x = x.sum(dim=1)                              # [B, D]  sum over sequence
-        valid_counts = valid_mask.sum(dim=1).clamp(min=1e-6).unsqueeze(-1)  # [B, 1]
-        x = sum_x / valid_counts                          # [B, D]
+        # x = tensor * valid_mask_exp                       # [B, S, D]
+        # sum_x = x.sum(dim=1)                              # [B, D]  sum over sequence
+        # valid_counts = valid_mask.sum(dim=1).clamp(min=1e-6).unsqueeze(-1)  # [B, 1]
+        # x = sum_x / valid_counts                          # [B, D]
 
-        logits = self.head(x)                             # [B, num_classes]
+        # logits = self.head(x)                             # [B, num_classes]
 
-        if return_loss and not self.flop_measure:
-            return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
-        else:
-            return logits
+        # if return_loss and not self.flop_measure:
+        #     return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+        # else:
+        #     return logits

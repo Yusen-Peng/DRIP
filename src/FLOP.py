@@ -9,7 +9,11 @@ from numbers import Number
 from typing import Any, List
 import numpy as np
 from fvcore.nn import FlopCountAnalysis
-from open_clip_local.DTP_ViT import DTPViT, HierarchicalDTPViT, SoftDTPViT, XL_Baseline
+# from open_clip_local.DTP_ViT import DTPViT
+# from open_clip_local.DTP_ViT_TransformerXL import DTPViT
+from open_clip_local.DTP_ViT_entropy import DTPViT
+
+from open_clip_local.DTP_ViT import HierarchicalDTPViT, SoftDTPViT, XL_Baseline
 from open_clip_local.transformer import VisionTransformer
 
 DROPOUT_FLOPS = 4
@@ -29,7 +33,12 @@ def rfft_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
 
 def calc_flops(model, img_size=224, show_details=False, ratios=None):
     with torch.no_grad():
-        x = torch.randn(1, 3, img_size, img_size)
+        # x = torch.randn(1, 3, img_size, img_size)
+
+
+        x = torch.randn(10, 3, img_size, img_size)
+        
+        
         # model.default_ratio = ratios # this seems useless
         fca1 = FlopCountAnalysis(model, x)
         handlers = {
@@ -79,7 +88,7 @@ def main():
             compression_rate=COMPRESSION_RATE,
             heads=width // 64,
             mlp_ratio=mlp_ratio,
-            temp=1.0,
+            temp=0.5,
             flop_measure=True
         )
     elif MODE == "H-DRIP":
