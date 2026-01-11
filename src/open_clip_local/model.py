@@ -157,7 +157,8 @@ def _build_vision_tower(
         POOLING = "DRIP" # "DRIP" or "Fixed" or "Swin"
 
         if DTP_ViT and not HIERARCHICAL and not SOFT: 
-            compression_rate = 0.25  # compression rate
+            # compression_rate = 0.25  # compression rate
+            compression_rate = 0.1  # compression rate
             depth = (4, 8, 0)
     
             if POOLING == "DRIP":

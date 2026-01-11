@@ -9,9 +9,9 @@ from numbers import Number
 from typing import Any, List
 import numpy as np
 from fvcore.nn import FlopCountAnalysis
-# from open_clip_local.DTP_ViT import DTPViT
+from open_clip_local.DTP_ViT import DTPViT
 # from open_clip_local.DTP_ViT_TransformerXL import DTPViT
-from open_clip_local.DTP_ViT_entropy import DTPViT
+# from open_clip_local.DTP_ViT_entropy import DTPViT
 
 from open_clip_local.DTP_ViT import HierarchicalDTPViT, SoftDTPViT, XL_Baseline
 from open_clip_local.transformer import VisionTransformer
@@ -33,10 +33,8 @@ def rfft_flop_jit(inputs: List[Any], outputs: List[Any]) -> Number:
 
 def calc_flops(model, img_size=224, show_details=False, ratios=None):
     with torch.no_grad():
-        # x = torch.randn(1, 3, img_size, img_size)
-
-
-        x = torch.randn(10, 3, img_size, img_size)
+        x = torch.randn(1, 3, img_size, img_size)
+        # x = torch.randn(10, 3, img_size, img_size)
         
         
         # model.default_ratio = ratios # this seems useless
@@ -77,7 +75,10 @@ def main():
     mlp_ratio = 4.0
     patch_dropout = 0.1
     if MODE == "DRIP":
-        COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
+        
+        # COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
+        COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
+
         print(f"🥶🥶🥶🥶Calculating GFLOPs for DRIP with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
         model = DTPViT(
             image_size=img_size,

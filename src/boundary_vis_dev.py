@@ -825,7 +825,7 @@ if __name__ == "__main__":
         compression_rate=compression_rate,
         heads=768 // 64,
         mlp_ratio=4.0,
-        temp=1.0, # NOTE: need to match training temp
+        temp=0.5, # NOTE: need to match training temp
         pos_embed_type="transformer-xl", # NOTE: sin_cos_2d or transformer-xl
         flop_measure=False # need to learn real boundaries
     )
@@ -843,8 +843,8 @@ if __name__ == "__main__":
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_DRIP_sinusoidal_temp_1.5_15epoch/checkpoints/epoch_15.pt"
 
     # ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/new_XLbased_drip_temp1.5/checkpoints/epoch_4.pt"
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/new_XLbased_drip/checkpoints/epoch_4.pt"
-
+    # ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/new_XLbased_drip/checkpoints/epoch_4.pt"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/temp0.5_XL_DRIP_reproduce/checkpoints/epoch_4.pt"
 
 
 
@@ -876,9 +876,9 @@ if __name__ == "__main__":
 
     visualize_boundaries_hard_soft_2x2(
         model,
-        load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/single_1.JPEG", preprocess),
-        load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/multi_1.JPEG", preprocess),
-        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_hard_soft_2x2.png"
+        load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_1.JPEG", preprocess),
+        load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_2.JPEG", preprocess),
+        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/VIT_BASED_boundary_hard_soft_2x2.png"
     )
 
 
