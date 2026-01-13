@@ -6,6 +6,7 @@ from torchvision import datasets
 from torch.utils.data import DataLoader
 from open_clip_local import create_model_and_transforms
 from open_clip_local.model import DTPViT
+from open_clip_local.DTP_ViT import build_entropy_boundaries
 from open_clip_local.transformer import VisionTransformer
 from open_clip_local import CLIP
 from torch.cuda.amp import GradScaler
@@ -213,6 +214,7 @@ def strip_visual_prefix(k: str) -> Optional[str]:
 def load_dtp_from_clip_checkpoint(
     model: DTPViT,
     ckpt_path: str,
+    entropy_method: bool,
     map_location: str = "cpu",
     verbose: bool = True,
 ) -> Tuple[DTPViT, Dict[str, object]]:
@@ -221,11 +223,9 @@ def load_dtp_from_clip_checkpoint(
     for k, v in sd.items():
         inner = strip_visual_prefix(k)
         if inner is not None:
-
             # skip the boundary predictor so far
             # if "boundary_predictor.boundary_predictor." in inner:
             #     continue
-
             if verbose:
                 print(f"[drip] ckpt key: {k} -> inner: {inner}")
             mapped[inner] = v
@@ -234,11 +234,11 @@ def load_dtp_from_clip_checkpoint(
         print(f"[drip] Loaded {len(mapped)} tensors into DTPViT")
         print("=" * 60)
 
-    bp = model.boundary_predictor.boundary_predictor
-    print("Boundary predictor weights stats:")
-    for name, param in bp.named_parameters():
-        print(f"  {name}: mean={param.mean().item():.6f}  std={param.std().item():.6f}")
-
+    if not entropy_method:
+        bp = model.boundary_predictor.boundary_predictor
+        print("Boundary predictor weights stats:")
+        for name, param in bp.named_parameters():
+            print(f"  {name}: mean={param.mean().item():.6f}  std={param.std().item():.6f}")
 
     return model, None
 
@@ -513,7 +513,8 @@ def load_vit_from_clip_checkpoint(
 
 @torch.no_grad()
 def visualize_boundaries_single_multi(
-    model: DTPViT, 
+    model: DTPViT,
+    entropy_method: bool, 
     preprocess,
     root_dir: str = ".", 
     save_path: str = None):
@@ -534,20 +535,34 @@ def visualize_boundaries_single_multi(
         x: torch.Tensor = img_3chw.unsqueeze(0).to(device)
 
         if model.pos_embed_type == "transformer-xl":
-            x = model._embeds(x) # [B, 3, H, W] -> [B, L, D]
-            # Compute position embeddings
-            T = x.size(1)
-            pos_seq = torch.arange(T - 1, -1, -1.0, device=x.device, dtype=x.dtype)
-            pos_emb = model.positional_embedding(pos_seq)
-            x = model.transformer_pre(
-                x, 
-                pos_emb=pos_emb, 
-                r_w_bias=model.r_w_bias, 
-                r_r_bias=model.r_r_bias) # [B, L, D] -> [B, L, D]
+            if entropy_method:
+                x_pix = TF.normalize(
+                    img_3chw.detach().clone(),
+                    mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.225],
+                    std=[1 / 0.229, 1 / 0.224, 1 / 0.225],
+                ).clamp(0, 1)
 
-            x_transposed = x.transpose(0, 1) # [B, L, D] -> [L, B, D]
-            # hard boundaries: [B, L]
-            soft_boundaries, hard_boundaries = model.boundary_predictor(x_transposed) # input is [L, B, D]
+                hard_boundaries, _ = build_entropy_boundaries(
+                    x_pix.unsqueeze(0).to(device),
+                    model.grid_size[0],
+                    model.grid_size[1],
+                    model.prior
+                )
+            else:
+                x = model._embeds(x) # [B, 3, H, W] -> [B, L, D]
+                # Compute position embeddings
+                T = x.size(1)
+                pos_seq = torch.arange(T - 1, -1, -1.0, device=x.device, dtype=x.dtype)
+                pos_emb = model.positional_embedding(pos_seq)
+                x = model.transformer_pre(
+                    x, 
+                    pos_emb=pos_emb, 
+                    r_w_bias=model.r_w_bias, 
+                    r_r_bias=model.r_r_bias) # [B, L, D] -> [B, L, D]
+
+                x_transposed = x.transpose(0, 1) # [B, L, D] -> [L, B, D]
+                # hard boundaries: [B, L]
+                _, hard_boundaries = model.boundary_predictor(x_transposed) # input is [L, B, D]
 
         else:
             # [B, 3, H, W] -> [B, L, D]
@@ -556,7 +571,7 @@ def visualize_boundaries_single_multi(
 
             # boundary_predictor expects [L, B, D]
             x_transposed = x.transpose(0, 1)  # [L, B, D]
-            soft_boundaries, hard_boundaries = model.boundary_predictor(x_transposed)  # [B, L]
+            _, hard_boundaries = model.boundary_predictor(x_transposed)  # [B, L]
 
         print("hard boundaries shape:", hard_boundaries.shape)
 
@@ -566,20 +581,20 @@ def visualize_boundaries_single_multi(
         hard_1d = hard_boundaries[0].detach().float()  # [L = 1 + grid_h * grid_w]
         hard_1d_patches = hard_1d[1:]                  # [grid_h * grid_w]
 
-        soft_1d = soft_boundaries[0].detach().float()
-        soft_1d_patches = soft_1d[1:]
+        # soft_1d = soft_boundaries[0].detach().float()
+        # soft_1d_patches = soft_1d[1:]
 
         assert hard_1d_patches.numel() == grid_h * grid_w, \
             f"Expected {grid_h * grid_w} patch tokens, got {hard_1d_patches.numel()}"
-        assert soft_1d_patches.numel() == grid_h * grid_w, \
-            f"Expected {grid_h * grid_w} patch tokens, got {soft_1d_patches.numel()}"
+        # assert soft_1d_patches.numel() == grid_h * grid_w, \
+        #     f"Expected {grid_h * grid_w} patch tokens, got {soft_1d_patches.numel()}"
 
         hard_mask = hard_1d_patches.view(grid_h, grid_w).cpu().numpy()
-        soft_mask = soft_1d_patches.view(grid_h, grid_w).cpu().numpy()
+        # soft_mask = soft_1d_patches.view(grid_h, grid_w).cpu().numpy()
         print("hard mask:")
         print(hard_mask)
-        print("soft mask:")
-        print(soft_mask)
+        # print("soft mask:")
+        # print(soft_mask)
 
         # ---- unnormalize and resize image ----
         orig = TF.normalize(
@@ -795,13 +810,9 @@ def load_img_norm(path: str, preprocess) -> torch.Tensor:
 
 
 
-
-
-
-
 if __name__ == "__main__":
 
-    compression_rate = 0.25
+    compression_rate = 0.1 # 0.25 for 4x, 0.1 for 10x
     patch_size = 16
     checkpoint_type = "CLIP" # imagenet or CLIP
 
@@ -844,9 +855,16 @@ if __name__ == "__main__":
 
     # ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/new_XLbased_drip_temp1.5/checkpoints/epoch_4.pt"
     # ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/new_XLbased_drip/checkpoints/epoch_4.pt"
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/temp0.5_XL_DRIP_reproduce/checkpoints/epoch_4.pt"
+    
+    
+    
 
+    # ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/temp0.5_XL_DRIP_reproduce/checkpoints/epoch_4.pt"
+    # ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/temp0.5_XL_DRIP_reproduce_10x/checkpoints/epoch_4.pt"
+    
 
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/entropy_XL_DRIP_4x/checkpoints/epoch_4.pt"
+    entropy_method = ckpt_path.__contains__("entropy")
 
 
 
@@ -862,24 +880,26 @@ if __name__ == "__main__":
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/faithful_vitbased_drip_4epochs_sinusoidal/checkpoints/epoch_4.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
-    model, _ = load_dtp_from_clip_checkpoint(model_empty, ckpt_path)
+    model, _ = load_dtp_from_clip_checkpoint(model_empty, ckpt_path, entropy_method=entropy_method)
     model.eval()
 
     
     visualize_boundaries_single_multi(
         model, 
+        entropy_method=entropy_method,
         preprocess=preprocess,
         root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi", 
         save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi/VIT_BASED_boundary_visualization_2x2.png"
     )
 
 
-    visualize_boundaries_hard_soft_2x2(
-        model,
-        load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_1.JPEG", preprocess),
-        load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_2.JPEG", preprocess),
-        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/VIT_BASED_boundary_hard_soft_2x2.png"
-    )
+    if not entropy_method:
+        visualize_boundaries_hard_soft_2x2(
+            model,
+            load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_1.JPEG", preprocess),
+            load_img_norm("/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/img_2.JPEG", preprocess),
+            save_path="/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/soft_hard/VIT_BASED_boundary_hard_soft_2x2.png"
+        )
 
 
     # run visualization (for the main paper)

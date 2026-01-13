@@ -104,8 +104,8 @@ def visualize_entropy_boundaries_single_multi(
     top_frac: float = 0.25,
     resize_to: tuple[int, int] = (224, 224),  # e.g. (224, 224)
 ):
-    # names = ["single_1", "multi_1", "single_2", "multi_2"]
-    names = ["single_3", "multi_3", "single_4", "multi_4"]
+    names = ["single_1", "multi_1", "single_2", "multi_2"]
+    # names = ["single_3", "multi_3", "single_4", "multi_4"]
 
     paths = [os.path.join(root_dir, f"{n}.JPEG") for n in names]
 
@@ -163,7 +163,7 @@ def visualize_entropy_boundaries_single_multi(
 
 if __name__ == "__main__":
     root_dir = "/users/PAS2912/yusenpeng/Fast-CLIP/unit_further_vis/single_multi"
-    save_path = "./entropy_boundary_demo_2nd_set.png"
+    save_path = "./entropy_boundary_demo_1st_set.png"
 
     visualize_entropy_boundaries_single_multi(
         root_dir=root_dir,
