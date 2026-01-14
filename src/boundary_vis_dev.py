@@ -863,7 +863,8 @@ if __name__ == "__main__":
     # ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/temp0.5_XL_DRIP_reproduce_10x/checkpoints/epoch_4.pt"
     
 
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/entropy_XL_DRIP_4x/checkpoints/epoch_4.pt"
+    # ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/entropy_XL_DRIP_4x/checkpoints/epoch_4.pt"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/entropy_XL_DRIP_10x/checkpoints/epoch_4.pt"
     entropy_method = ckpt_path.__contains__("entropy")
 
 

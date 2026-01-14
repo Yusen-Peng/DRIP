@@ -307,31 +307,9 @@ from .utils import to_2tuple
 #         else:
 #             return pooled # [B, output_dim]
 
-#         ###################################### ablation #######################################
-#         # pool across sequence dimension with mean pooling
-#         # tensor: [B, S, D]
-#         # pad_mask = tensor.abs().sum(dim=-1).eq(0)          # [B, S]  True where padded
-#         # valid_mask = (~pad_mask).float()                  # [B, S]
-#         # valid_mask_exp = valid_mask.unsqueeze(-1)         # [B, S, 1]
-
-#         # x = tensor * valid_mask_exp                       # [B, S, D]
-#         # sum_x = x.sum(dim=1)                              # [B, D]  sum over sequence
-#         # valid_counts = valid_mask.sum(dim=1).clamp(min=1e-6).unsqueeze(-1)  # [B, 1]
-#         # x = sum_x / valid_counts                          # [B, D]
-
-#         # logits = self.head(x)                             # [B, num_classes]
-
-#         # if return_loss and not self.flop_measure:
-#         #     return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
-#         # else:
-#         #     return logits
-
-
-
 
 ###################################################################################
 ### Entropy-based method ##########################################################
-###################################################################################
 
 
 @torch.no_grad()
@@ -452,7 +430,6 @@ class DTPViT(nn.Module):
         self.temp = temp
         self.flop_measure = flop_measure
         self.null_token = nn.Parameter(torch.zeros(1, 1, width))
-        # NOTE: may be different
         nn.init.normal_(self.null_token, std=0.02)
 
         self.conv1 = nn.Conv2d(
@@ -685,7 +662,6 @@ class DTPViT(nn.Module):
         else:
             tensor = features_out
         
-        ###################################### original #######################################
         pooled, tokens = self._pool(tensor) # [B, S, D] -> [B, D], [B, S, D]
         pooled = pooled @ self.proj # [B, D] -> [B, output_dim]
 
@@ -698,26 +674,284 @@ class DTPViT(nn.Module):
             return pooled # [B, output_dim]
 
 
-        ###################################### ablation #######################################
-        # pool across sequence dimension with mean pooling
-        # tensor: [B, S, D]
-        # pad_mask = tensor.abs().sum(dim=-1).eq(0)          # [B, S]  True where padded
-        # valid_mask = (~pad_mask).float()                  # [B, S]
-        # valid_mask_exp = valid_mask.unsqueeze(-1)         # [B, S, 1]
+####################### other important baselines #######################
+class SingleAdaptedFixed(nn.Module):
+    def __init__(self,
+                image_size: int,
+                patch_size: int,
+                width: int,
+                layers: int,
+                depth: tuple[int],
+                compression_rate: float,
+                heads: int,
+                mlp_ratio: float,
+                temp: float,
+                flop_measure: bool = False,
+                threshold: float = 0.5,
+                ls_init_value: float = None,
+                attentional_pool: bool = False,
+                attn_pooler_queries: int = 256,
+                attn_pooler_heads: int = 8,
+                output_dim: int = 512,
+                patch_dropout: float = 0.1,
+                no_ln_pre: bool = False,
+                pos_embed_type: str = 'transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
+                pool_type: str = 'avg',
+                final_ln_after_pool: bool = False,
+                act_layer: Callable = nn.GELU,
+                norm_layer: Callable = LayerNorm,
+                output_tokens: bool = False,
+    ):
 
-        # x = tensor * valid_mask_exp                       # [B, S, D]
-        # sum_x = x.sum(dim=1)                              # [B, D]  sum over sequence
-        # valid_counts = valid_mask.sum(dim=1).clamp(min=1e-6).unsqueeze(-1)  # [B, 1]
-        # x = sum_x / valid_counts                          # [B, D]
+        super().__init__()
+        assert pool_type in ('tok', 'avg', 'none')
+        self.output_tokens = output_tokens
+        image_height, image_width = self.image_size = to_2tuple(image_size)
+        patch_height, patch_width = self.patch_size = to_2tuple(patch_size)
+        self.grid_size = (image_height // patch_height, image_width // patch_width)
+        self.final_ln_after_pool = final_ln_after_pool  # currently ignored w/ attn pool enabled
+        self.output_dim = output_dim
+        self.width = width
+        self.layers = layers
+        self.depth = depth
+        self.prior = compression_rate
+        self.threshold = threshold
+        self.temp = temp
+        self.flop_measure = flop_measure
+        self.null_token = nn.Parameter(torch.zeros(1, 1, width))
+        nn.init.normal_(self.null_token, std=0.02)
 
-        # logits = self.head(x)                             # [B, num_classes]
 
-        # if return_loss and not self.flop_measure:
-        #     return logits, boundary_loss, avg_boundaries_per_batch, boundary_ratio
-        # else:
-        #     return logits
+        self.conv1 = nn.Conv2d(
+            in_channels=3,
+            out_channels=width,
+            kernel_size=patch_size,
+            stride=patch_size,
+            # bias=False # NOTE: False
+        )
+
+        # class embeddings and positional embeddings
+        scale = width ** -0.5
+        self.class_embedding = nn.Parameter(scale * torch.randn(width))
+        if pos_embed_type == 'learnable':
+            self.positional_embedding = nn.Parameter(
+                scale * torch.randn(self.grid_size[0] * self.grid_size[1] + 1, width))
+        elif pos_embed_type == 'sin_cos_2d':
+            # fixed sin-cos embedding
+            assert self.grid_size[0] == self.grid_size[1],\
+                'currently sin cos 2d pos embedding only supports square input'
+            self.positional_embedding = nn.Parameter(
+                torch.zeros(self.grid_size[0] * self.grid_size[1] + 1, width), requires_grad=False)
+            pos_embed_type = get_2d_sincos_pos_embed(width, self.grid_size[0], cls_token=True)
+            self.positional_embedding.data.copy_(torch.from_numpy(pos_embed_type).float())
+        elif pos_embed_type == 'transformer-xl':
+            self.positional_embedding = PositionalEmbedding(demb=width)
+        else:
+            raise ValueError
+        self.pos_embed_type = pos_embed_type
+    
+        # pos-aware attention bias terms
+        num_heads = heads
+        embed_dim = width
+        self.r_w_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
+        self.r_r_bias = nn.Parameter(torch.zeros(num_heads, embed_dim // num_heads))
+
+        # setting a patch_dropout of 0. would mean it is disabled and this function would be the identity fn
+        self.patch_dropout = nn.Identity()
+        self.ln_pre = nn.Identity() if no_ln_pre else norm_layer(width)
+        self.down_ln = norm_layer(width)
+
+        self.transformer_pre = TransformerXL(
+            width,
+            self.depth[0],
+            heads,
+            mlp_ratio,
+            ls_init_value=ls_init_value,
+            act_layer=act_layer,
+            norm_layer=norm_layer,
+            batch_first=False
+        )
+
+        self.transformer_post = TransformerXL(
+            width,
+            self.depth[1],
+            heads,
+            mlp_ratio,
+            ls_init_value=ls_init_value,
+            act_layer=act_layer,
+            norm_layer=norm_layer,
+            batch_first=False
+        )
+
+        if attentional_pool:
+            if isinstance(attentional_pool, str):
+                self.attn_pool_type = attentional_pool
+                self.pool_type = 'none'
+                if attentional_pool in ('parallel', 'cascade'):
+                    self.attn_pool = AttentionalPooler(
+                        output_dim,
+                        width,
+                        n_head=attn_pooler_heads,
+                        n_queries=attn_pooler_queries,
+                    )
+                    self.attn_pool_contrastive = AttentionalPooler(
+                        output_dim,
+                        width,
+                        n_head=attn_pooler_heads,
+                        n_queries=1,
+                    )
+                else:
+                    assert False
+            else:
+                self.attn_pool_type = ''
+                self.pool_type = pool_type
+                self.attn_pool = AttentionalPooler(
+                    output_dim,
+                    width,
+                    n_head=attn_pooler_heads,
+                    n_queries=attn_pooler_queries,
+                )
+                self.attn_pool_contrastive = None
+            pool_dim = output_dim
+        else:
+            self.attn_pool = None
+            pool_dim = width
+            self.pool_type = pool_type
+
+        self.ln_post = norm_layer(pool_dim)
+        self.proj = nn.Parameter(scale * torch.randn(pool_dim, output_dim))
+        self.head = nn.Linear(embed_dim, 1000)
 
 
+    @torch.jit.ignore
+    def set_grad_checkpointing(self, enable: bool = True):
+        self.transformer_pre.grad_checkpointing = enable
+        self.transformer_post.grad_checkpointing = enable
+    
+    @torch.jit.ignore
+    def no_weight_decay(self):
+        # for timm optimizers, 1d params like logit_scale, logit_bias, ln/bn scale, biases are excluded by default
+        no_wd = {'positional_embedding', 'class_embedding'}
+        return no_wd
+
+    def _global_pool(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if self.pool_type == 'avg':
+            pooled, tokens = x[:, 1:].mean(dim=1), x[:, 1:]
+        elif self.pool_type == 'tok':
+            pooled, tokens = x[:, 0], x[:, 1:]
+        else:
+            pooled = tokens = x
+
+        return pooled, tokens
+
+    def _embeds(self, x:torch.Tensor) -> torch.Tensor:
+        x = self.conv1(x)  # shape = [*, dim, grid, grid]
+        x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
+        x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
+
+        # class embeddings and positional embeddings
+        x = torch.cat([_expand_token(self.class_embedding, x.shape[0]).to(x.dtype), x], dim=1)
+
+        # patch dropout (if active)
+        x = self.patch_dropout(x)
+
+        # apply norm before transformer
+        x = self.ln_pre(x)
+        return x
+
+    def _pool(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if self.attn_pool is not None:
+            if self.attn_pool_contrastive is not None:
+                # This is untested, WIP pooling that should match paper
+                x = self.ln_post(x)  # TBD LN first or separate one after each pool?
+                tokens = self.attn_pool(x)
+                if self.attn_pool_type == 'parallel':
+                    pooled = self.attn_pool_contrastive(x)
+                else:
+                    assert self.attn_pool_type == 'cascade'
+                    pooled = self.attn_pool_contrastive(tokens)
+            else:
+                # this is the original OpenCLIP CoCa setup, does not match paper
+                x = self.attn_pool(x)
+                x = self.ln_post(x)
+                pooled, tokens = self._global_pool(x)
+        elif self.final_ln_after_pool:
+            pooled, tokens = self._global_pool(x)
+            pooled = self.ln_post(pooled)
+        else:
+            x = self.ln_post(x)
+            pooled, tokens = self._global_pool(x)
+
+        return pooled, tokens
+    
+    def encode(self, x: torch.Tensor, return_loss: bool):
+        x = self._embeds(x) # [B, 3, H, W] -> [B, L, D]
+
+        # Compute position embeddings
+        B, T = x.size(0), x.size(1)
+        pos_seq = torch.arange(T - 1, -1, -1.0, device=x.device, dtype=x.dtype)
+        pos_emb = self.positional_embedding(pos_seq)
+        x = self.transformer_pre(
+            x, 
+            pos_emb=pos_emb, 
+            r_w_bias=self.r_w_bias, 
+            r_r_bias=self.r_r_bias) # [B, L, D] -> [B, L, D]
+    
+
+        # fixed pooling
+        num_tokens_to_keep = max(1, int(T * self.prior))
+        indices = torch.linspace(0, T - 1, steps=num_tokens_to_keep).round().long()
+        hard_boundaries = torch.zeros(B, T, device=x.device)
+        # hard boundaries: [B, T]
+        hard_boundaries[:, indices] = 1
+
+        hidden: torch.Tensor = self.down_ln(x) # [B, L, D] -> [B, L, D]
+        hidden = hidden.transpose(0, 1) # [B, L, D] -> [L, B, D]
+        shortened_hidden = downsample(
+            boundaries=hard_boundaries,
+            hidden=hidden,
+            null_group=self.null_token
+        ) # [L, B, D] -> [S, B, D]
+        shortened_hidden = shortened_hidden.transpose(0, 1) # [S, B, D] -> [B, S, D]
+
+        S = shortened_hidden.size(1)
+        new_pos_seq = torch.arange(S - 1, -1, -1.0, device=x.device, dtype=x.dtype)
+        new_pos_emb = self.positional_embedding(new_pos_seq)
+
+        features = self.transformer_post(
+            shortened_hidden,
+            pos_emb=new_pos_emb, 
+            r_w_bias=self.r_w_bias, 
+            r_r_bias=self.r_r_bias) # [B, S, D] -> [B, S, D]
+        
+        if return_loss and not self.flop_measure:
+            boundary_loss = torch.tensor(0.0, device=x.device) # entropy-based method: boundary loss disabled
+            # boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
+            avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
+            boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
+            return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+        else:
+            return features # [B, S, D]
+
+    def forward(self, x: torch.Tensor, return_loss: bool = False):
+        features_out = self.encode(x, return_loss=return_loss) # [B, 3, H, W] -> [B, S, D]
+
+        if return_loss and not self.flop_measure:
+            # encode returns tuple (features, loss, avg_boundaries, boundary_ratio)
+            tensor, boundary_loss, avg_boundaries_per_batch, boundary_ratio = features_out
+        else:
+            tensor = features_out
+        
+        pooled, tokens = self._pool(tensor) # [B, S, D] -> [B, D], [B, S, D]
+        pooled = pooled @ self.proj # [B, D] -> [B, output_dim]
+
+        if self.output_tokens:
+            return pooled, tokens
+
+        if return_loss and not self.flop_measure:
+            return pooled, boundary_loss, avg_boundaries_per_batch, boundary_ratio # [B, output_dim]
+        else:
+            return pooled # [B, output_dim]
 
 
 
@@ -1492,159 +1726,6 @@ class TokenPool1DAvg(nn.Module):
         B, L, C = x.shape
         x = x.view(B, L // p, p, C).mean(dim=2)
         return x
-
-
-
-
-class SingleAdaptedFixed(nn.Module):
-    def __init__(self,
-                 image_size=224,
-                 patch_size=16,
-                 in_chans=3,
-                 embed_dim=768,            # constant across pre/post
-                 depth=(2, 8),             # (pre_depth, post_depth)
-                 num_heads=(12, 12),       # (pre_heads, post_heads) or single int
-                 mlp_ratio=4.0,
-                 drop_rate=0.1,
-                 num_classes=512,
-                 activation_function='gelu',
-                 flop_measure: bool = False,
-                 norm_layer=nn.LayerNorm):
-        super().__init__()
-        self.flop_measure = flop_measure
-        self.num_classes = num_classes
-        self.embed_dim = embed_dim
-        C = embed_dim
-
-        # ----- grids -----
-        Hp = image_size // patch_size
-        Wp = image_size // patch_size
-        assert Hp * patch_size == image_size and Wp * patch_size == image_size
-        assert (Hp % 2 == 0) and (Wp % 2 == 0), "Need even H/ W (one 2x merge)."
-        self.grid0 = (Hp, Wp)
-        self.grid1 = (Hp // 2, Wp // 2)
-
-        L0 = Hp * Wp
-        L1 = (Hp // 2) * (Wp // 2)
-
-        # ----- heads -----
-        if isinstance(num_heads, int):
-            heads = (num_heads, num_heads)
-        else:
-            assert len(num_heads) == 2
-            heads = num_heads
-
-        # ----- patch embed -----
-        self.patch_embed = PatchEmbedding(image_size, patch_size, in_chans, C)
-        self.dropout = nn.Dropout(drop_rate)
-
-        # ----- pos embeddings (both C, constant width) -----
-        self.pos_pre  = nn.Parameter(torch.zeros(1, 1 + L0, C))
-        # self.pos_post = nn.Parameter(torch.zeros(1, 1 + L1, C))
-
-        # FIXME: ablation - pool=1        
-        self.pos_post = nn.Parameter(torch.zeros(1, 1 + L0, C))
-
-
-        nn.init.trunc_normal_(self.pos_pre,  std=0.02)
-        nn.init.trunc_normal_(self.pos_post, std=0.02)
-
-        # ----- transformer stacks -----
-        def make_layers(n_layers, d_model, nhead):
-            return nn.ModuleList([
-                nn.TransformerEncoderLayer(
-                    d_model=d_model,
-                    nhead=nhead,
-                    dim_feedforward=int(d_model * mlp_ratio),
-                    dropout=drop_rate,
-                    activation=activation_function,
-                    batch_first=False,
-                    norm_first=True
-                )
-                # ResidualAttentionBlock(
-                #     d_model=embed_dim,
-                #     n_head=num_heads,
-                #     mlp_ratio=mlp_ratio
-                # ) # follow CLIP ViT design (GFLOP drops from 2.19 to 1.5)
-                for _ in range(max(0, n_layers))
-            ])
-
-        self.pre_blocks  = make_layers(depth[0], C, heads[0])
-        self.post_blocks = make_layers(depth[1], C, heads[1])
-
-        # ----- fixed pooling (avg) -----
-        # self.merge = TokenPool1DAvg(pool=4, handle_tail="trim")  # L0 -> L1, keep C
-
-        # FIXME: ablation - pool=1        
-        self.merge = TokenPool1DAvg(pool=1, handle_tail="trim")  # L0 -> L1, keep C
-
-
-        # ----- norm + head -----
-        self.post_ln = norm_layer(C)
-        # self.head    = nn.Linear(C, num_classes)
-        self.head = nn.Parameter(torch.empty(C, num_classes))  # matches CLIP's proj shape
-        self.head_bias = None   # optional, CLIP has no bias
-
-
-    # utils
-    def _add_pos(self, x, pos_param):
-        B, L, C = x.shape
-        pos = pos_param[:, 1:1+L, :].to(device=x.device, dtype=x.dtype)
-        return x + pos
-
-    def _run_stack(self, x, layers):
-        for blk in layers:
-            x = blk(x)
-        return x
-
-    def encode(self, x: torch.Tensor, return_loss: bool = False):
-        # pre
-        x = self.patch_embed(x)                 # (B, L0, C)
-        x = self.dropout(x)
-        x = self._add_pos(x, self.pos_pre)
-        x = x.transpose(0, 1)                   # (L0, B, C)
-        x = self._run_stack(x, self.pre_blocks) # (L0, B, C)
-
-        # merge (no channel change)
-        x = x.transpose(0, 1)                   # (B, L0, C)
-        x = self.merge(x)                       # (B, L1, C)
-        x = self._add_pos(x, self.pos_post)
-        x = x.transpose(0, 1)                   # (L1, B, C)
-
-        # post
-        x = self._run_stack(x, self.post_blocks)  # (L1, B, C)
-
-        if return_loss:
-            # keep DTPViT API
-            dummy_loss = torch.zeros([], device=x.device)
-            # single fixed merge → tokens /4
-            avg_boundaries = 0.0
-            boundary_ratio = 1.0 / 4.0
-            return x, dummy_loss, avg_boundaries, boundary_ratio
-        else:
-            return x
-
-    def forward(self, x, return_loss: bool = False):
-        out = self.encode(x, return_loss=return_loss)
-        if return_loss:
-            feats, boundary_loss, avg_boundaries, boundary_ratio = out
-        else:
-            feats = out
-
-        # mean pool over sequence (dense)
-        x = feats.mean(dim=0)   # (B, C)
-        x = self.post_ln(x)
-        
-        # FIXME: not a linear layer, but a projection matrix like CLIP
-        # logits = self.head(x)
-        logits = x @ self.head  # (B, num_classes == output_dim)
-
-
-        if return_loss:
-            return logits, boundary_loss, avg_boundaries, boundary_ratio
-        else:
-            return logits
-
 
 class SingleAdaptedSwin(nn.Module):
     def __init__(self,

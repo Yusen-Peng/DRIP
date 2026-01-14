@@ -15,6 +15,7 @@ from open_clip_local.DTP_ViT import DTPViT
 
 from open_clip_local.DTP_ViT import HierarchicalDTPViT, SoftDTPViT, XL_Baseline
 from open_clip_local.transformer import VisionTransformer
+from open_clip_local.DTP_ViT import SingleAdaptedFixed
 
 DROPOUT_FLOPS = 4
 LAYER_NORM_FLOPS = 5
@@ -68,7 +69,10 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "DRIP" # "DRIP", "H-DRIP", "S-DRIP","ViT", 'XL_Baseline', "Swin", "DynamicViT", "EViT"
+    MODE = "fixed_pooling" # "DRIP" or "fixed_pooling" or "ViT" 
+    COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
+    # COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
+
 
     img_size = 224
     width = 768
@@ -76,8 +80,6 @@ def main():
     patch_dropout = 0.1
     if MODE == "DRIP":
         
-        # COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
-        COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
 
         print(f"🥶🥶🥶🥶Calculating GFLOPs for DRIP with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
         model = DTPViT(
@@ -192,20 +194,19 @@ def main():
             norm_layer=torch.nn.LayerNorm
         )
     
-    elif MODE == "single_Swin":
-        from swin import SingleAdaptedSwin
-        print("Calculating GFLOPs for Single-stage Adapted Swin Transformer...")
-        model = SingleAdaptedSwin(
-            image_size=224, 
-            patch_size=16, 
-            in_chans=3,
-            embed_dim=768,
-            depth=(4, 8),
-            num_heads=(12, 12),
-            mlp_ratio=4.0,
-            drop_rate=0.0, 
-            num_classes=768,
-            norm_layer=torch.nn.LayerNorm
+    elif MODE == "fixed_pooling":
+        print("Calculating GFLOPs for Fixed Pooling...")
+        model = SingleAdaptedFixed(
+            image_size=img_size,
+            patch_size=patch_size,
+            width=width,
+            layers=12,
+            depth=(4, 8, 0),
+            compression_rate=COMPRESSION_RATE,
+            heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            temp=0.5,
+            flop_measure=True
         )
 
     elif MODE == "DynamicViT":

@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=Jan12_entropy_XL_10x
-#SBATCH --output=Jan12_entropy_XL_10x.log
+#SBATCH --job-name=Jan14_vit_baseline
+#SBATCH --output=Jan14_vit_baseline.log
 #SBATCH --partition=quad
-#SBATCH --time=60:00:00
+#SBATCH --time=100:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
