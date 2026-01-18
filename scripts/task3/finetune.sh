@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=Dec4_ABLATION_pool1_finetune
-#SBATCH --output=Dec4_finetune_openai_baseline.txt
-#SBATCH --time=65:00:00
+#SBATCH --job-name=Jan18_DEBUGGING_finetune
+#SBATCH --output=Jan18_DEBUGGING_finetune.txt
+#SBATCH --time=00:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=4
+#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836

@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=Dec4_BP-at-the-end-fixed-pooling-baseline
-#SBATCH --output=Dec4_BP-at-the-end-fixed-pooling-baseline.txt
-#SBATCH --time=07:00:00
+#SBATCH --job-name=Jan18_DEBUGGING_pretrain
+#SBATCH --output=Jan18_DEBUGGING_pretrain.txt
+#SBATCH --time=00:15:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=4
+#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256G
 #SBATCH --account=PAS2836

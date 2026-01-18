@@ -6,7 +6,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # FIXME: all hardcoded. Need to be fixed later.
     USE_DTP = False
-    USE_COMPRESSION_BASELINE = True
+    USE_COMPRESSION_BASELINE = False
     BASELINE_TYPE = 'Fixed'  # 'Fixed' or 'Swin'
     BACKBONE_NAME = 'pretrained'
 

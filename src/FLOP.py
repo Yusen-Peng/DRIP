@@ -17,6 +17,10 @@ from open_clip_local.DTP_ViT import HierarchicalDTPViT, SoftDTPViT, XL_Baseline
 from open_clip_local.transformer import VisionTransformer
 from open_clip_local.DTP_ViT import SingleAdaptedFixed
 
+
+from open_clip_local.Qwen2VL_ViT import Qwen2VLViT, Qwen2VLVisionConfig
+
+
 DROPOUT_FLOPS = 4
 LAYER_NORM_FLOPS = 5
 ACTIVATION_FLOPS = 8
@@ -69,7 +73,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "fixed_pooling" # "DRIP" or "fixed_pooling" or "ViT" 
+    MODE = "Qwen2VL_ViT" # "DRIP" or "fixed_pooling" or "ViT" or "Qwen2VL_ViT"
     COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
     # COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
 
@@ -146,6 +150,21 @@ def main():
             mlp_ratio=mlp_ratio,
             output_dim=512
         )
+    elif MODE == "Qwen2VL_ViT":
+        print("Calculating GFLOPs for Qwen2VL Vision Transformer...")
+        config = Qwen2VLVisionConfig(
+            depth=12,
+            embed_dim=width,
+            hidden_size=width * mlp_ratio,
+            mlp_ratio=mlp_ratio,
+            num_heads=width // 64,
+            in_channels=3,
+            patch_size=patch_size,
+            spatial_merge_size=1,
+            temporal_patch_size=1,
+        )
+        model = Qwen2VLViT(config)
+
     elif MODE == "XL_Baseline":
         model = XL_Baseline(
             image_size=img_size,
