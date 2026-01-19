@@ -5,6 +5,9 @@ from collections.abc import Callable
 from torch.nn import LayerNorm
 from typing import Tuple
 
+from .BP import BoundaryPredictor, downsample_with_indices
+
+
 class Qwen2VLVisionConfig:
     model_type = "qwen2_vl"
     base_config_key = "vision_config"
@@ -65,58 +68,51 @@ class Qwen2RMSNorm(nn.Module):
     def extra_repr(self):
         return f"{tuple(self.weight.shape)}, eps={self.variance_epsilon}"
 
+class VisionMlp(nn.Module):
+    def __init__(self, dim: int, hidden_dim: int, hidden_act: str) -> None:
+        super().__init__()
+        self.fc1 = nn.Linear(dim, hidden_dim)
+        hidden_act = hidden_act
+        self.act = QuickGELUActivation()
+        self.fc2 = nn.Linear(hidden_dim, dim)
 
-# Copied from transformers.models.llama.modeling_llama.rotate_half
-def rotate_half(x):
+    def forward(self, x) -> torch.Tensor:
+        return self.fc2(self.act(self.fc1(x)))
+
+class PatchEmbed(nn.Module):
+    def __init__(
+        self,
+        patch_size: int = 14,
+        temporal_patch_size: int = 2,
+        in_channels: int = 3,
+        embed_dim: int = 1152,
+    ) -> None:
+        super().__init__()
+        self.patch_size = patch_size
+        self.temporal_patch_size = temporal_patch_size
+        self.in_channels = in_channels
+        self.embed_dim = embed_dim
+
+        kernel_size = [temporal_patch_size, patch_size, patch_size]
+        self.proj = nn.Conv3d(in_channels, embed_dim, kernel_size=kernel_size, stride=kernel_size, bias=False)
+
+    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        target_dtype = self.proj.weight.dtype
+        hidden_states = hidden_states.view(
+            -1, self.in_channels, self.temporal_patch_size, self.patch_size, self.patch_size
+        )
+        hidden_states = self.proj(hidden_states.to(dtype=target_dtype)).view(-1, self.embed_dim)
+        return hidden_states
+
+"""
+    2D-ROPE part implementation.
+"""
+
+def rotate_half(x: torch.Tensor) -> torch.Tensor:
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
     x2 = x[..., x.shape[-1] // 2 :]
     return torch.cat((-x2, x1), dim=-1)
-
-
-def apply_multimodal_rotary_pos_emb(q, k, cos, sin, mrope_section, unsqueeze_dim=1):
-    """Applies Rotary Position Embedding with Multimodal Sections to the query and key tensors (https://qwenlm.github.io/blog/qwen2-vl/).
-
-    Explanation:
-        Multimodal 3D rotary position embedding is an extension to 1D rotary position embedding. The input embedding
-        sequence contains vision (images / videos) embedding and text embedding or just contains text embedding. For
-        vision embedding part, we apply rotary position embedding on temporal, height and width dimension separately.
-        Here we split the channel dimension to 3 chunks for the temporal, height and width rotary position embedding.
-        For text embedding part, we just apply 1D rotary position embedding. The three rotary position index (temporal,
-        height and width) of text embedding is always the same, so the text embedding rotary position embedding has no
-        difference with modern LLMs.
-
-    Args:
-        q (`torch.Tensor`): The query tensor.
-        k (`torch.Tensor`): The key tensor.
-        cos (`torch.Tensor`): The cosine part of the rotary embedding.
-        sin (`torch.Tensor`): The sine part of the rotary embedding.
-        position_ids (`torch.Tensor`):
-            The position indices of the tokens corresponding to the query and key tensors. For example, this can be
-            used to pass offsetted position ids when working with a KV-cache.
-        mrope_section(`List(int)`):
-            Multimodal rope section is for channel dimension of temporal, height and width in rope calculation.
-        unsqueeze_dim (`int`, *optional*, defaults to 1):
-            The 'unsqueeze_dim' argument specifies the dimension along which to unsqueeze cos[position_ids] and
-            sin[position_ids] so that they can be properly broadcasted to the dimensions of q and k. For example, note
-            that cos[position_ids] and sin[position_ids] have the shape [batch_size, seq_len, head_dim]. Then, if q and
-            k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes
-            cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k. Similarly, if q and k have
-            the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
-    Returns:
-        `tuple(torch.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
-    """
-    mrope_section = mrope_section * 2
-    cos = torch.cat([m[i % 3] for i, m in enumerate(cos.split(mrope_section, dim=-1))], dim=-1).unsqueeze(
-        unsqueeze_dim
-    )
-    sin = torch.cat([m[i % 3] for i, m in enumerate(sin.split(mrope_section, dim=-1))], dim=-1).unsqueeze(
-        unsqueeze_dim
-    )
-
-    q_embed = (q * cos) + (rotate_half(q) * sin)
-    k_embed = (k * cos) + (rotate_half(k) * sin)
-    return q_embed, k_embed
 
 
 def apply_rotary_pos_emb_vision(
@@ -147,44 +143,6 @@ class VisionRotaryEmbedding(nn.Module):
         seq = torch.arange(seqlen, device=self.inv_freq.device, dtype=self.inv_freq.dtype)
         freqs = torch.outer(seq, self.inv_freq)
         return freqs
-
-
-class PatchEmbed(nn.Module):
-    def __init__(
-        self,
-        patch_size: int = 14,
-        temporal_patch_size: int = 2,
-        in_channels: int = 3,
-        embed_dim: int = 1152,
-    ) -> None:
-        super().__init__()
-        self.patch_size = patch_size
-        self.temporal_patch_size = temporal_patch_size
-        self.in_channels = in_channels
-        self.embed_dim = embed_dim
-
-        kernel_size = [temporal_patch_size, patch_size, patch_size]
-        self.proj = nn.Conv3d(in_channels, embed_dim, kernel_size=kernel_size, stride=kernel_size, bias=False)
-
-    def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
-        target_dtype = self.proj.weight.dtype
-        hidden_states = hidden_states.view(
-            -1, self.in_channels, self.temporal_patch_size, self.patch_size, self.patch_size
-        )
-        hidden_states = self.proj(hidden_states.to(dtype=target_dtype)).view(-1, self.embed_dim)
-        return hidden_states
-
-
-class VisionMlp(nn.Module):
-    def __init__(self, dim: int, hidden_dim: int, hidden_act: str) -> None:
-        super().__init__()
-        self.fc1 = nn.Linear(dim, hidden_dim)
-        hidden_act = hidden_act
-        self.act = QuickGELUActivation()
-        self.fc2 = nn.Linear(hidden_dim, dim)
-
-    def forward(self, x) -> torch.Tensor:
-        return self.fc2(self.act(self.fc1(x)))
 
 
 # Copied from transformers.models.llama.modeling_llama.repeat_kv
@@ -417,7 +375,6 @@ class Qwen2VLViT(nn.Module):
             )        
         # reshape (B*L, D) to (B, L, D)
         reshaped_hidden_states = hidden_states.view(B, gh * gw, self.config.embed_dim)
-        # print(f"🥎🥎🥎shape check: {hidden_states.shape}")
         return reshaped_hidden_states
     
     def _global_pool(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -465,3 +422,250 @@ class Qwen2VLViT(nn.Module):
         pooled, _ = self._pool(features_out) # [B, L, D] -> [B, D]
         pooled = pooled @ self.proj # [B, D] -> [B, output_dim]
         return pooled # [B, output_dim]
+
+
+class Qwen2VLDRIP(nn.Module):
+    config: Qwen2VLVisionConfig
+    input_modalities = ("image", "video")
+    _no_split_modules = ["Qwen2VLVisionBlock"]
+    _input_embed_layer = "patch_embed"
+
+    def __init__(self, 
+        config: Qwen2VLVisionConfig,
+        depth: tuple[int],
+        compression_rate: float,
+        temp: float,
+        flop_measure: bool = False,
+        threshold: float = 0.5
+        ) -> None:
+        super().__init__()
+        self.config = config  # keep it for reference
+        self.spatial_merge_size = config.spatial_merge_size
+        self.patch_embed = PatchEmbed(
+            patch_size=config.patch_size,
+            temporal_patch_size=config.temporal_patch_size,
+            in_channels=config.in_channels,
+            embed_dim=config.embed_dim,
+        )
+        head_dim = config.embed_dim // config.num_heads
+        self.rotary_pos_emb = VisionRotaryEmbedding(head_dim // 2)
+
+        self.blocks_pre = nn.ModuleList([Qwen2VLVisionBlock(config) for _ in range(depth[0])])
+        self.blocks_post = nn.ModuleList([Qwen2VLVisionBlock(config) for _ in range(depth[1])])
+
+        self.prior = compression_rate
+        self.boundary_predictor = BoundaryPredictor(
+            d_model=config.embed_dim,
+            d_inner=int(config.embed_dim * config.mlp_ratio),
+            activation_function="gelu",
+            temp=temp,
+            prior=compression_rate,
+            bp_type='gumbel',
+            threshold=threshold
+        )
+
+        self.gradient_checkpointing = False
+        self.pool_type = 'avg'  # 'avg' | 'tok' | 'none'
+        self.final_ln_after_pool = True
+        self.ln_post = LayerNorm(config.embed_dim, eps=1e-6)
+        self.attn_pool = None
+        self.attn_pool_contrastive = None
+        self.attn_pool_type = 'parallel'
+        self.output_dim = config.embed_dim
+        self.proj = nn.Parameter(torch.randn(config.embed_dim, self.output_dim))
+        self.flop_measure = flop_measure
+        self.null_token = nn.Parameter(torch.zeros(1, 1, config.embed_dim))
+        nn.init.normal_(self.null_token, std=0.02)
+
+
+    def get_dtype(self) -> torch.dtype:
+        return self.blocks_pre[0].mlp.fc2.weight.dtype
+
+    def get_device(self) -> torch.device:
+        return self.blocks_pre[0].mlp.fc2.weight.device
+
+    def rot_pos_emb(self, grid_thw):
+        pos_ids = []
+        for t, h, w in grid_thw:
+            hpos_ids = torch.arange(h).unsqueeze(1).expand(-1, w)
+            hpos_ids = hpos_ids.reshape(
+                h // self.spatial_merge_size,
+                self.spatial_merge_size,
+                w // self.spatial_merge_size,
+                self.spatial_merge_size,
+            )
+            hpos_ids = hpos_ids.permute(0, 2, 1, 3)
+            hpos_ids = hpos_ids.flatten()
+
+            wpos_ids = torch.arange(w).unsqueeze(0).expand(h, -1)
+            wpos_ids = wpos_ids.reshape(
+                h // self.spatial_merge_size,
+                self.spatial_merge_size,
+                w // self.spatial_merge_size,
+                self.spatial_merge_size,
+            )
+            wpos_ids = wpos_ids.permute(0, 2, 1, 3)
+            wpos_ids = wpos_ids.flatten()
+            pos_ids.append(torch.stack([hpos_ids, wpos_ids], dim=-1).repeat(t, 1))
+        pos_ids = torch.cat(pos_ids, dim=0)
+        max_grid_size = grid_thw[:, 1:].max()
+        rotary_pos_emb_full = self.rotary_pos_emb(max_grid_size)
+        rotary_pos_emb = rotary_pos_emb_full[pos_ids].flatten(1)
+        return rotary_pos_emb
+
+    def encode(
+        self,
+        hidden_states: torch.Tensor,
+        return_loss: bool,
+        **kwargs,
+    ) -> torch.Tensor:
+        r"""
+        grid_thw (`torch.LongTensor` of shape `(num_images, 3)`):
+            The temporal, height and width dimensions of feature shape for each image. Each row contains [t, h, w] values.
+        """
+        # hidden_states: (B, 3, H, W)
+        B, _, H, W = hidden_states.shape
+        # initialize grid_thw parameter
+        gh, gw = H // self.config.patch_size, W // self.config.patch_size
+        grid_thw = hidden_states.new_empty((B, 3), dtype=torch.long)
+        grid_thw[:, 0] = 1
+        grid_thw[:, 1] = gh
+        grid_thw[:, 2] = gw
+
+        hidden_states = self.patch_embed(hidden_states)
+        rotary_pos_emb = self.rot_pos_emb(grid_thw)
+        emb = torch.cat((rotary_pos_emb, rotary_pos_emb), dim=-1)
+        position_embeddings = (emb.cos(), emb.sin())
+
+        cu_seqlens = torch.repeat_interleave(grid_thw[:, 1] * grid_thw[:, 2], grid_thw[:, 0]).cumsum(
+            dim=0, dtype=grid_thw.dtype if torch.jit.is_tracing() else torch.int32,
+        )
+        cu_seqlens = F.pad(cu_seqlens, (1, 0), value=0)
+
+        for blk in self.blocks_pre:
+            hidden_states = blk(
+                hidden_states,
+                cu_seqlens=cu_seqlens,
+                position_embeddings=position_embeddings,
+                **kwargs,
+            )
+        # reshape (B*L, D) to (B, L, D)
+        reshaped_hidden_states = hidden_states.view(B, gh * gw, self.config.embed_dim)
+        # print(f"🥎🥎🥎shape check: {reshaped_hidden_states.shape} - should be (B, L, D).")
+        
+        B, L, _ = reshaped_hidden_states.shape
+        if self.flop_measure:
+            num_tokens_to_keep = max(1, int(L * self.prior))
+            indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
+            hard_boundaries = torch.zeros(B, L, device=reshaped_hidden_states.device)
+            # hard boundaries: [B, L]
+            hard_boundaries[:, indices] = 1
+        else:
+            x_transposed = reshaped_hidden_states.transpose(0, 1) # [B, L, D] -> [L, B, D]
+            # hard boundaries: [B, L]
+            _, hard_boundaries = self.boundary_predictor(x_transposed) # input is [L, B, D]
+
+        hidden = reshaped_hidden_states.transpose(0, 1) # [B, L, D] -> [L, B, D]
+        # print(f"👔👔👔👔shape before downsample: {hidden.shape}👔👔👔👔; should be (L, B, D)")
+        shortened_hidden, rep_idx = downsample_with_indices(
+            boundaries=hard_boundaries,
+            hidden=hidden,
+            null_group=self.null_token
+        ) # [L, B, D] -> [S, B, D]
+        shortened_hidden = shortened_hidden.transpose(0, 1) # [S, B, D] -> [B, S, D]
+        S = shortened_hidden.size(1)
+
+        """
+            rebuild cu_seqlens for post blocks: each sample has S tokens.
+        """
+        cu_seqlens_post = torch.arange(
+            0, (B + 1) * S, step=S,
+            device=shortened_hidden.device,
+            dtype=torch.int32 if not torch.jit.is_tracing() else grid_thw.dtype,
+        )
+
+        """
+            prepare position embeddings for post blocks.
+        """
+        offset = (torch.arange(B, device=rep_idx.device) * L)[:, None]
+        rep_global = (rep_idx + offset).reshape(-1)    
+        emb_post = emb[rep_global]                
+        position_embeddings_post = (emb_post.cos(), emb_post.sin())
+        
+        reshaped_shortened_hidden_states = shortened_hidden.reshape(B * S, self.config.embed_dim) # reshape back to (B*S, D)
+        
+        for blk in self.blocks_post:
+            reshaped_shortened_hidden_states = blk(
+                reshaped_shortened_hidden_states,
+                cu_seqlens=cu_seqlens_post,
+                position_embeddings=position_embeddings_post,
+                **kwargs,
+            )
+        feature_out = reshaped_shortened_hidden_states.view(B, S, self.config.embed_dim) # reshape (B*S, D) to (B, S, D)
+
+        if return_loss and not self.flop_measure:
+            boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
+            avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
+            boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
+            return feature_out, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+        else:
+            return feature_out # [B, S, D]
+    
+    def _global_pool(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if self.pool_type == 'avg':
+            pooled, tokens = x[:, 1:].mean(dim=1), x[:, 1:]
+        elif self.pool_type == 'tok':
+            pooled, tokens = x[:, 0], x[:, 1:]
+        else:
+            pooled = tokens = x
+
+        return pooled, tokens
+
+
+    def _pool(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if self.attn_pool is not None:
+            if self.attn_pool_contrastive is not None:
+                # This is untested, WIP pooling that should match paper
+                x = self.ln_post(x)  # TBD LN first or separate one after each pool?
+                tokens = self.attn_pool(x)
+                if self.attn_pool_type == 'parallel':
+                    pooled = self.attn_pool_contrastive(x)
+                else:
+                    assert self.attn_pool_type == 'cascade'
+                    pooled = self.attn_pool_contrastive(tokens)
+            else:
+                # this is the original OpenCLIP CoCa setup, does not match paper
+                x = self.attn_pool(x)
+                x = self.ln_post(x)
+                pooled, tokens = self._global_pool(x)
+        elif self.final_ln_after_pool:
+            pooled, tokens = self._global_pool(x)
+            pooled = self.ln_post(pooled)
+        else:
+            x = self.ln_post(x)
+            pooled, tokens = self._global_pool(x)
+
+        return pooled, tokens
+
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        return_loss: bool = False
+    ) -> torch.Tensor:
+        features_out = self.encode(hidden_states, return_loss=return_loss) # (B, L, D)
+
+        if return_loss and not self.flop_measure:
+            # encode returns tuple (features, loss, avg_boundaries, boundary_ratio)
+            tensor, boundary_loss, avg_boundaries_per_batch, boundary_ratio = features_out
+        else:
+            tensor = features_out
+        
+        pooled, _ = self._pool(tensor) # [B, L, D] -> [B, D]
+        pooled = pooled @ self.proj # [B, D] -> [B, output_dim]
+
+
+        if return_loss and not self.flop_measure:
+            return pooled, boundary_loss, avg_boundaries_per_batch, boundary_ratio # [B, output_dim]
+        else:
+            return pooled # [B, output_dim]
+

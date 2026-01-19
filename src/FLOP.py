@@ -18,7 +18,7 @@ from open_clip_local.transformer import VisionTransformer
 from open_clip_local.DTP_ViT import SingleAdaptedFixed
 
 
-from open_clip_local.Qwen2VL_ViT import Qwen2VLViT, Qwen2VLVisionConfig
+from open_clip_local.Qwen2VL_ViT import Qwen2VLViT, Qwen2VLVisionConfig, Qwen2VLDRIP
 
 
 DROPOUT_FLOPS = 4
@@ -40,7 +40,6 @@ def calc_flops(model, img_size=224, show_details=False, ratios=None):
     with torch.no_grad():
         x = torch.randn(1, 3, img_size, img_size)
         # x = torch.randn(10, 3, img_size, img_size)
-        
         
         # model.default_ratio = ratios # this seems useless
         fca1 = FlopCountAnalysis(model, x)
@@ -73,7 +72,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "Qwen2VL_ViT" # "DRIP" or "fixed_pooling" or "ViT" or "Qwen2VL_ViT"
+    MODE = "Qwen2VL_DRIP" # "DRIP" or "fixed_pooling" or "ViT" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
     COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
     # COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
 
@@ -83,8 +82,6 @@ def main():
     mlp_ratio = 4.0
     patch_dropout = 0.1
     if MODE == "DRIP":
-        
-
         print(f"🥶🥶🥶🥶Calculating GFLOPs for DRIP with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
         model = DTPViT(
             image_size=img_size,
@@ -164,6 +161,27 @@ def main():
             temporal_patch_size=1,
         )
         model = Qwen2VLViT(config)
+    elif MODE == "Qwen2VL_DRIP":
+        print(f"🥶🥶🥶🥶Calculating GFLOPs for Qwen2VL-DRIP with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
+        config = Qwen2VLVisionConfig(
+            depth=12,
+            embed_dim=width,
+            hidden_size=width * mlp_ratio,
+            mlp_ratio=mlp_ratio,
+            num_heads=width // 64,
+            in_channels=3,
+            patch_size=patch_size,
+            spatial_merge_size=1,
+            temporal_patch_size=1,
+        )
+        model = Qwen2VLDRIP(
+            config=config,
+            depth=(4, 8, 0),
+            temp=0.5,
+            compression_rate=COMPRESSION_RATE,
+            threshold=0.5,
+            flop_measure=True
+        )
 
     elif MODE == "XL_Baseline":
         model = XL_Baseline(

@@ -22,6 +22,7 @@ from .timm_model import TimmModel
 from .transformer import LayerNormFp32, LayerNorm, QuickGELU, Attention, VisionTransformer, TextTransformer,\
     text_global_pool
 from .DTP_ViT import DTPViT, HierarchicalDTPViT, SoftDTPViT, XL_Baseline, SingleAdaptedFixed, SingleAdaptedSwin
+from .Qwen2VL_ViT import Qwen2VLViT, Qwen2VLVisionConfig
 from .utils import to_2tuple
 
 ZERO = 0
@@ -155,6 +156,7 @@ def _build_vision_tower(
         HIERARCHICAL = False  # whether to use hierarchical DTP-ViT
         SOFT = False  # whether to use soft DTP-ViT
         POOLING = "DRIP" # "DRIP" or "Fixed" or "Swin"
+        QWEN = False  # whether to use Qwen2VL ViT backbone
 
         if DTP_ViT and not HIERARCHICAL and not SOFT: 
             # compression_rate = 0.25  # compression rate
@@ -256,6 +258,10 @@ def _build_vision_tower(
                 activation_function="gelu",
                 num_classes=embed_dim
             )
+        
+        elif not DTP_ViT and QWEN:
+            print("Using Qwen2VL ViT backbone")
+
         else:
             use_XL_backbone = False
             print(f"are we using XL backbone? {use_XL_backbone}", flush=True)

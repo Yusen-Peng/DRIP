@@ -1,10 +1,15 @@
-# Dynamic Patch Pooling for Efficient Vision Transformers
+<p align="center">
+<img src="docs/DRIP.png" width="500"/>
+</p>
 
-## News/Updates
+<h1 align="center">DRIP</h1>
+<h2 align="center">Dynamic Patch Pooling for Efficient Vision Transformers</h2>
 
-- [October 27, 2025] model checkpoints pretrained on CLIP/BioCLIP are publicly available on [HuggingFace](https://huggingface.co/YusenPeng/DRIP_checkpoints) for further finetuning!
+<!-- ## News/Updates
 
-## Environment Setup
+- [October 27, 2025] model checkpoints pretrained on CLIP/BioCLIP are publicly available on [HuggingFace](https://huggingface.co/YusenPeng/DRIP_checkpoints) for further finetuning! -->
+
+<!-- ## Environment Setup
 
 ```bash
 conda create -n DRIP python=3.11
@@ -16,8 +21,9 @@ python -m pip install braceexpand
 python -m pip install webdataset
 python -m pip install tensorboard
 python -m pip install pdbpp
-```
+``` -->
 
+[Full Results on Google Sheet](https://docs.google.com/spreadsheets/d/1jfIsPSpiPZZjCjGudOQiIYASim_LiHTu2kArpMDlIgI/edit?gid=0#gid=0)
 
 
 ## Activate Conda Env
@@ -30,14 +36,14 @@ conda activate DRIP
 ```
 
 
-## Contacts
+<!-- ## Contacts
 
 If you have any questions or suggestions, feel free to contact:
 
 - Yusen Peng (peng.1007@osu.edu)
 - Sachin Kumar (kumar.1145@osu.edu)
 
-Or describe it in Issues.
+Or describe it in Issues. -->
 
 <!-- ## find the model
 
