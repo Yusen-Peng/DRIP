@@ -35,6 +35,28 @@ conda deactivate
 conda activate DRIP
 ```
 
+## Experiments
+
+### CLIP pretraining from scratch
+
+```bash
+sbatch scripts/task2/multi_gpu_ascend.sh
+```
+
+### LLaVA
+
+pretraining (low-resouce is fine):
+
+```bash
+sbatch scripts/task3/pretrain.sh
+```
+
+finetuning:
+
+```bash
+sbatch scripts/task3/finetune.sh
+```
+
 
 <!-- ## Contacts
 

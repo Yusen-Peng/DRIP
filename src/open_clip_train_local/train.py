@@ -15,7 +15,8 @@ except ImportError:
     wandb = None
 
 from open_clip_local import get_input_dtype, CLIP, CustomTextCLIP
-from open_clip_local.model import DTPViT, HierarchicalDTPViT, SoftDTPViT, SingleAdaptedFixed, SingleAdaptedSwin
+from open_clip_local.model import DTPViT, HierarchicalDTPViT, SoftDTPViT
+from open_clip_local.DTP_ViT import SingleAdaptedFixed, SingleAdaptedSwin
 from open_clip_train_local.distributed import is_master
 from open_clip_train_local.zero_shot import zero_shot_eval
 from open_clip_train_local.precision import get_autocast

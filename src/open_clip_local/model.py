@@ -155,12 +155,12 @@ def _build_vision_tower(
         ######## HP tuning ########
         HIERARCHICAL = False  # whether to use hierarchical DTP-ViT
         SOFT = False  # whether to use soft DTP-ViT
-        POOLING = "DRIP" # "DRIP" or "Fixed" or "Swin"
+        POOLING = "Fixed" # "DRIP" or "Fixed" or "Swin"
         QWEN = False  # whether to use Qwen2VL ViT backbone
 
         if DTP_ViT and not HIERARCHICAL and not SOFT: 
-            # compression_rate = 0.25  # compression rate
-            compression_rate = 0.1  # compression rate
+            compression_rate = 0.25  # compression rate
+            # compression_rate = 0.1  # compression rate
             depth = (4, 8, 0)
     
             if POOLING == "DRIP":
@@ -188,14 +188,14 @@ def _build_vision_tower(
                 visual = SingleAdaptedFixed(
                     image_size=vision_cfg.image_size,
                     patch_size=vision_cfg.patch_size,
-                    in_chans=3,
-                    embed_dim=vision_cfg.width,
+                    width=vision_cfg.width,
+                    layers=12,
                     depth=depth,
-                    num_heads=vision_heads,
+                    compression_rate=compression_rate,
+                    heads=vision_cfg.width // 64,
                     mlp_ratio=vision_cfg.mlp_ratio,
-                    drop_rate=vision_cfg.patch_dropout,
-                    activation_function="gelu",
-                    num_classes=embed_dim
+                    temp=0.5,
+                    flop_measure=False # need to learn real boundaries
                 )
 
             elif POOLING == "Swin":

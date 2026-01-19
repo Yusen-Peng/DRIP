@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=Jan14_vit_baseline
-#SBATCH --output=Jan14_vit_baseline.log
+#SBATCH --job-name=Jan19_fixed_pool_4x
+#SBATCH --output=Jan19_fixed_pool_4x.log
+#SBATCH --time=70:00:00
 #SBATCH --partition=quad
-#SBATCH --time=100:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
