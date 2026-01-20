@@ -57,6 +57,20 @@ finetuning:
 sbatch scripts/task3/finetune.sh
 ```
 
+## Handy Commands
+
+monitor jobs:
+
+```bash
+squeue -u yusenpeng
+```
+
+check when the job can start running:
+
+```bash
+squeue --start -j <JOB_ID>
+```
+
 
 <!-- ## Contacts
 
