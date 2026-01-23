@@ -1115,7 +1115,7 @@ def main(args):
     else:
         torch.backends.cudnn.benchmark = True
 
-    train_dir = os.path.join(args.data_path, "train")
+    train_dir = os.path.join(args.data_path, "imagenet_train") # path updated! 
     val_dir = os.path.join(args.data_path, "val")
     dataset, dataset_test, train_sampler, test_sampler = load_data(train_dir, val_dir, args)
 
@@ -1142,8 +1142,11 @@ def main(args):
     data_loader_test = torch.utils.data.DataLoader(
         dataset_test, batch_size=args.batch_size, sampler=test_sampler, num_workers=args.workers, pin_memory=True
     )
+    
+    ######################################################################
     print("Creating model")
-    MODE = "single_swin" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
+
+    MODE = "ViT" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
     if MODE == "DRIP":
         compression_rate = 0.1 # 0.25 for 4x, 0.1 for 10x
         empty_backbone = DTPViT(

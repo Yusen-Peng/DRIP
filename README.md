@@ -37,6 +37,12 @@ conda activate DRIP
 
 ## Experiments
 
+### ImageNet from scratch
+
+```bash
+sbatch scripts/task1/finetune_imagenet.sh
+```
+
 ### CLIP pretraining from scratch
 
 ```bash
