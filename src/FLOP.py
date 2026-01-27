@@ -72,7 +72,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "Qwen2VL_DRIP" # "DRIP" or "fixed_pooling" or "ViT" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
+    MODE = "EViT" # "DRIP" or "fixed_pooling" or "ViT" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
     COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
     # COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
 
@@ -246,41 +246,40 @@ def main():
             flop_measure=True
         )
 
-    elif MODE == "DynamicViT":
-        from dynamicViT import VisionTransformerDiffPruning
-        print("Calculating GFLOPs for DynamicViT...")
-        model = VisionTransformerDiffPruning(
-            img_size=img_size,
-            patch_size=patch_size,
-            in_chans=3,
-            num_classes=1000,
-            embed_dim=width,
-            depth=12, # total 12 layers - keep everything consistent
-            num_heads=width // 64,
-            mlp_ratio=mlp_ratio,
-            qkv_bias=True,
-            drop_rate=patch_dropout,
-            attn_drop_rate=0.1,
-            drop_path_rate=0.1,
-            norm_layer=torch.nn.LayerNorm,
-            pruning_loc=[2],
-            token_ratio=[0.25], # keep 25% patches at the only pruning location
-            distill=False,
-            training=False, # for GFLOPs calculation we set it to False to avoid randomness
-        )
+    # elif MODE == "DynamicViT":
+    #     from dynamicViT import VisionTransformerDiffPruning
+    #     print("Calculating GFLOPs for DynamicViT...")
+    #     model = VisionTransformerDiffPruning(
+    #         img_size=img_size,
+    #         patch_size=patch_size,
+    #         in_chans=3,
+    #         num_classes=1000,
+    #         embed_dim=width,
+    #         depth=12, # total 12 layers - keep everything consistent
+    #         num_heads=width // 64,
+    #         mlp_ratio=mlp_ratio,
+    #         qkv_bias=True,
+    #         drop_rate=patch_dropout,
+    #         attn_drop_rate=0.1,
+    #         drop_path_rate=0.1,
+    #         norm_layer=torch.nn.LayerNorm,
+    #         pruning_loc=[2],
+    #         token_ratio=[0.25], # keep 25% patches at the only pruning location
+    #         distill=False,
+    #         training=False, # for GFLOPs calculation we set it to False to avoid randomness
+    #     )
     elif MODE == "EViT":
-        from EViT import EViT
+        from open_clip_local.EViT import EViT
         print("Calculating GFLOPs for EViT...")
-        r = 0.25  # keep 25% of patch tokens at block 2 only
         keep_rate = [1.0] * 12
-        keep_rate[2] = r
+        keep_rate[3] = 0.25 # only prune at layer 4 (0-indexed, 4+8)
         model = EViT(
             img_size=img_size,
             patch_size=patch_size,
             in_chans=3,
             num_classes=1000,
             embed_dim=width,
-            depth=12,  # total 12 layers - keep everything consistent
+            depth=12,
             num_heads=width // 64,
             mlp_ratio=mlp_ratio,
             qkv_bias=False,
@@ -292,6 +291,7 @@ def main():
         )
     else:
         raise NotImplementedError("MODE not implemented")
+    
             
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

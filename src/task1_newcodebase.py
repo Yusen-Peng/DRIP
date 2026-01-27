@@ -31,7 +31,9 @@ import torch.multiprocessing as mp
 from transformers import get_cosine_schedule_with_warmup
 from dynamicViT import VisionTransformerDiffPruning
 from swin import SingleAdaptedSwin, SwinTransformer
-from EViT import EViT
+
+# Other collected SOTA baselines
+from open_clip_local.EViT import EViT
 
 
 
