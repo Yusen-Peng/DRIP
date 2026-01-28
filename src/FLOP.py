@@ -72,7 +72,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "EViT" # "DRIP" or "fixed_pooling" or "ViT" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
+    MODE = "ToME" # "DRIP" or "fixed_pooling" or "ViT" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
     COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
     # COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
 
@@ -199,38 +199,7 @@ def main():
             num_classes=width,
             flop_measure=True,  # simulating fake boundaries for reproducible GFLOPs
         )
-
-    elif MODE == "Swin":
-        from swin import SwinTransformer
-        print("Calculating GFLOPs for Swin Transformer...")
-        model = SwinTransformer(
-            img_size=224, 
-            patch_size=4, 
-            embed_dim=96,
-            depths=[2, 2, 6, 2],
-            num_heads=[3, 6, 12, 24],
-            window_size=7, mlp_ratio=4.0, qkv_bias=True,
-            drop_rate=0.0, attn_drop_rate=0.0, drop_path_rate=0.1,
-            norm_layer=torch.nn.LayerNorm, ape=False, patch_norm=True,
-            use_checkpoint=False, fused_window_process=False,
-        )
-    
-    elif MODE == "adapted_Swin":
-        from swin import HierarchicalAdaptedSwin
-        print("Calculating GFLOPs for Adapted Swin Transformer...")
-        model = HierarchicalAdaptedSwin(
-            image_size=224, 
-            patch_size=8, 
-            in_chans=3,
-            embed_dim=96,
-            depth=(2, 2, 6, 2),
-            num_heads=(3, 6, 12, 24),
-            mlp_ratio=4.0,
-            drop_rate=0.0, 
-            num_classes=768,
-            norm_layer=torch.nn.LayerNorm
-        )
-    
+        
     elif MODE == "fixed_pooling":
         print("Calculating GFLOPs for Fixed Pooling...")
         model = SingleAdaptedFixed(
@@ -246,33 +215,11 @@ def main():
             flop_measure=True
         )
 
-    # elif MODE == "DynamicViT":
-    #     from dynamicViT import VisionTransformerDiffPruning
-    #     print("Calculating GFLOPs for DynamicViT...")
-    #     model = VisionTransformerDiffPruning(
-    #         img_size=img_size,
-    #         patch_size=patch_size,
-    #         in_chans=3,
-    #         num_classes=1000,
-    #         embed_dim=width,
-    #         depth=12, # total 12 layers - keep everything consistent
-    #         num_heads=width // 64,
-    #         mlp_ratio=mlp_ratio,
-    #         qkv_bias=True,
-    #         drop_rate=patch_dropout,
-    #         attn_drop_rate=0.1,
-    #         drop_path_rate=0.1,
-    #         norm_layer=torch.nn.LayerNorm,
-    #         pruning_loc=[2],
-    #         token_ratio=[0.25], # keep 25% patches at the only pruning location
-    #         distill=False,
-    #         training=False, # for GFLOPs calculation we set it to False to avoid randomness
-    #     )
     elif MODE == "EViT":
         from open_clip_local.EViT import EViT
         print("Calculating GFLOPs for EViT...")
         keep_rate = [1.0] * 12
-        keep_rate[3] = 0.25 # only prune at layer 4 (0-indexed, 4+8)
+        keep_rate[3] = COMPRESSION_RATE # only prune at layer 4 (0-indexed, 4+8)
         model = EViT(
             img_size=img_size,
             patch_size=patch_size,
@@ -289,6 +236,30 @@ def main():
             norm_layer=torch.nn.LayerNorm,
             keep_rate=keep_rate
         )
+    
+    elif MODE == 'ToME':
+        from open_clip_local.ToME import ToMEViT
+        print("Calculating GFLOPs for ToME...")
+        # approximately 4x compression at layer 4 and 5
+        tome_r_schedule = [0] * 12
+        tome_r_schedule[3] = 98  # layer 4
+        tome_r_schedule[4] = 49  # layer 5
+        model = ToMEViT(
+            image_size=img_size,
+            patch_size=patch_size,
+            width=width,
+            layers=12,
+            heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            output_dim=512,
+            tome_r_schedule=tome_r_schedule,
+            tome_class_token=True,
+            tome_distill_token=False,
+            tome_use_wavg=True,
+            tome_metric="x"
+        )
+
+
     else:
         raise NotImplementedError("MODE not implemented")
     
