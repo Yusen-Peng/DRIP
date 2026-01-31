@@ -15,7 +15,7 @@ from torchvision import datasets
 from torch.utils.data import DataLoader
 from open_clip_local import create_model_and_transforms
 from open_clip_local.model import DTPViT, VisionTransformer, HierarchicalDTPViT, SoftDTPViT
-from open_clip_local.DTP_ViT import XL_Baseline
+from open_clip_local.DTP_ViT import SingleAdaptedFixed, XL_Baseline
 from boundary_vis import load_dtpx_from_clip_checkpoint
 from open_clip_local import CLIP
 from torch.cuda.amp import GradScaler
@@ -919,8 +919,14 @@ def train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, arg
         start_time = time.time()
         image, target = image.to(device), target.to(device)
         with torch.cuda.amp.autocast(enabled=scaler is not None):
-            output = model(image)
-            loss = criterion(output, target)
+            if isinstance(model, (DTPViT, SingleAdaptedFixed)):
+                output, boundary_loss, _, _ = model(image, return_loss=True)
+                cls_loss = criterion(output, target)
+                # NOTE: add boundary loss for back propagation
+                loss = cls_loss + boundary_loss
+            else:
+                output = model(image)            
+                loss = criterion(output, target)
 
         optimizer.zero_grad()
         if scaler is not None:

@@ -308,9 +308,17 @@ def main(args):
         if args.ddp_static_graph:
             # this doesn't exist in older PyTorch, arg only added if enabled
             ddp_args['static_graph'] = True
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], **ddp_args)
+
+
+        if not DTP_ViT:
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], **ddp_args)
+        else:
+            # we need to tolerate conditional execution for DRIP
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device],
+                    find_unused_parameters=True, gradient_as_bucket_view=True, **ddp_args)
     
         if args.distill:
+            # FIXME: not used
             dist_model = torch.nn.parallel.DistributedDataParallel(dist_model, device_ids=[device], **ddp_args)
 
     # create optimizer and scaler

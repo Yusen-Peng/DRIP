@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Jan19_fixed_pool_4x
-#SBATCH --output=Jan19_fixed_pool_4x.log
-#SBATCH --time=70:00:00
+#SBATCH --job-name=Jan30_fixed_pool_4x
+#SBATCH --output=Jan30_fixed_pool_4x.log
+#SBATCH --time=00:10:00
 #SBATCH --partition=quad
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
-torchrun --nproc_per_node=1 src/task2_clip.py
+torchrun --nproc_per_node=4 src/task2_clip.py
 
 conda deactivate
 # End of script
