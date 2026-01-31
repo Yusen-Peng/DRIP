@@ -1,7 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=Jan_22_vit_baseline
-#SBATCH --output=Jan_22_vit_baseline.txt
+#SBATCH --job-name=Jan31_imagenet_fixed_pooling
+#SBATCH --output=Jan31_imagenet_fixed_pooling.txt
 #SBATCH --time=60:00:00
+#SBATCH --partition=quad
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
@@ -23,7 +24,7 @@ torchrun --nproc_per_node=4 src/task1_newcodebase.py \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_ViT_baseline
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_fixed
 
 conda deactivate
 # End of script

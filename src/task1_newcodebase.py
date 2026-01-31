@@ -36,13 +36,12 @@ from swin import SingleAdaptedSwin, SwinTransformer
 from open_clip_local.EViT import EViT
 
 
-
 class VisionClassifier(nn.Module):
-    def __init__(self, backbone: DTPViT | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT | SingleAdaptedSwin, num_classes):
+    def __init__(self, backbone: DTPViT | SingleAdaptedFixed | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT | SingleAdaptedSwin, num_classes):
         super().__init__()
         self.backbone = backbone
-        if isinstance(backbone, DTPViT) or isinstance(backbone, XL_Baseline):
-            self.fc = nn.Linear(backbone.num_classes, num_classes)
+        if isinstance(backbone, DTPViT) or isinstance(backbone, XL_Baseline) or isinstance(backbone, SingleAdaptedFixed):
+            self.fc = nn.Linear(backbone.output_dim, num_classes)
         elif isinstance(backbone, VisionTransformer):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
         elif isinstance(backbone, VisionTransformerDiffPruning):
@@ -57,12 +56,12 @@ class VisionClassifier(nn.Module):
             self.fc = nn.Linear(backbone.num_classes, num_classes)
 
     def forward(self, x):
-        outs = self.backbone(x)
-        if isinstance(outs, tuple):
-            feats = outs[0]
+        if isinstance(self.backbone, DTPViT) or isinstance(self.backbone, SingleAdaptedFixed):
+            outs, boundary_loss, _, _  = self.backbone(x, return_loss=True)
+            return self.fc(outs), boundary_loss
         else:
-            feats = outs
-        return self.fc(feats)
+            outs = self.backbone(x)
+            return self.fc(outs)
 
 class SmoothedValue:
     """Track a series of values and provide access to smoothed values over a
@@ -359,7 +358,6 @@ def average_checkpoints(inputs):
                 p = p.float()
             if k not in params_dict:
                 params_dict[k] = p.clone()
-                # NOTE: clone() is needed in case of p is a shared parameter
             else:
                 params_dict[k] += p
     averaged_params = OrderedDict()
@@ -908,7 +906,7 @@ class RASampler(torch.utils.data.Sampler):
         self.epoch = epoch
 
 
-def train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, args, model_ema=None, scaler=None):
+def train_one_epoch(model, is_dtp: bool, criterion, optimizer, data_loader, device, epoch, args, model_ema=None, scaler=None):
     model.train()
     metric_logger = MetricLogger(delimiter="  ")
     metric_logger.add_meter("lr", SmoothedValue(window_size=1, fmt="{value}"))
@@ -919,14 +917,18 @@ def train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, arg
         start_time = time.time()
         image, target = image.to(device), target.to(device)
         with torch.cuda.amp.autocast(enabled=scaler is not None):
-            if isinstance(model, (DTPViT, SingleAdaptedFixed)):
-                output, boundary_loss, _, _ = model(image, return_loss=True)
+            if is_dtp:
+                output, boundary_loss = model(image)
                 cls_loss = criterion(output, target)
-                # NOTE: add boundary loss for back propagation
+                
+                # add boundary loss for back propagation
                 loss = cls_loss + boundary_loss
+                print(f"====cls_loss: {cls_loss.item():.4f}, boundary_loss: {boundary_loss.item():.4f}===", flush=True)
             else:
                 output = model(image)            
                 loss = criterion(output, target)
+                print(f"====cls_loss: {cls_loss.item():.4f}===", flush=True)
+
 
         optimizer.zero_grad()
         if scaler is not None:
@@ -954,6 +956,11 @@ def train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, arg
         metric_logger.update(loss=loss.item(), lr=optimizer.param_groups[0]["lr"])
         metric_logger.meters["acc1"].update(acc1.item(), n=batch_size)
         metric_logger.meters["acc5"].update(acc5.item(), n=batch_size)
+        
+        # log boundary loss as appropriate
+        if is_dtp:
+            metric_logger.meters["boundary_loss"].update(boundary_loss.item(), n=batch_size)
+
         metric_logger.meters["img/s"].update(batch_size / (time.time() - start_time))
 
 
@@ -1153,136 +1160,46 @@ def main(args):
     
     ######################################################################
     print("Creating model")
+    is_dtp = False
+    MODE = "fixed_pooling" # "DRIP" or "fixed_pooling"
 
-    MODE = "ViT" # "DRIP" # "Swin"  # "DynamicViT"  # "EViT"  # "ViT"
     if MODE == "DRIP":
-        compression_rate = 0.1 # 0.25 for 4x, 0.1 for 10x
+        compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
         empty_backbone = DTPViT(
-                image_size=RESOLUTION,
-                patch_size=patch_size,
-                embed_dim=768,
-                num_heads=12,
-                depth=(4, 8, 0),
-                mlp_ratio=4.0,
-                drop_rate=0.0,
-                attn_drop_rate=0.1,
-                num_classes=512,
-                temp=0.5,
-                compression_rate=compression_rate,
-                threshold=0.5,
-                activation_function='gelu',
-                flop_measure=False
-            )
-        backbone = empty_backbone
-        model = VisionClassifier(backbone, num_classes).to(device)
-
-
-    elif MODE == "Swin":
-        print("Calculating GFLOPs for Swin Transformer...")
-        empty_backbone = SwinTransformer(
-            img_size=RESOLUTION, 
-            patch_size=4, 
-            embed_dim=96,
-            depths=[2, 2, 6, 2],
-            num_heads=[3, 6, 12, 24],
-            window_size=7, mlp_ratio=4.0, qkv_bias=True,
-            drop_rate=0.0, attn_drop_rate=0.0, drop_path_rate=0.1,
-            norm_layer=torch.nn.LayerNorm, ape=False, patch_norm=True,
-            use_checkpoint=False, fused_window_process=False,
-        )
-        backbone = empty_backbone
-        model = VisionClassifier(backbone, num_classes).to(device)
-    
-
-    elif MODE == "single_swin":
-        from swin import SingleAdaptedSwin
-        print("Calculating GFLOPs for Single-stage Adapted Swin Transformer...")
-        empty_backbone = SingleAdaptedSwin(
-            image_size=224, 
-            patch_size=16, 
-            in_chans=3,
-            embed_dim=768,
-            depth=(2, 10),
-            num_heads=(12, 12),
-            mlp_ratio=4.0,
-            drop_rate=0.0, 
-            num_classes=768,
-            norm_layer=torch.nn.LayerNorm
-        )
-        backbone = empty_backbone
-        model = VisionClassifier(backbone, num_classes).to(device)    
-    elif MODE == "DynamicViT":
-        print("Calculating GFLOPs for DynamicViT...")
-        empty_backbone = VisionTransformerDiffPruning(
-            img_size=RESOLUTION,
+            image_size=RESOLUTION,
             patch_size=patch_size,
-            in_chans=3,
-            num_classes=1000,
-            embed_dim=768,
-            depth=12, # total 12 layers - keep everything consistent
-            num_heads=768 // 64,
+            width=768,
+            layers=12,
+            depth=(4, 8, 0),
+            compression_rate=compression_rate,
+            heads=768 // 64,
             mlp_ratio=4.0,
-            qkv_bias=True,
-            drop_rate=0.0,
-            attn_drop_rate=0.1,
-            drop_path_rate=0.1,
-            norm_layer=torch.nn.LayerNorm,
-            pruning_loc=[2],
-            token_ratio=[0.25], # keep 25% patches at the only pruning location
-            distill=False,
-            training=True, # here we need to set training=True since we are training the model
-        )
-        backbone = empty_backbone
-        model = VisionClassifier(backbone, num_classes).to(device)
-
-    elif MODE == "EViT":
-        print("Calculating GFLOPs for EViT...")
-        r = 0.25  # keep 25% of patch tokens at block 2 only
-        keep_rate = [1.0] * 12
-        keep_rate[2] = r        # 3 + 9
-        empty_backbone = EViT(
-            img_size=RESOLUTION,
-            patch_size=patch_size,
-            in_chans=3,
-            num_classes=1000,
-            embed_dim=768,
-            depth=12,  # total 12 layers - keep everything consistent
-            num_heads=768 // 64,
-            mlp_ratio=4.0,
-            qkv_bias=False,
-            drop_rate=0.0,
-            attn_drop_rate=0.1,
-            drop_path_rate=0.1,
-            norm_layer=torch.nn.LayerNorm,
-            keep_rate=keep_rate
-        )
-        backbone = empty_backbone
-        model = VisionClassifier(backbone, num_classes).to(device)
-
-    elif MODE == "H-DRIP":
-        rate1 = 0.25  # compression rate at stage 1
-        rate2 = 0.25  # compression rate at stage 2
-        rate3 = 0.25  # compression rate at stage 3
-        print("Calculating GFLOPs for H-DRIP...")
-        empty_backbone = HierarchicalDTPViT(
-            image_size=224,
-            patch_size=8,
-            in_chans=3,
-            embed_dim=96,
-            depth=(2, 2, 6, 2),
-            num_heads=[3, 6, 12, 24],
-            mlp_ratio=4.0,
-            drop_rate=0.0,
-            attn_drop_rate=0.0,
             temp=0.5,
-            compression_rate=(rate1, rate2, rate3),  # compression at stage 1 and 2
-            threshold=0.5,
-            activation_function="gelu",
-            num_classes=768,
-            flop_measure=False
+            pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
+            flop_measure=False # need to learn real boundaries
         )
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
+        is_dtp = True # NOTE: important!
+
+    elif MODE == "fixed_pooling":
+        compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
+        empty_backbone = SingleAdaptedFixed(
+            image_size=RESOLUTION,
+            patch_size=patch_size,
+            width=768,
+            layers=12,
+            depth=(4, 8, 0),
+            compression_rate=compression_rate,
+            heads=768 // 64,
+            mlp_ratio=4.0,
+            temp=0.5,
+            pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
+            flop_measure=False # need to learn real boundaries
+        )
+        backbone = empty_backbone
+        model = VisionClassifier(backbone, num_classes).to(device)
+        is_dtp = True # NOTE: important!
 
     else:
         use_XL_backbone = False
@@ -1451,7 +1368,7 @@ def main(args):
     for epoch in tqdm(range(args.start_epoch, args.epochs), desc="Training Epochs"):
         if args.distributed:
             train_sampler.set_epoch(epoch)
-        train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, args, model_ema, scaler)
+        train_one_epoch(model, is_dtp, criterion, optimizer, data_loader, device, epoch, args, model_ema, scaler)
         lr_scheduler.step()
         evaluate(model, criterion, data_loader_test, device=device)
         if model_ema:

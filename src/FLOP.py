@@ -13,7 +13,7 @@ from open_clip_local.DTP_ViT import DTPViT
 # from open_clip_local.DTP_ViT_TransformerXL import DTPViT
 # from open_clip_local.DTP_ViT_entropy import DTPViT
 
-from open_clip_local.DTP_ViT import HierarchicalDTPViT, SoftDTPViT, XL_Baseline
+from open_clip_local.DTP_ViT import XL_Baseline
 from open_clip_local.transformer import VisionTransformer
 from open_clip_local.DTP_ViT import SingleAdaptedFixed
 
@@ -72,7 +72,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "DTEM" # "DRIP" or "fixed_pooling" or "ViT" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
+    MODE = "XL_baseline" # "DRIP" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
     COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
     # COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
 
@@ -94,48 +94,6 @@ def main():
             mlp_ratio=mlp_ratio,
             temp=0.5,
             flop_measure=True
-        )
-    elif MODE == "H-DRIP":
-        rate1 = 0.25  # compression rate at stage 1
-        rate2 = 0.25  # compression rate at stage 2
-        rate3 = 0.25  # compression rate at stage 3
-        model = HierarchicalDTPViT(
-            image_size=224,
-            patch_size=4,
-            in_chans=3,
-            embed_dim=96,
-            depth=(2, 2, 6, 2),
-            num_heads=[3, 6, 12, 24],
-            mlp_ratio=mlp_ratio,
-            drop_rate=patch_dropout,
-            attn_drop_rate=0.0,
-            temp=0.5,
-            compression_rate=(rate1, rate2, rate3),  # compression at stage 1 and 2
-            threshold=0.5,
-            activation_function="gelu",
-            num_classes=width,
-            flop_measure=True,
-        )
-    elif MODE == "S-DRIP":
-        upper_bound = 0.3  # compression rate upper bound
-        lower_bound = 0.2  # compression rate lower bound
-        compression_rate = (lower_bound, upper_bound)
-        model = SoftDTPViT(
-            image_size=img_size,
-            patch_size=patch_size,
-            in_chans=3,
-            embed_dim=width,
-            depth=(2, 10, 0),
-            num_heads=width // 64,
-            mlp_ratio=mlp_ratio,
-            drop_rate=patch_dropout,
-            attn_drop_rate=0.1,
-            temp=0.5,
-            compression_rate=compression_rate,
-            threshold=0.5,
-            activation_function="gelu",
-            num_classes=width,
-            flop_measure=True,  # simulating fake boundaries for reproducible GFLOPs
         )
     elif MODE == "ViT":
         model = VisionTransformer(
@@ -183,21 +141,18 @@ def main():
             flop_measure=True
         )
 
-    elif MODE == "XL_Baseline":
+    elif MODE == "XL_baseline":
         model = XL_Baseline(
             image_size=img_size,
             patch_size=patch_size,
-            in_chans=3,
-            embed_dim=width,
-            num_heads=width // 64,
+            width=width,
+            layers=12,
+            depth=12,
+            compression_rate=COMPRESSION_RATE,
+            heads=width // 64,
             mlp_ratio=mlp_ratio,
-            drop_rate=patch_dropout,
-            attn_drop_rate=0.1,
             temp=0.5,
-            threshold=0.5,
-            activation_function="gelu",
-            num_classes=width,
-            flop_measure=True,  # simulating fake boundaries for reproducible GFLOPs
+            pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
         )
         
     elif MODE == "fixed_pooling":
