@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=Jan31_CLIP_XL
 #SBATCH --output=Jan31_CLIP_XL.log
-#SBATCH --time=120:00:00
+#SBATCH --time=100:00:00
 #SBATCH --partition=quad
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

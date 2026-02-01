@@ -964,7 +964,7 @@ def train_one_epoch(model, is_dtp: bool, criterion, optimizer, data_loader, devi
         metric_logger.meters["img/s"].update(batch_size / (time.time() - start_time))
 
 
-def evaluate(model, criterion, data_loader, device, print_freq=100, log_suffix=""):
+def evaluate(model, is_dtp: bool, criterion, data_loader, device, print_freq=100, log_suffix=""):
     model.eval()
     metric_logger = MetricLogger(delimiter="  ")
     header = f"Test: {log_suffix}"
@@ -974,8 +974,13 @@ def evaluate(model, criterion, data_loader, device, print_freq=100, log_suffix="
         for image, target in metric_logger.log_every(data_loader, print_freq, header):
             image = image.to(device, non_blocking=True)
             target = target.to(device, non_blocking=True)
-            output = model(image)
-            loss = criterion(output, target)
+            if is_dtp:
+                output, boundary_loss = model(image)
+                cls_loss = criterion(output, target)
+                loss = cls_loss + boundary_loss
+            else:
+                output = model(image)            
+                loss = criterion(output, target)
 
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
             # FIXME need to take into account that the datasets
@@ -1161,7 +1166,7 @@ def main(args):
     ######################################################################
     print("Creating model")
     is_dtp = False
-    MODE = "fixed_pooling" # "DRIP" or "fixed_pooling"
+    MODE = "ViT" # "DRIP" or "fixed_pooling" or "ViT" or "XL"
 
     if MODE == "DRIP":
         compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
@@ -1202,7 +1207,7 @@ def main(args):
         is_dtp = True # NOTE: important!
 
     else:
-        use_XL_backbone = False
+        use_XL_backbone = (MODE == "XL")
         print(f"are we using XL backbone? {use_XL_backbone}", flush=True)
         if use_XL_backbone:
             print("use XL backbone!")
@@ -1223,7 +1228,7 @@ def main(args):
             model = VisionClassifier(backbone, num_classes).to(device)
 
         else:
-            print(f"use ViT with patch size {patch_size} and resolution {RESOLUTION}!")
+            print(f"use **ViT** with patch size {patch_size} and resolution {RESOLUTION}!")
             empty_backbone = VisionTransformer(
                 image_size=RESOLUTION,
                 patch_size=patch_size,
@@ -1356,9 +1361,9 @@ def main(args):
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
         if model_ema:
-            evaluate(model_ema, criterion, data_loader_test, device=device, log_suffix="EMA")
+            evaluate(model_ema, is_dtp, criterion, data_loader_test, device=device, log_suffix="EMA")
         else:
-            evaluate(model, criterion, data_loader_test, device=device)
+            evaluate(model, is_dtp, criterion, data_loader_test, device=device)
         return
 
     print("Start training")
@@ -1368,9 +1373,9 @@ def main(args):
             train_sampler.set_epoch(epoch)
         train_one_epoch(model, is_dtp, criterion, optimizer, data_loader, device, epoch, args, model_ema, scaler)
         lr_scheduler.step()
-        evaluate(model, criterion, data_loader_test, device=device)
+        evaluate(model, is_dtp, criterion, data_loader_test, device=device)
         if model_ema:
-            evaluate(model_ema, criterion, data_loader_test, device=device, log_suffix="EMA")
+            evaluate(model_ema, is_dtp, criterion, data_loader_test, device=device, log_suffix="EMA")
         if args.output_dir:
             checkpoint = {
                 "model": model_without_ddp.state_dict(),
@@ -1383,6 +1388,10 @@ def main(args):
                 checkpoint["model_ema"] = model_ema.state_dict()
             if scaler:
                 checkpoint["scaler"] = scaler.state_dict()
+            
+            
+            os.makedirs(args.output_dir, exist_ok=True)
+
             save_on_master(checkpoint, os.path.join(args.output_dir, f"model_{epoch}.pth"))
             save_on_master(checkpoint, os.path.join(args.output_dir, "checkpoint.pth"))
 

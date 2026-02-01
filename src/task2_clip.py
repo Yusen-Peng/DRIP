@@ -82,7 +82,10 @@ def main():
     # lr = 1e-3
 
     wd = 0.1
-    epochs = 15 # NOTE: 4 for small experiment; 15 for full training
+    
+    # NOTE
+    # here, 4 for small experiment; 20 for full training
+    epochs = 20
     
     workers = 8       # CPU utilization
     model = f"ViT-B-{patch_size}"
