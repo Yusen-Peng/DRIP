@@ -927,7 +927,7 @@ def train_one_epoch(model, is_dtp: bool, criterion, optimizer, data_loader, devi
             else:
                 output = model(image)            
                 loss = criterion(output, target)
-                print(f"====cls_loss: {cls_loss.item():.4f}===", flush=True)
+                print(f"====cls_loss: {loss.item():.4f}===", flush=True)
 
 
         optimizer.zero_grad()

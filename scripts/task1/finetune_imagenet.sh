@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Jan31_imagenet_kernel_ViT
-#SBATCH --output=Jan31_imagenet_kernel_ViT.txt
+#SBATCH --job-name=Feb1_imagenet_kernel_ViT
+#SBATCH --output=Feb1_imagenet_kernel_ViT.txt
 #SBATCH --time=60:00:00
 #SBATCH --partition=quad
 #SBATCH --nodes=1
