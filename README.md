@@ -5,9 +5,6 @@
 <h1 align="center">DRIP</h1>
 <h2 align="center">Dynamic Patch Pooling for Efficient Vision Transformers</h2>
 
-[Full Results on Google Sheet](https://docs.google.com/spreadsheets/d/1jfIsPSpiPZZjCjGudOQiIYASim_LiHTu2kArpMDlIgI/edit?gid=0#gid=0)
-
-
 ## Activate Conda Env
 
 ```bash
@@ -46,13 +43,13 @@ sbatch scripts/task3/finetune.sh
 
 ## Handy Commands
 
-monitor jobs:
+monitor all jobs:
 
 ```bash
 squeue -u yusenpeng
 ```
 
-check when the job can start running:
+check when a specific job can start running:
 
 ```bash
 squeue --start -j <JOB_ID>

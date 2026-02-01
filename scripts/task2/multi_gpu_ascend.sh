@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Jan30_fixed_pool_4x
-#SBATCH --output=Jan30_fixed_pool_4x.log
-#SBATCH --time=00:10:00
+#SBATCH --job-name=Jan31_CLIP_XL
+#SBATCH --output=Jan31_CLIP_XL.log
+#SBATCH --time=120:00:00
 #SBATCH --partition=quad
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

@@ -18,6 +18,7 @@ def infer_successful_samples_from_stats(stats_glob: str) -> int:
 
 def train_runner(
         DTP: bool,
+        XL_baseline: bool = False,
         use_webdataset: bool = False,
         train_data_path: str = "dataset/coco_train_subset.csv",
         val_data_path: str = "dataset/coco_val_subset.csv",
@@ -57,13 +58,17 @@ def train_runner(
 
     if DTP:
         args_list.append("--DTP")
+    if XL_baseline:
+        args_list.append("--XL-baseline")
+    
     train_function(args_list)
 
 def main():
     # dataset parameters - "COCO" or "LAION" or "CC12"
     dataset_name = "LAION"
 
-    use_DTP = True # use pooling (DRIP, fixed) or not
+    use_DTP = False # use pooling (DRIP, fixed) or not
+    XL_baseline = True # use CLIP XL baseline or not
 
     # experiment with batch size
     # batch size:
@@ -77,7 +82,7 @@ def main():
     # lr = 1e-3
 
     wd = 0.1
-    epochs = 4 # NOTE: 4 for small experiment; 15 for full training
+    epochs = 15 # NOTE: 4 for small experiment; 15 for full training
     
     workers = 8       # CPU utilization
     model = f"ViT-B-{patch_size}"
@@ -120,6 +125,7 @@ def main():
     # train CLIP
     train_runner(
         DTP=use_DTP,
+        XL_baseline=XL_baseline,
         use_webdataset=use_webdataset,
         train_data_path=train_data_path,
         val_data_path=val_data_path,

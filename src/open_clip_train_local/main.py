@@ -229,6 +229,7 @@ def main(args):
         model_kwargs['init_logit_bias'] = -10
 
     DTP_ViT = True if args.DTP else False
+    XL_baseline = True if args.XL_baseline else False
     model, preprocess_train, preprocess_val = create_model_and_transforms(
         args.model,
         DTP_ViT,
@@ -310,7 +311,7 @@ def main(args):
             ddp_args['static_graph'] = True
 
 
-        if not DTP_ViT:
+        if not DTP_ViT and not XL_baseline:
             model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], **ddp_args)
         else:
             # we need to tolerate conditional execution for DRIP

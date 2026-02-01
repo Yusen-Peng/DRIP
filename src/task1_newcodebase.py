@@ -1207,20 +1207,18 @@ def main(args):
         if use_XL_backbone:
             print("use XL backbone!")
             patch_size = 16
-            empty_backbone = XL_Baseline(
+            model = XL_Baseline(
                 image_size=RESOLUTION,
                 patch_size=patch_size,
-                in_chans=3,
-                embed_dim=768,
-                num_heads=12,
+                width=768,
+                layers=12,
+                depth=12,
+                compression_rate=0.25,
+                heads=768 // 64,
                 mlp_ratio=4.0,
-                drop_rate=0.0,
-                attn_drop_rate=0.1,
                 temp=0.5,
-                threshold=0.5,
-                activation_function="gelu",
-                num_classes=512,
-            )
+                pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
+            )            
             backbone = empty_backbone
             model = VisionClassifier(backbone, num_classes).to(device)
 

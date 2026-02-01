@@ -263,25 +263,23 @@ def _build_vision_tower(
             print("Using Qwen2VL ViT backbone")
 
         else:
-            use_XL_backbone = False
+            use_XL_backbone = True
             print(f"are we using XL backbone? {use_XL_backbone}", flush=True)
             if use_XL_backbone:
                 print("use XL backbone!")
                 patch_size = 16
                 visual = XL_Baseline(
-                    image_size=224,
-                    patch_size=patch_size,
-                    in_chans=3,
-                    embed_dim=768,
-                    num_heads=12,
-                    mlp_ratio=4.0,
-                    drop_rate=0.0,
-                    attn_drop_rate=0.1,
-                    temp=0.5,
-                    threshold=0.5,
-                    activation_function="gelu",
-                    num_classes=512,
-                )
+                image_size=vision_cfg.image_size,
+                patch_size=patch_size,
+                width=768,
+                layers=12,
+                depth=12,
+                compression_rate=0.25,
+                heads=768 // 64,
+                mlp_ratio=4.0,
+                temp=0.5,
+                pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
+            )    
 
             else:
                 print("use ViT!")

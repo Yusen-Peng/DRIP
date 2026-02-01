@@ -215,6 +215,12 @@ def parse_args(args):
         action='store_true',
         help="Use DTP (Dynamic Token Pooling) for image encoder.",
     )
+
+    parser.add_argument(
+        "--XL-baseline",
+        action='store_true',
+        help="Use CLIP XL baseline model.",
+    )
     
     parser.add_argument(
         "--pretrained",
