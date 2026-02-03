@@ -1117,9 +1117,7 @@ def main(args):
     print(args)
     
     RESOLUTION = 224
-    #RESOLUTION = 384 # FIXME: 384 only for ablation
     patch_size = 16
-    #patch_size = 32 # FIXME: 32 only for ablation
 
     args.train_crop_size = RESOLUTION
     args.val_crop_size = RESOLUTION # FIXME: patching so far
@@ -1166,7 +1164,7 @@ def main(args):
     ######################################################################
     print("Creating model")
     is_dtp = False
-    MODE = "ViT" # "DRIP" or "fixed_pooling" or "ViT" or "XL"
+    MODE = "XL" # "DRIP" or "fixed_pooling" or "ViT" or "XL"
 
     if MODE == "DRIP":
         compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
@@ -1212,7 +1210,7 @@ def main(args):
         if use_XL_backbone:
             print("use XL backbone!")
             patch_size = 16
-            model = XL_Baseline(
+            empty_backbone = XL_Baseline(
                 image_size=RESOLUTION,
                 patch_size=patch_size,
                 width=768,

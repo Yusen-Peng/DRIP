@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Feb1_imagenet_kernel_ViT
-#SBATCH --output=Feb1_imagenet_kernel_ViT.txt
-#SBATCH --time=60:00:00
+#SBATCH --job-name=Feb2_imagenet_XL_baseline
+#SBATCH --output=Feb2_imagenet_XL_baseline.txt
+#SBATCH --time=70:00:00
 #SBATCH --partition=quad
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,7 +24,7 @@ torchrun --nproc_per_node=4 src/task1_newcodebase.py \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_kernel_ViT
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_XL_baseline
 
 conda deactivate
 # End of script
