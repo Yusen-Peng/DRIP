@@ -72,7 +72,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "XL_baseline" # "DRIP" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
+    MODE = "EViT_XL" # "DRIP" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
     COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
     # COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
 
@@ -176,6 +176,28 @@ def main():
         keep_rate = [1.0] * 12
         keep_rate[3] = COMPRESSION_RATE # only prune at layer 4 (0-indexed, 4+8)
         model = EViT(
+            img_size=img_size,
+            patch_size=patch_size,
+            in_chans=3,
+            num_classes=1000,
+            embed_dim=width,
+            depth=12,
+            num_heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            qkv_bias=False,
+            drop_rate=patch_dropout,
+            attn_drop_rate=0.1,
+            drop_path_rate=0.1,
+            norm_layer=torch.nn.LayerNorm,
+            keep_rate=keep_rate
+        )
+
+    elif MODE == "EViT_XL":
+        from open_clip_local.EViT import EViT_XL_adapted
+        print("Calculating GFLOPs for EViT XL...")
+        keep_rate = [1.0] * 12
+        keep_rate[3] = COMPRESSION_RATE # only prune at layer 4 (0-indexed, 4+8)
+        model = EViT_XL_adapted(
             img_size=img_size,
             patch_size=patch_size,
             in_chans=3,

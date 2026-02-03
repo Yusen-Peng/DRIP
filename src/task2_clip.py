@@ -67,7 +67,7 @@ def main():
     # dataset parameters - "COCO" or "LAION" or "CC12"
     dataset_name = "LAION"
 
-    use_DTP = False # use pooling (DRIP, fixed) or not
+    use_DTP = True # use pooling (DRIP, fixed) or not
     XL_baseline = True # use CLIP XL baseline or not
 
     # experiment with batch size
