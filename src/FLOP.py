@@ -72,7 +72,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "EViT_XL" # "DRIP" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
+    MODE = "ToME_XL" # "DRIP" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
     COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
     # COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
 
@@ -222,6 +222,27 @@ def main():
         tome_r_schedule[3] = 98  # layer 4
         tome_r_schedule[4] = 49  # layer 5
         model = ToMEViT(
+            image_size=img_size,
+            patch_size=patch_size,
+            width=width,
+            layers=12,
+            heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            output_dim=512,
+            tome_r_schedule=tome_r_schedule,
+            tome_class_token=True,
+            tome_distill_token=False,
+            tome_use_wavg=True,
+            tome_metric="x"
+        )
+    elif MODE == 'ToME_XL':
+        from open_clip_local.ToME import XL_ToMEViT
+        print("Calculating GFLOPs for ToME XL...")
+        # approximately 4x compression at layer 4 and 5
+        tome_r_schedule = [0] * 12
+        tome_r_schedule[3] = 98  # layer 4
+        tome_r_schedule[4] = 49  # layer 5
+        model = XL_ToMEViT(
             image_size=img_size,
             patch_size=patch_size,
             width=width,

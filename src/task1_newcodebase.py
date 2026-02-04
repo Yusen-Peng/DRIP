@@ -1164,7 +1164,7 @@ def main(args):
     ######################################################################
     print("Creating model")
     is_dtp = False
-    MODE = "XL" # "DRIP" or "fixed_pooling" or "ViT" or "XL"
+    MODE = "fixed_pooling" # "DRIP" or "fixed_pooling" or "ViT" or "XL"
 
     if MODE == "DRIP":
         compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
@@ -1186,7 +1186,8 @@ def main(args):
         is_dtp = True # NOTE: important!
 
     elif MODE == "fixed_pooling":
-        compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
+        compression_rate = 0.1 # 0.25 for 4x, 0.1 for 10x
+        print(f"Using fixed pooling with compression rate {compression_rate}", flush=True)
         empty_backbone = SingleAdaptedFixed(
             image_size=RESOLUTION,
             patch_size=patch_size,
