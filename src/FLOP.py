@@ -72,7 +72,7 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "ToME_XL" # "DRIP" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
+    MODE = "DTEM_XL" # "DRIP" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
     COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
     # COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
 
@@ -263,6 +263,22 @@ def main():
 
         base = timm.create_model("deit_base_patch16_224", pretrained=False)
         base = patch_deit(base, k2=3, tau1=0.1, tau2=0.1, feat_dim=128)
+
+        # configure r schedule:
+        # approximately 4x compression at layer 4 and 5
+        r_schedule = [0] * 12
+        r_schedule[3] = 98
+        r_schedule[4] = 49
+        base.update_r(r_schedule)
+        model = LogitsOnly(base)
+    
+    elif MODE == "DTEM_XL":
+        print("Calculating GFLOPs for DTEM XL...")
+        import timm
+        from open_clip_local.DTEM import patch_deit_XL, LogitsOnly
+
+        base = timm.create_model("vit_base_patch16_224", pretrained=False)
+        base = patch_deit_XL(base, k2=3, tau1=0.1, tau2=0.1, feat_dim=128)
 
         # configure r schedule:
         # approximately 4x compression at layer 4 and 5
