@@ -119,6 +119,8 @@ def main():
             temporal_patch_size=1,
         )
         model = Qwen2VLViT(config)
+
+
     elif MODE == "Qwen2VL_DRIP":
         print(f"🥶🥶🥶🥶Calculating GFLOPs for Qwen2VL-DRIP with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
         config = Qwen2VLVisionConfig(
