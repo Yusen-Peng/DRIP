@@ -15,7 +15,6 @@ import torch.nn.functional as F
 from torch import nn
 from torch.utils.checkpoint import checkpoint
 from functools import partial
-
 from .hf_model import HFTextEncoder
 from .modified_resnet import ModifiedResNet
 from .timm_model import TimmModel
@@ -302,6 +301,7 @@ def _build_vision_tower(
                     output_dim=embed_dim,
                 )
                 visual = Qwen2VLViT(config)
+                visual.load_siglip2_vision_from_full_sd()
 
             else:
                 print("use ViT!")

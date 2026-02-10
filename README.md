@@ -5,6 +5,12 @@
 <h1 align="center">DRIP</h1>
 <h2 align="center">Dynamic Patch Pooling for Efficient Vision Transformers</h2>
 
+### Debugging with interactive node
+
+```bash
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00
+```
+
 ## Activate Conda Env
 
 ```bash
@@ -12,13 +18,6 @@ module load miniconda3/24.1.2-py310
 conda deactivate
 conda activate DRIP
 torchrun --nproc_per_node=1 src/task2_clip.py
-```
-
-
-### Debugging with interactive node
-
-```bash
-salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00
 ```
 
 

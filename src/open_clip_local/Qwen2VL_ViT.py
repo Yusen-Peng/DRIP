@@ -4,6 +4,8 @@ import torch.nn.functional as F
 from collections.abc import Callable
 from torch.nn import LayerNorm
 from typing import Tuple
+from transformers import AutoModel
+from transformers.models.siglip.modeling_siglip import SiglipModel
 
 from .BP import BoundaryPredictor, downsample_with_indices
 
@@ -280,6 +282,42 @@ class Qwen2VLVisionBlock(nn.Module):
     Qwen2VL version of ViT (with 2D-ROPE).
 """
 
+class SiglipVisionHead(nn.Module):
+    """
+    SigLIP vision_model.head:
+      probe + MHA pooling + LN + MLP(residual)
+    Output: (B, embed_dim)
+    """
+    def __init__(self, embed_dim: int, num_heads: int, mlp_ratio: float = 4.0, num_probes: int = 1):
+        super().__init__()
+        self.probe = nn.Parameter(torch.zeros(num_probes, embed_dim))  # (P, D)
+
+        self.attention = nn.MultiheadAttention(
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            batch_first=True,
+        )
+        self.layernorm = nn.LayerNorm(embed_dim, eps=1e-6)
+
+        hidden_dim = int(embed_dim * mlp_ratio)
+        self.mlp = nn.Sequential(
+            nn.Linear(embed_dim, hidden_dim),
+            QuickGELUActivation(),
+            nn.Linear(hidden_dim, embed_dim),   # <-- MUST be embed_dim for residual
+        )
+
+    def forward(self, tokens: torch.Tensor) -> torch.Tensor:
+        B, L, D = tokens.shape
+        q = self.probe.unsqueeze(0).expand(B, -1, -1)  # (B, P, D)
+
+        pooled, _ = self.attention(q, tokens, tokens, need_weights=False)  # (B, P, D)
+        pooled = pooled.mean(dim=1)  # (B, D)
+
+        x = self.layernorm(pooled)
+        x = pooled + self.mlp(x)     # residual is valid now
+        return x                     # (B, embed_dim)
+    
+
 class Qwen2VLViT(nn.Module):
     config: Qwen2VLVisionConfig
     input_modalities = ("image", "video")
@@ -308,6 +346,14 @@ class Qwen2VLViT(nn.Module):
         self.attn_pool_type = 'parallel'
         self.output_dim = config.output_dim
         self.proj = nn.Parameter(torch.randn(config.embed_dim, self.output_dim))
+
+        self.use_siglip_head = False
+        self.siglip_head = SiglipVisionHead(
+            embed_dim=config.embed_dim,
+            num_heads=config.num_heads,
+            mlp_ratio=config.mlp_ratio,
+            num_probes=1,
+        )
 
 
     def get_dtype(self) -> torch.dtype:
@@ -384,16 +430,14 @@ class Qwen2VLViT(nn.Module):
         reshaped_hidden_states = hidden_states.view(B, gh * gw, self.config.embed_dim)
         return reshaped_hidden_states
     
-    def _global_pool(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _global_pool(self, x: torch.Tensor):
         if self.pool_type == 'avg':
-            pooled, tokens = x[:, 1:].mean(dim=1), x[:, 1:]
+            pooled, tokens = x.mean(dim=1), x
         elif self.pool_type == 'tok':
             pooled, tokens = x[:, 0], x[:, 1:]
         else:
             pooled = tokens = x
-
         return pooled, tokens
-
 
     def _pool(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         if self.attn_pool is not None:
@@ -420,17 +464,225 @@ class Qwen2VLViT(nn.Module):
 
         return pooled, tokens
 
-    def forward(
-        self,
-        hidden_states: torch.Tensor,
-        **kwargs,
-    ) -> torch.Tensor:
-        features_out = self.encode(hidden_states, **kwargs) # (B, L, D)
-        pooled, _ = self._pool(features_out) # [B, L, D] -> [B, D]
-        pooled = pooled @ self.proj # [B, D] -> [B, output_dim]
-        return pooled # [B, output_dim]
+    def forward(self, hidden_states: torch.Tensor, **kwargs) -> torch.Tensor:
+        tokens = self.encode(hidden_states, **kwargs)  # (B, L, D)
+
+        # SigLIP does post_layernorm before head pooling
+        if self.use_siglip_head and self.siglip_head is not None:
+            tokens_ln = self.ln_post(tokens)
+            pooled = self.siglip_head(tokens_ln)  # (B, D)
+            # now map to OpenCLIP embed space (output_dim)
+            pooled = pooled @ self.proj                # (B, output_dim)
+            # pooled = F.normalize(pooled, dim=-1)
+            return pooled
+
+        pooled, _ = self._pool(tokens)
+        pooled = pooled @ self.proj
+        return pooled
+
+    @torch.no_grad()
+    def load_siglip2_vision_from_full_sd(self, verbose: bool = True):
+        """
+        Load SigLIP2 vision tower from HF SiglipModel.state_dict() into this RoPE ViT.
+
+        Assumes this model matches:
+          depth=12, embed_dim=768, num_heads=12, patch_size=16, temporal_patch_size=1
+        """
+
+        # load the checkpoint
+        ckpt = "google/siglip2-base-patch16-224"
+        model: SiglipModel = AutoModel.from_pretrained(ckpt, trust_remote_code=True)
+        full_sd = model.state_dict()
+
+        # report on how many tensors were loaded, skipped (e.g. probe head), missing, or mismatched in shape
+        rep = {"loaded": [], "skipped": [], "missing": [], "mismatch": []}
+
+        """
+            helper functions.
+        """
+        def log(msg):
+            if verbose:
+                print(msg)
+        
+        def copy_(dst: torch.Tensor, src: torch.Tensor, name: str):
+            
+            if tuple(dst.shape) != tuple(src.shape):
+                rep["mismatch"].append(f"{name}: dst{tuple(dst.shape)} != src{tuple(src.shape)}")
+                return
+            
+            dst.copy_(src.to(device=dst.device, dtype=dst.dtype))
+            rep["loaded"].append(name)
 
 
+        """
+        component: patch embedding
+            SigLIP2: Conv2d weight (D, 3, ps, ps) + bias (D)
+            Qwen2VLViT:  Conv3d weight (D, 3, tp, ps, ps) and bias=False
+        """
+        pe_w = "vision_model.embeddings.patch_embedding.weight"
+        pe_b = "vision_model.embeddings.patch_embedding.bias"
+        if pe_w in full_sd:
+            src_w = full_sd[pe_w]
+            dst_w = self.patch_embed.proj.weight
+            if src_w.ndim == 4 and dst_w.ndim == 5:
+                tp = dst_w.shape[2]
+                if tp != 1:
+                    inflated = src_w.unsqueeze(2).repeat(1, 1, tp, 1, 1) / tp
+                else:
+                    inflated = src_w.unsqueeze(2)  # (D,3,1,ps,ps)
+                copy_(dst_w, inflated, "patch_embed.proj.weight")
+            else:
+                copy_(dst_w, src_w, "patch_embed.proj.weight")
+        else:
+            rep["missing"].append(pe_w)
+        if pe_b in full_sd:
+            if getattr(self.patch_embed.proj, "bias", None) is None:
+                rep["skipped"].append(f"{pe_b}")
+            else:
+                copy_(self.patch_embed.proj.bias, full_sd[pe_b], "patch_embed.proj.bias")
+        else:
+            rep["missing"].append(pe_b)
+
+        """
+            skip APE from SigLIP2 checkpoint
+        """
+        pos_k = "vision_model.embeddings.position_embedding.weight"
+        if pos_k in full_sd:
+            rep["skipped"].append(pos_k)
+
+
+        """
+            load SigLIP vision head
+        """
+        # infer num_probes from ckpt tensor shape
+        probe_k = "vision_model.head.probe"
+        if probe_k in full_sd:
+            probe: torch.Tensor = full_sd[probe_k]  # shape likely (P, D) or (1, P, D) depending on impl
+            if probe.ndim == 3:
+                probe = probe.squeeze(0)
+            P, D = probe.shape
+
+            # NOTE: rebuild head with correct P if needed
+            if self.siglip_head.probe.shape[0] != P:
+                self.siglip_head = SiglipVisionHead(
+                    embed_dim=self.config.embed_dim,
+                    output_dim=self.config.output_dim,
+                    num_heads=self.config.num_heads,
+                    mlp_ratio=self.config.mlp_ratio,
+                    num_probes=P,
+                ).to(device=self.get_device(), dtype=self.get_dtype())
+
+            copy_(self.siglip_head.probe, probe, "siglip_head.probe")
+        else:
+            rep["missing"].append(probe_k)
+
+        # attention weights (MultiheadAttention uses same parameter names)
+        for name in ["in_proj_weight", "in_proj_bias", "out_proj.weight", "out_proj.bias"]:
+            ck = f"vision_model.head.attention.{name}"
+            if ck in full_sd:
+                # map to pytorch MHA params
+                if name.startswith("out_proj."):
+                    attr = name.split(".", 1)[1]  # "weight" or "bias"
+                    copy_(getattr(self.siglip_head.attention.out_proj, attr), full_sd[ck], f"siglip_head.attention.{name}")
+                else:
+                    copy_(getattr(self.siglip_head.attention, name), full_sd[ck], f"siglip_head.attention.{name}")
+            else:
+                rep["missing"].append(ck)
+
+        # layernorm
+        for p in ["weight", "bias"]:
+            ck = f"vision_model.head.layernorm.{p}"
+            if ck in full_sd:
+                copy_(getattr(self.siglip_head.layernorm, p), full_sd[ck], f"siglip_head.layernorm.{p}")
+            else:
+                rep["missing"].append(ck)
+
+        # mlp
+        for fc in ["fc1", "fc2"]:
+            for p in ["weight", "bias"]:
+                ck = f"vision_model.head.mlp.{fc}.{p}"
+                if ck in full_sd:
+                    # our mlp is Sequential: [Linear, Act, Linear]
+                    mod = self.siglip_head.mlp[0] if fc == "fc1" else self.siglip_head.mlp[2]
+                    copy_(getattr(mod, p), full_sd[ck], f"siglip_head.mlp.{fc}.{p}")
+                else:
+                    rep["missing"].append(ck)
+
+        # enable it
+        self.use_siglip_head = True
+
+        """
+            transformer blocks.
+        """
+        for i, blk in enumerate(self.blocks):
+            base = f"vision_model.encoder.layers.{i}"
+            blk: Qwen2VLVisionBlock = blk
+
+            # norm1 and norm2
+            for ln_name, ln_mod in [("layer_norm1", blk.norm1), ("layer_norm2", blk.norm2)]:
+                for p in ["weight", "bias"]:
+                    k = f"{base}.{ln_name}.{p}"
+                    if k in full_sd:
+                        copy_(getattr(ln_mod, p), full_sd[k], f"blocks.{i}.{ln_name}.{p}")
+                    else:
+                        rep["missing"].append(k)
+
+            # mlp
+            for fc in ["fc1", "fc2"]:
+                for p in ["weight", "bias"]:
+                    k = f"{base}.mlp.{fc}.{p}"
+                    if k in full_sd:
+                        copy_(getattr(getattr(blk.mlp, fc), p), full_sd[k], f"blocks.{i}.mlp.{fc}.{p}")
+                    else:
+                        rep["missing"].append(k)
+
+            # attention
+            # SigLIP2 has separate q/k/v proj; Qwen2VLViT has fused qkv
+            q_w = full_sd.get(f"{base}.self_attn.q_proj.weight", None)
+            k_w = full_sd.get(f"{base}.self_attn.k_proj.weight", None)
+            v_w = full_sd.get(f"{base}.self_attn.v_proj.weight", None)
+            q_b = full_sd.get(f"{base}.self_attn.q_proj.bias", None)
+            k_b = full_sd.get(f"{base}.self_attn.k_proj.bias", None)
+            v_b = full_sd.get(f"{base}.self_attn.v_proj.bias", None)
+
+            if q_w is None or k_w is None or v_w is None:
+                rep["missing"].append(f"{base}.self_attn.(q/k/v)_proj.weight")
+            else:
+                # fusion happens: (3D, D)
+                fused_w = torch.cat([q_w, k_w, v_w], dim=0)  
+                copy_(blk.attn.qkv.weight, fused_w, f"blocks.{i}.attn.qkv.weight")
+
+            if q_b is None or k_b is None or v_b is None:
+                rep["missing"].append(f"{base}.self_attn.(q/k/v)_proj.bias")
+            else:
+                fused_b = torch.cat([q_b, k_b, v_b], dim=0)  # (3D,)
+                copy_(blk.attn.qkv.bias, fused_b, f"blocks.{i}.attn.qkv.bias")
+
+            # out proj
+            out_w = f"{base}.self_attn.out_proj.weight"
+            out_b = f"{base}.self_attn.out_proj.bias"
+            if out_w in full_sd:
+                copy_(blk.attn.proj.weight, full_sd[out_w], f"blocks.{i}.attn.proj.weight")
+            else:
+                rep["missing"].append(out_w)
+            if out_b in full_sd:
+                copy_(blk.attn.proj.bias, full_sd[out_b], f"blocks.{i}.attn.proj.bias")
+            else:
+                rep["missing"].append(out_b)
+
+        """
+            final layer normalization layers.
+        """
+
+        for p in ["weight", "bias"]:
+            k = f"vision_model.post_layernorm.{p}"
+            if k in full_sd:
+                copy_(getattr(self.ln_post, p), full_sd[k], f"ln_post.{p}")
+            else:
+                rep["missing"].append(k)
+
+        log(f"[🥹🥹🥹SigLIP2 vision -> Qwen2VL] loaded={len(rep['loaded'])} "
+            f"mismatch={len(rep['mismatch'])} missing={len(rep['missing'])} skipped={len(rep['skipped'])}")
 
 
 
