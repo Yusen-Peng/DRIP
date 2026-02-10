@@ -25,6 +25,7 @@ class Qwen2VLVisionConfig:
         spatial_merge_size=2,
         temporal_patch_size=2,
         initializer_range=0.02,
+        output_dim=512,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -40,6 +41,7 @@ class Qwen2VLVisionConfig:
         self.spatial_merge_size = spatial_merge_size
         self.temporal_patch_size = temporal_patch_size
         self.initializer_range = initializer_range
+        self.output_dim = output_dim
 
 class QuickGELUActivation(nn.Module):
     """
@@ -273,6 +275,11 @@ class Qwen2VLVisionBlock(nn.Module):
         return hidden_states
 
 
+
+"""
+    Qwen2VL version of ViT (with 2D-ROPE).
+"""
+
 class Qwen2VLViT(nn.Module):
     config: Qwen2VLVisionConfig
     input_modalities = ("image", "video")
@@ -299,7 +306,7 @@ class Qwen2VLViT(nn.Module):
         self.attn_pool = None
         self.attn_pool_contrastive = None
         self.attn_pool_type = 'parallel'
-        self.output_dim = config.embed_dim
+        self.output_dim = config.output_dim
         self.proj = nn.Parameter(torch.randn(config.embed_dim, self.output_dim))
 
 
@@ -422,6 +429,15 @@ class Qwen2VLViT(nn.Module):
         pooled, _ = self._pool(features_out) # [B, L, D] -> [B, D]
         pooled = pooled @ self.proj # [B, D] -> [B, output_dim]
         return pooled # [B, output_dim]
+
+
+
+
+
+
+"""
+    Qwen2VL version of DRIP (with 2D-ROPE).
+"""
 
 
 class Qwen2VLDRIP(nn.Module):
@@ -668,4 +684,10 @@ class Qwen2VLDRIP(nn.Module):
             return pooled, boundary_loss, avg_boundaries_per_batch, boundary_ratio # [B, output_dim]
         else:
             return pooled # [B, output_dim]
+
+
+
+
+
+
 

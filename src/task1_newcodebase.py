@@ -1167,7 +1167,7 @@ def main(args):
     MODE = "DRIP" # "DRIP" or "fixed_pooling" or "ViT" or "XL"
 
     if MODE == "DRIP":
-        compression_rate = 0.1 # 0.25 for 4x, 0.1 for 10x
+        compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
         empty_backbone = DTPViT(
             image_size=RESOLUTION,
             patch_size=patch_size,

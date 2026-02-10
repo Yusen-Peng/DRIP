@@ -458,8 +458,9 @@ def main(args):
             model.load_state_dict(checkpoint)
             logging.info(f"=> loaded checkpoint '{args.resume}' (epoch {start_epoch})")
 
-    # initialize datasets
-    tokenizer = get_tokenizer(args.model, cache_dir=args.cache_dir)
+    # initialize datasets FIXME
+    #tokenizer = get_tokenizer(args.model, cache_dir=args.cache_dir)
+    tokenizer = get_tokenizer("ViT-B-16", cache_dir=args.cache_dir)  # forces CLIP BPE
     data = get_data(
         args,
         (preprocess_train, preprocess_val),

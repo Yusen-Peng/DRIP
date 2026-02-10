@@ -72,8 +72,8 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "DTEM_XL" # "DRIP" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
-    COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
+    MODE = "Qwen2VL_DRIP" # "DRIP" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
+    COMPRESSION_RATE = 0.1  # e.g., 0.25 means keeping 25% patches
     # COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
 
 

@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Feb4_imagenet_fixed_pooling_10x
-#SBATCH --output=Feb4_imagenet_fixed_pooling_10x.txt
+#SBATCH --job-name=Feb8_imagenet_DRIP_4x
+#SBATCH --output=Feb8_imagenet_DRIP_4x.txt
 #SBATCH --time=70:00:00
 #SBATCH --partition=quad
 #SBATCH --nodes=1
@@ -24,7 +24,7 @@ torchrun --nproc_per_node=4 src/task1_newcodebase.py \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_fixed_pooling_10x
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x
 
 conda deactivate
 # End of script

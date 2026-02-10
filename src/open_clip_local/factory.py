@@ -174,6 +174,10 @@ def load_state_dict(
     return state_dict
 
 
+"""
+    Load model checkpoint.
+"""
+
 def load_checkpoint(
         model: Union[CLIP, CustomTextCLIP],
         checkpoint_path: str,
@@ -219,6 +223,9 @@ def load_checkpoint(
     # Finally, load the massaged state_dict into model
     incompatible_keys = model.load_state_dict(state_dict, strict=strict)
     return incompatible_keys
+
+
+
 
 
 def create_model(
@@ -399,6 +406,11 @@ def create_model(
         if checkpoint_path:
             logging.info(f'Loading pretrained {model_name} weights ({pretrained}).')
             load_checkpoint(model, checkpoint_path, weights_only=load_weights_only)
+
+
+
+
+
         else:
             error_str = (
                 f'Pretrained weights ({pretrained}) not found for model {model_name}.'

@@ -263,7 +263,10 @@ def _build_vision_tower(
             print("Using Qwen2VL ViT backbone")
 
         else:
-            use_XL_backbone = True
+            
+            use_XL_backbone = False
+            use_Qwen_RoPE_backbone = True
+
             print(f"are we using XL backbone? {use_XL_backbone}", flush=True)
             if use_XL_backbone:
                 print("use XL backbone!")
@@ -279,7 +282,26 @@ def _build_vision_tower(
                 mlp_ratio=4.0,
                 temp=0.5,
                 pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
-            )    
+            )
+                
+            
+            elif use_Qwen_RoPE_backbone:
+                print("Using Qwen2VL ViT backbone with RoPE!!!")
+                from .Qwen2VL_ViT import Qwen2VLViT, Qwen2VLVisionConfig
+                patch_size = 16
+                config = Qwen2VLVisionConfig(
+                    depth=12,
+                    embed_dim=vision_cfg.width,
+                    hidden_size=vision_cfg.width * vision_cfg.mlp_ratio,
+                    mlp_ratio=vision_cfg.mlp_ratio,
+                    num_heads=vision_cfg.width // 64,
+                    in_channels=3,
+                    patch_size=patch_size,
+                    spatial_merge_size=1,
+                    temporal_patch_size=1,
+                    output_dim=embed_dim,
+                )
+                visual = Qwen2VLViT(config)
 
             else:
                 print("use ViT!")

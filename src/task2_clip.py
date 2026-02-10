@@ -31,30 +31,57 @@ def train_runner(
         model: str = "RN50",
         train_num_samples: int | None = 1_000_000,  # only used if webdataset is True
         imagenet_val_path: str = "/fs/scratch/PAS2836/yusenpeng_dataset/val",
+        eval_only: bool = False
     ):
 
-    args_list = [
-        "--train-data", train_data_path,
-        "--dataset-type", "webdataset",
-        "--train-num-samples", str(train_num_samples),
-        "--imagenet-val", imagenet_val_path,
-        "--save-frequency", "1",
-        "--zeroshot-frequency", "1",
-        #"--pretrained", "openai", # FIXME: only use this for continual pretraining
-        "--report-to", "tensorboard",
-        "--batch-size", str(batch_size),
-        "--warmup", str(warmup),
-        "--lr", str(lr),
-        "--wd", str(wd),
-        "--epochs", str(epochs),
-        "--workers", str(workers),
-        "--model", model,
-        "--precision", "amp", # automatic mixed precision
-        "--logs", "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/",
-        #"--grad-clip-norm", "1.0", # gradient clipping
-        #"--resume", "latest", # resume from the latest checkpoints
-        #"--checkpoint-path", "logs/ViT-B-16/checkpoints", # the path to save checkpoints
-    ]
+
+    if eval_only:
+        print("🚀 Running in evaluation-only mode. No training will be performed.")
+        # NOTE: do not specify training data -> immediately evaluation only
+        args_list = [
+            "--dataset-type", "webdataset",
+            "--train-num-samples", str(train_num_samples),
+            "--imagenet-val", imagenet_val_path,
+            "--save-frequency", "1",
+            "--zeroshot-frequency", "1",
+            # "--pretrained", "openai", # openai
+            "--report-to", "tensorboard",
+            "--batch-size", "128", # hardcoded for evaluation only
+            "--warmup", str(warmup),
+            "--lr", str(lr),
+            "--wd", str(wd),
+            "--epochs", str(epochs),
+            "--workers", "1", # hardcoded for lightweight eval only
+            "--model", model,
+            "--precision", "amp", # automatic mixed precision
+            "--logs", "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/",
+            #"--grad-clip-norm", "1.0", # gradient clipping
+            #"--resume", "latest", # resume from the latest checkpoints
+            #"--checkpoint-path", "logs/ViT-B-16/checkpoints", # the path to save checkpoints
+        ]
+    else:
+        args_list = [
+            "--train-data", train_data_path,
+            "--dataset-type", "webdataset",
+            "--train-num-samples", str(train_num_samples),
+            "--imagenet-val", imagenet_val_path,
+            "--save-frequency", "1",
+            "--zeroshot-frequency", "1",
+            #"--pretrained", "openai", # FIXME: only use this for continual pretraining
+            "--report-to", "tensorboard",
+            "--batch-size", str(batch_size),
+            "--warmup", str(warmup),
+            "--lr", str(lr),
+            "--wd", str(wd),
+            "--epochs", str(epochs),
+            "--workers", str(workers),
+            "--model", model,
+            "--precision", "amp", # automatic mixed precision
+            "--logs", "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/",
+            #"--grad-clip-norm", "1.0", # gradient clipping
+            #"--resume", "latest", # resume from the latest checkpoints
+            #"--checkpoint-path", "logs/ViT-B-16/checkpoints", # the path to save checkpoints
+        ]
 
     if DTP:
         args_list.append("--DTP")
@@ -67,8 +94,9 @@ def main():
     # dataset parameters - "COCO" or "LAION" or "CC12"
     dataset_name = "LAION"
 
-    use_DTP = True # use pooling (DRIP, fixed) or not
-    XL_baseline = True # use CLIP XL baseline or not
+    use_DTP = False # use pooling (DRIP, fixed) or not
+    XL_baseline = False # use CLIP XL baseline or not
+    EVAL_ONLY = True # only run evaluation (no training)
 
     # experiment with batch size
     # batch size:
@@ -140,6 +168,7 @@ def main():
         workers=workers,
         model=model,
         train_num_samples=train_num_samples,
+        eval_only=EVAL_ONLY
     )
 
     if dist.is_initialized():

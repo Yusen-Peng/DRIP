@@ -11,4 +11,4 @@ logs/
 *.log
 *.tar
 *.pth
-CascadeFormer_Best_Checkpoints/
+transformers_copy*/
