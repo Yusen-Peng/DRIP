@@ -17,8 +17,9 @@ def main():
     )
     
     vit = Qwen2VLViT(cfg)
+    vit.load_from_qwen2vl_checkpoint()
 
-    vit.load_siglip2_vision_from_full_sd()
+    # vit.load_siglip2_vision_from_full_sd()
 
 
 if __name__ == "__main__":

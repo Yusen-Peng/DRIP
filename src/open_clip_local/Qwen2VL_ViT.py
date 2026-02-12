@@ -276,8 +276,6 @@ class Qwen2VLVisionBlock(nn.Module):
         hidden_states = hidden_states + self.mlp(self.norm2(hidden_states))
         return hidden_states
 
-
-
 """
     Qwen2VL version of ViT (with 2D-ROPE).
 """
@@ -347,7 +345,7 @@ class Qwen2VLViT(nn.Module):
         self.output_dim = config.output_dim
         self.proj = nn.Parameter(torch.randn(config.embed_dim, self.output_dim))
 
-        self.use_siglip_head = False
+        self.use_siglip_head = False # set to False by default
         self.siglip_head = SiglipVisionHead(
             embed_dim=config.embed_dim,
             num_heads=config.num_heads,
@@ -479,6 +477,72 @@ class Qwen2VLViT(nn.Module):
         pooled, _ = self._pool(tokens)
         pooled = pooled @ self.proj
         return pooled
+    
+
+    @torch.no_grad()
+    def load_from_qwen2vl_checkpoint(
+        self,
+        model_name: str = "Qwen/Qwen2-VL-7B-Instruct",
+        verbose: bool = True,
+    ):
+        dtype = self.get_dtype()
+        device = self.get_device()
+        hf = Qwen2VLForConditionalGeneration.from_pretrained(
+            model_name,
+            torch_dtype=dtype,
+            device_map={"": "cpu"},  # keep CPU to avoid random GPU OOM while loading 7B
+        )
+
+        # grab vision tower (Qwen2-VL uses `visual`)
+        if hasattr(hf, "model") and hasattr(hf.model, "visual") and hf.model.visual is not None:
+            hf_visual = hf.model.visual
+            prefix = ""
+        else:
+            raise AttributeError("Could not find vision tower at `model.visual` or `model.model.visual`.")
+
+        hf_sd = hf_visual.state_dict()
+        self.to(device=device, dtype=dtype)
+
+        drop_prefixes = (
+            "siglip_head.",  # yours
+        )
+
+        filtered = {}
+        for k, v in hf_sd.items():
+            # HF key -> your key mapping
+            # Most common case: keys already match (patch_embed.*, blocks.*, ln_post.*)
+            nk = k
+
+            # If HF ever saves with a "visual." prefix (sometimes happens when you use hf.state_dict()),
+            # you can uncomment this:
+            # if nk.startswith("visual."): nk = nk[len("visual."):]
+
+            if any(nk.startswith(dp) for dp in drop_prefixes):
+                continue
+
+            filtered[nk] = v.to(device=device, dtype=dtype)
+
+        # 5) Load (strict=False = we’re chill about extra/missing keys)
+        missing, unexpected = self.load_state_dict(filtered, strict=False)
+
+        if verbose:
+            print(f"[load_from_qwen2vl_checkpoint] loaded from {model_name}")
+            print(f"  missing keys: {len(missing)}")
+            print(f"  unexpected keys: {len(unexpected)}")
+            # helpful to sanity check what didn't load
+            if len(missing) and len(missing) < 40:
+                print("  missing:", missing)
+            if len(unexpected) and len(unexpected) < 40:
+                print("  unexpected:", unexpected)
+
+        return {"missing": missing, "unexpected": unexpected}
+
+
+
+
+
+
+
 
     @torch.no_grad()
     def load_siglip2_vision_from_full_sd(self, verbose: bool = True):
