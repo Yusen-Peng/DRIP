@@ -14,7 +14,7 @@ import torch.optim as optim
 from torchvision import datasets
 from torch.utils.data import DataLoader
 from open_clip_local import create_model_and_transforms
-from open_clip_local.model import DTPViT, VisionTransformer, HierarchicalDTPViT, SoftDTPViT
+from open_clip_local.model import DTPViT, VisionTransformer, HierarchicalDTPViT
 from open_clip_local.DTP_ViT import SingleAdaptedFixed, XL_Baseline
 from boundary_vis import load_dtpx_from_clip_checkpoint
 from open_clip_local import CLIP
@@ -34,15 +34,20 @@ from swin import SingleAdaptedSwin, SwinTransformer
 
 # Other collected SOTA baselines
 from open_clip_local.EViT import EViT
+from open_clip_local.Qwen2VL_ViT import Qwen2VLVisionConfig, Qwen2VLViT
 
 
 class VisionClassifier(nn.Module):
-    def __init__(self, backbone: DTPViT | SingleAdaptedFixed | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT | SingleAdaptedSwin, num_classes):
+    def __init__(self, 
+                 backbone: DTPViT | SingleAdaptedFixed | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT | SingleAdaptedSwin | Qwen2VLViT, 
+                 num_classes):
         super().__init__()
         self.backbone = backbone
         if isinstance(backbone, DTPViT) or isinstance(backbone, XL_Baseline) or isinstance(backbone, SingleAdaptedFixed):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
         elif isinstance(backbone, VisionTransformer):
+            self.fc = nn.Linear(backbone.output_dim, num_classes)
+        elif isinstance(backbone, Qwen2VLViT):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
         elif isinstance(backbone, VisionTransformerDiffPruning):
             self.fc = nn.Linear(backbone.num_classes, num_classes)
@@ -1164,10 +1169,10 @@ def main(args):
     ######################################################################
     print("Creating model")
     is_dtp = False
-    MODE = "DRIP" # "DRIP" or "fixed_pooling" or "ViT" or "XL"
+    MODE = args.MODE
 
     if MODE == "DRIP":
-        compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
+        compression_rate = 0.1 # 0.25 for 4x, 0.1 for 10x
         empty_backbone = DTPViT(
             image_size=RESOLUTION,
             patch_size=patch_size,
@@ -1204,6 +1209,23 @@ def main(args):
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
         is_dtp = True # NOTE: important!
+    elif MODE == "ViT-RP":
+
+        print("😵‍💫😵‍💫😵‍💫Using Qwen2VL Vision Transformer...😵‍💫😵‍💫😵‍💫")
+        config = Qwen2VLVisionConfig(
+            depth=12,
+            embed_dim=768,
+            hidden_size=768 * 4,
+            mlp_ratio=4.0,
+            num_heads=768 // 64,
+            in_channels=3,
+            patch_size=patch_size,
+            spatial_merge_size=1,
+            temporal_patch_size=1,
+        )
+        empty_backbone = Qwen2VLViT(config)
+        backbone = empty_backbone
+        model = VisionClassifier(backbone, num_classes).to(device)
 
     else:
         use_XL_backbone = (MODE == "XL")
@@ -1530,6 +1552,10 @@ def get_args_parser(add_help=True):
     parser.add_argument("--weights", default=None, type=str, help="the weights enum name to load")
     parser.add_argument("--backend", default="PIL", type=str.lower, help="PIL or tensor - case insensitive")
     parser.add_argument("--use-v2", action="store_true", help="Use V2 transforms")
+    
+    # NOTE: pick your model!
+    # "DRIP" or "fixed_pooling" or "ViT" or "XL" or "ViT-RP"
+    parser.add_argument("--MODE", type=str, help="which model to use buddy")
     return parser
 
 
