@@ -5,7 +5,7 @@
 <h1 align="center">DRIP</h1>
 <h2 align="center">Dynamic Patch Pooling for Efficient Vision Transformers</h2>
 
-### Debugging with interactive node
+### ☀️☀️Debugging with interactive node☀️☀️ (important)
 
 ```bash
 salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00
@@ -48,6 +48,25 @@ finetuning:
 
 ```bash
 sbatch scripts/task3/finetune.sh
+```
+
+
+### 🔥🔥NEW🔥🔥 QwenVL series SFT
+
+```bash
+sbatch FT_QwenVL/scripts/finetune_lora.sh
+```
+
+or interactive mode for debugging:
+
+
+```bash
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00
+cd /users/PAS2912/yusenpeng/Fast-CLIP/FT_QwenVL/
+# 💥💥💥 absolutely needed! (otherwise, it will cause "ModuleNotFoundError: No module named 'src'") 💥💥💥
+export PYTHONPATH=$PWD:$PYTHONPATH
+
+deepspeed src/train/train_sft.py     --use_liger_kernel True     --lora_enable True     --use_dora False     --lora_namespan_exclude "['lm_head', 'embed_tokens']"     --lora_rank 32     --lora_alpha 64     --lora_dropout 0.05     --num_lora_modules -1     --deepspeed scripts/zero3_offload.json     --model_id Qwen/Qwen3-VL-4B-Instruct     --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning     --remove_unused_columns False     --freeze_vision_tower False     --freeze_llm True     --freeze_merger False     --bf16 True     --fp16 False     --disable_flash_attn2 False     --output_dir /fs/scratch/PAS2836/yusenpeng_dataset/testing_lora     --num_train_epochs 1     --per_device_train_batch_size 4     --gradient_accumulation_steps 32     --image_min_pixels $((256 * 28 * 28))     --image_max_pixels $((1280 * 28 * 28))     --learning_rate 1e-4     --merger_lr 1e-5     --vision_lr 2e-6     --weight_decay 0.1     --warmup_ratio 0.03     --lr_scheduler_type "cosine"     --logging_steps 1     --tf32 True     --gradient_checkpointing True     --report_to tensorboard     --lazy_preprocess True     --save_strategy "steps"     --save_steps 200     --save_total_limit 10     --dataloader_num_workers 4
 ```
 
 ## Handy Commands
