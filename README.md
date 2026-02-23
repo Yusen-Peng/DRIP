@@ -19,6 +19,8 @@ conda deactivate
 conda activate DRIP
 # a simple imagenet example (smaller batch size, single worker)
 torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 300 --batch-size 32 --opt adamw --lr 0.0003 --wd 0.3 --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30  --workers 1 --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_ViT_RP --MODE ViT-RP
+# DRIP test:
+torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 300 --batch-size 32 --opt adamw --lr 0.0003 --wd 0.3 --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30  --workers 1 --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_RP_test --MODE DRIP-RP
 ```
 
 
@@ -65,8 +67,9 @@ salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00
 cd /users/PAS2912/yusenpeng/Fast-CLIP/FT_QwenVL/
 # 💥💥💥 absolutely needed! (otherwise, it will cause "ModuleNotFoundError: No module named 'src'") 💥💥💥
 export PYTHONPATH=$PWD:$PYTHONPATH
-
-deepspeed src/train/train_sft.py     --use_liger_kernel True     --lora_enable True     --use_dora False     --lora_namespan_exclude "['lm_head', 'embed_tokens']"     --lora_rank 32     --lora_alpha 64     --lora_dropout 0.05     --num_lora_modules -1     --deepspeed scripts/zero3_offload.json     --model_id Qwen/Qwen3-VL-4B-Instruct     --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning     --remove_unused_columns False     --freeze_vision_tower False     --freeze_llm True     --freeze_merger False     --bf16 True     --fp16 False     --disable_flash_attn2 False     --output_dir /fs/scratch/PAS2836/yusenpeng_dataset/testing_lora     --num_train_epochs 1     --per_device_train_batch_size 4     --gradient_accumulation_steps 32     --image_min_pixels $((256 * 28 * 28))     --image_max_pixels $((1280 * 28 * 28))     --learning_rate 1e-4     --merger_lr 1e-5     --vision_lr 2e-6     --weight_decay 0.1     --warmup_ratio 0.03     --lr_scheduler_type "cosine"     --logging_steps 1     --tf32 True     --gradient_checkpointing True     --report_to tensorboard     --lazy_preprocess True     --save_strategy "steps"     --save_steps 200     --save_total_limit 10     --dataloader_num_workers 4
+# actual deepspeed command
+deepspeed src/train/train_sft.py --use_liger_kernel True --lora_enable True --use_dora False --lora_namespan_exclude "['lm_head', 'embed_tokens']" --lora_rank 32 --lora_alpha 64 --lora_dropout 0.05 --num_lora_modules -1 --deepspeed scripts/zero3_offload.json --model_id Qwen/Qwen3-VL-4B-Instruct --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning --remove_unused_columns False --freeze_vision_tower False --freeze_llm True --freeze_merger False --bf16 True --fp16 False --disable_flash_attn2 False --output_dir /fs/scratch/PAS2836/yusenpeng_dataset/testing_lora --num_train_epochs 1 --per_device_train_batch_size 4 --gradient_accumulation_steps 32 --image_min_pixels $((256 * 28 * 28)) --image_max_pixels $((1280 * 28 * 28)) --learning_rate 1e-4 --merger_lr 1e-5 --vision_lr 2e-6 --weight_decay 0.1 --warmup_ratio 0.03 --lr_scheduler_type "cosine" --logging_steps 1 --tf32 True --gradient_checkpointing True --report_to tensorboard --lazy_preprocess True --save_strategy "steps" --save_steps 200 --save_total_limit 10 --dataloader_num_workers 1
+# set --dataloader_num_workers 1 for interactive mode!
 ```
 
 ## Handy Commands

@@ -34,12 +34,12 @@ from swin import SingleAdaptedSwin, SwinTransformer
 
 # Other collected SOTA baselines
 from open_clip_local.EViT import EViT
-from open_clip_local.Qwen2VL_ViT import Qwen2VLVisionConfig, Qwen2VLViT
+from open_clip_local.Qwen2VL_ViT import Qwen2VLVisionConfig, Qwen2VLViT, Qwen2VLDRIP
 
 
 class VisionClassifier(nn.Module):
     def __init__(self, 
-                 backbone: DTPViT | SingleAdaptedFixed | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT | SingleAdaptedSwin | Qwen2VLViT, 
+                 backbone: DTPViT | SingleAdaptedFixed | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT | SingleAdaptedSwin | Qwen2VLViT | Qwen2VLDRIP, 
                  num_classes):
         super().__init__()
         self.backbone = backbone
@@ -47,7 +47,7 @@ class VisionClassifier(nn.Module):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
         elif isinstance(backbone, VisionTransformer):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
-        elif isinstance(backbone, Qwen2VLViT):
+        elif isinstance(backbone, Qwen2VLViT) or isinstance(backbone, Qwen2VLDRIP):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
         elif isinstance(backbone, VisionTransformerDiffPruning):
             self.fc = nn.Linear(backbone.num_classes, num_classes)
@@ -1224,6 +1224,30 @@ def main(args):
             temporal_patch_size=1,
         )
         empty_backbone = Qwen2VLViT(config)
+        backbone = empty_backbone
+        model = VisionClassifier(backbone, num_classes).to(device)
+
+    elif MODE == "DRIP-RP":
+        COMPRESSION_RATE = 0.25 # 0.25 for 4x, 0.1 for 10x
+        print(f"🥶🥶🥶🥶Calculating GFLOPs for Qwen2VL-DRIP with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
+        config = Qwen2VLVisionConfig(
+            depth=12,
+            embed_dim=768,
+            hidden_size=768 * 4,
+            mlp_ratio=4.0,
+            num_heads=768 // 64,
+            in_channels=3,
+            patch_size=patch_size,
+            spatial_merge_size=1,
+            temporal_patch_size=1,
+        )
+        empty_backbone = Qwen2VLDRIP(
+            config=config,
+            depth=(4, 8, 0),
+            temp=0.5,
+            compression_rate=COMPRESSION_RATE,
+            threshold=0.5
+        )
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
 

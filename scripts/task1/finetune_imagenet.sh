@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Feb12_imagenet_ViT_RP
-#SBATCH --output=Feb12_imagenet_ViT_RP.txt
-#SBATCH --time=70:00:00
+#SBATCH --job-name=Feb23_imagenet_DRIP_RP_4x
+#SBATCH --output=Feb23_imagenet_DRIP_RP_4x.txt
+#SBATCH --time=60:00:00
 #SBATCH --partition=quad
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,8 +24,8 @@ torchrun --nproc_per_node=4 src/task1_newcodebase.py \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_ViT_RP \
-    --MODE ViT-RP
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_RP_4x \
+    --MODE DRIP-RP
 
 conda deactivate
 # End of script
