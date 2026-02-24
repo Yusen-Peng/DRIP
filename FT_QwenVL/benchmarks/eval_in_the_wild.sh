@@ -1,0 +1,54 @@
+#!/bin/bash
+#SBATCH --job-name=in_the_wild_vitbaseline
+#SBATCH --output=in_the_wild_vitbaseline.txt
+#SBATCH --time=00:25:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --gpus-per-node=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=128G
+#SBATCH --account=PAS2836
+
+module load miniconda3/24.1.2-py310
+conda activate DRIP
+source activate DRIP
+
+export OMP_NUM_THREADS=16
+export MASTER_PORT=$((12000 + RANDOM % 20000))
+
+cd /users/PAS2912/yusenpeng/Fast-CLIP/
+
+# Load API key from .env
+set -a
+source /users/PAS2912/yusenpeng/Fast-CLIP/.env
+set +a
+
+mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers/XLbased-DRIP-10x-16-5-7-finetune.jsonl
+
+python src/model_vqa.py \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/XLbased-DRIP-10x-16-5-7-finetune \
+    --model-base lmsys/vicuna-7b-v1.5 \
+    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/questions.jsonl \
+    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/images \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers/XLbased-DRIP-10x-16-5-7-finetune.jsonl \
+    --temperature 0 \
+    --conv-mode vicuna_v1
+
+mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews/XLbased-DRIP-10x-16-5-7-finetune.jsonl
+
+python src/eval_gpt_review_bench.py \
+    --question /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/questions.jsonl \
+    --context /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/context.jsonl \
+    --rule src/LLaVA_wrapper/llava_local/eval/table/rule.json \
+    --answer-list \
+        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers_gpt4.jsonl \
+        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers/XLbased-DRIP-10x-16-5-7-finetune.jsonl \
+    --output \
+        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews/XLbased-DRIP-10x-16-5-7-finetune.jsonl
+
+python src/summarize_gpt_review.py -f /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews/XLbased-DRIP-10x-16-5-7-finetune.jsonl
+
+conda deactivate
+# End of script

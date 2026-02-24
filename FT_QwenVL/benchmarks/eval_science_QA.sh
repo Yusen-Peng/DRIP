@@ -1,0 +1,45 @@
+#!/bin/bash
+#SBATCH --job-name=Feb24_Qwen3VL_scienceQA_eval
+#SBATCH --output=Feb24_Qwen3VL_scienceQA_eval.txt
+#SBATCH --time=01:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --gpus-per-node=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=128G
+#SBATCH --account=PAS2836
+
+module load miniconda3/24.1.2-py310
+conda activate DRIP-LLM
+source activate DRIP-LLM
+
+export OMP_NUM_THREADS=16
+export MASTER_PORT=$((12000 + RANDOM % 20000))
+
+cd /users/PAS2912/yusenpeng/Fast-CLIP/
+
+mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-last-layer-1e-4-3epochs.jsonl
+
+python src/model_vqa_science.py \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-finetune-last-layer-1e-4-3epochs \
+    --model-base lmsys/vicuna-7b-v1.5 \
+    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/llava_test_QCM-LEA.json \
+    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/images/test \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-last-layer-1e-4-3epochs.jsonl \
+    --single-pred-prompt \
+    --temperature 0 \
+    --conv-mode vicuna_v1
+
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-last-layer-1e-4-3epochs.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-last-layer-1e-4-3epochs_output.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-last-layer-1e-4-3epochs_result.json
+
+python src/eval_science_qa.py \
+    --base-dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa \
+    --result-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-last-layer-1e-4-3epochs.jsonl \
+    --output-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-last-layer-1e-4-3epochs_output.jsonl \
+    --output-result /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/scienceqa/answers/ViTbased-DRIP-4x-16-4-8-finetune-last-layer-1e-4-3epochs_result.json
+
+conda deactivate
+# End of script

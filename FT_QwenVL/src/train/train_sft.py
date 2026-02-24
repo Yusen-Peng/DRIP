@@ -154,6 +154,11 @@ def train():
             attn_implementation="flash_attention_2" if not training_args.disable_flash_attn2 else "sdpa",
             **bnb_model_from_pretrained_args
         )
+        expected_keys = list(model.state_dict().keys())
+        # print keys in a txt file
+        with open("qwen3vl_keys.txt", "w") as f:
+            for key in expected_keys:
+                f.write(f"{key}\n")
 
     elif config.model_type == "qwen2_5_vl":
         replace_qwen2_5_with_mixed_modality_forward()
@@ -252,21 +257,23 @@ def train():
 
     rank0_print("🎉🎉milestone: data loader is ready!!")
 
-    trainer = QwenSFTTrainer(
-        model=model,
-        processing_class=processor,
-        args=training_args,
-        **data_module
-    )
-
-    rank0_print("🎉🎉milestone: trainer is ready!!")
-
-    if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
-        trainer.train(resume_from_checkpoint=True)
+    if training_args.num_train_epochs == 0:
+        rank0_print("👋👋👋num_train_epochs is set to 0, skipping training and saving the model directly.👋👋👋")
     else:
-        trainer.train()
+        trainer = QwenSFTTrainer(
+            model=model,
+            processing_class=processor,
+            args=training_args,
+            **data_module
+        )
 
-    trainer.save_state()
+        rank0_print("🎉🎉milestone: trainer is ready!!")
+        if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
+            trainer.train(resume_from_checkpoint=True)
+        else:
+            trainer.train()
+
+        trainer.save_state()
 
     model.config.use_cache = True
     
