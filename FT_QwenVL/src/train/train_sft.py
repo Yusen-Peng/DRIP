@@ -259,6 +259,21 @@ def train():
 
     if training_args.num_train_epochs == 0:
         rank0_print("👋👋👋num_train_epochs is set to 0, skipping training and saving the model directly.👋👋👋")
+        trainer = QwenSFTTrainer(
+            model=model,
+            processing_class=processor,
+            args=training_args,
+            **data_module
+        )
+
+        rank0_print("🎉🎉milestone: trainer is ready!!")
+        if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
+            trainer.train(resume_from_checkpoint=True)
+        else:
+            trainer.train()
+
+        trainer.save_state()
+
     else:
         trainer = QwenSFTTrainer(
             model=model,
