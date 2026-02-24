@@ -215,11 +215,6 @@ def train():
         rank0_print("Adding LoRA to the model...")
         model = get_peft_model(model, peft_config)
 
-        # Peft maodel makes vision tower and merger freezed again.
-        # Configuring fuction could be called here, but sometimes it does not work properly.
-        # So I just made it this way.
-        # Need to be fixed in the future.
-
         if not training_args.freeze_vision_tower:
             for name, param in model.named_parameters():
                 if "visual" in name:
@@ -234,6 +229,7 @@ def train():
 
     # model.config.tokenizer_model_max_length = processor.tokenizer.model_max_length
 
+
     if training_args.bits in [4, 8]:
         from peft.tuners.lora import LoraLayer
         for name, module in model.named_modules():
@@ -247,10 +243,14 @@ def train():
                 if hasattr(module, 'weight'):
                     if training_args.bf16 and module.weight.dtype == torch.float32:
                         module = module.to(torch.bfloat16)
+    
+    rank0_print("🎉🎉milestone: LoRA-model is ready!!")
 
     data_module = make_supervised_data_module(model_id=model_args.model_id,
                                               processor=processor,
                                               data_args=data_args)
+
+    rank0_print("🎉🎉milestone: data loader is ready!!")
 
     trainer = QwenSFTTrainer(
         model=model,
@@ -258,6 +258,8 @@ def train():
         args=training_args,
         **data_module
     )
+
+    rank0_print("🎉🎉milestone: trainer is ready!!")
 
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         trainer.train(resume_from_checkpoint=True)

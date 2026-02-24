@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Feb23_imagenet_DRIP_RP_4x
-#SBATCH --output=Feb23_imagenet_DRIP_RP_4x.txt
-#SBATCH --time=60:00:00
+#SBATCH --job-name=Feb24_imagenet_DRIP_RP_4x
+#SBATCH --output=Feb24_imagenet_DRIP_RP_4x.txt
+#SBATCH --time=168:00:00
 #SBATCH --partition=quad
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

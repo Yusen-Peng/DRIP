@@ -1250,6 +1250,7 @@ def main(args):
         )
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
+        is_dtp = True # NOTE: important!
 
     else:
         use_XL_backbone = (MODE == "XL")

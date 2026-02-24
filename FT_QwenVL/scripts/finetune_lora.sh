@@ -30,15 +30,9 @@ NUM_DEVICES=8
 GRAD_ACCUM_STEPS=$((GLOBAL_BATCH_SIZE / (BATCH_PER_DEVICE * NUM_DEVICES)))
 
 
-
-
-
-
-
-
 cd /users/PAS2912/yusenpeng/Fast-CLIP/FT_QwenVL/
 # 💥💥💥 absolutely needed! (otherwise, it will cause "ModuleNotFoundError: No module named 'src'") 💥💥💥
-export PYTHONPATH=$PWD:$PYTHONPATH 
+export PYTHONPATH=$PWD:$PYTHONPATH
 
 deepspeed src/train/train_sft.py \
     --use_liger_kernel True \
@@ -59,7 +53,7 @@ deepspeed src/train/train_sft.py \
     --freeze_merger False \
     --bf16 True \
     --fp16 False \
-    --disable_flash_attn2 False \
+    --disable_flash_attn2 True \
     --output_dir /fs/scratch/PAS2836/yusenpeng_dataset/testing_lora \
     --num_train_epochs 1 \
     --per_device_train_batch_size 4 \
