@@ -300,6 +300,9 @@ def run_evaluation(args):
         model=getattr(args, 'eval_model', 'gpt-3.5-turbo-0125'),
         api_type=getattr(args, 'api_type', 'dash')
     )
+
+    # FIXME: currently judge model cannot work, will fix later
+    #model = None
     
     # Prepare evaluation tasks
     eval_tasks = []

@@ -164,6 +164,8 @@ def build_judge(model, api_type):
     elif api_type == 'dash':
         api_key = os.environ.get('CHATGPT_DASHSCOPE_API_KEY', '')
         api_base = os.environ.get('DASHSCOPE_API_BASE', '')
+        # print(f"Using DashScope API with base: {api_base}")
+        # print(f"Using DashScope API with key: {api_key}")
         return DashScopeWrapper(model, api_base, api_key)
     else:
         raise ValueError(f"Unsupported API type: {api_type}")
@@ -284,12 +286,16 @@ def extract_answer_from_item(model, item, wait=5):
         return dict(opt=ret, log=log, extract_model='rule', extract_flag=extract_flag)
     
     # If rule-based extraction fails, use model-based extraction
-    print(f"Rule extract failed. Use model-based extraction.")
+    # print(f"Rule extract failed. Use model-based extraction.")
     if model is None:
        assert model is not None, 'Judge model is None for MMMU_DEV_VAL !!!'
     
     # Try model-based extraction with retries
-    retry = 25
+    #retry = 25
+
+    # FIXME: 1 is much faster - only try once
+    retry = 1
+
     while retry:
         ans = model.generate([{"type": "text", "value": prompt}])
         if 'Failed to obtain answer via API' in ans:
@@ -299,11 +305,13 @@ def extract_answer_from_item(model, item, wait=5):
             if ret and ret != 'Z':
                 log = f'{model.model} extract Succeed. {model.model}:{ans}\n'
                 return dict(opt=ret, log=log, extract_model=model.model, extract_flag=True)
-            else:
-                print(f'Output includes 0 / > 1 letter among candidates {set(choices)} and Z: {ans}')
+            # else:
+                # print(f'Output includes 0 / > 1 letter among candidates {set(choices)} and Z: {ans}')
         retry -= 1
-        T = random.random() * wait * 2
-        time.sleep(T)
+
+        # No sleep!
+        # T = random.random() * wait * 2
+        # time.sleep(T)
         
         if retry == 0:
             options = list(choices) + ['Z'] if 'Z' not in choices else list(choices)

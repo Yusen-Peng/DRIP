@@ -113,24 +113,25 @@ python run_mmmu.py infer \
     --presence-penalty 1.5
 ```
 
-Then we can finally do evaluation:
+Then we can finally do evaluation (no need for GPU here):
 
 ```bash
-salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00 --mem=64G
 module load miniconda3/24.1.2-py310
 conda activate DRIP-VLM
 export PYTHONPATH=$PWD:$PYTHONPATH
 cd /users/PAS2912/yusenpeng/Fast-CLIP/FT_QwenVL/benchmarks/mmmu
 export CHATGPT_DASHSCOPE_API_KEY=<api_key>
-export DASHSCOPE_API_BASE="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+# use This API endpoint!! We are in America 🇺🇸🇺🇸
+export DASHSCOPE_API_BASE="https://dashscope-us.aliyuncs.com/compatible-mode/v1/chat/completions"
+# NOTE: we have to use
 python run_mmmu.py eval \
     --data-dir /fs/scratch/PAS2836/yusenpeng_dataset/Qwen_eval \
     --input-file /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora/results/predictions.jsonl \
     --output-file /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora/evaluation.csv \
     --dataset MMMU_DEV_VAL \
-    --eval-model gpt-3.5-turbo-0125 \
+    --eval-model qwen3-max \
     --api-type dash \
-    --nproc 16
+    --nproc 1
 ```
 
 

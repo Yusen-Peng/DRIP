@@ -12,3 +12,4 @@ logs/
 *.tar
 *.pth
 transformers_copy*/
+README_private.md
