@@ -132,7 +132,7 @@ python run_mmmu.py eval \
     --dataset MMMU_DEV_VAL \
     --eval-model qwen3-max \
     --api-type dash \
-    --nproc 1
+    --nproc 16
 ```
 
 ### Benchmarks - RealWorldQA
@@ -175,8 +175,58 @@ python run_realworldqa.py eval \
     --dataset RealWorldQA \
     --eval-model qwen3-max \
     --api-type dash \
-    --nproc 1
+    --nproc 16
 ```
+
+### Benchmarks - MathVision
+
+infer:
+
+```bash
+# math problems are hard (therefore time-consuming)
+# make sure to schedule for 6 hours on pitzer!
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 6:00:00 --mem=64G
+module load miniconda3/24.1.2-py310
+conda activate DRIP-VLM
+export PYTHONPATH=$PWD:$PYTHONPATH
+cd /users/PAS2912/yusenpeng/Fast-CLIP/FT_QwenVL/benchmarks/MathVision
+# 8192
+python run_mathv.py infer \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora_merged \
+    --data-dir /fs/scratch/PAS2836/yusenpeng_dataset/Qwen_eval \
+    --dataset MathVision \
+    --output-file /fs/scratch/PAS2836/yusenpeng_dataset/Qwen_eval/mathvision_results/predictions.jsonl \
+    --max-new-tokens 2048 \
+    --temperature 0.7 \
+    --top-p 0.8 \
+    --top-k 20 \
+    --repetition-penalty 1.0 \
+    --presence-penalty 1.5 \
+    --max-model-len 8192
+```
+
+eval:
+
+
+```bash
+module load miniconda3/24.1.2-py310
+conda activate DRIP-VLM
+export PYTHONPATH=$PWD:$PYTHONPATH
+export CHATGPT_DASHSCOPE_API_KEY=<api_key>
+# use This API endpoint!! We are in America 🇺🇸🇺🇸
+export DASHSCOPE_API_BASE="https://dashscope-us.aliyuncs.com/compatible-mode/v1/chat/completions"
+cd /users/PAS2912/yusenpeng/Fast-CLIP/FT_QwenVL/benchmarks/MathVision
+python run_mathv.py eval \
+    --data-dir /fs/scratch/PAS2836/yusenpeng_dataset/Qwen_eval \
+    --input-file /fs/scratch/PAS2836/yusenpeng_dataset/Qwen_eval/mathvision_results/predictions.jsonl  \
+    --output-file /fs/scratch/PAS2836/yusenpeng_dataset/Qwen_eval/mathvision_results/evaluation.csv \
+    --dataset MathVision \
+    --eval-model qwen3-max \
+    --api-type dash \
+    --nproc 16
+```
+
+
 
 
 
