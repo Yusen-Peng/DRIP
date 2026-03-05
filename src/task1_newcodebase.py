@@ -921,7 +921,7 @@ def train_one_epoch(model, is_dtp: bool, criterion, optimizer, data_loader, devi
     for i, (image, target) in tqdm(enumerate(metric_logger.log_every(data_loader, args.print_freq, header))):
         start_time = time.time()
         image, target = image.to(device), target.to(device)
-        with torch.cuda.amp.autocast(enabled=scaler is not None):
+        with torch.amp.autocast('cuda', enabled=scaler is not None):
             if is_dtp:
                 output, boundary_loss = model(image)
                 cls_loss = criterion(output, target)
