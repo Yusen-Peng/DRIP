@@ -171,7 +171,7 @@ def qwen3_vl_moe_mixed_modality_forward(
 
 
 def qwen3_vl_mixed_modality_forward(
-    self,
+    self: transformers.models.qwen3_vl.modeling_qwen3_vl.Qwen3VLModel,
     input_ids: torch.LongTensor = None,
     attention_mask: Optional[torch.Tensor] = None,
     position_ids: Optional[torch.LongTensor] = None,
@@ -447,7 +447,7 @@ def qwen2_5_mixed_modality_forward(
 
 
 def qwen2_mixed_modality_forward(
-    self,
+    self: transformers.models.qwen2_vl.modeling_qwen2_vl.Qwen2VLModel,
     input_ids: torch.LongTensor = None,
     attention_mask: Optional[torch.Tensor] = None,
     position_ids: Optional[torch.LongTensor] = None,

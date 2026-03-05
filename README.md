@@ -227,6 +227,14 @@ python run_mathv.py eval \
 ```
 
 
+### result table
+
+| model | finetuning | configs | MMMU | RealWorldQA | MathVision |
+| ----- | ---------- | ------- | ---- | ----------- | ---------- |
+| Qwen3VL [paper] | - | - | 67.4% | 70.9% | 51.6% |
+| Qwen3VL | no | - | 66.57% | 70.98% | 47.07% |
+| Qwen3VL | yes | 1 epoch on LLaVA | ? | ? | ? |
+
 
 
 
