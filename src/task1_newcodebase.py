@@ -61,7 +61,7 @@ class VisionClassifier(nn.Module):
             self.fc = nn.Linear(backbone.num_classes, num_classes)
 
     def forward(self, x):
-        if isinstance(self.backbone, DTPViT) or isinstance(self.backbone, SingleAdaptedFixed):
+        if isinstance(self.backbone, DTPViT) or isinstance(self.backbone, SingleAdaptedFixed) or isinstance(self.backbone, Qwen2VLDRIP):
             outs, boundary_loss, _, _  = self.backbone(x, return_loss=True)
             return self.fc(outs), boundary_loss
         else:
