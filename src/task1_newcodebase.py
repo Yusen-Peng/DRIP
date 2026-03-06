@@ -1228,7 +1228,9 @@ def main(args):
         model = VisionClassifier(backbone, num_classes).to(device)
 
     elif MODE == "DRIP-RP":
-        COMPRESSION_RATE = 0.25 # 0.25 for 4x, 0.1 for 10x
+        #COMPRESSION_RATE = 0.25 # 0.25 for 4x, 0.1 for 10x
+        COMPRESSION_RATE = 0.1 # 0.25 for 4x, 0.1 for 10x
+
         print(f"🥶🥶🥶🥶Calculating GFLOPs for Qwen2VL-DRIP with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
         config = Qwen2VLVisionConfig(
             depth=12,

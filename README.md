@@ -58,6 +58,17 @@ sbatch scripts/task3/finetune.sh
 
 ### 🔥🔥NEW🔥🔥 QwenVL series SFT
 
+🧠🧠🧠 finetuning environment 🧠🧠🧠:
+
+```bash
+module load miniconda3/24.1.2-py310
+conda create -n DRIP-VLM-FT python=3.10 -y
+conda activate DRIP-VLM-FT
+cd FT_QwenVL/
+python -m pip install -r requirements.txt -f https://download.pytorch.org/whl/cu128
+python -m pip install qwen-vl-utils
+```
+
 ```bash
 sbatch FT_QwenVL/scripts/finetune_lora.sh
 ```
@@ -69,7 +80,7 @@ or interactive mode for debugging:
 salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00 --mem=64G
 cd /users/PAS2912/yusenpeng/Fast-CLIP/FT_QwenVL/
 module load miniconda3/24.1.2-py310
-conda activate DRIP-VLM
+conda activate DRIP-VLM-FT
 # 💥💥💥 absolutely needed! (otherwise, it will cause "ModuleNotFoundError: No module named 'src'") 💥💥💥
 export PYTHONPATH=$PWD:$PYTHONPATH
 # actual deepspeed command: set --dataloader_num_workers 0 for interactive mode!
@@ -227,13 +238,22 @@ python run_mathv.py eval \
 ```
 
 
-### result table
+## result table
 
 | model | finetuning | configs | MMMU | RealWorldQA | MathVision |
 | ----- | ---------- | ------- | ---- | ----------- | ---------- |
+| ***original VLMs*** |
 | Qwen3VL [paper] | - | - | 67.4% | 70.9% | 51.6% |
-| Qwen3VL | no | - | 66.57% | 70.98% | 47.07% |
-| Qwen3VL | yes | 1 epoch on LLaVA | ? | ? | ? |
+| Qwen3VL | no, just eval | - | 66.57% | 70.98% | 47.07% |
+| Qwen3VL | 1 epoch on LLaVA | lora LLM, full FT ViT | ? | ? | ? |
+| ***fixed pooling baselines*** |
+| Qwen3VL-fixed-4x | no, just eval | - | ? | ? | ? |
+| Qwen3VL-fixed-10x | no, just eval | - | ? | ? | ? |
+| Qwen3VL-fixed-4x | 1 epoch on LLaVA | lora LLM, full FT ViT | ? | ? | ? |
+| Qwen3VL-fixed-10x | 1 epoch on LLaVA | lora LLM, full FT ViT | ? | ? | ? |
+| ***DRIP*** |
+| Qwen3VL-DRIP-4x | 1 epoch on LLaVA | lora LLM, full FT ViT | ? | ? | ? |
+| Qwen3VL-DRIP-10x | 1 epoch on LLaVA | lora LLM, full FT ViT | ? | ? | ? |
 
 
 

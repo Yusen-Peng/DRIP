@@ -8,8 +8,11 @@ from transformers import (
 )
 
 def main():
+    # make an instance
     config = AutoConfig.from_pretrained("Qwen/Qwen3-VL-4B-Instruct", trust_remote_code=True)
     m = Qwen3VLForConditionalGeneration(config)
+    
+    
     print("type(m.model):", type(m.model))
     print("type(m.model.visual):", type(m.model.visual))
 

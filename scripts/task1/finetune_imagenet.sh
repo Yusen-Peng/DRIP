@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=March5_pitzer_4x_QwenDRIP
-#SBATCH --output=March5_pitzer_4x_QwenDRIP.txt
+#SBATCH --job-name=March5_pitzer_10x_QwenDRIP
+#SBATCH --output=March5_pitzer_10x_QwenDRIP.txt
 #SBATCH --time=72:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,7 +24,7 @@ torchrun --nproc_per_node=4 src/task1_newcodebase.py \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 10 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_QwenDRIP_4x \
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_QwenDRIP_10x \
     --MODE DRIP-RP
 
 conda deactivate
