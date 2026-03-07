@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=March5_pitzer_10x_QwenDRIP
 #SBATCH --output=March5_pitzer_10x_QwenDRIP.txt
-#SBATCH --time=72:00:00
+#SBATCH --time=100:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
@@ -20,7 +20,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
 torchrun --nproc_per_node=4 src/task1_newcodebase.py \
-    --model vit_b_16 --epochs 100 --batch-size 256 --opt adamw --lr 0.0003 --wd 0.3 \
+    --model vit_b_16 --epochs 100 --batch-size 128 --opt adamw --lr 0.0003 --wd 0.3 \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 10 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
