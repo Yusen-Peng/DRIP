@@ -108,7 +108,6 @@ fixed pooling - with SFT:
 TBD
 
 
-
 ## Benchmarks
 
 [IMPORTANT] before running any benchmark, we need to merge the LoRA checkpoint:
@@ -124,14 +123,19 @@ python merge_lora.py
 
 ### Benchmarks - MMMU
 
-we perform inference first:
+we perform inference first (let's use ``Ascend`` for this one):
 
 ```bash
-salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00 --mem=64G
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:20:00 --mem=64G
 module load miniconda3/24.1.2-py310
 conda activate DRIP-VLM
 export PYTHONPATH=$PWD:$PYTHONPATH
 cd /users/PAS2912/yusenpeng/Fast-CLIP/FT_QwenVL/benchmarks/mmmu
+```
+
+The `vLLM` version (from official Qwen3VL codebase):
+
+```bash
 python run_mmmu.py infer \
     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora_merged \
     --data-dir /fs/scratch/PAS2836/yusenpeng_dataset/Qwen_eval \
@@ -144,6 +148,24 @@ python run_mmmu.py infer \
     --repetition-penalty 1.0 \
     --presence-penalty 1.5
 ```
+
+The `HF Transformer` version (adapted from MMMU codebase):
+
+```bash
+python run_mmmu_hf.py \
+  --output_path qwen_mmmu_val.json \
+  --config_path configs/llava1.5.yaml \
+  --data_path MMMU/MMMU \
+  --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora_merged \
+  --split validation \
+  --bf16 \
+  --attn_implementation sdpa \
+  --max_new_tokens 128 \
+  --temperature 0 \
+  --pooling_strategy Original \
+  --compression_rate 1.0
+```
+
 
 Then we can finally do evaluation (no need for GPU here):
 
