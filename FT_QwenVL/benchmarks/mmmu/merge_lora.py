@@ -6,9 +6,9 @@ from peft import PeftModel
 import argparse
 
 
-base_id = "Qwen/Qwen3-VL-4B-Instruct"
-lora_dir = "/fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora"
-out_dir  = "/fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora_merged"
+base_id = "Qwen/Qwen3-VL-2B-Instruct"
+lora_dir = "/fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora_2B"
+out_dir  = "/fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora_2B_merged"
 
 
 if __name__ == "__main__":

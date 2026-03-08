@@ -87,7 +87,10 @@ deepspeed src/train/train_sft.py --use_liger_kernel True --lora_enable True --us
 skip finetuning by setting num_epochs = 0 -> in order to jump right into eval later:
 
 ```bash
+# Qwen3VL-4B
 deepspeed src/train/train_sft.py --use_liger_kernel True --lora_enable True --use_dora False --lora_namespan_exclude "['lm_head', 'embed_tokens']" --lora_rank 32 --lora_alpha 64 --lora_dropout 0.05 --num_lora_modules -1 --deepspeed scripts/zero3.json --model_id Qwen/Qwen3-VL-4B-Instruct --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning --remove_unused_columns False --freeze_vision_tower False --freeze_llm True --freeze_merger False --bf16 True --fp16 False --disable_flash_attn2 True --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora --num_train_epochs 0 --per_device_train_batch_size 4 --gradient_accumulation_steps 1 --image_min_pixels $((224 * 224)) --image_max_pixels $((224 * 224)) --learning_rate 1e-4 --merger_lr 1e-5 --vision_lr 2e-6 --weight_decay 0.1 --warmup_ratio 0.03 --lr_scheduler_type "cosine" --logging_steps 1 --tf32 True --gradient_checkpointing True --report_to tensorboard --lazy_preprocess True --save_strategy "steps" --save_steps 200 --save_total_limit 10 --dataloader_num_workers 4
+# Qwen3VL-2B (smaller)
+deepspeed src/train/train_sft.py --use_liger_kernel True --lora_enable True --use_dora False --lora_namespan_exclude "['lm_head', 'embed_tokens']" --lora_rank 32 --lora_alpha 64 --lora_dropout 0.05 --num_lora_modules -1 --deepspeed scripts/zero3.json --model_id Qwen/Qwen3-VL-2B-Instruct --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning --remove_unused_columns False --freeze_vision_tower False --freeze_llm True --freeze_merger False --bf16 True --fp16 False --disable_flash_attn2 True --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora_2B --num_train_epochs 0 --per_device_train_batch_size 4 --gradient_accumulation_steps 1 --image_min_pixels $((224 * 224)) --image_max_pixels $((224 * 224)) --learning_rate 1e-4 --merger_lr 1e-5 --vision_lr 2e-6 --weight_decay 0.1 --warmup_ratio 0.03 --lr_scheduler_type "cosine" --logging_steps 1 --tf32 True --gradient_checkpointing True --report_to tensorboard --lazy_preprocess True --save_strategy "steps" --save_steps 200 --save_total_limit 10 --dataloader_num_workers 4
 ```
 
 launch official experiment:
@@ -118,6 +121,7 @@ module load miniconda3/24.1.2-py310
 conda activate DRIP-VLM
 export PYTHONPATH=$PWD:$PYTHONPATH
 cd /users/PAS2912/yusenpeng/Fast-CLIP/FT_QwenVL/benchmarks/mmmu
+# remember to change HF id, path etc!
 python merge_lora.py
 ```
 
@@ -137,7 +141,7 @@ The `vLLM` version (from official Qwen3VL codebase):
 
 ```bash
 python run_mmmu.py infer \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora_merged \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora_2B_merged \
     --data-dir /fs/scratch/PAS2836/yusenpeng_dataset/Qwen_eval \
     --dataset MMMU_DEV_VAL \
     --output-file /fs/scratch/PAS2836/yusenpeng_dataset/Qwen_eval/mmmu_results/predictions.jsonl \
@@ -149,7 +153,7 @@ python run_mmmu.py infer \
     --presence-penalty 1.5
 ```
 
-The `HF Transformer` version (adapted from MMMU codebase):
+The `HF Transformer` version (adapted from MMMU codebase) - (BETA):
 
 ```bash
 python run_mmmu_hf.py \
@@ -198,7 +202,7 @@ conda activate DRIP-VLM
 export PYTHONPATH=$PWD:$PYTHONPATH
 cd /users/PAS2912/yusenpeng/Fast-CLIP/FT_QwenVL/benchmarks/RealWorldQA
 python run_realworldqa.py infer \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora_merged \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora_2B_merged \
     --data-dir /fs/scratch/PAS2836/yusenpeng_dataset/Qwen_eval \
     --dataset RealWorldQA \
     --output-file /fs/scratch/PAS2836/yusenpeng_dataset/Qwen_eval/realworldqa_results/predictions.jsonl \
@@ -281,12 +285,13 @@ python run_mathv.py eval \
 
 ## result table
 
-| model | finetuning | configs | MMMU | RealWorldQA | MathVision |
-| ----- | ---------- | ------- | ---- | ----------- | ---------- |
+| model | finetuning | configs | MMMU | RealWorldQA | MathVision | ScienceQA | MMBench | POPE | TextVQA | MME |
+| ----- | ---------- | ------- | ---- | ----------- | ---------- | --------- | --- | ---- | ------- | --- |
 | ***original VLMs*** |
 | Qwen3VL-4B [paper] | - | - | 67.4% | 70.9% | 51.6% |
 | Qwen3VL-4B | no, just eval | - | 66.57% | 70.98% | 47.07% |
-| Qwen3VL-2B | no, just eval | - | ? | ? | ? |
+| Qwen3VL-2B [paper] | - | - | 53.4% | 63.9% | 31.6% |
+| Qwen3VL-2B | no, just eval | - | 54.38% | 65.88% | TBD |
 | Qwen3VL-2B | 1 epoch on LLaVA | lora LLM, full FT ViT | submitted | - | - |
 | ***fixed pooling baselines*** |
 | Qwen3VL-4B-fixed-4x | no, just eval | - | ? | ? | ? |
