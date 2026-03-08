@@ -10,6 +10,8 @@ import transformers.models.qwen3_vl_moe.modeling_qwen3_vl_moe
 from transformers.utils import TransformersKwargs
 from transformers.processing_utils import Unpack
 from transformers.cache_utils import Cache
+import torch.nn.functional as F
+from typing import List, Optional, Tuple
 from transformers.utils import is_torchdynamo_compiling
 
 def replace_qwen_2_with_mixed_modality_forward():
@@ -23,6 +25,16 @@ def replace_qwen3_with_mixed_modality_forward():
 
 def replace_qwen3_vl_moe_with_mixed_modality_forward():
     transformers.models.qwen3_vl_moe.modeling_qwen3_vl_moe.Qwen3VLMoeModel.forward = qwen3_vl_moe_mixed_modality_forward
+
+
+
+def build_qwen3_vl_mixed_modality_forward_drip_pooling():
+    pass
+
+def replace_qwen3_with_mixed_modality_forward_drip_pooling(compression_rate: float):
+    forward_fn = build_qwen3_vl_mixed_modality_forward_drip_pooling(compression_rate)
+    transformers.models.qwen3_vl.modeling_qwen3_vl.Qwen3VLModel.forward = forward_fn
+
 
 def qwen3_vl_moe_mixed_modality_forward(
     self,
@@ -319,6 +331,179 @@ def qwen3_vl_mixed_modality_forward(
         past_key_values=outputs.past_key_values,
         rope_deltas=self.rope_deltas,
     )
+
+# =============================================================================
+# =============================================================================
+
+def get_keep_indices(n: int, compression_rate: float, device: torch.device) -> torch.LongTensor:
+    keep = max(1, int(round(n * compression_rate)))
+    if keep >= n:
+        return torch.arange(n, device=device)
+    return torch.linspace(0, n - 1, steps=keep, device=device).round().long()
+
+def compress_one_sequence(
+        x: torch.Tensor, 
+        compression_rate: float, 
+    ) -> Tuple[torch.Tensor, int]:
+    n = x.shape[0]
+    if n == 0:
+        return x, 0
+    keep_idx = get_keep_indices(n, compression_rate, x.device)
+    keep = keep_idx.numel()
+    bounds = torch.linspace(0, n, steps=keep + 1, device=x.device).round().long()
+    chunks = []
+    for i in range(keep):
+        s = bounds[i].item()
+        e = bounds[i + 1].item()
+        if e <= s:
+            e = min(s + 1, n)
+        chunks.append(x[s:e].mean(dim=0, keepdim=True))
+    y = torch.cat(chunks, dim=0)
+    return y, y.shape[0]
+
+def split_by_lengths(x: torch.Tensor, lengths: List[int]) -> List[torch.Tensor]:
+    if len(lengths) == 0:
+        return []
+    return list(x.split(lengths, dim=0))
+
+def merged_token_lengths_from_grid(grid_thw: torch.Tensor, spatial_merge_unit: int) -> List[int]:
+    lengths = []
+    for t, h, w in grid_thw.tolist():
+        lengths.append(int((t * h * w) // spatial_merge_unit))
+    return lengths
+
+def build_qwen3_visual_forward_fixed_pooling(
+    compression_rate: float,
+    debug: bool = False,
+):
+    """
+        patched self.visual.forward
+    """
+    if not (0.0 < compression_rate <= 1.0):
+        raise ValueError(f"compression_rate must be in (0, 1], got {compression_rate}")
+
+    def forward_fixed_pooling(
+            self: transformers.models.qwen3_vl.Qwen3VLVisionModel, 
+            hidden_states: torch.Tensor, 
+            grid_thw: torch.Tensor, 
+            **kwargs):
+        hidden_states = self.patch_embed(hidden_states)
+        pos_embeds = self.fast_pos_embed_interpolate(grid_thw)
+        hidden_states = hidden_states + pos_embeds
+        rotary_pos_emb = self.rot_pos_emb(grid_thw)
+        seq_len, _ = hidden_states.size()
+        hidden_states = hidden_states.reshape(seq_len, -1)
+        rotary_pos_emb = rotary_pos_emb.reshape(seq_len, -1)
+        emb = torch.cat((rotary_pos_emb, rotary_pos_emb), dim=-1)
+        position_embeddings = (emb.cos(), emb.sin())
+        cu_seqlens = torch.repeat_interleave(
+            grid_thw[:, 1] * grid_thw[:, 2],
+            grid_thw[:, 0]
+        ).cumsum(
+            dim=0,
+            dtype=grid_thw.dtype if torch.jit.is_tracing() else torch.int32,
+        )
+        cu_seqlens = F.pad(cu_seqlens, (1, 0), value=0)
+        deepstack_feature_lists = []
+        for layer_num, blk in enumerate(self.blocks):
+            hidden_states = blk(
+                hidden_states,
+                cu_seqlens=cu_seqlens,
+                position_embeddings=position_embeddings,
+                **kwargs,
+            )
+            if layer_num in self.deepstack_visual_indexes:
+                deepstack_feature = self.deepstack_merger_list[
+                    self.deepstack_visual_indexes.index(layer_num)
+                ](hidden_states)
+                deepstack_feature_lists.append(deepstack_feature)
+        hidden_states = self.merger(hidden_states)
+
+        # fixed pooling on merged outputs, per sample
+        raw_lengths = merged_token_lengths_from_grid(grid_thw, self.spatial_merge_unit)
+        hidden_chunks = split_by_lengths(hidden_states, raw_lengths)
+
+        pooled_hidden_chunks = []
+        keep_lengths = []
+        for chunk in hidden_chunks:
+            pooled_chunk, kept = compress_one_sequence(
+                chunk,
+                compression_rate=compression_rate,
+            )
+            pooled_hidden_chunks.append(pooled_chunk)
+            keep_lengths.append(kept)
+        hidden_states = torch.cat(pooled_hidden_chunks, dim=0) if len(pooled_hidden_chunks) > 0 else hidden_states
+        # deepstack features are also concatenated over samples; compress them with per-sample lengths
+        pooled_deepstack_feature_lists = []
+        for deep_feat in deepstack_feature_lists:
+            deep_chunks = split_by_lengths(deep_feat, raw_lengths)
+            pooled_deep_chunks = []
+            for deep_chunk, kept in zip(deep_chunks, keep_lengths):
+                pooled_deep_chunk, _ = compress_one_sequence(deep_chunk, compression_rate=compression_rate)
+                pooled_deep_chunks.append(pooled_deep_chunk)
+            pooled_deepstack_feature_lists.append(torch.cat(pooled_deep_chunks, dim=0) if len(pooled_deep_chunks) > 0 else deep_feat)
+
+        # store compressed lengths for get_image_features/get_video_features splitting
+        self._last_raw_lengths = raw_lengths
+        self._last_kept_lengths = keep_lengths
+        self._last_compression_rate = compression_rate
+        return hidden_states, pooled_deepstack_feature_lists
+
+    return forward_fixed_pooling
+
+def build_qwen3_get_image_features_fixed_pooling():
+    """
+    Patched get_image_features / get_video_features
+    """
+
+    def get_image_features_fixed_pooling(
+            self: transformers.models.qwen3_vl.Qwen3VLModel,
+            pixel_values: torch.Tensor, image_grid_thw: torch.Tensor):
+        image_embeds, deepstack_image_embeds = self.visual(pixel_values, grid_thw=image_grid_thw)
+
+        split_sizes = getattr(self.visual, "_last_kept_lengths", None)
+        if split_sizes is None:
+            # fallback to original merged lengths
+            split_sizes = [
+                int((t.item() * h.item() * w.item()) // self.visual.spatial_merge_unit)
+                for t, h, w in image_grid_thw
+            ]
+
+        image_embeds = list(image_embeds.split(split_sizes, dim=0))
+        return image_embeds, deepstack_image_embeds
+
+    return get_image_features_fixed_pooling
+
+def build_qwen3_get_video_features_fixed_pooling():
+    def get_video_features_fixed_pooling(self:  transformers.models.qwen3_vl.Qwen3VLModel, 
+            pixel_values_videos: torch.Tensor, video_grid_thw: torch.Tensor):
+        video_embeds, deepstack_video_embeds = self.visual(pixel_values_videos, grid_thw=video_grid_thw)
+
+        split_sizes = getattr(self.visual, "_last_kept_lengths", None)
+        if split_sizes is None:
+            split_sizes = [
+                int((t.item() * h.item() * w.item()) // self.visual.spatial_merge_unit)
+                for t, h, w in video_grid_thw
+            ]
+        video_embeds = list(video_embeds.split(split_sizes, dim=0))
+        return video_embeds, deepstack_video_embeds
+    return get_video_features_fixed_pooling
+
+
+def replace_qwen3_with_mixed_modality_forward_fixed_pooling(
+    compression_rate: float,
+    debug: bool = False,
+):
+    # patch the vision model forward
+    print(f"🔥🔥🔥🔥Monkey patching Qwen3VLModel.visual.forward with fixed pooling, compression_rate={compression_rate}🔥🔥🔥", flush=True)
+    
+    transformers.models.qwen3_vl.modeling_qwen3_vl.Qwen3VLVisionModel.forward = build_qwen3_visual_forward_fixed_pooling(
+        compression_rate=compression_rate,
+        debug=debug,
+    )
+    
+    transformers.models.qwen3_vl.modeling_qwen3_vl.Qwen3VLModel.get_image_features = build_qwen3_get_image_features_fixed_pooling()
+    transformers.models.qwen3_vl.modeling_qwen3_vl.Qwen3VLModel.get_video_features = build_qwen3_get_video_features_fixed_pooling()
 
 def qwen2_5_mixed_modality_forward(
     self,

@@ -71,7 +71,6 @@ python -m pip install qwen-vl-utils
 
 interactive mode for debugging:
 
-
 ```bash
 # mem=64G is a must!
 salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00 --mem=64G
@@ -83,8 +82,12 @@ conda activate DRIP-VLM-FT
 export PYTHONPATH=$PWD:$PYTHONPATH
 # recipe: freeze LLM, train vision encoder (what we need the most)
 deepspeed src/train/train_sft.py --use_liger_kernel True --lora_enable True --use_dora False --lora_namespan_exclude "['lm_head', 'embed_tokens']" --lora_rank 32 --lora_alpha 64 --lora_dropout 0.05 --num_lora_modules -1 --deepspeed scripts/zero3.json --model_id Qwen/Qwen3-VL-2B-Instruct --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning --remove_unused_columns False --freeze_vision_tower False --freeze_llm True --freeze_merger False --bf16 True --fp16 False --disable_flash_attn2 True --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora --num_train_epochs 1 --per_device_train_batch_size 4 --gradient_accumulation_steps 32 --image_min_pixels $((224 * 224)) --image_max_pixels $((224 * 224)) --learning_rate 1e-4 --merger_lr 1e-5 --vision_lr 2e-6 --weight_decay 0.1 --warmup_ratio 0.03 --lr_scheduler_type "cosine" --logging_steps 1 --tf32 True --gradient_checkpointing True --report_to tensorboard --lazy_preprocess True --save_strategy "steps" --save_steps 200 --save_total_limit 10 --dataloader_num_workers 4
-# skip finetuning by setting num_epochs = 0 -> in order to jump right into eval later
-deepspeed src/train/train_sft.py --use_liger_kernel True --lora_enable True --use_dora False --lora_namespan_exclude "['lm_head', 'embed_tokens']" --lora_rank 32 --lora_alpha 64 --lora_dropout 0.05 --num_lora_modules -1 --deepspeed scripts/zero3.json --model_id Qwen/Qwen3-VL-4B-Instruct --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning --remove_unused_columns False --freeze_vision_tower False --freeze_llm True --freeze_merger False --bf16 True --fp16 False --disable_flash_attn2 True --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora --num_train_epochs 0 --per_device_train_batch_size 4 --gradient_accumulation_steps 1 --image_min_pixels $((224 * 224)) --image_max_pixels $((224 * 224)) --learning_rate 1e-4 --merger_lr 1e-5 --vision_lr 2e-6 --weight_decay 0.1 --warmup_ratio 0.03 --lr_scheduler_type "cosine" --logging_steps 1 --tf32 True --gradient_checkpointing True --report_to tensorboard --lazy_preprocess True --save_strategy "steps" --save_steps 200 --save_total_limit 10 --dataloader_num_workers 0
+```
+
+skip finetuning by setting num_epochs = 0 -> in order to jump right into eval later:
+
+```bash
+deepspeed src/train/train_sft.py --use_liger_kernel True --lora_enable True --use_dora False --lora_namespan_exclude "['lm_head', 'embed_tokens']" --lora_rank 32 --lora_alpha 64 --lora_dropout 0.05 --num_lora_modules -1 --deepspeed scripts/zero3.json --model_id Qwen/Qwen3-VL-4B-Instruct --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning --remove_unused_columns False --freeze_vision_tower False --freeze_llm True --freeze_merger False --bf16 True --fp16 False --disable_flash_attn2 True --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora --num_train_epochs 0 --per_device_train_batch_size 4 --gradient_accumulation_steps 1 --image_min_pixels $((224 * 224)) --image_max_pixels $((224 * 224)) --learning_rate 1e-4 --merger_lr 1e-5 --vision_lr 2e-6 --weight_decay 0.1 --warmup_ratio 0.03 --lr_scheduler_type "cosine" --logging_steps 1 --tf32 True --gradient_checkpointing True --report_to tensorboard --lazy_preprocess True --save_strategy "steps" --save_steps 200 --save_total_limit 10 --dataloader_num_workers 4
 ```
 
 launch official experiment:
@@ -92,6 +95,18 @@ launch official experiment:
 ```bash
 sbatch FT_QwenVL/scripts/finetune_lora.sh
 ```
+
+fixed pooling - no SFT:
+
+```bash
+deepspeed src/train/train_sft.py --use_liger_kernel True --lora_enable True --use_dora False --lora_namespan_exclude "['lm_head', 'embed_tokens']" --lora_rank 32 --lora_alpha 64 --lora_dropout 0.05 --num_lora_modules -1 --deepspeed scripts/zero3.json --model_id Qwen/Qwen3-VL-4B-Instruct --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning --remove_unused_columns False --freeze_vision_tower False --freeze_llm True --freeze_merger False --bf16 True --fp16 False --disable_flash_attn2 True --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/fixed_4x_lora --num_train_epochs 0 --per_device_train_batch_size 4 --gradient_accumulation_steps 1 --image_min_pixels $((224 * 224)) --image_max_pixels $((224 * 224)) --learning_rate 1e-4 --merger_lr 1e-5 --vision_lr 2e-6 --weight_decay 0.1 --warmup_ratio 0.03 --lr_scheduler_type "cosine" --logging_steps 1 --tf32 False --gradient_checkpointing True --report_to tensorboard --lazy_preprocess True --save_strategy "steps" --save_steps 200 --save_total_limit 10 --dataloader_num_workers 4 --pooling_strategy Fixed --compression_rate 0.25
+```
+
+
+fixed pooling - with SFT:
+
+TBD
+
 
 
 ## Benchmarks
@@ -247,21 +262,20 @@ python run_mathv.py eval \
 | model | finetuning | configs | MMMU | RealWorldQA | MathVision |
 | ----- | ---------- | ------- | ---- | ----------- | ---------- |
 | ***original VLMs*** |
-| Qwen3VL [paper] | - | - | 67.4% | 70.9% | 51.6% |
-| Qwen3VL | no, just eval | - | 66.57% | 70.98% | 47.07% |
-| Qwen3VL | 1 epoch on LLaVA | lora LLM, full FT ViT | ? | ? | ? |
+| Qwen3VL-4B [paper] | - | - | 67.4% | 70.9% | 51.6% |
+| Qwen3VL-4B | no, just eval | - | 66.57% | 70.98% | 47.07% |
+| Qwen3VL-2B | no, just eval | - | ? | ? | ? |
+| Qwen3VL-2B | 1 epoch on LLaVA | lora LLM, full FT ViT | submitted | - | - |
 | ***fixed pooling baselines*** |
-| Qwen3VL-fixed-4x | no, just eval | - | ? | ? | ? |
-| Qwen3VL-fixed-10x | no, just eval | - | ? | ? | ? |
-| Qwen3VL-fixed-4x | 1 epoch on LLaVA | lora LLM, full FT ViT | ? | ? | ? |
-| Qwen3VL-fixed-10x | 1 epoch on LLaVA | lora LLM, full FT ViT | ? | ? | ? |
+| Qwen3VL-4B-fixed-4x | no, just eval | - | ? | ? | ? |
+| Qwen3VL-4B-fixed-10x | no, just eval | - | ? | ? | ? |
+| Qwen3VL-2B-fixed-4x | no, just eval | - | ? | ? | ? |
+| Qwen3VL-2B-fixed-10x | no, just eval | - | ? | ? | ? |
+| Qwen3VL-2B-fixed-4x | 1 epoch on LLaVA | lora LLM, full FT ViT | ? | ? | ? |
+| Qwen3VL-2B-fixed-10x | 1 epoch on LLaVA | lora LLM, full FT ViT | ? | ? | ? |
 | ***DRIP*** |
-| Qwen3VL-DRIP-4x | 1 epoch on LLaVA | lora LLM, full FT ViT | ? | ? | ? |
-| Qwen3VL-DRIP-10x | 1 epoch on LLaVA | lora LLM, full FT ViT | ? | ? | ? |
-
-
-
-
+| Qwen3VL-2B-DRIP-4x | 1 epoch on LLaVA | lora LLM, full FT ViT | ? | ? | ? |
+| Qwen3VL-2B-DRIP-10x | 1 epoch on LLaVA | lora LLM, full FT ViT | ? | ? | ? |
 
 ## Handy Commands
 

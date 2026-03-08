@@ -116,6 +116,7 @@ def downsample_with_indices(boundaries: torch.Tensor, hidden: torch.Tensor, null
     S = int(seg_counts.max().item())
 
     # If no segments at all in the batch, return a single null segment
+    # FIXME: there is a bug here
     if S == 0:
         # shape [1, B, D]
         return null_group.expand(1, B, D).to(hidden.dtype).to(hidden.device)

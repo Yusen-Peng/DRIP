@@ -21,8 +21,11 @@ from monkey_patch_forward import (
     replace_qwen3_with_mixed_modality_forward,
     replace_qwen2_5_with_mixed_modality_forward, 
     replace_qwen_2_with_mixed_modality_forward,
-    replace_qwen3_vl_moe_with_mixed_modality_forward
+    replace_qwen3_vl_moe_with_mixed_modality_forward,
+    replace_qwen3_with_mixed_modality_forward_fixed_pooling,
+    replace_qwen3_with_mixed_modality_forward_drip_pooling
 )
+
 from monkey_patch_vision import replace_qwen2_5_vision
 
 local_rank = None
@@ -147,7 +150,16 @@ def train():
         )
 
     elif config.model_type == "qwen3_vl":
-        replace_qwen3_with_mixed_modality_forward()
+        if model_args.pooling_strategy == "Original":
+            replace_qwen3_with_mixed_modality_forward()
+        elif model_args.pooling_strategy == "Fixed":
+            replace_qwen3_with_mixed_modality_forward_fixed_pooling(compression_rate=model_args.compression_rate)
+        elif model_args.pooling_strategy == "DRIP":
+            replace_qwen3_with_mixed_modality_forward_drip_pooling(compression_rate=model_args.compression_rate)
+        else:
+            raise ValueError("Invalid pooling strategy. Should be one of `Original`, `Fixed`, `DRIP`.")
+
+
         model = Qwen3VLForConditionalGeneration.from_pretrained(
             model_args.model_id,
             dtype=compute_dtype,

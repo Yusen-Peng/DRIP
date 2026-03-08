@@ -19,6 +19,16 @@ from trl import GRPOConfig as GRPOConfigTRL
 @dataclass
 class ModelArguments:
     model_id: Optional[str] = field(default="Qwen/Qwen2-VL-7B-Instruct")
+    
+    pooling_strategy: str = field(
+        default="Original",
+        metadata={"help": "Pooling strategy to use for the model. Should be one of `Original`, `Fixed`, `DRIP`)."}
+    )
+
+    compression_rate: Optional[float] = field(
+        default=None,
+        metadata={"help": "Compression rate for DRIP pooling strategy. Should be a float between 0 and 1."}
+    )
 
 
 @dataclass
