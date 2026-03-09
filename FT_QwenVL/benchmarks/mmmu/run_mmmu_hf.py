@@ -23,8 +23,11 @@ from utils.data_utils import (
     CAT_SHORT2LONG,
 )
 from utils.eval_utils import parse_multi_choice_response
+from FT_QwenVL.benchmarks.inference_patching.original import (
+    replace_qwen3_with_mixed_modality_forward_inference_only
+)
+
 from FT_QwenVL.src.train.monkey_patch_forward import (
-    replace_qwen3_with_mixed_modality_forward,
     replace_qwen2_5_with_mixed_modality_forward,
     replace_qwen_2_with_mixed_modality_forward,
     replace_qwen3_vl_moe_with_mixed_modality_forward,
@@ -180,7 +183,7 @@ def apply_model_patch(args, config):
 
     elif config.model_type == "qwen3_vl":
         if args.pooling_strategy == "Original":
-            replace_qwen3_with_mixed_modality_forward()
+            replace_qwen3_with_mixed_modality_forward_inference_only()
         elif args.pooling_strategy == "Fixed":
             replace_qwen3_with_mixed_modality_forward_fixed_pooling(
                 compression_rate=args.compression_rate
@@ -263,8 +266,13 @@ from utils.data_utils import (
     CAT_SHORT2LONG,
 )
 from utils.eval_utils import parse_multi_choice_response, parse_open_response
+
+from FT_QwenVL.benchmarks.inference_patching.original import (
+    replace_qwen3_with_mixed_modality_forward_inference_only
+)
+
+
 from FT_QwenVL.src.train.monkey_patch_forward import (
-    replace_qwen3_with_mixed_modality_forward,
     replace_qwen2_5_with_mixed_modality_forward,
     replace_qwen_2_with_mixed_modality_forward,
     replace_qwen3_vl_moe_with_mixed_modality_forward,
@@ -299,33 +307,6 @@ def set_seed(seed_value):
         torch.cuda.manual_seed_all(seed_value)
     random.seed(seed_value)
     np.random.seed(seed_value)
-
-
-def apply_model_patch(args, config):
-    print(f"Applying patch for model_type={config.model_type}")
-
-    if config.model_type == "qwen3_vl_moe":
-        replace_qwen3_vl_moe_with_mixed_modality_forward()
-
-    elif config.model_type == "qwen3_vl":
-        if args.pooling_strategy == "Original":
-            replace_qwen3_with_mixed_modality_forward()
-        elif args.pooling_strategy == "Fixed":
-            replace_qwen3_with_mixed_modality_forward_fixed_pooling(
-                compression_rate=args.compression_rate
-            )
-        elif args.pooling_strategy == "DRIP":
-            replace_qwen3_with_mixed_modality_forward_drip_pooling(
-                compression_rate=args.compression_rate
-            )
-        else:
-            raise ValueError("Invalid pooling_strategy")
-
-    elif config.model_type == "qwen2_5_vl":
-        replace_qwen2_5_with_mixed_modality_forward()
-
-    else:
-        replace_qwen_2_with_mixed_modality_forward()
 
 
 def load_qwen_model_and_processor(args):
