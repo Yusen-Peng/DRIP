@@ -17,14 +17,14 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-cd /users/PAS2912/yusenpeng/Fast-CLIP/
+cd /users/PAS3184/tejasnaik/DRIP/
 
 torchrun --nproc_per_node=4 src/task1_newcodebase.py \
     --model vit_b_16 --epochs 300 --batch-size 512 --opt adamw --lr 0.0003 --wd 0.3 \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_ViT_RP \
+    --output-dir /fs/scratch/PAS2836/tejasnaik_checkpoint/imagenet_ViT_RP \
     --MODE ViT-RP
 
 conda deactivate
