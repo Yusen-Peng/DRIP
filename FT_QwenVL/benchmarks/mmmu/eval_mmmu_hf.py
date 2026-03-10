@@ -120,7 +120,12 @@ def main():
     print(f"Loaded {len(preds)} predictions")
 
     print("Loading MMMU dataset...")
-    dataset = build_dataset(args.data_path, args.split)
+    if args.split == "mixed":
+        dataset_dev = build_dataset(args.data_path, "dev")
+        dataset_val = build_dataset(args.data_path, "validation")
+        dataset = concatenate_datasets([dataset_dev, dataset_val])
+    else:
+        dataset = build_dataset(args.data_path, args.split)
     print(f"Loaded {len(dataset)} total MMMU samples")
 
     print("Running evaluation...")

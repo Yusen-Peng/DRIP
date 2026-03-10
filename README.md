@@ -35,6 +35,18 @@ torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 3
 sbatch scripts/task1/finetune_imagenet.sh
 ```
 
+
+### Boundary visualization (UPDATED)
+
+```bash
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:20:00 --mem=64G
+module load miniconda3/24.1.2-py310
+conda deactivate
+conda activate DRIP
+cd src
+python python imagenet_ckpt.py
+```
+
 ### CLIP pretraining from scratch
 
 ```bash
@@ -153,7 +165,9 @@ python run_mmmu.py infer \
     --presence-penalty 1.5
 ```
 
-The `HF Transformer` version (adapted from MMMU codebase):
+The `HF Transformer` version (adapted from MMMU codebase) -
+
+val split only:
 
 ```bash
 # NOTE: schedule for at least 70 mins!
@@ -170,6 +184,25 @@ python run_mmmu_hf.py \
   --pooling_strategy Original \
   --compression_rate 1.0
 ```
+
+val + dev split:
+
+```bash
+# NOTE: schedule for at least 80 mins for this version!
+python run_mmmu_hf.py \
+  --output_path qwen_mmmu_mixed.json \
+  --config_path configs/llava1.5.yaml \
+  --data_path MMMU/MMMU \
+  --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/testing_lora_2B_merged \
+  --split mixed \
+  --bf16 \
+  --attn_implementation sdpa \
+  --max_new_tokens 128 \
+  --temperature 0 \
+  --pooling_strategy Original \
+  --compression_rate 1.0
+```
+
 
 
 Then we can finally do evaluation (vLLM):
@@ -199,7 +232,10 @@ module load miniconda3/24.1.2-py310
 conda activate DRIP-VLM
 export PYTHONPATH=$PWD:$PYTHONPATH
 cd /users/PAS2912/yusenpeng/Fast-CLIP/FT_QwenVL/benchmarks/mmmu
+# val only
 python eval_mmmu_hf.py --pred_path qwen_mmmu_val.json
+# or dev + val
+python eval_mmmu_hf.py --pred_path qwen_mmmu_mixed.json --split mixed
 ```
 
 
@@ -302,9 +338,10 @@ python run_mathv.py eval \
 | ***original VLMs*** |
 | Qwen3VL-4B [paper] | - | - | 67.4% | 70.9% | 51.6% |
 | Qwen3VL-4B | no, just eval | - | 66.57% (vLLM) | 70.98% (vLLM) | 47.07% (vLLM) |
-| Qwen3VL-2B [paper] | - | - | 53.4% | 63.9% | 31.6% |
-| Qwen3VL-2B | no, just eval | - | 54.38% (vLLM) | 65.88% (vLLM) | TBD |
-| Qwen3VL-2B | no, just eval | validation split, bf16, max_new_tokens=128, temperature=0 | 41.22% | ?? | TBD |
+| Qwen3VL-2B [paper] | - | - | **53.4%** | 63.9% | 31.6% |
+| Qwen3VL-2B | no, just eval | - | dev + validation (1050 samples); Qwen3 judge; 54.38% (vLLM) | 65.88% (vLLM) | TBD |
+| Qwen3VL-2B | no, just eval | - | validation split (900 samples); rule-based only; 41.22% (HF) | ?? | TBD |
+| Qwen3VL-2B | no, just eval | - | dev + validation (1050 samples); rule-based only; 41.90% (HF) | ?? | TBD |
 | Qwen3VL-2B | 1 epoch on LLaVA | lora LLM, full FT ViT | submitted | - | - |
 | ***fixed pooling baselines*** |
 | Qwen3VL-4B-fixed-4x | no, just eval | - | ? | ? | ? |

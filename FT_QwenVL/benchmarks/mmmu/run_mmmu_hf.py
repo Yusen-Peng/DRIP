@@ -351,7 +351,7 @@ def main():
     parser.add_argument("--config_path", type=str, required=True)
     parser.add_argument("--data_path", type=str, default="MMMU/MMMU")
     parser.add_argument("--model_path", type=str, required=True)
-    parser.add_argument("--split", type=str, default="validation")
+    parser.add_argument("--split", type=str, default="mixed")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--bf16", action="store_true")
     parser.add_argument("--fp16", action="store_true")
@@ -385,7 +385,14 @@ def main():
 
     sub_dataset_list = []
     for subject in CAT_SHORT2LONG.values():
-        sub_dataset = load_dataset(args.data_path, subject, split=args.split)
+        if args.split == "mixed":
+            sub_dataset_dev = load_dataset(args.data_path, subject, split="dev")
+            sub_dataset_val = load_dataset(args.data_path, subject, split="validation")
+            sub_dataset = concatenate_datasets([sub_dataset_dev, sub_dataset_val])
+        else:
+            sub_dataset = load_dataset(args.data_path, subject, split=args.split)
+        
+        
         sub_dataset_list.append(sub_dataset)
 
     dataset = concatenate_datasets(sub_dataset_list)
