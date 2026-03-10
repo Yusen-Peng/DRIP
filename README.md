@@ -172,7 +172,7 @@ python run_mmmu_hf.py \
 ```
 
 
-Then we can finally do evaluation (no need for GPU here):
+Then we can finally do evaluation (vLLM):
 
 ```bash
 module load miniconda3/24.1.2-py310
@@ -191,6 +191,17 @@ python run_mmmu.py eval \
     --api-type dash \
     --nproc 16
 ```
+
+eval with HF transformers:
+
+```bash
+module load miniconda3/24.1.2-py310
+conda activate DRIP-VLM
+export PYTHONPATH=$PWD:$PYTHONPATH
+cd /users/PAS2912/yusenpeng/Fast-CLIP/FT_QwenVL/benchmarks/mmmu
+python eval_mmmu_hf.py --pred_path qwen_mmmu_val.json
+```
+
 
 ### Benchmarks - RealWorldQA
 
@@ -286,14 +297,14 @@ python run_mathv.py eval \
 
 ## result table
 
-| model | finetuning | configs | MMMU | RealWorldQA | MathVision | MMBench | ScienceQA | POPE | TextVQA | MME |
+| model | finetuning | config details | MMMU | RealWorldQA | MathVision | MMBench | ScienceQA | POPE | TextVQA | MME |
 | ----- | ---------- | ------- | ---- | ----------- | ---------- | ------- | --------- | ---- | ------- | --- |
 | ***original VLMs*** |
 | Qwen3VL-4B [paper] | - | - | 67.4% | 70.9% | 51.6% |
 | Qwen3VL-4B | no, just eval | - | 66.57% (vLLM) | 70.98% (vLLM) | 47.07% (vLLM) |
 | Qwen3VL-2B [paper] | - | - | 53.4% | 63.9% | 31.6% |
 | Qwen3VL-2B | no, just eval | - | 54.38% (vLLM) | 65.88% (vLLM) | TBD |
-| Qwen3VL-2B | no, just eval | - | ?? (HF) | 65.88% (HF) | TBD |
+| Qwen3VL-2B | no, just eval | validation split, bf16, max_new_tokens=128, temperature=0 | 41.22% | ?? | TBD |
 | Qwen3VL-2B | 1 epoch on LLaVA | lora LLM, full FT ViT | submitted | - | - |
 | ***fixed pooling baselines*** |
 | Qwen3VL-4B-fixed-4x | no, just eval | - | ? | ? | ? |

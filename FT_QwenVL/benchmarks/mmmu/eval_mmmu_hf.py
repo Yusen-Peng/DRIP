@@ -3,6 +3,7 @@ import json
 import argparse
 from collections import defaultdict
 import pandas as pd
+from tqdm import tqdm
 from datasets import load_dataset, concatenate_datasets
 from utils.data_utils import process_single_sample, CAT_SHORT2LONG
 
@@ -16,7 +17,6 @@ def load_predictions(path):
             f"Expected prediction file to be a JSON dict of sample_id -> prediction, got {type(preds)}"
         )
     return preds
-
 
 def normalize_choice(x):
     if x is None:
@@ -54,7 +54,7 @@ def evaluate(preds, dataset):
     total = 0
     correct = 0
 
-    for raw_sample in dataset:
+    for raw_sample in tqdm(dataset, desc="Evaluating"):
         sample = process_single_sample(raw_sample)
 
         sample_id = sample["id"]
@@ -134,22 +134,6 @@ def main():
         f"({summary['num_correct']}/{summary['num_evaluated']})"
     )
     print(f"Missing predictions: {summary['num_missing_predictions']}")
-
-    print("\nPer-subject accuracy:")
-    for subject, stats in summary["per_subject"].items():
-        print(f"  {subject}: {stats['accuracy']:.4f} ({stats['correct']}/{stats['total']})")
-
-    if args.summary_out is not None:
-        os.makedirs(os.path.dirname(args.summary_out), exist_ok=True) if os.path.dirname(args.summary_out) else None
-        with open(args.summary_out, "w") as f:
-            json.dump(summary, f, indent=2)
-        print(f"\nSaved summary JSON to: {args.summary_out}")
-
-    if args.detail_out is not None:
-        os.makedirs(os.path.dirname(args.detail_out), exist_ok=True) if os.path.dirname(args.detail_out) else None
-        detail_df.to_csv(args.detail_out, index=False)
-        print(f"Saved detail CSV to: {args.detail_out}")
-
 
 if __name__ == "__main__":
     main()
