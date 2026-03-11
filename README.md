@@ -35,17 +35,18 @@ torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 3
 sbatch scripts/task1/finetune_imagenet.sh
 ```
 
+### Boundary visualization (🍟🍟 updated 🍟🍟)
 
-### Boundary visualization (UPDATED)
+debugging with attention map analysis:
 
 ```bash
-salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:20:00 --mem=64G
 module load miniconda3/24.1.2-py310
 conda deactivate
 conda activate DRIP
 cd src
-python python imagenet_ckpt.py
+python imagenet_ckpt_qwen2.py
 ```
+
 
 ### CLIP pretraining from scratch
 

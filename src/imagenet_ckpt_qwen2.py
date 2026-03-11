@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 import torchvision.transforms.functional as TF
-from open_clip_local.Qwen2VL_ViT import Qwen2VLVisionConfig, Qwen2VLDRIP
+from open_clip_local.Qwen2VL_ViT import Qwen2VLVisionConfig, Qwen2VLDRIP, Qwen2VLVisionBlock, apply_rotary_pos_emb_vision
 
 def load_img_norm(img_path, preprocess):
     """
@@ -144,7 +144,13 @@ def get_qwen2vldrip_hard_boundaries(model: Qwen2VLDRIP, img_3chw: torch.Tensor):
         hard_boundaries[:, indices] = 1
     else:
         x_transposed = reshaped_hidden_states.transpose(0, 1)  # [L, B, D]
-        _, hard_boundaries = model.boundary_predictor(x_transposed)  # [B, L]
+        """
+            NOTE: for visualization/inference, we stop sampling and apply deterministic thresholding
+        """
+        # _, hard_boundaries = model.boundary_predictor(x_transposed)  # [B, L]
+        boundary_logits = model.boundary_predictor.boundary_predictor(x_transposed).squeeze(-1).transpose(0, 1)   # [B, L]
+        boundary_probs = torch.sigmoid(boundary_logits)
+        hard_boundaries = (boundary_probs > model.boundary_predictor.threshold).float()
 
     return hard_boundaries[0].detach(), gh, gw
 
@@ -248,6 +254,191 @@ def visualize_boundaries_single_multi_qwen2vldrip(
         plt.close(fig)
 
 
+@torch.no_grad()
+def get_qwen2vldrip_layer4_attention_no_patch(
+    model: Qwen2VLDRIP,
+    img_3chw: torch.Tensor,
+):
+    """
+    Compute attention map from blocks_pre[3] without modifying model code.
+    Returns:
+        attn_map: [gh, gw] normalized patch heatmap
+        gh, gw
+    """
+    device = next(model.parameters()).device
+    x = img_3chw.unsqueeze(0).to(device)  # [1, 3, H, W]
+
+    B, _, H, W = x.shape
+    assert B == 1, "This helper currently assumes a single image."
+    gh = H // model.config.patch_size
+    gw = W // model.config.patch_size
+    L = gh * gw
+
+    grid_thw = x.new_empty((B, 3), dtype=torch.long)
+    grid_thw[:, 0] = 1
+    grid_thw[:, 1] = gh
+    grid_thw[:, 2] = gw
+
+    # patch embedding
+    hidden_states = model.patch_embed(x)  # [L, D]
+
+    # position embeddings
+    rotary_pos_emb = model.rot_pos_emb(grid_thw)
+    emb = torch.cat((rotary_pos_emb, rotary_pos_emb), dim=-1)
+    cos, sin = emb.cos(), emb.sin()
+    position_embeddings = (cos, sin)
+
+    cu_seqlens = torch.repeat_interleave(
+        grid_thw[:, 1] * grid_thw[:, 2], grid_thw[:, 0]
+    ).cumsum(dim=0, dtype=torch.int32)
+    cu_seqlens = F.pad(cu_seqlens, (1, 0), value=0)
+
+
+    """
+        we will run first 3 pre-blocks normally and manually compute attention of 4th block.
+    """
+    for blk in model.blocks_pre[:3]:
+        hidden_states = blk(
+            hidden_states,
+            cu_seqlens=cu_seqlens,
+            position_embeddings=position_embeddings,
+        )
+
+    blk4: Qwen2VLVisionBlock = model.blocks_pre[3]
+    normed: torch.Tensor = blk4.norm1(hidden_states)  # [L, D]
+    seq_length = normed.shape[0]
+    num_heads = blk4.attn.num_heads
+    head_dim = blk4.attn.head_dim
+    scaling = blk4.attn.scaling
+    qkv: torch.Tensor = blk4.attn.qkv(normed)  # [L, 3D]
+    query_states, key_states, value_states = (
+        qkv.reshape(seq_length, 3, num_heads, head_dim)
+        .permute(1, 0, 2, 3)
+        .unbind(0)
+    ) # q/k/v: [L, H, Hd]
+
+    query_states, key_states = apply_rotary_pos_emb_vision(
+        query_states, key_states, cos, sin
+    )
+
+    # [L, H, Hd] -> [H, L, Hd]
+    q = query_states.permute(1, 0, 2)
+    k = key_states.permute(1, 0, 2)
+    v = value_states.permute(1, 0, 2)
+
+    # attention
+    attn_scores = torch.matmul(q, k.transpose(-2, -1)) * scaling   # [H, L, L]
+    attn_probs = torch.softmax(attn_scores, dim=-1)                # [H, L, L]
+
+    # average over heads, then average over queries
+    attn_mean = attn_probs.mean(dim=0)      # [L, L]
+    token_score = attn_mean.mean(dim=0)     # [L]
+
+    attn_map = token_score.view(gh, gw).detach().cpu()
+    attn_map = attn_map - attn_map.min()
+    attn_map = attn_map / (attn_map.max() + 1e-8)
+
+    return attn_map.numpy(), gh, gw
+
+
+@torch.no_grad()
+def overlay_qwen2vldrip_attention_no_patch(
+    model: Qwen2VLDRIP,
+    img_3chw: torch.Tensor,
+    mean=(0.485, 0.456, 0.406),
+    std=(0.229, 0.224, 0.225),
+    alpha=0.45,
+):
+    """
+    Returns:
+      PIL.Image with layer-4 attention heatmap overlaid on the image.
+    """
+    attn_map, gh, gw = get_qwen2vldrip_layer4_attention_no_patch(model, img_3chw)
+
+    # unnormalize image for visualization
+    orig = unnormalize_img(img_3chw, mean=mean, std=std)
+    orig_img = TF.to_pil_image(orig).convert("RGB")
+    orig_np = np.array(orig_img).astype(np.float32) / 255.0
+
+    # resize patch attention map to image size
+    heatmap_img = Image.fromarray((attn_map * 255).astype(np.uint8)).resize(
+        (orig_np.shape[1], orig_np.shape[0]),
+        resample=Image.BILINEAR,
+    )
+    heatmap_np = np.array(heatmap_img).astype(np.float32) / 255.0
+
+    # colorize
+    cmap = plt.get_cmap("jet")
+    heat_rgb = cmap(heatmap_np)[..., :3]
+
+    overlay = (1 - alpha) * orig_np + alpha * heat_rgb
+    overlay = np.clip(overlay, 0.0, 1.0)
+
+    return Image.fromarray((overlay * 255).astype(np.uint8))
+
+
+@torch.no_grad()
+def visualize_attention_single_multi_qwen2vldrip(
+    model: Qwen2VLDRIP,
+    preprocess,
+    root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/image_samples/single_multi/",
+    save_path="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/single_multi_attention_overlay.png",
+    mean=(0.485, 0.456, 0.406),
+    std=(0.229, 0.224, 0.225),
+):
+    """
+    Reads:
+      single_1.JPEG, multi_1.JPEG, single_2.JPEG, multi_2.JPEG
+    and plots attention overlays in a separate 2x2 grid.
+    """
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = model.to(device).eval()
+
+    names = ["single_1", "multi_1", "single_2", "multi_2"]
+    paths = [os.path.join(root_dir, f"{n}.JPEG") for n in names]
+
+    tensors = []
+    for p in paths:
+        if not os.path.exists(p):
+            raise FileNotFoundError(f"Image not found: {p}")
+        tensors.append(load_img_norm(p, preprocess))
+
+    overlays = [
+        overlay_qwen2vldrip_attention_no_patch(model, t, mean=mean, std=std)
+        for t in tensors
+    ]
+
+    fig, axes = plt.subplots(2, 2, figsize=(12, 12))
+    axes = axes.flatten()
+
+    plot_titles = ["single_1", "multi_1", "single_2", "multi_2"]
+
+    for ax, ov, title in zip(axes, overlays, plot_titles):
+        ax.imshow(ov)
+        ax.set_title(f"{title} - attention @ layer 4")
+        ax.axis("off")
+
+    plt.tight_layout()
+
+    if save_path is not None:
+        save_dir = os.path.dirname(save_path)
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
+        plt.savefig(save_path, bbox_inches="tight", dpi=200)
+        print(f"Saved to {save_path}")
+        plt.close(fig)
+    else:
+        plt.show()
+        plt.close(fig)
+
+
+
+
+
+
+
+
+
 def main():
     ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_QwenDRIP_4x/model_99.pth"
 
@@ -296,6 +487,14 @@ def main():
         root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/image_samples/single_multi/",
         save_path="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/single_multi_overlay.png",
     )
+
+    visualize_attention_single_multi_qwen2vldrip(
+        model,
+        preprocess,
+        root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/image_samples/single_multi/",
+        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/single_multi_attention_overlay.png"
+    )
+
 
 if __name__ == "__main__":
     main()
