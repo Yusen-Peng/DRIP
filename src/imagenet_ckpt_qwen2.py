@@ -332,8 +332,9 @@ def get_qwen2vldrip_layer4_attention_no_patch(
 
     # average over heads, then average over queries
     attn_mean = attn_probs.mean(dim=0)      # [L, L]
-    token_score = attn_mean.mean(dim=0)     # [L]
+    token_score = attn_mean.sum(dim=0)     # [L]
 
+    # min-max normalize for visualization
     attn_map = token_score.view(gh, gw).detach().cpu()
     attn_map = attn_map - attn_map.min()
     attn_map = attn_map / (attn_map.max() + 1e-8)
@@ -432,15 +433,8 @@ def visualize_attention_single_multi_qwen2vldrip(
         plt.close(fig)
 
 
-
-
-
-
-
-
-
 def main():
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_QwenDRIP_4x/model_99.pth"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_QwenDRIP_4x/model_19.pth"
 
 
     patch_size = 16

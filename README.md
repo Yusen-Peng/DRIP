@@ -35,9 +35,7 @@ torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 3
 sbatch scripts/task1/finetune_imagenet.sh
 ```
 
-### Boundary visualization (🍟🍟 updated 🍟🍟)
-
-debugging with attention map analysis:
+### Boundary visualization and attention map analysis(🥑🥑 updated 🥑🥑)
 
 ```bash
 module load miniconda3/24.1.2-py310
