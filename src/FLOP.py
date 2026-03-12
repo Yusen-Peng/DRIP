@@ -9,7 +9,7 @@ from numbers import Number
 from typing import Any, List
 import numpy as np
 from fvcore.nn import FlopCountAnalysis
-from open_clip_local.DTP_ViT import DTPViT
+from open_clip_local.DTP_ViT import DTPViT, DTPViT_Causal
 # from open_clip_local.DTP_ViT_TransformerXL import DTPViT
 # from open_clip_local.DTP_ViT_entropy import DTPViT
 
@@ -72,9 +72,17 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "DRIP" # "DRIP" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
-    COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
-    # COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
+
+    import argparse
+    parser = argparse.ArgumentParser(description='Calculate GFLOPs for different ViT variants')
+    # "DRIP" or "DRIP_Causal" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
+    parser.add_argument('--mode', type=str, default='DRIP', help='Model variant to calculate GFLOPs for')
+    parser.add_argument('--compression_rate', type=float, default=0.25, help='Compression rate for DRIP and fixed pooling variants')
+    args = parser.parse_args()
+
+    MODE = args.mode
+    print(f"Selected mode: {MODE}")
+    COMPRESSION_RATE = args.compression_rate
     img_size = 224
     width = 768
     mlp_ratio = 4.0
@@ -96,6 +104,25 @@ def main():
             pool_type='avg',
             flop_measure=True
         )
+    
+    elif MODE == "DRIP_Causal":
+        print(f"🥶🥶🥶🥶Calculating GFLOPs for DRIP-Causal with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
+        model = DTPViT_Causal(
+            image_size=img_size,
+            patch_size=patch_size,
+            width=width,
+            layers=12,
+            depth=(4, 8, 0),
+            compression_rate=COMPRESSION_RATE,
+            heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            temp=0.5,
+            output_dim=512,
+            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
+            pool_type='avg',
+            flop_measure=True
+        )
+
     elif MODE == "ViT":
         model = VisionTransformer(
             image_size=img_size,

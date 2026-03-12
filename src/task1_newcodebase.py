@@ -15,7 +15,7 @@ from torchvision import datasets
 from torch.utils.data import DataLoader
 from open_clip_local import create_model_and_transforms
 from open_clip_local.model import DTPViT, VisionTransformer, HierarchicalDTPViT
-from open_clip_local.DTP_ViT import SingleAdaptedFixed, XL_Baseline
+from open_clip_local.DTP_ViT import SingleAdaptedFixed, XL_Baseline, DTPViT_Causal
 from boundary_vis import load_dtpx_from_clip_checkpoint
 from open_clip_local import CLIP
 from torch.cuda.amp import GradScaler
@@ -39,11 +39,11 @@ from open_clip_local.Qwen2VL_ViT import Qwen2VLVisionConfig, Qwen2VLViT, Qwen2VL
 
 class VisionClassifier(nn.Module):
     def __init__(self, 
-                 backbone: DTPViT | SingleAdaptedFixed | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT | SingleAdaptedSwin | Qwen2VLViT | Qwen2VLDRIP, 
+                 backbone: DTPViT | DTPViT_Causal | SingleAdaptedFixed | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT | SingleAdaptedSwin | Qwen2VLViT | Qwen2VLDRIP, 
                  num_classes):
         super().__init__()
         self.backbone = backbone
-        if isinstance(backbone, DTPViT) or isinstance(backbone, XL_Baseline) or isinstance(backbone, SingleAdaptedFixed):
+        if isinstance(backbone, DTPViT) or isinstance(backbone, DTPViT_Causal) or isinstance(backbone, XL_Baseline) or isinstance(backbone, SingleAdaptedFixed):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
         elif isinstance(backbone, VisionTransformer):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
@@ -1170,12 +1170,11 @@ def main(args):
     print("Creating model")
     is_dtp = False
     MODE = args.MODE
+    COMPRESSION_RATE = 0.25
+    width=768
+    mlp_ratio=4.0
 
     if MODE == "DRIP":
-        COMPRESSION_RATE = 0.25
-        width=768
-        mlp_ratio=4.0
-        compression_rate = 0.1 # 0.25 for 4x, 0.1 for 10x
         empty_backbone = DTPViT(
             image_size=RESOLUTION,
             patch_size=patch_size,
@@ -1193,6 +1192,25 @@ def main(args):
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
         is_dtp = True # NOTE: important!
+    
+    elif MODE == "DRIP_Causal":
+        empty_backbone = DTPViT_Causal(
+            image_size=RESOLUTION,
+            patch_size=patch_size,
+            width=width,
+            layers=12,
+            depth=(4, 8, 0),
+            compression_rate=COMPRESSION_RATE,
+            heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            temp=0.5,
+            output_dim=512,
+            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
+            pool_type='avg'
+        )
+        backbone = empty_backbone
+        model = VisionClassifier(backbone, num_classes).to(device)
+        is_dtp = True # NOTE: important
 
     elif MODE == "fixed_pooling":
         compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x

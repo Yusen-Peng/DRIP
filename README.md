@@ -26,8 +26,14 @@ torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 3
 torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 30 --batch-size 128 --opt adamw --lr 0.0003 --wd 0.3 --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30  --workers 1 --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_ViT_RP --MODE ViT-RP
 ```
 
-
 ## Experiments
+
+GFLOP measurment:
+
+```bash
+python src/FLOP.py --mode DRIP_Causal --compression_rate 0.25
+```
+
 
 ### ImageNet from scratch
 

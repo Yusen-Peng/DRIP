@@ -342,6 +342,70 @@ class DTPViT(nn.Module):
         else:
             return pooled # [B, output_dim]
 
+####################### causal ViT DRIP #######################
+
+class DTPViT_Causal(DTPViT):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _build_causal_mask(
+        self,
+        seq_len: int,
+        device: torch.device,
+        dtype: torch.dtype,
+    ) -> torch.Tensor:
+        # additive mask for attention: 0 on and below diagonal, -inf above diagonal
+        mask = torch.full((seq_len, seq_len), float("-inf"), device=device, dtype=dtype)
+        mask = torch.triu(mask, diagonal=1)
+        return mask
+
+    def encode(self, x: torch.Tensor, return_loss: bool):
+        x = self._embeds(x)  # [B, L, D]
+
+        pre_mask = self._build_causal_mask(
+            seq_len=x.size(1),
+            device=x.device,
+            dtype=x.dtype,
+        )
+
+        x = self.transformer_pre(x, attn_mask=pre_mask)  # [B, L, D]
+
+        if self.flop_measure:
+            B, L, _ = x.shape
+            num_tokens_to_keep = max(1, int(L * self.prior))
+            indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep, device=x.device).round().long()
+            hard_boundaries = torch.zeros(B, L, device=x.device)
+            hard_boundaries[:, indices] = 1
+        else:
+            x_transposed = x.transpose(0, 1)  # [L, B, D]
+            _, hard_boundaries = self.boundary_predictor(x_transposed)  # [B, L]
+
+        hidden = self.down_ln(x)              # [B, L, D]
+        hidden = hidden.transpose(0, 1)       # [L, B, D]
+
+        shortened_hidden = downsample(
+            boundaries=hard_boundaries,
+            hidden=hidden,
+            null_group=self.null_token
+        )                                     # [S, B, D]
+
+        shortened_hidden = shortened_hidden.transpose(0, 1)  # [B, S, D]
+        
+        post_mask = self._build_causal_mask(
+            seq_len=shortened_hidden.size(1),
+            device=shortened_hidden.device,
+            dtype=shortened_hidden.dtype,
+        )
+        
+        features = self.transformer_post(shortened_hidden, attn_mask=post_mask)
+        if return_loss and not self.flop_measure:
+            boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
+            avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
+            boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
+            return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+        else:
+            return features
+
 
 ####################### other important baselines #######################
 class SingleAdaptedFixed(nn.Module):
