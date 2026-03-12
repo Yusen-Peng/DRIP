@@ -1172,19 +1172,23 @@ def main(args):
     MODE = args.MODE
 
     if MODE == "DRIP":
+        COMPRESSION_RATE = 0.25
+        width=768
+        mlp_ratio=4.0
         compression_rate = 0.1 # 0.25 for 4x, 0.1 for 10x
         empty_backbone = DTPViT(
             image_size=RESOLUTION,
             patch_size=patch_size,
-            width=768,
+            width=width,
             layers=12,
             depth=(4, 8, 0),
-            compression_rate=compression_rate,
-            heads=768 // 64,
-            mlp_ratio=4.0,
+            compression_rate=COMPRESSION_RATE,
+            heads=width // 64,
+            mlp_ratio=mlp_ratio,
             temp=0.5,
-            pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
-            flop_measure=False # need to learn real boundaries
+            output_dim=512,
+            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
+            pool_type='avg'
         )
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)

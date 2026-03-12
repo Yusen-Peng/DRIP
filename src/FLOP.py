@@ -72,11 +72,9 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "Qwen2VL_DRIP" # "DRIP" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
-    COMPRESSION_RATE = 0.1  # e.g., 0.25 means keeping 25% patches
+    MODE = "DRIP" # "DRIP" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
+    COMPRESSION_RATE = 0.25  # e.g., 0.25 means keeping 25% patches
     # COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
-
-
     img_size = 224
     width = 768
     mlp_ratio = 4.0
@@ -93,6 +91,9 @@ def main():
             heads=width // 64,
             mlp_ratio=mlp_ratio,
             temp=0.5,
+            output_dim=512,
+            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
+            pool_type='avg',
             flop_measure=True
         )
     elif MODE == "ViT":
