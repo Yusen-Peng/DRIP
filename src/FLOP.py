@@ -9,7 +9,7 @@ from numbers import Number
 from typing import Any, List
 import numpy as np
 from fvcore.nn import FlopCountAnalysis
-from open_clip_local.DTP_ViT import DTPViT, DTPViT_Causal
+from open_clip_local.DTP_ViT import DTPViT, DTPViT_Causal, DTPViT_CosSim
 # from open_clip_local.DTP_ViT_TransformerXL import DTPViT
 # from open_clip_local.DTP_ViT_entropy import DTPViT
 
@@ -108,6 +108,24 @@ def main():
     elif MODE == "DRIP_Causal":
         print(f"🥶🥶🥶🥶Calculating GFLOPs for DRIP-Causal with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
         model = DTPViT_Causal(
+            image_size=img_size,
+            patch_size=patch_size,
+            width=width,
+            layers=12,
+            depth=(4, 8, 0),
+            compression_rate=COMPRESSION_RATE,
+            heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            temp=0.5,
+            output_dim=512,
+            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
+            pool_type='avg',
+            flop_measure=True
+        )
+    
+    elif MODE == "DRIP_CosSim":
+        print(f"🥶🥶🥶🥶Calculating GFLOPs for DRIP-CosSim with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
+        model = DTPViT_CosSim(
             image_size=img_size,
             patch_size=patch_size,
             width=width,

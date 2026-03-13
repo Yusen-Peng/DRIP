@@ -6,7 +6,7 @@ from .transformer import LayerNorm, PatchDropout, AttentionalPooler, Transformer
 from .transformer import PositionalEmbedding, RelPartialLearnableDecoderLayer
 from .transformer import TransformerXL
 from .pos_embed import get_2d_sincos_pos_embed
-from .BP import BoundaryPredictor, downsample
+from .BP import BoundaryPredictor, downsample, RoutingModule
 from .utils import to_2tuple
 
 # @torch.no_grad()
@@ -406,6 +406,16 @@ class DTPViT_Causal(DTPViT):
         else:
             return features
 
+
+####################### H-Net routing module style DRIP #######################
+
+class DTPViT_CosSim(DTPViT):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.boundary_predictor = RoutingModule(
+            prior=self.prior,
+            d_model=self.width,
+        )
 
 ####################### other important baselines #######################
 class SingleAdaptedFixed(nn.Module):

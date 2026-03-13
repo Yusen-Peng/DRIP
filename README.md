@@ -31,7 +31,12 @@ torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 3
 GFLOP measurment:
 
 ```bash
+# original DRIP (not good)
+python src/FLOP.py --mode DRIP --compression_rate 0.25
+# causual DRIP
 python src/FLOP.py --mode DRIP_Causal --compression_rate 0.25
+# DRIP with adjacent similarity as BP (🐰🐰 NEW!! 🐰🐰)
+python src/FLOP.py --mode DRIP_CosSim --compression_rate 0.25
 ```
 
 
