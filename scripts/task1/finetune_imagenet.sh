@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=March12_causal_DRIP
-#SBATCH --output=March12_causal_DRIP.txt
-#SBATCH --time=40:00:00
+#SBATCH --job-name=March14_Hnet_DRIP
+#SBATCH --output=March14_Hnet_DRIP.txt
+#SBATCH --time=00:15:00
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
@@ -22,8 +22,8 @@ torchrun --nproc_per_node=1 src/task1_newcodebase.py \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 5 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_causal_DRIP \
-    --MODE DRIP_Causal
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_Hnet_DRIP \
+    --MODE DRIP_CosSim
 
 conda deactivate
 # End of script

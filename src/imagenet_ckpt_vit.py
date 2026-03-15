@@ -133,7 +133,12 @@ def get_dtpvit_hard_boundaries(model: DTPViT, img_3chw: torch.Tensor):
             IF your BoundaryPredictor exposes raw logits/probs somewhere, swap this to match QwenDRIP exactly.
             Otherwise this uses the predictor's own hard output.
         """
-        _, hard_boundaries = model.boundary_predictor(x_transposed)   # [B, 1+L]
+        boundary_probabilities, hard_boundaries = model.boundary_predictor(x_transposed)   # [B, 1+L]
+        print("================================")
+        np.set_printoptions(suppress=True, precision=4)
+        print(f"Boundary probabilities multiplied by 1000:")
+        print(boundary_probabilities.cpu().numpy() * 1000)
+        print("================================")
 
     # remove CLS before reshaping to patch grid
     hard_boundaries = hard_boundaries[:, 1:]   # [B, L_patch]
@@ -771,8 +776,11 @@ def visualize_attention_single_multi_causal(
 
 
 def main():
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_causal_DRIP/checkpoint.pth"
-    TYPE = "causal" # "bidirectional" or "causal" or "H-Net"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_bidirectional_DRIP/checkpoint.pth"
+    TYPE = "bidirectional" # "bidirectional" or "causal" or "H-Net"
+
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_causal_DRIP/checkpoint.pth"
+
 
     patch_size = 16
     COMPRESSION_RATE = 0.25

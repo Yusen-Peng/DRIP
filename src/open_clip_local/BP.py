@@ -151,53 +151,86 @@ def downsample_with_indices(boundaries: torch.Tensor, hidden: torch.Tensor, null
     https://github.com/goombalab/hnet/blob/main/hnet/modules/dc.py
 """
 
+# class RoutingModule(nn.Module):
+#     def __init__(self, prior, d_model, device=None, dtype=None):
+#         super().__init__()
+#         self.prior = prior
+#         self.d_model = d_model
+#         factory_kwargs = {"device": device, "dtype": dtype}
+
+#         self.q_proj_layer = nn.Linear(d_model, d_model, bias=False, **factory_kwargs)
+#         self.k_proj_layer = nn.Linear(d_model, d_model, bias=False, **factory_kwargs)
+#         with torch.no_grad():
+#             eye_mat = torch.eye(
+#                 d_model,
+#                 device=self.q_proj_layer.weight.device,
+#                 dtype=self.q_proj_layer.weight.dtype,
+#             )
+#             self.q_proj_layer.weight.copy_(eye_mat)
+#             self.k_proj_layer.weight.copy_(eye_mat)
+
+#         self.q_proj_layer.weight._no_reinit = True
+#         self.k_proj_layer.weight._no_reinit = True
+
+#     def forward(self, hidden_states: torch.Tensor):  # [L, B, D]
+#         hidden_states = hidden_states.transpose(0, 1)  # [B, L, D]
+#         q = self.q_proj_layer(hidden_states[:, :-1]).float()
+#         k = self.k_proj_layer(hidden_states[:, 1:]).float()
+#         q = F.normalize(q, dim=-1, eps=1e-6)
+#         k = F.normalize(k, dim=-1, eps=1e-6)
+#         cos_sim = torch.einsum("b l d, b l d -> b l", q, k).clamp(-1.0, 1.0)
+#         boundary_prob = ((1 - cos_sim) / 2).clamp(0.0, 1.0)
+#         boundary_prob = F.pad(boundary_prob, (1, 0), "constant", 1.0)
+
+
+#         boundary_prob = torch.stack(((1 - boundary_prob), boundary_prob), dim=-1)
+#         selected_idx = torch.argmax(boundary_prob, dim=-1)
+#         boundary_mask = selected_idx == 1  # (shape hidden_states.shape[:-1])
+#         # boundary_mask = (boundary_prob >= 0.5).float()
+#         return boundary_prob.to(hidden_states.dtype), boundary_mask.to(hidden_states.dtype)
+
 class RoutingModule(nn.Module):
 
     def __init__(self, prior, d_model, device=None, dtype=None):
-        super().__init__()
         self.prior = prior
         self.d_model = d_model
         factory_kwargs = {"device": device, "dtype": dtype}
-
-
-        # corresponds to qt = Wq * x^t , kt = Wk * x^t in the paper
+        super().__init__()
         self.q_proj_layer = nn.Linear(d_model, d_model, bias=False, **factory_kwargs)
         self.k_proj_layer = nn.Linear(d_model, d_model, bias=False, **factory_kwargs)
         with torch.no_grad():
-            # initial routing = raw cosine similarity between hidden states
-            eye_mat = torch.eye(d_model, device=self.q_proj_layer.weight.device, dtype=self.q_proj_layer.weight.dtype)
-            self.q_proj_layer.weight.copy_(eye_mat)
-            self.k_proj_layer.weight.copy_(eye_mat)
-
-
+            self.q_proj_layer.weight.copy_(torch.eye(d_model))
+            self.k_proj_layer.weight.copy_(torch.eye(d_model))
         self.q_proj_layer.weight._no_reinit = True
         self.k_proj_layer.weight._no_reinit = True
 
-    def forward(self, hidden_states: torch.Tensor): # [L, B, D]
-        # hidden_states: [L, B, D]
-        hidden_states = hidden_states.transpose(0, 1)  # -> [B, L, D]
-
-        # corresponds to the cosine similarity in the paper
+    def forward(self, hidden_states: torch.Tensor):  # [L, B, D]
+        hidden_states = hidden_states.transpose(0, 1)  # [B, L, D]
         cos_sim = torch.einsum(
             "b l d, b l d -> b l",
             F.normalize(self.q_proj_layer(hidden_states[:, :-1]), dim=-1),
             F.normalize(self.k_proj_layer(hidden_states[:, 1:]), dim=-1),
         )
-        # corresponds to the boundary probabilities in the paper
+        # this clamp should no-op as long as no precision issues are encountered
         boundary_prob = torch.clamp(((1 - cos_sim) / 2), min=0.0, max=1.0)
-        PAD_PROB = 1.0 # Force boundary probability of the first element to 1.0
+        # Force boundary probability of the first element to 1.0
+        PAD_PROB = 1.0
         boundary_prob = F.pad(boundary_prob, (1, 0), "constant", PAD_PROB)
 
-        # corresponds to thresholding bt = 1{pt ≥ 0.5} in the paper
-        boundary_mask = boundary_prob >= 0.5
+        boundary_prob = torch.stack(((1 - boundary_prob), boundary_prob), dim=-1)
+        selected_idx = torch.argmax(boundary_prob, dim=-1)
+        boundary_mask = selected_idx == 1  # (shape hidden_states.shape[:-1])
 
-        return boundary_prob, boundary_mask
+        # selected_probs = boundary_prob.gather(
+        #     dim=-1, index=selected_idx.unsqueeze(-1)
+        # )  # (shape hidden_states.shape[:-1], 1)
+
+        return boundary_prob.to(hidden_states.dtype), boundary_mask.to(hidden_states.dtype)
 
     def calc_loss(self, preds: torch.Tensor):
-        """We need this to compute the axillary loss for the boundary predictor"""
         preds = preds.float()
-        total_count = preds.size(-1)              # L
-        target_count = preds.sum(dim=-1)          # [B]
+        total_count = preds.size(-1)
+        target_count = preds.sum(dim=-1)
         binomial = torch.distributions.Binomial(
             total_count=total_count,
             probs=torch.tensor(self.prior, device=preds.device, dtype=preds.dtype)
