@@ -54,6 +54,8 @@ conda deactivate
 conda activate DRIP
 cd src
 python imagenet_ckpt_qwen2.py
+# or 
+python imagenet_ckpt_vit.py
 ```
 
 

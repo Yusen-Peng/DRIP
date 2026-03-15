@@ -6,7 +6,7 @@ from torchvision import datasets
 from torch.utils.data import DataLoader
 from open_clip_local import create_model_and_transforms
 from open_clip_local.model import DTPViT
-from open_clip_local.DTP_ViT import build_entropy_boundaries
+# from open_clip_local.DTP_ViT import build_entropy_boundaries
 from open_clip_local.transformer import VisionTransformer
 from open_clip_local import CLIP
 from torch.cuda.amp import GradScaler
