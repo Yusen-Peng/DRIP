@@ -395,6 +395,9 @@ def visualize_boundaries_single_multi_causal(
 
 
 
+####################################################################
+# Attention map
+####################################################################
 
 @torch.no_grad()
 def get_dtpvit_layer4_attention_no_patch(
@@ -572,7 +575,199 @@ def visualize_attention_single_multi_dtpvit(
     else:
         plt.show()
         plt.close(fig)
-    
+
+
+@torch.no_grad()
+def get_causal_layer4_attention_no_patch(
+    model: DTPViT_Causal,
+    img_3chw: torch.Tensor,
+):
+    """
+    Compute causal attention map from transformer_pre.resblocks[3]
+    without modifying model code.
+
+    Returns:
+        attn_map: [gh, gw] normalized patch heatmap
+        gh, gw
+    """
+    device = next(model.parameters()).device
+    x = img_3chw.unsqueeze(0).to(device)  # [1, 3, H, W]
+
+    B, _, H, W = x.shape
+    assert B == 1, "This helper currently assumes a single image."
+    gh, gw = model.grid_size
+    L_patch = gh * gw
+
+    """
+        Run first 3 pre-blocks WITH causal mask,
+        then manually compute attention of 4th block WITH causal mask.
+    """
+    hidden_states = model._embeds(x)   # [B, 1+L, D]
+
+    pre_mask = model._build_causal_mask(
+        seq_len=hidden_states.size(1),
+        device=hidden_states.device,
+        dtype=hidden_states.dtype,
+    )
+
+    for blk in model.transformer_pre.resblocks[:3]:
+        hidden_states = blk(hidden_states, attn_mask=pre_mask)
+
+    blk4 = model.transformer_pre.resblocks[3]
+    normed = blk4.ln_1(hidden_states)   # [B, 1+L, D]
+
+    attn = blk4.attn
+    B, L_full, C = normed.shape
+    num_heads = attn.num_heads
+    head_dim = attn.head_dim
+    scaling = attn.scale
+
+    x_attn = normed
+    if attn.batch_first:
+        x_attn = x_attn.transpose(0, 1)   # [L, B, D]
+
+    seq_length, batch_size, dim = x_attn.shape
+    q, k, v = F.linear(x_attn, attn.in_proj_weight, attn.in_proj_bias).chunk(3, dim=-1)
+
+    q = q.reshape(seq_length, batch_size * num_heads, head_dim).transpose(0, 1)  # [B*H, L, Hd]
+    k = k.reshape(seq_length, batch_size * num_heads, head_dim).transpose(0, 1)  # [B*H, L, Hd]
+    v = v.reshape(seq_length, batch_size * num_heads, head_dim).transpose(0, 1)  # [B*H, L, Hd]
+
+    causal_mask = model._build_causal_mask(
+        seq_len=seq_length,
+        device=q.device,
+        dtype=q.dtype,
+    )   # [L, L]
+
+    if attn.logit_scale is not None:
+        attn_scores = torch.bmm(
+            F.normalize(q, dim=-1),
+            F.normalize(k, dim=-1).transpose(-1, -2)
+        )  # [B*H, L, L]
+
+        attn_scores = attn_scores.view(batch_size, num_heads, seq_length, seq_length)
+        logit_scale = torch.clamp(attn.logit_scale, max=attn.logit_scale_max).exp()  # [H, 1, 1]
+        attn_scores = attn_scores * logit_scale.unsqueeze(0)  # [B, H, L, L]
+
+        # apply causal mask before softmax
+        attn_scores = attn_scores + causal_mask.unsqueeze(0).unsqueeze(0)
+
+        attn_probs = torch.softmax(attn_scores, dim=-1)  # [B, H, L, L]
+    else:
+        attn_scores = torch.bmm(q * scaling, k.transpose(-1, -2))   # [B*H, L, L]
+
+        # apply causal mask before softmax
+        attn_scores = attn_scores + causal_mask.unsqueeze(0)   # [B*H, L, L]
+
+        attn_probs = torch.softmax(attn_scores, dim=-1)
+        attn_probs = attn_probs.view(batch_size, num_heads, seq_length, seq_length)  # [B, H, L, L]
+
+    # average over heads, then aggregate over queries
+    attn_mean = attn_probs[0].mean(dim=0)      # [L, L]
+    token_score = attn_mean.sum(dim=0)         # [L]
+
+    # remove CLS token before reshaping
+    token_score = token_score[1:]              # [L_patch]
+
+    assert token_score.numel() == L_patch, \
+        f"Expected {L_patch} patch tokens after removing CLS, got {token_score.numel()}"
+
+    # min-max normalize for visualization
+    attn_map = token_score.view(gh, gw).detach().cpu()
+    attn_map = attn_map - attn_map.min()
+    attn_map = attn_map / (attn_map.max() + 1e-8)
+
+    return attn_map.numpy(), gh, gw
+
+@torch.no_grad()
+def overlay_causal_attention_no_patch(
+    model: DTPViT_Causal,
+    img_3chw: torch.Tensor,
+    mean=(0.485, 0.456, 0.406),
+    std=(0.229, 0.224, 0.225),
+    alpha=0.45,
+):
+    """
+    Returns:
+      PIL.Image with layer-4 attention heatmap overlaid on the image.
+    """
+    attn_map, gh, gw = get_causal_layer4_attention_no_patch(model, img_3chw)
+
+    # unnormalize image for visualization
+    orig = unnormalize_img(img_3chw, mean=mean, std=std)
+    orig_img = TF.to_pil_image(orig).convert("RGB")
+    orig_np = np.array(orig_img).astype(np.float32) / 255.0
+
+    # resize patch attention map to image size
+    heatmap_img = Image.fromarray((attn_map * 255).astype(np.uint8)).resize(
+        (orig_np.shape[1], orig_np.shape[0]),
+        resample=Image.BILINEAR,
+    )
+    heatmap_np = np.array(heatmap_img).astype(np.float32) / 255.0
+
+    # colorize
+    cmap = plt.get_cmap("jet")
+    heat_rgb = cmap(heatmap_np)[..., :3]
+
+    overlay = (1 - alpha) * orig_np + alpha * heat_rgb
+    overlay = np.clip(overlay, 0.0, 1.0)
+
+    return Image.fromarray((overlay * 255).astype(np.uint8))
+
+
+@torch.no_grad()
+def visualize_attention_single_multi_causal(
+    model: DTPViT_Causal,
+    preprocess,
+    root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/image_samples/single_multi/",
+    save_path="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/single_multi_attention_overlay_causal.png",
+    mean=(0.485, 0.456, 0.406),
+    std=(0.229, 0.224, 0.225),
+):
+    """
+    Reads:
+      single_1.JPEG, multi_1.JPEG, single_2.JPEG, multi_2.JPEG
+    and plots attention overlays in a separate 2x2 grid.
+    """
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = model.to(device).eval()
+
+    names = ["single_1", "multi_1", "single_2", "multi_2"]
+    paths = [os.path.join(root_dir, f"{n}.JPEG") for n in names]
+
+    tensors = []
+    for p in paths:
+        if not os.path.exists(p):
+            raise FileNotFoundError(f"Image not found: {p}")
+        tensors.append(load_img_norm(p, preprocess))
+
+    overlays = [
+        overlay_causal_attention_no_patch(model, t, mean=mean, std=std)
+        for t in tensors
+    ]
+
+    fig, axes = plt.subplots(2, 2, figsize=(12, 12))
+    axes = axes.flatten()
+
+    plot_titles = ["single_1", "multi_1", "single_2", "multi_2"]
+
+    for ax, ov, title in zip(axes, overlays, plot_titles):
+        ax.imshow(ov)
+        ax.set_title(f"{title} - attention @ layer 4")
+        ax.axis("off")
+
+    plt.tight_layout()
+
+    if save_path is not None:
+        save_dir = os.path.dirname(save_path)
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
+        plt.savefig(save_path, bbox_inches="tight", dpi=200)
+        print(f"Saved to {save_path}")
+        plt.close(fig)
+    else:
+        plt.show()
+        plt.close(fig)
 
 
 def main():
@@ -600,7 +795,7 @@ def main():
             pool_type='avg'
         )
     elif TYPE == "causal":
-        DTPViT_Causal(
+        model = DTPViT_Causal(
             image_size=RESOLUTION,
             patch_size=patch_size,
             width=width,
@@ -615,7 +810,7 @@ def main():
             pool_type='avg'
         )
     elif TYPE == "H-Net":
-        DTPViT_CosSim(
+        model = DTPViT_CosSim(
             image_size=RESOLUTION,
             patch_size=patch_size,
             width=width,
@@ -678,7 +873,12 @@ def main():
             save_path="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/causal_dtpvit_single_multi_overlay.png",
         )
 
-
+        visualize_attention_single_multi_causal(
+            model,
+            preprocess,
+            root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/image_samples/single_multi/",
+            save_path="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/causal_dtpvit_single_multi_attention_overlay.png"
+        )
 
 
 if __name__ == "__main__":
