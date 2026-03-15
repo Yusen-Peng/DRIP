@@ -22,6 +22,8 @@ conda deactivate
 conda activate DRIP
 # DRIP test:
 torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 30 --batch-size 128 --opt adamw --lr 0.0003 --wd 0.3 --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30  --workers 1 --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_RP_test --MODE DRIP
+# H-Net style DRIP test:
+torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 30 --batch-size 128 --opt adamw --lr 0.0003 --wd 0.3 --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30  --workers 1 --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_RP_test --MODE DRIP_CosSim
 # a simple imagenet example (smaller batch size, single worker)
 torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 30 --batch-size 128 --opt adamw --lr 0.0003 --wd 0.3 --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30  --workers 1 --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_ViT_RP --MODE ViT-RP
 ```
@@ -35,12 +37,12 @@ GFLOP measurment:
 python src/FLOP.py --mode DRIP --compression_rate 0.25
 # causual DRIP
 python src/FLOP.py --mode DRIP_Causal --compression_rate 0.25
-# DRIP with adjacent similarity as BP (🐰🐰 NEW!! 🐰🐰)
+# H-net style DRIP (🐰🐰 NEW stuff!! 🐰🐰)
 python src/FLOP.py --mode DRIP_CosSim --compression_rate 0.25
 ```
 
 
-### ImageNet from scratch
+### ImageNet from scratch (starting point)
 
 ```bash
 sbatch scripts/task1/finetune_imagenet.sh

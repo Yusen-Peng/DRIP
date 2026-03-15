@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=March14_Hnet_DRIP
-#SBATCH --output=March14_Hnet_DRIP.txt
-#SBATCH --time=00:15:00
+#SBATCH --job-name=March15_H-net_DRIP_50epoch
+#SBATCH --output=March15_H-net_DRIP_50epoch.txt
+#SBATCH --time=00:40:00
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
@@ -18,11 +18,11 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
 torchrun --nproc_per_node=1 src/task1_newcodebase.py \
-    --model vit_b_16 --epochs 30 --batch-size 128 --opt adamw --lr 0.0003 --wd 0.3 \
+    --model vit_b_16 --epochs 50 --batch-size 128 --opt adamw --lr 0.0003 --wd 0.3 \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 5 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_Hnet_DRIP \
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_H-net_DRIP_50epoch \
     --MODE DRIP_CosSim
 
 conda deactivate

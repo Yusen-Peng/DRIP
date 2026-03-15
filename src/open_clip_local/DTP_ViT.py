@@ -416,6 +416,43 @@ class DTPViT_CosSim(DTPViT):
             prior=self.prior,
             d_model=self.width,
         )
+    
+
+    def encode(self, x: torch.Tensor, return_loss: bool):
+        x = self._embeds(x) # [B, 3, H, W] -> [B, L, D]
+        x = self.transformer_pre(x, attn_mask=None) # [B, L, D] -> [B, L, D]
+        if self.flop_measure:
+            B, L, _ = x.shape
+            num_tokens_to_keep = max(1, int(L * self.prior))
+            indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
+            hard_boundaries = torch.zeros(B, L, device=x.device)
+            # hard boundaries: [B, L]
+            hard_boundaries[:, indices] = 1 
+        else:
+            x_transposed = x.transpose(0, 1) # [B, L, D] -> [L, B, D]
+            # hard boundaries: [B, L]
+            soft_boundaries, hard_boundaries = self.boundary_predictor(x_transposed) # input is [L, B, D]
+            # print("soft boundaries", soft_boundaries, flush=True)
+            # print("hard boundaries", hard_boundaries, flush=True)
+
+        hidden: torch.Tensor = self.down_ln(x) # [B, L, D] -> [B, L, D]
+        hidden = hidden.transpose(0, 1) # [B, L, D] -> [L, B, D]
+        shortened_hidden = downsample(
+            boundaries=hard_boundaries,
+            hidden=hidden,
+            null_group=self.null_token
+        ) # [L, B, D] -> [S, B, D]
+        shortened_hidden = shortened_hidden.transpose(0, 1) # [S, B, D] -> [B, S, D]
+
+        features = self.transformer_post(shortened_hidden, attn_mask=None) # [B, S, D] -> [B, S, D]
+        
+        if return_loss and not self.flop_measure:
+            boundary_loss = self.boundary_predictor.calc_loss(soft_boundaries, hard_boundaries)
+            avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
+            boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
+            return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+        else:
+            return features # [B, S, D]
 
 ####################### other important baselines #######################
 class SingleAdaptedFixed(nn.Module):
