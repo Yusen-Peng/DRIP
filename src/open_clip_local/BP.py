@@ -148,7 +148,6 @@ class BoundaryPredictor(nn.Module):
 """
     The following code is carefully adapted from H-Net (ICLR 2026):
     https://github.com/goombalab/hnet/blob/main/hnet/modules/dc.py
-    NOTE: 
 """
 
 class RoutingModule(nn.Module):
@@ -160,9 +159,21 @@ class RoutingModule(nn.Module):
         super().__init__()
         self.q_proj_layer = nn.Linear(d_model, d_model, bias=False, **factory_kwargs)
         self.k_proj_layer = nn.Linear(d_model, d_model, bias=False, **factory_kwargs)
+        
+        # # NOTE: apply top-k routing
+        # with torch.no_grad():
+        #     self.q_proj_layer.weight.copy_(torch.eye(d_model))
+        #     self.k_proj_layer.weight.copy_(torch.eye(d_model))
+        
+        # # NOTE: apply thresholding routing with zero initialization
+        # with torch.no_grad():
+        #     self.q_proj_layer.weight.zero_()
+        #     self.k_proj_layer.weight.zero_()
         with torch.no_grad():
-            self.q_proj_layer.weight.copy_(torch.eye(d_model))
-            self.k_proj_layer.weight.copy_(torch.eye(d_model))
+            nn.init.normal_(self.q_proj_layer.weight, mean=0.0, std=1e-3)
+            nn.init.normal_(self.k_proj_layer.weight, mean=0.0, std=1e-3)
+
+
         self.q_proj_layer.weight._no_reinit = True
         self.k_proj_layer.weight._no_reinit = True
 
@@ -178,19 +189,24 @@ class RoutingModule(nn.Module):
         # 2-class probability tensor, same format as before
         boundary_prob = torch.stack((1.0 - keep_prob, keep_prob), dim=-1)   # [B, L, 2]
 
-        # NOTE: we decide to apply top-k hard routing
-        B, L = keep_prob.shape
-        k = max(1, int(round(L * self.prior)))
+        # # NOTE: apply top-k routing
+        # B, L = keep_prob.shape
+        # k = max(1, int(round(L * self.prior)))
 
-        # reserve one slot for it when token 0 is forced kept
-        num_extra = max(0, k - 1)
+        # # reserve one slot for it when token 0 is forced kept
+        # num_extra = max(0, k - 1)
 
-        boundary_mask = torch.zeros_like(keep_prob)                          # [B, L]
-        boundary_mask[:, 0] = 1.0
-        if num_extra > 0 and L > 1:
-            scores = keep_prob[:, 1:] # rank tokens 1..L-1
-            topk_idx = torch.topk(scores, k=min(num_extra, L - 1), dim=1).indices
-            boundary_mask[:, 1:].scatter_(1, topk_idx, 1.0)
+        # boundary_mask = torch.zeros_like(keep_prob)                          # [B, L]
+        # boundary_mask[:, 0] = 1.0
+        # if num_extra > 0 and L > 1:
+        #     scores = keep_prob[:, 1:] # rank tokens 1..L-1
+        #     topk_idx = torch.topk(scores, k=min(num_extra, L - 1), dim=1).indices
+        #     boundary_mask[:, 1:].scatter_(1, topk_idx, 1.0)
+        # return boundary_prob.to(hidden_states.dtype), boundary_mask.to(hidden_states.dtype)
+    
+
+        # NOTE: apply thresholding routing (>=0.5) with zero initialization
+        boundary_mask = (keep_prob >= 0.5).float()                                # [B, L]
         return boundary_prob.to(hidden_states.dtype), boundary_mask.to(hidden_states.dtype)
 
     def calc_loss(self, boundary_prob: torch.Tensor, boundary_mask: torch.Tensor) -> torch.Tensor:
