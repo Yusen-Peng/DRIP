@@ -776,7 +776,8 @@ def visualize_attention_single_multi_causal(
 
 
 def main():
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_bidirectional_DRIP/checkpoint.pth"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_bidirectional_DRIP/checkpoint.pth"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_bidirectional_DRIP_100epoch/model_99.pth"
     TYPE = "bidirectional" # "bidirectional" or "causal" or "H-Net"
 
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_causal_DRIP/checkpoint.pth"
