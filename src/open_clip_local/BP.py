@@ -115,21 +115,17 @@ class BoundaryPredictor(nn.Module):
         boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
         boundary_probs = torch.sigmoid(boundary_logits)
 
-        if self.bp_type == 'gumbel':
-            bernoulli = torch.distributions.relaxed_bernoulli.RelaxedBernoulli(
-                temperature=self.temp,
-                probs=boundary_probs,
-            )
+        bernoulli = torch.distributions.relaxed_bernoulli.RelaxedBernoulli(
+            temperature=self.temp,
+            probs=boundary_probs,
+        )
 
-            soft_boundaries = bernoulli.rsample()
+        soft_boundaries = bernoulli.rsample()
 
-            hard_boundaries = (soft_boundaries > self.threshold).float()
-            hard_boundaries = (
-                hard_boundaries - soft_boundaries.detach() + soft_boundaries
-            )
-        elif self.bp_type in ['entropy', 'unigram']:
-            soft_boundaries = boundary_probs
-            hard_boundaries = (soft_boundaries > self.threshold).float()
+        hard_boundaries = (soft_boundaries > self.threshold).float()
+        hard_boundaries = (
+            hard_boundaries - soft_boundaries.detach() + soft_boundaries
+        )
 
         return soft_boundaries, hard_boundaries
 
@@ -144,6 +140,15 @@ class BoundaryPredictor(nn.Module):
         loss_boundaries = -binomial.log_prob(target_count).mean() / total_count
         return loss_boundaries
 
+    def inference(self, hidden):
+        boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
+        boundary_probs = torch.sigmoid(boundary_logits)
+        
+        # apply hard thresholding during inference
+        soft_boundaries = boundary_probs
+        hard_boundaries = (soft_boundaries > self.threshold).float()
+
+        return soft_boundaries, hard_boundaries
 
 """
     The following code is carefully adapted from H-Net (ICLR 2026):

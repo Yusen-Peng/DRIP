@@ -9,75 +9,75 @@ from .pos_embed import get_2d_sincos_pos_embed
 from .BP import BoundaryPredictor, downsample, RoutingModule
 from .utils import to_2tuple
 
-# @torch.no_grad()
-# def entropy_boundary_mask_torch(
-#     img: torch.Tensor,
-#     grid_h: int,
-#     grid_w: int,
-#     top_frac: float = 0.25,
-#     bins: int = 256,
-# ) -> tuple[torch.Tensor, torch.Tensor]:
-#     assert img.dim() == 4 and img.size(1) == 3, "img must be [B,3,H,W]"
-#     B, _, H, W = img.shape
+@torch.no_grad()
+def entropy_boundary_mask_torch(
+    img: torch.Tensor,
+    grid_h: int,
+    grid_w: int,
+    top_frac: float = 0.25,
+    bins: int = 256,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    assert img.dim() == 4 and img.size(1) == 3, "img must be [B,3,H,W]"
+    B, _, H, W = img.shape
 
-#     patch_h = H // grid_h
-#     patch_w = W // grid_w
-#     Hc = patch_h * grid_h
-#     Wc = patch_w * grid_w
-#     img = img[:, :, :Hc, :Wc]
+    patch_h = H // grid_h
+    patch_w = W // grid_w
+    Hc = patch_h * grid_h
+    Wc = patch_w * grid_w
+    img = img[:, :, :Hc, :Wc]
 
-#     # RGB -> grayscale (luma), still float
-#     gray = 0.2989 * img[:, 0] + 0.5870 * img[:, 1] + 0.1140 * img[:, 2]   # [B, Hc, Wc]
-#     gray = gray.clamp(0, 1)
+    # RGB -> grayscale (luma), still float
+    gray = 0.2989 * img[:, 0] + 0.5870 * img[:, 1] + 0.1140 * img[:, 2]   # [B, Hc, Wc]
+    gray = gray.clamp(0, 1)
 
-#     # quantize to [0, bins-1]
-#     q = (gray * (bins - 1)).round().to(torch.long)  # [B, Hc, Wc]
+    # quantize to [0, bins-1]
+    q = (gray * (bins - 1)).round().to(torch.long)  # [B, Hc, Wc]
 
-#     # patchify: [B, grid_h, grid_w, patch_h, patch_w] -> [B, N, P]
-#     patches = q.view(B, grid_h, patch_h, grid_w, patch_w).permute(0, 1, 3, 2, 4)
-#     patches = patches.reshape(B, grid_h * grid_w, patch_h * patch_w)      # [B, N, P]
-#     N, P = grid_h * grid_w, patch_h * patch_w
+    # patchify: [B, grid_h, grid_w, patch_h, patch_w] -> [B, N, P]
+    patches = q.view(B, grid_h, patch_h, grid_w, patch_w).permute(0, 1, 3, 2, 4)
+    patches = patches.reshape(B, grid_h * grid_w, patch_h * patch_w)      # [B, N, P]
+    N, P = grid_h * grid_w, patch_h * patch_w
 
-#     # histogram via one_hot + sum: [B, N, P, bins] -> [B, N, bins]
-#     hist = torch.zeros((B, N, bins), device=img.device, dtype=torch.float32)
-#     ones = torch.ones((B, N, P), device=img.device, dtype=torch.float32)
-#     hist.scatter_add_(dim=2, index=patches, src=ones)
+    # histogram via one_hot + sum: [B, N, P, bins] -> [B, N, bins]
+    hist = torch.zeros((B, N, bins), device=img.device, dtype=torch.float32)
+    ones = torch.ones((B, N, P), device=img.device, dtype=torch.float32)
+    hist.scatter_add_(dim=2, index=patches, src=ones)
 
-#     # probability per bin
-#     p = hist / (hist.sum(dim=-1, keepdim=True) + 1e-12)                   # [B, N, bins]
+    # probability per bin
+    p = hist / (hist.sum(dim=-1, keepdim=True) + 1e-12)                   # [B, N, bins]
 
-#     # entropy: -sum p log2 p
-#     ent = -(p * (p + 1e-12).log2()).sum(dim=-1)                           # [B, N]
-#     ent_map = ent.view(B, grid_h, grid_w)
+    # entropy: -sum p log2 p
+    ent = -(p * (p + 1e-12).log2()).sum(dim=-1)                           # [B, N]
+    ent_map = ent.view(B, grid_h, grid_w)
 
-#     # top-k mask per image
-#     k = max(1, int(torch.ceil(torch.tensor(top_frac * N)).item()))
-#     topk_idx = torch.topk(ent, k=k, dim=1, largest=True).indices          # [B, k]
+    # top-k mask per image
+    k = max(1, int(torch.ceil(torch.tensor(top_frac * N)).item()))
+    topk_idx = torch.topk(ent, k=k, dim=1, largest=True).indices          # [B, k]
 
-#     hard = torch.zeros((B, N), device=img.device, dtype=torch.float32)
-#     hard.scatter_(1, topk_idx, 1.0)
-#     hard_mask = hard.view(B, grid_h, grid_w)
+    hard = torch.zeros((B, N), device=img.device, dtype=torch.float32)
+    hard.scatter_(1, topk_idx, 1.0)
+    hard_mask = hard.view(B, grid_h, grid_w)
 
-#     return ent_map, hard_mask
+    return ent_map, hard_mask
 
-# @torch.no_grad()
-# def build_entropy_boundaries(
-#     x: torch.Tensor,            # [B,3,H,W]
-#     grid_h: int,
-#     grid_w: int,
-#     top_frac: float,
-# ) -> torch.Tensor:
-#     B = x.size(0)
-#     L = 1 + grid_h * grid_w
+@torch.no_grad()
+def build_entropy_boundaries(
+    x: torch.Tensor,            # [B,3,H,W]
+    grid_h: int,
+    grid_w: int,
+    top_frac: float,
+) -> torch.Tensor:
+    B = x.size(0)
+    L = 1 + grid_h * grid_w
 
-#     ent_map, hard_mask = entropy_boundary_mask_torch(
-#         img=x, grid_h=grid_h, grid_w=grid_w, top_frac=top_frac
-#     )  # hard_mask: [B, gh, gw]
+    ent_map, hard_mask = entropy_boundary_mask_torch(
+        img=x, grid_h=grid_h, grid_w=grid_w, top_frac=top_frac
+    )  # hard_mask: [B, gh, gw]
 
-#     hard_boundaries = torch.zeros((B, L), device=x.device, dtype=torch.float32)
-#     hard_boundaries[:, 0] = 1.0
-#     hard_boundaries[:, 1:] = hard_mask.reshape(B, -1)
-#     return hard_boundaries, ent_map
+    hard_boundaries = torch.zeros((B, L), device=x.device, dtype=torch.float32)
+    hard_boundaries[:, 0] = 1.0
+    hard_boundaries[:, 1:] = hard_mask.reshape(B, -1)
+    return hard_boundaries, ent_map
 
 
 class DTPViT(nn.Module):
@@ -287,7 +287,7 @@ class DTPViT(nn.Module):
 
         return pooled, tokens
     
-    def encode(self, x: torch.Tensor, return_loss: bool):
+    def encode(self, x: torch.Tensor, return_loss: bool, inference: bool = False):
         x = self._embeds(x) # [B, 3, H, W] -> [B, L, D]
         x = self.transformer_pre(x, attn_mask=None) # [B, L, D] -> [B, L, D]
 
@@ -300,8 +300,13 @@ class DTPViT(nn.Module):
             hard_boundaries[:, indices] = 1 
         else:
             x_transposed = x.transpose(0, 1) # [B, L, D] -> [L, B, D]
-            # hard boundaries: [B, L]
-            _, hard_boundaries = self.boundary_predictor(x_transposed) # input is [L, B, D]
+
+            if not inference:
+                # hard boundaries: [B, L]
+                _, hard_boundaries = self.boundary_predictor(x_transposed) # input is [L, B, D]
+            else:
+                # during inference, apply thresholding to get hard boundaries
+                _, hard_boundaries = self.boundary_predictor.inference(x_transposed) # input is [L, B, D]
 
         hidden: torch.Tensor = self.down_ln(x) # [B, L, D] -> [B, L, D]
         hidden = hidden.transpose(0, 1) # [B, L, D] -> [L, B, D]
@@ -322,8 +327,8 @@ class DTPViT(nn.Module):
         else:
             return features # [B, S, D]
 
-    def forward(self, x: torch.Tensor, return_loss: bool = False):
-        features_out = self.encode(x, return_loss=return_loss) # [B, 3, H, W] -> [B, S, D]
+    def forward(self, x: torch.Tensor, return_loss: bool = False, inference: bool = False):
+        features_out = self.encode(x, return_loss=return_loss, inference=inference) # [B, 3, H, W] -> [B, S, D]
 
         if return_loss and not self.flop_measure:
             # encode returns tuple (features, loss, avg_boundaries, boundary_ratio)

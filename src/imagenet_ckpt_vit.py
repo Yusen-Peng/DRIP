@@ -128,12 +128,8 @@ def get_dtpvit_hard_boundaries(model: DTPViT, img_3chw: torch.Tensor):
         hard_boundaries[:, indices] = 1
     else:
         x_transposed = hidden_states.transpose(0, 1)  # [1, 1+L, D] -> [1+L, 1, D]
-        """
-            NOTE: for visualization/inference, we stop sampling and apply deterministic thresholding
-            IF your BoundaryPredictor exposes raw logits/probs somewhere, swap this to match QwenDRIP exactly.
-            Otherwise this uses the predictor's own hard output.
-        """
-        boundary_probabilities, hard_boundaries = model.boundary_predictor(x_transposed)   # [B, 1+L]
+        # boundary_probabilities, hard_boundaries = model.boundary_predictor(x_transposed)   # [B, 1+L]
+        boundary_probabilities, hard_boundaries = model.boundary_predictor.inference(x_transposed)   # [B, 1+L]
         print("================================")
         np.set_printoptions(suppress=True, precision=4)
         print(f"Boundary probabilities multiplied by 1000:")
@@ -778,9 +774,13 @@ def visualize_attention_single_multi_causal(
 def main():
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_bidirectional_DRIP/checkpoint.pth"
     ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_bidirectional_DRIP_100epoch/model_99.pth"
-    TYPE = "bidirectional" # "bidirectional" or "causal" or "H-Net"
-
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_bidirectional_DRIP_100epoch/model_49.pth"
+    
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_causal_DRIP/checkpoint.pth"
+    
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_H-net_DRIP_50epoch/model_49.pth"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_H-net_DRIP_50epoch_zero_init_with_noise/model_49.pth"
+    TYPE = "bidirectional" # "bidirectional" or "causal" or "H-Net"
 
 
     patch_size = 16
@@ -838,7 +838,7 @@ def main():
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    if TYPE == "bidirectional" or TYPE == "causal":
+    if TYPE == "bidirectional" or TYPE == "causal" or TYPE == "H-Net":
         model = load_dtpvit_checkpoint(
             model,
             checkpoint_path=ckpt_path,
@@ -846,8 +846,6 @@ def main():
             strict=False,
             verbose=True,
         )
-    elif TYPE == "H-Net":
-        pass # TODO
     else:
         raise ValueError(f"Unsupported TYPE: {TYPE}")
 
@@ -861,7 +859,7 @@ def main():
     ])
 
 
-    if TYPE == "bidirectional":
+    if TYPE == "bidirectional" or TYPE == "H-Net":
         visualize_boundaries_single_multi_dtpvit(
             model,
             preprocess,
