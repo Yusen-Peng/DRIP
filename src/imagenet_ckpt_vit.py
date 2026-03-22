@@ -119,29 +119,21 @@ def get_dtpvit_hard_boundaries(model: DTPViT, img_3chw: torch.Tensor):
     # pre transformer
     hidden_states = model.transformer_pre(hidden_states, attn_mask=None)
 
-    if model.flop_measure:
-        # deterministic fallback if flop_measure=True
-        L_full = hidden_states.shape[1]   # includes CLS
-        num_tokens_to_keep = max(1, int(L_full * model.prior))
-        indices = torch.linspace(0, L_full - 1, steps=num_tokens_to_keep, device=device).round().long()
-        hard_boundaries = torch.zeros(B, L_full, device=device)
-        hard_boundaries[:, indices] = 1
-    else:
-        x_transposed = hidden_states.transpose(0, 1)  # [1, 1+L, D] -> [1+L, 1, D]
-        # boundary_probabilities, hard_boundaries = model.boundary_predictor(x_transposed)   # [B, 1+L]
-        boundary_probabilities, hard_boundaries = model.boundary_predictor.inference(x_transposed)   # [B, 1+L]
-        print("================================")
-        np.set_printoptions(suppress=True, precision=4)
-        print(f"Boundary probabilities multiplied by 1000:")
-        print(boundary_probabilities.cpu().numpy() * 1000)
-        print("================================")
+    # Split CLS and patch tokens
+    cls_token = hidden_states[:, :1, :]      # [B, 1, D]
+    patch_tokens = hidden_states[:, 1:, :]   # [B, L, D]
 
-    # remove CLS before reshaping to patch grid
-    hard_boundaries = hard_boundaries[:, 1:]   # [B, L_patch]
+    x_transposed = patch_tokens.transpose(0, 1)  # [1, L, D] -> [L, 1, D]
+    boundary_probabilities, hard_boundaries = model.boundary_predictor.inference(x_transposed)   # [B, L]
+    print("================================")
+    np.set_printoptions(suppress=True, precision=4)
+    print(f"Boundary probabilities multiplied by 1000:")
+    print(boundary_probabilities.cpu().numpy() * 1000)
+    print("================================")
 
+    hard_boundaries = hard_boundaries
     assert hard_boundaries.shape[1] == L_patch, \
         f"Expected {L_patch} patch tokens after removing CLS, got {hard_boundaries.shape[1]}"
-
     return hard_boundaries[0].detach(), gh, gw
 
 

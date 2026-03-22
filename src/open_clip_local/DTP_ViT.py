@@ -288,36 +288,43 @@ class DTPViT(nn.Module):
         return pooled, tokens
     
     def encode(self, x: torch.Tensor, return_loss: bool, inference: bool = False):
-        x = self._embeds(x) # [B, 3, H, W] -> [B, L, D]
-        x = self.transformer_pre(x, attn_mask=None) # [B, L, D] -> [B, L, D]
+        x = self._embeds(x) # [B, 3, H, W] -> [B, L+1, D]
+        x = self.transformer_pre(x, attn_mask=None) # [B, L, D] -> [B, L+1, D]
+
+        # Split CLS and patch tokens
+        cls_token = x[:, :1, :]      # [B, 1, D]
+        patch_tokens = x[:, 1:, :]   # [B, L, D]
 
         if self.flop_measure:
-            B, L, _ = x.shape
+            B, L, _ = patch_tokens.shape
             num_tokens_to_keep = max(1, int(L * self.prior))
             indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
             hard_boundaries = torch.zeros(B, L, device=x.device)
             # hard boundaries: [B, L]
             hard_boundaries[:, indices] = 1 
         else:
-            x_transposed = x.transpose(0, 1) # [B, L, D] -> [L, B, D]
-
+            patch_transposed = patch_tokens.transpose(0, 1) # [B, L, D] -> [L, B, D]
             if not inference:
                 # hard boundaries: [B, L]
-                _, hard_boundaries = self.boundary_predictor(x_transposed) # input is [L, B, D]
+                _, hard_boundaries = self.boundary_predictor(patch_transposed) # input is [L, B, D]
             else:
                 # during inference, apply thresholding to get hard boundaries
-                _, hard_boundaries = self.boundary_predictor.inference(x_transposed) # input is [L, B, D]
+                _, hard_boundaries = self.boundary_predictor.inference(patch_transposed) # input is [L, B, D]
 
-        hidden: torch.Tensor = self.down_ln(x) # [B, L, D] -> [B, L, D]
+
+        hidden: torch.Tensor = self.down_ln(patch_tokens) # [B, L, D] -> [B, L, D]
         hidden = hidden.transpose(0, 1) # [B, L, D] -> [L, B, D]
         shortened_hidden = downsample(
             boundaries=hard_boundaries,
             hidden=hidden,
             null_group=self.null_token
         ) # [L, B, D] -> [S, B, D]
-        shortened_hidden = shortened_hidden.transpose(0, 1) # [S, B, D] -> [B, S, D]
+        shortened_patches = shortened_hidden.transpose(0, 1) # [S, B, D] -> [B, S, D]
 
-        features = self.transformer_post(shortened_hidden, attn_mask=None) # [B, S, D] -> [B, S, D]
+        # Re-attach CLS
+        shortened_hidden = torch.cat([cls_token, shortened_patches], dim=1)  # [B, 1+S, D]
+
+        features = self.transformer_post(shortened_hidden, attn_mask=None) # [B, 1+S, D] -> [B, 1+S, D]
         
         if return_loss and not self.flop_measure:
             boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
