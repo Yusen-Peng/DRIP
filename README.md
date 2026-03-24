@@ -51,10 +51,9 @@ sbatch scripts/task1/finetune_imagenet.sh
 ### Boundary visualization and attention map analysis(🥑🥑 updated with ImageNet 🥑🥑)
 
 ```bash
-cd src
-python imagenet_ckpt_vit.py
+python src/imagenet_ckpt_vit.py
 # or 
-python imagenet_ckpt_qwen2.py
+python src/imagenet_ckpt_qwen2.py
 
 ```
 

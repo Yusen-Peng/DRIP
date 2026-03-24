@@ -80,6 +80,19 @@ def load_dtpvit_checkpoint(model: DTPViT, checkpoint_path, device="cpu", strict=
     state_dict = _extract_state_dict(ckpt)
     state_dict = _strip_prefix_if_needed(state_dict)
 
+    if verbose:
+        print("\n==== BEFORE LOAD ====")
+        for name, param in model.boundary_predictor.boundary_predictor.named_parameters():
+            d = param.data.float().cpu()
+            print(f"{name}: mean={d.mean():.6f}, std={d.std():.6f}")
+        
+        print("\n==== CHECKPOINT VALUES ====")
+        for k, v in state_dict.items():
+            if "boundary_predictor.boundary_predictor" in k:
+                d = v.float().cpu()
+                print(f"{k}: mean={d.mean():.6f}, std={d.std():.6f}")
+
+
     missing, unexpected = model.load_state_dict(state_dict, strict=strict)
     model.to(device).eval()
 
@@ -124,12 +137,8 @@ def get_dtpvit_hard_boundaries(model: DTPViT, img_3chw: torch.Tensor):
     patch_tokens = hidden_states[:, 1:, :]   # [B, L, D]
 
     x_transposed = patch_tokens.transpose(0, 1)  # [1, L, D] -> [L, 1, D]
-    boundary_probabilities, hard_boundaries = model.boundary_predictor.inference(x_transposed)   # [B, L]
-    print("================================")
-    np.set_printoptions(suppress=True, precision=4)
-    print(f"Boundary probabilities multiplied by 1000:")
-    print(boundary_probabilities.cpu().numpy() * 1000)
-    print("================================")
+    
+    _, hard_boundaries = model.boundary_predictor(x_transposed)   # [B, L]
 
     hard_boundaries = hard_boundaries
     assert hard_boundaries.shape[1] == L_patch, \
@@ -765,8 +774,11 @@ def visualize_attention_single_multi_causal(
 
 def main():
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_bidirectional_DRIP/checkpoint.pth"
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_bidirectional_DRIP_100epoch/model_99.pth"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_bidirectional_DRIP_100epoch/model_99.pth"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_bidirectional_DRIP_100epoch/model_49.pth"
+
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_fixed_CLS_vanilla_50epoch/model_49.pth"
+
     
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_causal_DRIP/checkpoint.pth"
     

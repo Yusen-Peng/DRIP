@@ -1170,7 +1170,7 @@ def main(args):
     print("Creating model")
     is_dtp = False
     MODE = args.MODE
-    COMPRESSION_RATE = 0.25
+    COMPRESSION_RATE = 0.1
     width=768
     mlp_ratio=4.0
 

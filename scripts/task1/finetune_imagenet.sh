@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=March22_DRIP_fixed_CLS_vanilla
-#SBATCH --output=March22_DRIP_fixed_CLS_vanilla.txt
+#SBATCH --job-name=March22_DRIP_fixed_CLS_vanilla_10x
+#SBATCH --output=March22_DRIP_fixed_CLS_vanilla_10x.txt
 #SBATCH --time=52:00:00
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
@@ -22,7 +22,7 @@ torchrun --nproc_per_node=1 src/task1_newcodebase.py \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 5 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_fixed_CLS_vanilla_50epoch \
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_fixed_CLS_vanilla_50epoch_10x \
     --MODE DRIP
 
 conda deactivate

@@ -1,4 +1,4 @@
-from numpy import eye
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -126,6 +126,18 @@ class BoundaryPredictor(nn.Module):
         hard_boundaries = (
             hard_boundaries - soft_boundaries.detach() + soft_boundaries
         )
+
+        print("================================")
+        np.set_printoptions(suppress=True, precision=4)
+        print(f"raw logits:")
+        print(boundary_logits.cpu().numpy())
+        print(f"probabilities after sigmoid:")
+        print(boundary_probs.cpu().numpy())
+        print(f"probabilities after sampling:")
+        print(soft_boundaries.cpu().numpy())
+        print(f"hard boundaries after thresholding:")
+        print(hard_boundaries.cpu().numpy())
+        print("================================")
 
         return soft_boundaries, hard_boundaries
 
