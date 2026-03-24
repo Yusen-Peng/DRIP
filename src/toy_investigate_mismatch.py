@@ -1,7 +1,13 @@
 
 import numpy as np
+import torch
 
-raw_logits = np.array([[-1.119, -1.1155, -1.114,  -1.1137, -1.112,  -1.1103, -1.1119, -1.1114, -1.1099,
+TEMP = 0.5
+np.set_printoptions(suppress=True, precision=4)
+
+
+
+raw_logits_arr = np.array([[-1.119, -1.1155, -1.114,  -1.1137, -1.112,  -1.1103, -1.1119, -1.1114, -1.1099,
   -1.1086, -1.1075, -1.1062, -1.107,  -1.1058, -1.113,  -1.114,  -1.114,  -1.1136,
   -1.1116, -1.1103, -1.1093, -1.1093, -1.1093, -1.1113, -1.1101, -1.1115, -1.1101,
   -1.1068, -1.1168, -1.1147, -1.1143, -1.1129, -1.114,  -1.1126, -1.0409, -0.6471,
@@ -24,6 +30,37 @@ raw_logits = np.array([[-1.119, -1.1155, -1.114,  -1.1137, -1.112,  -1.1103, -1.
   -1.1189, -1.1226, -1.1137, -1.1197, -1.1433, -1.1314, -1.1493, -1.0639, -1.1435,
   -1.085,  -1.0688, -1.1229, -1.1221, -1.1168, -1.1208, -1.1365]])
 
-print("Raw logits's shape:", raw_logits.shape)
+raw_logits = torch.tensor(raw_logits_arr)
+boundary_probs = torch.sigmoid(raw_logits)
+print("Boundary probabilities after sigmoid:")
+print(boundary_probs.cpu().numpy())
 
+bernoulli = torch.distributions.relaxed_bernoulli.RelaxedBernoulli(
+    temperature=TEMP,
+    probs=boundary_probs,
+)
+
+soft_boundaries = bernoulli.rsample()
+print("Boundary probabilities after sampling:")
+print(soft_boundaries.cpu().numpy())
+
+# visualize it with a probability heatmap
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10, 3))
+plt.imshow(boundary_probs.cpu().numpy(), cmap='viridis', aspect='auto')
+plt.colorbar(label='Boundary Probability')
+plt.title('Boundary Probabilities Heatmap (before sampling)')
+plt.xlabel('Token Index')
+plt.yticks([])
+plt.savefig('/users/PAS2912/yusenpeng/Fast-CLIP/src/heatmap_before_sampling.png')
+plt.close()
+
+plt.figure(figsize=(10, 3))
+plt.imshow(soft_boundaries.cpu().numpy(), cmap='viridis', aspect='auto')
+plt.colorbar(label='Boundary Probability')
+plt.title('Boundary Probabilities Heatmap (after sampling)')
+plt.xlabel('Token Index')
+plt.yticks([])
+plt.savefig('/users/PAS2912/yusenpeng/Fast-CLIP/src/heatmap_after_sampling.png')
+plt.close()
 
