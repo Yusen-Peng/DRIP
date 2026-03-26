@@ -60,8 +60,11 @@ class VisionClassifier(nn.Module):
         elif isinstance(backbone, SingleAdaptedSwin):
             self.fc = nn.Linear(backbone.num_classes, num_classes)
 
-    def forward(self, x):
-        if isinstance(self.backbone, DTPViT) or isinstance(self.backbone, SingleAdaptedFixed) or isinstance(self.backbone, Qwen2VLDRIP):
+    def forward(self, x, inference: bool = False):
+        if isinstance(self.backbone, DTPViT):
+            outs, boundary_loss, _, _  = self.backbone(x, return_loss=True, inference=inference)
+            return self.fc(outs), boundary_loss
+        elif isinstance(self.backbone, SingleAdaptedFixed) or isinstance(self.backbone, Qwen2VLDRIP):
             outs, boundary_loss, _, _  = self.backbone(x, return_loss=True)
             return self.fc(outs), boundary_loss
         else:
@@ -923,7 +926,7 @@ def train_one_epoch(model, is_dtp: bool, criterion, optimizer, data_loader, devi
         image, target = image.to(device), target.to(device)
         with torch.amp.autocast('cuda', enabled=scaler is not None):
             if is_dtp:
-                output, boundary_loss = model(image)
+                output, boundary_loss = model(image, inference=False)
                 cls_loss = criterion(output, target)
                 
                 # add boundary loss for back propagation
@@ -980,7 +983,7 @@ def evaluate(model, is_dtp: bool, criterion, data_loader, device, print_freq=100
             image = image.to(device, non_blocking=True)
             target = target.to(device, non_blocking=True)
             if is_dtp:
-                output, boundary_loss = model(image)
+                output, boundary_loss = model(image, inference=True)
                 cls_loss = criterion(output, target)
                 loss = cls_loss + boundary_loss
             else:
@@ -1170,7 +1173,10 @@ def main(args):
     print("Creating model")
     is_dtp = False
     MODE = args.MODE
-    COMPRESSION_RATE = 0.1
+    COMPRESSION_RATE = args.RATE
+    TEMP = args.TEMP
+
+
     width=768
     mlp_ratio=4.0
 
@@ -1184,11 +1190,12 @@ def main(args):
             compression_rate=COMPRESSION_RATE,
             heads=width // 64,
             mlp_ratio=mlp_ratio,
-            temp=0.5,
+            temp=TEMP,
             output_dim=512,
             pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
             pool_type='avg'
         )
+        print(f"😛😛😛temperature is set to: {TEMP}😛😛😛", flush=True)
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
         is_dtp = True # NOTE: important!
@@ -1203,7 +1210,7 @@ def main(args):
             compression_rate=COMPRESSION_RATE,
             heads=width // 64,
             mlp_ratio=mlp_ratio,
-            temp=0.5,
+            temp=TEMP,
             output_dim=512,
             pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
             pool_type='avg'
@@ -1222,7 +1229,7 @@ def main(args):
             compression_rate=COMPRESSION_RATE,
             heads=width // 64,
             mlp_ratio=mlp_ratio,
-            temp=0.5,
+            temp=TEMP,
             output_dim=512,
             pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
             pool_type='avg'
@@ -1625,6 +1632,8 @@ def get_args_parser(add_help=True):
     # NOTE: pick your model!
     # "DRIP" or "fixed_pooling" or "ViT" or "XL" or "ViT-RP"
     parser.add_argument("--MODE", type=str, help="which model to use buddy")
+    parser.add_argument("--RATE", type=float, help="compression rate for DRIP and fixed pooling models")
+    parser.add_argument("--TEMP", type=float, help="temperature for DRIP models; -1 for no sampling")
     return parser
 
 

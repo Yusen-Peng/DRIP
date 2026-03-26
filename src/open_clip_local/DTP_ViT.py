@@ -305,7 +305,7 @@ class DTPViT(nn.Module):
         else:
             patch_transposed = patch_tokens.transpose(0, 1) # [B, L, D] -> [L, B, D]
             if not inference:
-                # hard boundaries: [B, L]
+                # hard boundaries: [B, L] - sampling during training
                 _, hard_boundaries = self.boundary_predictor(patch_transposed) # input is [L, B, D]
             else:
                 # during inference, apply thresholding to get hard boundaries

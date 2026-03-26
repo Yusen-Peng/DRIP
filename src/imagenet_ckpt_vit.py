@@ -140,7 +140,6 @@ def get_dtpvit_hard_boundaries(model: DTPViT, img_3chw: torch.Tensor):
     
     _, hard_boundaries = model.boundary_predictor(x_transposed)   # [B, L]
 
-    hard_boundaries = hard_boundaries
     assert hard_boundaries.shape[1] == L_patch, \
         f"Expected {L_patch} patch tokens after removing CLS, got {hard_boundaries.shape[1]}"
     return hard_boundaries[0].detach(), gh, gw
@@ -777,7 +776,8 @@ def main():
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_bidirectional_DRIP_100epoch/model_99.pth"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_bidirectional_DRIP_100epoch/model_49.pth"
 
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_fixed_CLS_vanilla_50epoch/model_49.pth"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_fixed_CLS_vanilla_50epoch/model_49.pth"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_fixed_CLS_vanilla_50epoch/model_9.pth"
 
     
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_causal_DRIP/checkpoint.pth"
