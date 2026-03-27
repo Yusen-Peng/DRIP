@@ -108,7 +108,7 @@ class BoundaryPredictor(nn.Module):
 
         self.loss = nn.BCEWithLogitsLoss()
     
-    def forward(self, hidden):
+    def forward(self, hidden, verbose: bool = False):
         # Hidden is of shape [seq_len x bs x d_model]
         # Boundaries we return are [bs x seq_len]
 
@@ -127,17 +127,18 @@ class BoundaryPredictor(nn.Module):
             hard_boundaries - soft_boundaries.detach() + soft_boundaries
         )
 
-        # print("================================")
-        # np.set_printoptions(suppress=True, precision=4)
-        # print(f"raw logits:")
-        # print(boundary_logits.cpu().numpy())
-        # print(f"probabilities after sigmoid:")
-        # print(boundary_probs.cpu().numpy())
-        # print(f"probabilities after sampling:")
-        # print(soft_boundaries.cpu().numpy())
-        # print(f"hard boundaries after thresholding:")
-        # print(hard_boundaries.cpu().numpy())
-        # print("================================")
+        if verbose:
+            print("================================")
+            np.set_printoptions(suppress=True, precision=4)
+            print(f"raw logits:")
+            print(boundary_logits.cpu().numpy())
+            print(f"probabilities after sigmoid:")
+            print(boundary_probs.cpu().numpy())
+            print(f"probabilities after sampling:")
+            print(soft_boundaries.cpu().numpy())
+            print(f"hard boundaries after thresholding:")
+            print(hard_boundaries.cpu().numpy())
+            print("================================")
 
         return soft_boundaries, hard_boundaries
 
@@ -152,13 +153,24 @@ class BoundaryPredictor(nn.Module):
         loss_boundaries = -binomial.log_prob(target_count).mean() / total_count
         return loss_boundaries
 
-    def inference(self, hidden):
+    def inference(self, hidden, verbose: bool = False):
         boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
         boundary_probs = torch.sigmoid(boundary_logits)
         
         # apply hard thresholding during inference
         soft_boundaries = boundary_probs
         hard_boundaries = (soft_boundaries > self.threshold).float()
+
+        if verbose:
+            print("================================")
+            np.set_printoptions(suppress=True, precision=4)
+            print(f"raw logits:")
+            print(boundary_logits.cpu().numpy())
+            print(f"probabilities after sigmoid:")
+            print(soft_boundaries.cpu().numpy())
+            print(f"hard boundaries after thresholding:")
+            print(hard_boundaries.cpu().numpy())
+            print("================================")
 
         return soft_boundaries, hard_boundaries
 
