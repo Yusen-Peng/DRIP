@@ -779,7 +779,11 @@ def main():
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_fixed_CLS_vanilla_50epoch/model_49.pth"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_fixed_CLS_vanilla_50epoch/model_9.pth"
     
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_temp_01/model_19.pth"
+    
+    
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_temp_01/model_19.pth"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_temp_005/model_19.pth"
+
 
 
     
