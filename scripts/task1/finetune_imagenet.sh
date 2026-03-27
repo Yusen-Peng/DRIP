@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=March26_DRIP_no_sample
 #SBATCH --output=March26_DRIP_no_sample.txt
-#SBATCH --time=00:10:00
+#SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16

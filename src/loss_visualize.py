@@ -28,7 +28,7 @@ def plot_losses(cls_losses, boundary_losses, log_file: str):
     steps = list(range(len(cls_losses)))
 
     plt.figure(figsize=(12, 5))
-    plt.plot(steps, cls_losses, label="cls_loss")
+    # plt.plot(steps, cls_losses, label="cls_loss")
     plt.plot(steps, boundary_losses, label="boundary_loss")
     plt.xlabel("Step")
     plt.ylabel("Loss")
