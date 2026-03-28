@@ -115,12 +115,16 @@ class BoundaryPredictor(nn.Module):
         boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
         boundary_probs = torch.sigmoid(boundary_logits)
 
-        bernoulli = torch.distributions.relaxed_bernoulli.RelaxedBernoulli(
-            temperature=self.temp,
-            probs=boundary_probs,
-        )
+        # bernoulli = torch.distributions.relaxed_bernoulli.RelaxedBernoulli(
+        #     temperature=self.temp,
+        #     probs=boundary_probs,
+        # )
 
-        soft_boundaries = bernoulli.rsample()
+        # soft_boundaries = bernoulli.rsample()
+
+        # FIXME: ablation
+        soft_boundaries = boundary_probs
+
 
         hard_boundaries = (soft_boundaries > self.threshold).float()
         hard_boundaries = (

@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=March26_DRIP_no_sample
-#SBATCH --output=March26_DRIP_no_sample.txt
-#SBATCH --time=24:00:00
+#SBATCH --job-name=March28_DRIP_no_sample
+#SBATCH --output=March28_DRIP_no_sample.txt
+#SBATCH --time=30:00:00
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
@@ -13,7 +13,7 @@ conda activate DRIP
 source activate DRIP
 
 export OMP_NUM_THREADS=16
-export MASTER_PORT=$((12000 + RANDOM % 20000))
+export MASTER_PORT=$((12001 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
 

@@ -914,7 +914,7 @@ class RASampler(torch.utils.data.Sampler):
         self.epoch = epoch
 
 
-def train_one_epoch(model, is_dtp: bool, criterion, optimizer, data_loader, device, epoch, args, model_ema=None, scaler=None, no_sampling=False):
+def train_one_epoch(model, is_dtp: bool, criterion, optimizer, data_loader, device, epoch, args, model_ema=None, scaler=None):
     model.train()
     metric_logger = MetricLogger(delimiter="  ")
     metric_logger.add_meter("lr", SmoothedValue(window_size=1, fmt="{value}"))
@@ -926,10 +926,7 @@ def train_one_epoch(model, is_dtp: bool, criterion, optimizer, data_loader, devi
         image, target = image.to(device), target.to(device)
         with torch.amp.autocast('cuda', enabled=scaler is not None):
             if is_dtp:
-                if no_sampling:
-                    output, boundary_loss = model(image, inference=True)
-                else:
-                    output, boundary_loss = model(image, inference=False)
+                output, boundary_loss = model(image, inference=False)
                 cls_loss = criterion(output, target)
                 
                 # add boundary loss for back propagation
@@ -1178,10 +1175,6 @@ def main(args):
     MODE = args.MODE
     COMPRESSION_RATE = args.RATE
     TEMP = args.TEMP
-    NO_SAMPLING = (TEMP == 0.0)
-    if NO_SAMPLING: 
-        print("🥶🥶🥶[INFO]🥶🥶🥶: No sampling will be performed during training", flush=True)
-
 
     width=768
     mlp_ratio=4.0
@@ -1474,7 +1467,7 @@ def main(args):
     for epoch in tqdm(range(args.start_epoch, args.epochs), desc="Training Epochs"):
         if args.distributed:
             train_sampler.set_epoch(epoch)
-        train_one_epoch(model, is_dtp, criterion, optimizer, data_loader, device, epoch, args, model_ema, scaler, NO_SAMPLING)
+        train_one_epoch(model, is_dtp, criterion, optimizer, data_loader, device, epoch, args, model_ema, scaler)
         lr_scheduler.step()
         evaluate(model, is_dtp, criterion, data_loader_test, device=device)
         if model_ema:

@@ -15,7 +15,7 @@ from open_clip_local.DTP_ViT import DTPViT, DTPViT_Causal, DTPViT_CosSim
 
 from open_clip_local.DTP_ViT import XL_Baseline
 from open_clip_local.transformer import VisionTransformer
-from open_clip_local.DTP_ViT import SingleAdaptedFixed
+from open_clip_local.DTP_ViT import DTPViT_Fixed
 
 
 from open_clip_local.Qwen2VL_ViT import Qwen2VLViT, Qwen2VLVisionConfig, Qwen2VLDRIP
@@ -205,7 +205,7 @@ def main():
         
     elif MODE == "fixed_pooling":
         print("Calculating GFLOPs for Fixed Pooling...")
-        model = SingleAdaptedFixed(
+        model = DTPViT_Fixed(            
             image_size=img_size,
             patch_size=patch_size,
             width=width,
@@ -215,9 +215,11 @@ def main():
             heads=width // 64,
             mlp_ratio=mlp_ratio,
             temp=0.5,
+            output_dim=512,
+            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
+            pool_type='avg',
             flop_measure=True
         )
-
     elif MODE == "EViT":
         from open_clip_local.EViT import EViT
         print("Calculating GFLOPs for EViT...")

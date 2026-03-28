@@ -354,6 +354,50 @@ class DTPViT(nn.Module):
         else:
             return pooled # [B, output_dim]
 
+
+####################### fixed pooling baseline #######################
+class DTPViT_Fixed(DTPViT):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def encode(self, x: torch.Tensor, return_loss: bool, inference: bool = False):
+        x = self._embeds(x) # [B, 3, H, W] -> [B, L+1, D]
+        x = self.transformer_pre(x, attn_mask=None) # [B, L, D] -> [B, L+1, D]
+
+        # Split CLS and patch tokens
+        cls_token = x[:, :1, :]      # [B, 1, D]
+        patch_tokens = x[:, 1:, :]   # [B, L, D]
+        
+        # fixed pooling
+        B, L, _ = patch_tokens.shape
+        num_tokens_to_keep = max(1, int(L * self.prior))
+        indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep).round().long()
+        hard_boundaries = torch.zeros(B, L, device=x.device)
+        # hard boundaries: [B, L]
+        hard_boundaries[:, indices] = 1
+
+        hidden: torch.Tensor = self.down_ln(patch_tokens) # [B, L, D] -> [B, L, D]
+        hidden = hidden.transpose(0, 1) # [B, L, D] -> [L, B, D]
+        shortened_hidden = downsample(
+            boundaries=hard_boundaries,
+            hidden=hidden,
+            null_group=self.null_token
+        ) # [L, B, D] -> [S, B, D]
+        shortened_patches = shortened_hidden.transpose(0, 1) # [S, B, D] -> [B, S, D]
+
+        # Re-attach CLS
+        shortened_hidden = torch.cat([cls_token, shortened_patches], dim=1)  # [B, 1+S, D]
+
+        features = self.transformer_post(shortened_hidden, attn_mask=None) # [B, 1+S, D] -> [B, 1+S, D]
+        
+        if return_loss and not self.flop_measure:
+            boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
+            avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
+            boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
+            return features, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+        else:
+            return features # [B, S, D]
+
 ####################### causal ViT DRIP #######################
 
 class DTPViT_Causal(DTPViT):
@@ -466,7 +510,20 @@ class DTPViT_CosSim(DTPViT):
         else:
             return features # [B, S, D]
 
-####################### other important baselines #######################
+
+
+
+
+
+
+
+
+
+
+###############################################################################################
+##
+
+
 class SingleAdaptedFixed(nn.Module):
     def __init__(self,
                 image_size: int,
