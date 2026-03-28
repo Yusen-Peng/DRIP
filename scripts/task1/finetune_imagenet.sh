@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=March28_DRIP_no_sample
-#SBATCH --output=March28_DRIP_no_sample.txt
-#SBATCH --time=30:00:00
+#SBATCH --job-name=March28_DRIP_fixed_pooling
+#SBATCH --output=March28_DRIP_fixed_pooling.txt
+#SBATCH --time=29:00:00
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
@@ -22,8 +22,8 @@ torchrun --nproc_per_node=1 src/task1_newcodebase.py \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 2 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_no_sample \
-    --MODE DRIP --RATE 0.25 --TEMP 0.0
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_fixed_pooling \
+    --MODE fixed_pooling --RATE 0.25 --TEMP 0.0
 
 conda deactivate
 # End of script

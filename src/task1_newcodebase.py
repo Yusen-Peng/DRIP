@@ -15,7 +15,7 @@ from torchvision import datasets
 from torch.utils.data import DataLoader
 from open_clip_local import create_model_and_transforms
 from open_clip_local.model import DTPViT, VisionTransformer, HierarchicalDTPViT
-from open_clip_local.DTP_ViT import SingleAdaptedFixed, XL_Baseline, DTPViT_Causal, DTPViT_CosSim
+from open_clip_local.DTP_ViT import DTPViT_Fixed, XL_Baseline, DTPViT_Causal, DTPViT_CosSim
 from boundary_vis import load_dtpx_from_clip_checkpoint
 from open_clip_local import CLIP
 from torch.cuda.amp import GradScaler
@@ -39,11 +39,11 @@ from open_clip_local.Qwen2VL_ViT import Qwen2VLVisionConfig, Qwen2VLViT, Qwen2VL
 
 class VisionClassifier(nn.Module):
     def __init__(self, 
-                 backbone: DTPViT | DTPViT_Causal | SingleAdaptedFixed | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT | SingleAdaptedSwin | Qwen2VLViT | Qwen2VLDRIP, 
+                 backbone: DTPViT | DTPViT_Causal | DTPViT_Fixed | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT | SingleAdaptedSwin | Qwen2VLViT | Qwen2VLDRIP, 
                  num_classes):
         super().__init__()
         self.backbone = backbone
-        if isinstance(backbone, DTPViT) or isinstance(backbone, DTPViT_Causal) or isinstance(backbone, XL_Baseline) or isinstance(backbone, SingleAdaptedFixed):
+        if isinstance(backbone, DTPViT) or isinstance(backbone, DTPViT_Causal) or isinstance(backbone, XL_Baseline) or isinstance(backbone, DTPViT_Fixed):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
         elif isinstance(backbone, VisionTransformer):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
@@ -64,7 +64,7 @@ class VisionClassifier(nn.Module):
         if isinstance(self.backbone, DTPViT):
             outs, boundary_loss, _, _  = self.backbone(x, return_loss=True, inference=inference)
             return self.fc(outs), boundary_loss
-        elif isinstance(self.backbone, SingleAdaptedFixed) or isinstance(self.backbone, Qwen2VLDRIP):
+        elif isinstance(self.backbone, DTPViT_Fixed) or isinstance(self.backbone, Qwen2VLDRIP):
             outs, boundary_loss, _, _  = self.backbone(x, return_loss=True)
             return self.fc(outs), boundary_loss
         else:
@@ -1241,19 +1241,20 @@ def main(args):
     elif MODE == "fixed_pooling":
         compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
         print(f"Using fixed pooling with compression rate {compression_rate}", flush=True)
-        empty_backbone = SingleAdaptedFixed(
+        empty_backbone = DTPViT_Fixed(
             image_size=RESOLUTION,
             patch_size=patch_size,
-            width=768,
+            width=width,
             layers=12,
             depth=(4, 8, 0),
-            compression_rate=compression_rate,
-            heads=768 // 64,
-            mlp_ratio=4.0,
-            temp=0.5,
-            pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
-            flop_measure=False # need to learn real boundaries
-        )
+            compression_rate=COMPRESSION_RATE,
+            heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            temp=TEMP,
+            output_dim=512,
+            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
+            pool_type='avg'
+        )       
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
         is_dtp = True # NOTE: important!
