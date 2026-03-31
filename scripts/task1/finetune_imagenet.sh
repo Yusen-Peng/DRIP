@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=March28_DRIP_fixed_pooling
-#SBATCH --output=March28_DRIP_fixed_pooling.txt
-#SBATCH --time=29:00:00
+#SBATCH --job-name=March30_DRIP_4x_0075temp_300epochs
+#SBATCH --output=March30_DRIP_4x_0075temp_300epochs.txt
+#SBATCH --time=80:00:00
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=1
+#SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
 #SBATCH --account=PAS2836
@@ -17,13 +17,13 @@ export MASTER_PORT=$((12001 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
-torchrun --nproc_per_node=1 src/task1_newcodebase.py \
-    --model vit_b_16 --epochs 20 --batch-size 64 --opt adamw --lr 0.0003 --wd 0.3 \
-    --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 2 \
+torchrun --nproc_per_node=4 src/task1_newcodebase.py \
+    --model vit_b_16 --epochs 300 --batch-size 64 --opt adamw --lr 0.0003 --wd 0.3 \
+    --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_fixed_pooling \
-    --MODE fixed_pooling --RATE 0.25 --TEMP 0.0
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_0075temp_300epochs \
+    --MODE DRIP --RATE 0.25 --TEMP 0.075
 
 conda deactivate
 # End of script
