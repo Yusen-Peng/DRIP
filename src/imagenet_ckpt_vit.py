@@ -783,9 +783,24 @@ def main():
     
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_temp_01/model_19.pth"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_temp_005/model_19.pth"
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_no_sample/model_19.pth"
+    
+    
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_temp_01/model_9.pth"
+
+    """
+    all zeros: 3rd
+    becoming meaningful: 9th
+    """
 
 
+    # ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01temp_300epochs/model_10.pth"
+
+    """
+    300 epochs
+    all zeros: 9th
+    callapsed: 10th
+    """
+    
 
     
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_causal_DRIP/checkpoint.pth"

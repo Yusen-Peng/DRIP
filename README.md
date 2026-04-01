@@ -46,7 +46,9 @@ python src/FLOP.py --mode fixed_pooling --compression_rate 0.25
 sbatch scripts/task1/finetune_imagenet.sh
 ```
 
-### Boundary visualization and attention map analysis(🥑🥑 updated with ImageNet 🥑🥑)
+### Boundary visualization & attention map analysis
+
+for ImageNet
 
 ```bash
 python src/imagenet_ckpt_vit.py
