@@ -802,8 +802,9 @@ def main():
     # """
 
 
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup2/model_6.pth" 
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup5/model_6.pth" 
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup2/model_54.pth" 
+    
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup5/model_6.pth" 
 
     
 
