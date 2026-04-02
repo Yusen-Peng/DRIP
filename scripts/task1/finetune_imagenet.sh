@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=March30_DRIP_4x_0075temp_300epochs
-#SBATCH --output=March30_DRIP_4x_0075temp_300epochs.txt
+#SBATCH --job-name=Apr1_DRIP_4x_01temp_warmup5
+#SBATCH --output=Apr1_DRIP_4x_01temp_warmup5.txt
 #SBATCH --time=80:00:00
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
@@ -19,11 +19,11 @@ cd /users/PAS2912/yusenpeng/Fast-CLIP/
 
 torchrun --nproc_per_node=4 src/task1_newcodebase.py \
     --model vit_b_16 --epochs 300 --batch-size 64 --opt adamw --lr 0.0003 --wd 0.3 \
-    --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30 \
+    --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 5 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_0075temp_300epochs \
-    --MODE DRIP --RATE 0.25 --TEMP 0.075
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup5 \
+    --MODE DRIP --RATE 0.25 --TEMP 0.1
 
 conda deactivate
 # End of script
