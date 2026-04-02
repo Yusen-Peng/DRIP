@@ -1192,7 +1192,8 @@ def main(args):
             temp=TEMP,
             output_dim=512,
             pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
-            pool_type='avg'
+            pool_type='avg',
+            smart_init=args.smart_init
         )
         print(f"😛😛😛temperature is set to: {TEMP}😛😛😛", flush=True)
         backbone = empty_backbone
@@ -1634,6 +1635,7 @@ def get_args_parser(add_help=True):
     parser.add_argument("--MODE", type=str, help="which model to use buddy")
     parser.add_argument("--RATE", type=float, help="compression rate for DRIP and fixed pooling models")
     parser.add_argument("--TEMP", type=float, help="temperature for DRIP models; -1 for no sampling")
+    parser.add_argument("--smart-init", action="store_true", help="whether to use smart initialization for DRIP models")
     return parser
 
 

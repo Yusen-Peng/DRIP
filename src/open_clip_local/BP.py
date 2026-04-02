@@ -80,7 +80,7 @@ def downsample_with_indices(boundaries: torch.Tensor, hidden: torch.Tensor, null
 
 class BoundaryPredictor(nn.Module):
     def __init__(self, d_model, d_inner, activation_function,
-                 temp, prior, bp_type, threshold=0.5,
+                 temp, prior, bp_type, threshold=0.5, smart_init=False,
                  image_size=None, patch_size=None, embed_dim=None):
         super().__init__()
 
@@ -106,6 +106,17 @@ class BoundaryPredictor(nn.Module):
             nn.Linear(d_inner, 1),
         )
 
+        if smart_init:
+            first = self.boundary_predictor[0]
+            last = self.boundary_predictor[2]
+            # standard initialization for the first weight
+            nn.init.xavier_uniform_(first.weight)
+            # zero bias - let BP learn
+            nn.init.zeros_(first.bias)
+            # zero weight + positive bias
+            # start with all tokens as boundaries, let BP learn to remove them
+            nn.init.zeros_(last.weight)
+            nn.init.constant_(last.bias, 5.0)
         self.loss = nn.BCEWithLogitsLoss()
     
     def forward(self, hidden, verbose: bool = False):

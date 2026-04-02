@@ -105,6 +105,7 @@ class DTPViT(nn.Module):
             no_ln_pre: bool = False,
             pos_embed_type: str = 'sin_cos_2d', # 'learnable' or 'sin_cos_2d'
             pool_type: str = 'tok',
+            smart_init: bool = False,
             final_ln_after_pool: bool = False,
             act_layer: Callable = nn.GELU,
             norm_layer: Callable = LayerNorm,
@@ -163,7 +164,8 @@ class DTPViT(nn.Module):
             temp=temp,
             prior=compression_rate,
             bp_type='gumbel',
-            threshold=threshold
+            threshold=threshold,
+            smart_init=smart_init
         )
 
         self.transformer_pre = Transformer(
