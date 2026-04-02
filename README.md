@@ -51,7 +51,7 @@ sbatch scripts/task1/finetune_imagenet.sh
 for ImageNet
 
 ```bash
-python src/imagenet_ckpt_vit.py
+python src/boundary_visual_IN.py
 ```
 
 
