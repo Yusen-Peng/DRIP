@@ -52,9 +52,6 @@ for ImageNet
 
 ```bash
 python src/imagenet_ckpt_vit.py
-# or 
-python src/imagenet_ckpt_qwen2.py
-
 ```
 
 

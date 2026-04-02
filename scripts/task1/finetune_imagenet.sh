@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr1_DRIP_4x_01temp_warmup5
-#SBATCH --output=Apr1_DRIP_4x_01temp_warmup5.txt
+#SBATCH --job-name=Apr1_DRIP_4x_01temp_warmup5_init
+#SBATCH --output=Apr1_DRIP_4x_01temp_warmup5_init.txt
 #SBATCH --time=80:00:00
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
@@ -22,8 +22,8 @@ torchrun --nproc_per_node=4 src/task1_newcodebase.py \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 5 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup5 \
-    --MODE DRIP --RATE 0.25 --TEMP 0.1
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup5_init \
+    --MODE DRIP --RATE 0.25 --TEMP 0.1 --smart-init
 
 conda deactivate
 # End of script
