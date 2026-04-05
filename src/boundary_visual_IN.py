@@ -421,15 +421,13 @@ def visualize_attention_single_multi_dtpvit(
 
 def main():
 
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup2/model_67.pth" 
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup5/model_68.pth" 
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup5_init/model_60.pth" 
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup2/model_299.pth"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup5/model_299.pth"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup5_init/model_299.pth" 
 
     patch_size = 16
     COMPRESSION_RATE = 0.25
     RESOLUTION = 224
-
-
 
     width = 768
     model = DTPViT(

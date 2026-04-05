@@ -8,7 +8,7 @@ from transformers import CLIPVisionModel, CLIPImageProcessor, CLIPVisionConfig
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
 sys.path.insert(0, PROJECT_ROOT)
-from src.open_clip_local.DTP_ViT import DTPViT, SingleAdaptedFixed, SingleAdaptedSwin
+from src.open_clip_local.DTP_ViT import DTPViT, SingleAdaptedFixed
 from src.open_clip_local.model import VisionTransformer
 from src.boundary_vis import load_dtpx_from_clip_checkpoint, weight_transfer, weight_transfer_baseline
 from src.boundary_vis_dev import load_dtp_from_clip_checkpoint, load_vit_from_clip_checkpoint

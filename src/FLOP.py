@@ -10,8 +10,6 @@ from typing import Any, List
 import numpy as np
 from fvcore.nn import FlopCountAnalysis
 from open_clip_local.DTP_ViT import DTPViT, DTPViT_Causal, DTPViT_CosSim
-# from open_clip_local.DTP_ViT_TransformerXL import DTPViT
-# from open_clip_local.DTP_ViT_entropy import DTPViT
 
 from open_clip_local.DTP_ViT import XL_Baseline
 from open_clip_local.transformer import VisionTransformer
@@ -104,42 +102,6 @@ def main():
             pool_type='avg',
             flop_measure=True
         )
-    
-    elif MODE == "DRIP_Causal":
-        print(f"🥶🥶🥶🥶Calculating GFLOPs for DRIP-Causal with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
-        model = DTPViT_Causal(
-            image_size=img_size,
-            patch_size=patch_size,
-            width=width,
-            layers=12,
-            depth=(4, 8, 0),
-            compression_rate=COMPRESSION_RATE,
-            heads=width // 64,
-            mlp_ratio=mlp_ratio,
-            temp=0.5,
-            output_dim=512,
-            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
-            pool_type='avg',
-            flop_measure=True
-        )
-    
-    elif MODE == "DRIP_CosSim":
-        print(f"🥶🥶🥶🥶Calculating GFLOPs for DRIP-CosSim with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
-        model = DTPViT_CosSim(
-            image_size=img_size,
-            patch_size=patch_size,
-            width=width,
-            layers=12,
-            depth=(4, 8, 0),
-            compression_rate=COMPRESSION_RATE,
-            heads=width // 64,
-            mlp_ratio=mlp_ratio,
-            temp=0.5,
-            output_dim=512,
-            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
-            pool_type='avg',
-            flop_measure=True
-        )
 
     elif MODE == "ViT":
         model = VisionTransformer(
@@ -151,58 +113,7 @@ def main():
             mlp_ratio=mlp_ratio,
             output_dim=512
         )
-    elif MODE == "Qwen2VL_ViT":
-        print("Calculating GFLOPs for Qwen2VL Vision Transformer...")
-        config = Qwen2VLVisionConfig(
-            depth=12,
-            embed_dim=width,
-            hidden_size=width * mlp_ratio,
-            mlp_ratio=mlp_ratio,
-            num_heads=width // 64,
-            in_channels=3,
-            patch_size=patch_size,
-            spatial_merge_size=1,
-            temporal_patch_size=1,
-        )
-        model = Qwen2VLViT(config)
-
-
-    elif MODE == "Qwen2VL_DRIP":
-        print(f"🥶🥶🥶🥶Calculating GFLOPs for Qwen2VL-DRIP with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
-        config = Qwen2VLVisionConfig(
-            depth=12,
-            embed_dim=width,
-            hidden_size=width * mlp_ratio,
-            mlp_ratio=mlp_ratio,
-            num_heads=width // 64,
-            in_channels=3,
-            patch_size=patch_size,
-            spatial_merge_size=1,
-            temporal_patch_size=1,
-        )
-        model = Qwen2VLDRIP(
-            config=config,
-            depth=(4, 8, 0),
-            temp=0.5,
-            compression_rate=COMPRESSION_RATE,
-            threshold=0.5,
-            flop_measure=True
-        )
-
-    elif MODE == "XL_baseline":
-        model = XL_Baseline(
-            image_size=img_size,
-            patch_size=patch_size,
-            width=width,
-            layers=12,
-            depth=12,
-            compression_rate=COMPRESSION_RATE,
-            heads=width // 64,
-            mlp_ratio=mlp_ratio,
-            temp=0.5,
-            pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
-        )
-        
+    
     elif MODE == "fixed_pooling":
         print("Calculating GFLOPs for Fixed Pooling...")
         model = DTPViT_Fixed(            

@@ -5,7 +5,7 @@
 <h1 align="center">DRIP</h1>
 <h2 align="center">Dynamic Patch Pooling for Efficient Vision Transformers</h2>
 
-### ☀️☀️Debugging with interactive node☀️☀️ (important)
+## Debugging with interactive node
 
 ```bash
 # simple
@@ -20,33 +20,28 @@ salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00
 module load miniconda3/24.1.2-py310
 conda deactivate
 conda activate DRIP
-# DRIP test:
-torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 30 --batch-size 128 --opt adamw --lr 0.0003 --wd 0.3 --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30  --workers 1 --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_RP_test --MODE DRIP
-# H-Net style DRIP test:
-torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 30 --batch-size 128 --opt adamw --lr 0.0003 --wd 0.3 --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30  --workers 1 --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_RP_test --MODE DRIP_CosSim
-# a simple imagenet example (smaller batch size, single worker)
-torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 30 --batch-size 128 --opt adamw --lr 0.0003 --wd 0.3 --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30  --workers 1 --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_ViT_RP --MODE ViT-RP
 ```
 
-## Experiments
-
-GFLOP measurment:
+## GFLOPs measurment
 
 ```bash
 # DRIP
 python src/FLOP.py --mode DRIP --compression_rate 0.25
 # Fixed pooling
 python src/FLOP.py --mode fixed_pooling --compression_rate 0.25
+# original ViT
+python src/FLOP.py --mode ViT
 ```
 
+## ImageNet 
 
-### ImageNet from scratch (starting point)
+running experiments:
 
 ```bash
 sbatch scripts/task1/finetune_imagenet.sh
 ```
 
-### Boundary visualization & attention map analysis
+boundary visualization & attention map analysis:
 
 for ImageNet
 
