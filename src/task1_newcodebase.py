@@ -16,7 +16,6 @@ from torch.utils.data import DataLoader
 from open_clip_local import create_model_and_transforms
 from open_clip_local.model import DTPViT, VisionTransformer, HierarchicalDTPViT
 from open_clip_local.DTP_ViT import DTPViT_Fixed, XL_Baseline, DTPViT_Causal, DTPViT_CosSim
-from boundary_vis import load_dtpx_from_clip_checkpoint
 from open_clip_local import CLIP
 from torch.cuda.amp import GradScaler
 from torch.cuda.amp import autocast
@@ -1199,45 +1198,6 @@ def main(args):
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
         is_dtp = True # NOTE: important!
-    
-    elif MODE == "DRIP_Causal":
-        empty_backbone = DTPViT_Causal(
-            image_size=RESOLUTION,
-            patch_size=patch_size,
-            width=width,
-            layers=12,
-            depth=(4, 8, 0),
-            compression_rate=COMPRESSION_RATE,
-            heads=width // 64,
-            mlp_ratio=mlp_ratio,
-            temp=TEMP,
-            output_dim=512,
-            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
-            pool_type='avg'
-        )
-        backbone = empty_backbone
-        model = VisionClassifier(backbone, num_classes).to(device)
-        is_dtp = True # NOTE: important
-    
-    elif MODE == "DRIP_CosSim":
-        empty_backbone = DTPViT_CosSim(
-            image_size=RESOLUTION,
-            patch_size=patch_size,
-            width=width,
-            layers=12,
-            depth=(4, 8, 0),
-            compression_rate=COMPRESSION_RATE,
-            heads=width // 64,
-            mlp_ratio=mlp_ratio,
-            temp=TEMP,
-            output_dim=512,
-            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
-            pool_type='avg'
-        )
-        backbone = empty_backbone
-        model = VisionClassifier(backbone, num_classes).to(device)
-        is_dtp = True # NOTE: important
-
 
     elif MODE == "fixed_pooling":
         compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
@@ -1259,6 +1219,22 @@ def main(args):
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
         is_dtp = True # NOTE: important!
+    
+    elif MODE == "ViT":
+        print(f"use **ViT** with patch size {patch_size} and resolution {RESOLUTION}!")
+        empty_backbone = VisionTransformer(
+            image_size=RESOLUTION,
+            patch_size=patch_size,
+            width=768,
+            layers=12,
+            heads=768 // 64,
+            mlp_ratio=4.0,
+            output_dim=512
+        )
+        backbone = empty_backbone
+        model = VisionClassifier(backbone, num_classes).to(device)
+        model.to(device)
+
     elif MODE == "ViT-RP":
 
         print("😵‍💫😵‍💫😵‍💫Using Qwen2VL Vision Transformer...😵‍💫😵‍💫😵‍💫")
@@ -1305,41 +1281,7 @@ def main(args):
         is_dtp = True # NOTE: important!
 
     else:
-        use_XL_backbone = (MODE == "XL")
-        print(f"are we using XL backbone? {use_XL_backbone}", flush=True)
-        if use_XL_backbone:
-            print("use XL backbone!")
-            patch_size = 16
-            empty_backbone = XL_Baseline(
-                image_size=RESOLUTION,
-                patch_size=patch_size,
-                width=768,
-                layers=12,
-                depth=12,
-                compression_rate=0.25,
-                heads=768 // 64,
-                mlp_ratio=4.0,
-                temp=0.5,
-                pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
-            )            
-            backbone = empty_backbone
-            model = VisionClassifier(backbone, num_classes).to(device)
-
-        else:
-            print(f"use **ViT** with patch size {patch_size} and resolution {RESOLUTION}!")
-            empty_backbone = VisionTransformer(
-                image_size=RESOLUTION,
-                patch_size=patch_size,
-                width=768,
-                layers=12,
-                heads=768 // 64,
-                mlp_ratio=4.0,
-                output_dim=512
-            )
-            backbone = empty_backbone
-            model = VisionClassifier(backbone, num_classes).to(device)
-        
-        model.to(device)
+        raise ValueError(f"Invalid MODE {MODE}. Supported MODEs are ViT, DRIP, DRIP_Causal, DRIP_CosSim, fixed_pooling, ViT-RP and DRIP-RP.")
 
     if args.distributed and args.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
@@ -1415,7 +1357,7 @@ def main(args):
 
     model_without_ddp = model
     if args.distributed:
-        if MODE == "ViT" and not use_XL_backbone:
+        if MODE == "ViT":
             model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
         else:
             # we need to tolerate conditional execution for DRIP

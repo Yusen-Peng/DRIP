@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Apr5_fixed_pooling_4x
-#SBATCH --output=Apr5_fixed_pooling_4x.txt
-#SBATCH --time=00:10:00
+#SBATCH --job-name=Apr5_vanilla_ViT_base
+#SBATCH --output=Apr5_vanilla_ViT_base.txt
+#SBATCH --time=110:00:00
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=16
@@ -22,8 +22,8 @@ torchrun --nproc_per_node=4 src/task1_newcodebase.py \
     --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 5 \
     --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra \
     --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 \
-    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_fixed_pooling_4x \
-    --MODE fixed_pooling --RATE 0.25 --TEMP 0.1
+    --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_vanilla_ViT_base \
+    --MODE ViT --RATE 0.25 --TEMP 0.1
 
 conda deactivate
 # End of script
