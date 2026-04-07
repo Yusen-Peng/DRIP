@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=Jan18_DEBUGGING_pretrain
-#SBATCH --output=Jan18_DEBUGGING_pretrain.txt
-#SBATCH --time=00:15:00
+#SBATCH --job-name=Apr7_DEBUGGING_pretrain
+#SBATCH --output=Apr7_DEBUGGING_pretrain.txt
+#SBATCH --time=00:05:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=256G
+#SBATCH --mem=64G
 #SBATCH --account=PAS2836
 
 module load miniconda3/24.1.2-py310
@@ -31,7 +31,7 @@ deepspeed src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/Dec4_BP-at-the-end-fixed-pooling-baseline \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/DEBUG_LLAVA \
     --num_train_epochs 1 \
     --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 4 \
@@ -44,7 +44,7 @@ deepspeed src/task3_llava.py \
     --warmup_ratio 0.03 \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
-    --tf32 True \
+    --tf32 False \
     --model_max_length 2048 \
     --gradient_checkpointing True \
     --dataloader_num_workers 4 \

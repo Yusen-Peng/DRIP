@@ -27,19 +27,12 @@ class ViTVisionTower(nn.Module):
             patch_size: int = 16,
             in_chans: int = 3,
             hidden_size: int = 768,
-            depth: Tuple = (2, 10, 0),
+            depth: int = 12,
             num_heads: int = 12,
             mlp_ratio: float = 4.0,
             drop_rate: float = 0.1,
             attn_drop_rate: float = 0.1, 
-            temp: float = 0.5, 
-            compression_rate: float = 0.1,
-            threshold: float = 0.5,
-            lower_bound: bool = False,
-            lambda_val: float = 1.0,
             activation_function: str = 'gelu',
-            num_classes: int = 512,
-            flop_measure: bool = False,
             delay_load=False,
             finetuning_mode: bool = False
             ):
@@ -56,14 +49,7 @@ class ViTVisionTower(nn.Module):
         self.drop_rate = drop_rate
         self._hidden_size = hidden_size
         self.attn_drop_rate = attn_drop_rate
-        self.temp = temp
-        self.compression_rate = compression_rate
-        self.threshold = threshold
-        self.lower_bound = lower_bound
-        self.lambda_val = lambda_val
         self.activation_function = activation_function
-        self.num_classes = num_classes
-        self.flop_measure = flop_measure
         self.finetuning_mode = finetuning_mode
 
         self.is_loaded = False
@@ -86,11 +72,6 @@ class ViTVisionTower(nn.Module):
         )
 
         # FIXME: load the model
-        # option 1: load from the original CLIP checkpoint
-        load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
-
-        # option 2: load from the finetuned checkpoint
-        #load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
 
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -106,6 +87,10 @@ class ViTVisionTower(nn.Module):
         # FIXME
         self.image_processor.size = {'shortest_edge': 224}
         self.image_processor.crop_size = {'height': 224, 'width': 224}
+
+
+
+
         self.is_loaded = True
         self.configurations = {
             'image_size': self.image_size,
@@ -117,14 +102,7 @@ class ViTVisionTower(nn.Module):
             'mlp_ratio': self.mlp_ratio,
             'drop_rate': self.drop_rate,
             'attn_drop_rate': self.attn_drop_rate,
-            'temp': self.temp,
-            'compression_rate': self.compression_rate,
-            'threshold': self.threshold,
-            'lower_bound': self.lower_bound,
-            'lambda_val': self.lambda_val,
-            'activation_function': self.activation_function,
-            'num_classes': self.num_classes,
-            'flop_measure': self.flop_measure
+            'activation_function': self.activation_function
         }
         
     
@@ -256,17 +234,8 @@ class DRIPVisionTower(nn.Module):
             flop_measure=self.flop_measure
         ) 
 
-        if self.backbone == 'ViT':
-            self.vision_tower, _ = load_dtp_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
-        elif self.backbone == 'XL':
-            self.vision_tower, _ = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
-        elif self.backbone == 'ViT-with-weights':
-            weight_transfer(self.vision_tower)
-        else:
-            raise ValueError(f'Unsupported backbone: {self.backbone}')
 
-        # NOTE: option 2: load from the finetuned checkpoint
-        #load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
+        # FIXME: load the model
 
 
         # if in finetuning mode, change precision into float16
@@ -408,27 +377,27 @@ class BaselineVisionTower(nn.Module):
         
         if self.backbone_type == 'Fixed':
             print("🍔🍔🍔🍔🍔 Using Fixed pooling 🍔🍔🍔🍔🍔")
-            self.vision_tower: SingleAdaptedFixed = SingleAdaptedFixed(
-                image_size=self.image_size,
-                patch_size=self.patch_size,
-                in_chans=self.in_chans,
-                embed_dim=self._hidden_size,
-                depth=self.depth,
-                num_heads=self.num_heads,
-                mlp_ratio=self.mlp_ratio,
-                drop_rate=self.drop_rate,
-                num_classes=self.num_classes,
-                activation_function=self.activation_function,
-                flop_measure=self.flop_measure
-            )
+            # self.vision_tower: SingleAdaptedFixed = SingleAdaptedFixed(
+            #     image_size=self.image_size,
+            #     patch_size=self.patch_size,
+            #     in_chans=self.in_chans,
+            #     embed_dim=self._hidden_size,
+            #     depth=self.depth,
+            #     num_heads=self.num_heads,
+            #     mlp_ratio=self.mlp_ratio,
+            #     drop_rate=self.drop_rate,
+            #     num_classes=self.num_classes,
+            #     activation_function=self.activation_function,
+            #     flop_measure=self.flop_measure
+            # )
 
-            if self.backbone == 'own':
-                self.vision_tower, _ = load_fixed_pooling(self.vision_tower, self.checkpoint_path)
-            elif self.backbone == 'pretrained':
-                print("🍌🍌🍌🍌🍌🍌🍌🍌using pretrained weights🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌")
-                weight_transfer_baseline(self.vision_tower)
-            else:
-                raise NotImplementedError(f"Unsupported backbone type: {self.backbone}")
+            # if self.backbone == 'own':
+            #     self.vision_tower, _ = load_fixed_pooling(self.vision_tower, self.checkpoint_path)
+            # elif self.backbone == 'pretrained':
+            #     print("🍌🍌🍌🍌🍌🍌🍌🍌using pretrained weights🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌")
+            #     weight_transfer_baseline(self.vision_tower)
+            # else:
+            #     raise NotImplementedError(f"Unsupported backbone type: {self.backbone}")
 
         elif self.backbone_type == 'Swin':
             print("🚑🚑🚑🚑🚑 Using Swin pooling 🚑🚑🚑🚑🚑")
