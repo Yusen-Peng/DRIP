@@ -18,26 +18,10 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     depth = (4, 8, 0)
     ######### FIXME: ######
     # depth = (12, 0, 0) # NOTE: put the boundary predictor at the end and load OpenAI pretrained weights
-
-
-
     #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/fixed_pooling_4x/checkpoints/epoch_15.pt"
     checkpoint_path = "openai"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_5_7/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_2_10/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_5_7/checkpoints/epoch_15.pt"
-    
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_5_7/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_4_8/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_XL_4_8/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_XL_2_10/checkpoints/epoch_15.pt"
-    
-    # trainable vision tower
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ViT-base-finetune-ALL/vision_tower.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-finetune-ALL/vision_tower.pt"
+
+
 
 
     patch_size = 16

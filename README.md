@@ -3,16 +3,7 @@
 </p>
 
 <h1 align="center">DRIP</h1>
-<h2 align="center">Dynamic Patch Pooling for Efficient Vision Transformers</h2>
-
-## Debugging with interactive node
-
-```bash
-# simple
-salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00
-# specify the CPU memory when needed
-salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00 --mem=64G
-```
+<h2 align="center">Dynamic Patch Pooling for Efficient Visual Instruction Tuning</h2>
 
 ## Activate Conda Env
 
@@ -49,25 +40,9 @@ for ImageNet
 python src/boundary_visual_IN.py
 ```
 
-
-### CLIP pretraining from scratch
-
-```bash
-sbatch scripts/task2/multi_gpu_ascend.sh
-```
-
-### Result table (classification, CLIP)
-
-| model | IN-configs | IN-Acc | IN-boundaries | CP-configs | CP-Acc | CP-boundaries |
-| ----- | ---------- | ------ | ------------- | ---------- | ------ | ------------- |
-| vanilla ViT | 100, 0.0003, 0.5 | 47.058% | not bad | 4, 5e-5, 1.0 | 18.07% | bad |
-| ViT-RoPE | 100, 0.0003, 0.5 | 65.014% | bad | - | - | - |
-| ViT-XL | - | - | - | 4 epochs, 5e-5, temp=0.5 | 20.09% | good |
-| ViT-H-net (TBD) | - | - | - | - | - | - |
-
 ### LLaVA
 
-pretraining (low-resouce is fine):
+pretraining:
 
 ```bash
 sbatch scripts/task3/pretrain.sh
@@ -78,6 +53,10 @@ finetuning:
 ```bash
 sbatch scripts/task3/finetune.sh
 ```
+
+
+
+
 
 
 ### 🔥🔥NEW🔥🔥 QwenVL series SFT
