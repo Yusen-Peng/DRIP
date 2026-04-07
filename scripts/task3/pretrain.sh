@@ -4,6 +4,7 @@
 #SBATCH --time=00:05:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
+#SBATCH --partition=ai
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
