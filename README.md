@@ -5,12 +5,25 @@
 <h1 align="center">DRIP</h1>
 <h2 align="center">Dynamic Patch Pooling for Efficient Visual Instruction Tuning</h2>
 
-## Activate Conda Env
+## Environment setup
+
+create a new one from scratch:
+
+```bash
+module load miniconda3/24.1.2-py310 # for OSC
+module load conda # for Anvil
+conda create -n DRIP python=3.11 -y
+conda activate DRIP
+python -m pip install -r requirements.txt
+```
+
+activate an existing one:
 
 ```bash
 # optional GPU
 salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00
-module load miniconda3/24.1.2-py310
+module load miniconda3/24.1.2-py310 # for OSC
+module load conda # for Anvil
 conda deactivate
 conda activate DRIP
 ```
@@ -26,15 +39,15 @@ python src/FLOP.py --mode fixed_pooling --compression_rate 0.25
 python src/FLOP.py --mode ViT
 ```
 
-## ImageNet 
+## ImageNet (OSC pitzer)
 
-running experiments (make sure to use **OSC pitzer** cluster):
+running experiments:
 
 ```bash
 sbatch scripts/task1/finetune_imagenet.sh
 ```
 
-boundary visualization & attention map analysis (**no GPU** is needed):
+boundary visualization & attention map analysis:
 
 for ImageNet
 
@@ -42,15 +55,15 @@ for ImageNet
 python src/boundary_visual_IN.py
 ```
 
-## LLaVA
+## LLaVA (Anvil)
 
-pretraining/token alignment (MUST use **ascend** cluster):
+pretraining/token alignment:
 
 ```bash
 sbatch scripts/task3/pretrain.sh
 ```
 
-finetuning/VQA SFT (MUST use **ascend** cluster):
+finetuning/VQA SFT:
 
 ```bash
 sbatch scripts/task3/finetune.sh
@@ -61,7 +74,8 @@ sbatch scripts/task3/finetune.sh
 monitor all jobs:
 
 ```bash
-squeue -u yusenpeng
+squeue -u yusenpeng # OSC
+squeue -u x-ypeng10 # Anvil
 ```
 
 check when a specific job can start running:
