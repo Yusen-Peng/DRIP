@@ -24,15 +24,15 @@ deepspeed src/task3_llava.py \
     --deepspeed src/LLaVA_wrapper/scripts/mix_free.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version plain \
-    --data_path /home/x-ypeng10/IMPORTANT_DATASETS/LLaVA_related/blip_laion_cc_sbu_558k.json \
-    --image_folder /home/x-ypeng10/IMPORTANT_DATASETS/LLaVA_related/LLaVA_pretrain_images \
+    --data_path /anvil/scratch/x-ypeng10/IMPORTANT_DATASETS/LLaVA_related/blip_laion_cc_sbu_558k.json \
+    --image_folder /anvil/scratch/x-ypeng10/IMPORTANT_DATASETS/LLaVA_related/LLaVA_pretrain_images \
     --vision_tower openai/clip-vit-base-patch16 \
     --mm_projector_type mlp2x_gelu \
     --tune_mm_mlp_adapter True \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /home/x-ypeng10/yusen_ckpts/DEBUG_LLAVA \
+    --output_dir /anvil/scratch/x-ypeng10/yusen_ckpts/DEBUG_LLAVA \
     --num_train_epochs 1 \
     --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 4 \
