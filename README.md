@@ -90,7 +90,7 @@ check when a specific job can start running:
 squeue --start -j <JOB_ID>
 ```
 
-##  -Contacts
+## Contacts
 
 If you have any questions or suggestions, feel free to contact:
 
