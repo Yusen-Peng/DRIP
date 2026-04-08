@@ -1,6 +1,6 @@
 import os
 from transformers import CLIPVisionModel, CLIPImageProcessor, CLIPVisionConfig
-from .clip_encoder import CLIPVisionTowerS2, DRIPVisionTower, ViTVisionTower, CLIPVisionTower, BaselineVisionTower
+from .clip_encoder import CLIPVisionTowerS2, DRIPVisionTower, ViTVisionTower, BaselineVisionTower
 
 def build_vision_tower(vision_tower_cfg, **kwargs):
 
@@ -13,14 +13,10 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     compression_rate = 0.25
 
 
-
     vision_tower = getattr(vision_tower_cfg, 'mm_vision_tower', getattr(vision_tower_cfg, 'vision_tower', None))
     is_absolute_path_exists = os.path.exists(vision_tower)
     print(f"🍌🍌🍌 Vision tower: {vision_tower}, exists: {is_absolute_path_exists} 🍌🍌🍌")
     checkpoint_path = vision_tower
-
-
-
     use_s2 = getattr(vision_tower_cfg, 's2', False)
     if is_absolute_path_exists or vision_tower.startswith("openai") or vision_tower.startswith("laion") or "ShareGPT4V" in vision_tower:
         if use_s2:
@@ -67,17 +63,6 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             # return vit_loaded
 
         else:
-            print("🍟" * 20)
-            print(f"Using original ViT from the path {checkpoint_path}")
-            print("🍟" * 20)
-
-            if checkpoint_path.startswith("openai"):
-                # shortcut for using openai pretrained weights
-                print("🥶" * 20)
-                print(f"Using OpenAI pretrained ViT: {vision_tower}")
-                print("🥶" * 20)
-                return CLIPVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
-
             vit_loaded: ViTVisionTower = ViTVisionTower(
                 checkpoint_path=checkpoint_path, 
                 vision_tower=vision_tower,
@@ -88,7 +73,6 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
                 finetuning_mode=FINETUNING_MODE,
                 **kwargs
             )
-
             return vit_loaded
     else:
         raise ValueError(f'Unknown vision tower: {vision_tower}')

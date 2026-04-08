@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=Jan31_DEBUGGING_finetune_single
-#SBATCH --output=Jan31_DEBUGGING_finetune_single.txt
+#SBATCH --output=Jan31_DEBUGGING_finetune_single.log
 #SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

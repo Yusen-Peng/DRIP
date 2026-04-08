@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
-from typing import Tuple, Dict, Any, Optional, List
+from typing import Tuple
 import os
 import sys
-from collections import OrderedDict
 from transformers import CLIPVisionModel, CLIPImageProcessor, CLIPVisionConfig
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
@@ -16,6 +15,55 @@ sys.path.insert(0, PROJECT_ROOT)
 
 from src.open_clip_local.DTP_ViT import DTPViT, DTPViT_Fixed
 from src.open_clip_local.transformer import VisionTransformer
+
+def load_HF_checkpoint_intoViT(hf_state_dict, local_model: VisionTransformer):
+    new_sd = {}
+
+    # retrieve embeddings
+    new_sd["conv1.weight"] = hf_state_dict["vision_model.embeddings.patch_embedding.weight"]
+    new_sd["class_embedding"] = hf_state_dict["vision_model.embeddings.class_embedding"]
+    new_sd["positional_embedding"] = hf_state_dict["vision_model.embeddings.position_embedding.weight"]
+    new_sd["ln_pre.weight"] = hf_state_dict["vision_model.pre_layrnorm.weight"]
+    new_sd["ln_pre.bias"] = hf_state_dict["vision_model.pre_layrnorm.bias"]
+    new_sd["ln_post.weight"] = hf_state_dict["vision_model.post_layernorm.weight"]
+    new_sd["ln_post.bias"] = hf_state_dict["vision_model.post_layernorm.bias"]
+
+    # load transformer blocks
+    num_local_blocks = len(local_model.transformer.resblocks)
+
+    for i in range(num_local_blocks):
+        hf_prefix = f"vision_model.encoder.layers.{i}"
+        local_prefix = f"transformer.resblocks.{i}"
+
+        # layer norm 1
+        new_sd[f"{local_prefix}.ln_1.weight"] = hf_state_dict[f"{hf_prefix}.layer_norm1.weight"]
+        new_sd[f"{local_prefix}.ln_1.bias"] = hf_state_dict[f"{hf_prefix}.layer_norm1.bias"]
+
+        # qkv -> in_proj
+        q_w = hf_state_dict[f"{hf_prefix}.self_attn.q_proj.weight"]
+        k_w = hf_state_dict[f"{hf_prefix}.self_attn.k_proj.weight"]
+        v_w = hf_state_dict[f"{hf_prefix}.self_attn.v_proj.weight"]
+        new_sd[f"{local_prefix}.attn.in_proj_weight"] = torch.cat([q_w, k_w, v_w], dim=0)
+        q_b = hf_state_dict[f"{hf_prefix}.self_attn.q_proj.bias"]
+        k_b = hf_state_dict[f"{hf_prefix}.self_attn.k_proj.bias"]
+        v_b = hf_state_dict[f"{hf_prefix}.self_attn.v_proj.bias"]
+        new_sd[f"{local_prefix}.attn.in_proj_bias"] = torch.cat([q_b, k_b, v_b], dim=0)
+
+        # attention output projection
+        new_sd[f"{local_prefix}.attn.out_proj.weight"] = hf_state_dict[f"{hf_prefix}.self_attn.out_proj.weight"]
+        new_sd[f"{local_prefix}.attn.out_proj.bias"] = hf_state_dict[f"{hf_prefix}.self_attn.out_proj.bias"]
+
+        # layer norm 2
+        new_sd[f"{local_prefix}.ln_2.weight"] = hf_state_dict[f"{hf_prefix}.layer_norm2.weight"]
+        new_sd[f"{local_prefix}.ln_2.bias"] = hf_state_dict[f"{hf_prefix}.layer_norm2.bias"]
+
+        # mlp
+        new_sd[f"{local_prefix}.mlp.c_fc.weight"] = hf_state_dict[f"{hf_prefix}.mlp.fc1.weight"]
+        new_sd[f"{local_prefix}.mlp.c_fc.bias"] = hf_state_dict[f"{hf_prefix}.mlp.fc1.bias"]
+        new_sd[f"{local_prefix}.mlp.c_proj.weight"] = hf_state_dict[f"{hf_prefix}.mlp.fc2.weight"]
+        new_sd[f"{local_prefix}.mlp.c_proj.bias"] = hf_state_dict[f"{hf_prefix}.mlp.fc2.bias"]
+    
+    return new_sd
 
 class ViTVisionTower(nn.Module):
     """load a pretrained ViT for reproducibility purposes."""
@@ -71,7 +119,17 @@ class ViTVisionTower(nn.Module):
                 mlp_ratio=self.mlp_ratio
         )
 
-        # FIXME: load the model
+        """
+            load the model.
+        """
+        hf_vision = CLIPVisionModel.from_pretrained(self.checkpoint_path)
+        hf_sd = hf_vision.state_dict()
+        mapped_sd = load_HF_checkpoint_intoViT(hf_sd, self.vision_tower)
+        missing, unexpected = self.vision_tower.load_state_dict(mapped_sd, strict=False)
+        if len(missing) > 0:
+            print(f"Warning: missing keys when loading ViT checkpoint: {missing}")
+        if len(unexpected) > 0:
+            print(f"Warning: unexpected keys when loading ViT checkpoint: {unexpected}")
 
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
