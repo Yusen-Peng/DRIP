@@ -1,0 +1,77 @@
+Traceback (most recent call last):
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/users/PAS3184/tejasnaik/DRIP/src/task1_newcodebase.py", line 19, in <module>
+Traceback (most recent call last):
+  File "/users/PAS3184/tejasnaik/DRIP/src/task1_newcodebase.py", line 19, in <module>
+  File "/users/PAS3184/tejasnaik/DRIP/src/task1_newcodebase.py", line 19, in <module>
+  File "/users/PAS3184/tejasnaik/DRIP/src/task1_newcodebase.py", line 19, in <module>
+    from boundary_vis import load_dtpx_from_clip_checkpoint
+    from boundary_vis import load_dtpx_from_clip_checkpoint
+  File "/users/PAS3184/tejasnaik/DRIP/src/boundary_vis.py", line 25, in <module>
+    from boundary_vis import load_dtpx_from_clip_checkpoint
+  File "/users/PAS3184/tejasnaik/DRIP/src/boundary_vis.py", line 25, in <module>
+  File "/users/PAS3184/tejasnaik/DRIP/src/boundary_vis.py", line 25, in <module>
+    from boundary_vis import load_dtpx_from_clip_checkpoint
+  File "/users/PAS3184/tejasnaik/DRIP/src/boundary_vis.py", line 25, in <module>
+    import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
+    ModuleNotFoundErrorimport matplotlib.pyplot as plt: 
+No module named 'matplotlib'
+ModuleNotFoundError: No module named 'matplotlib'
+ModuleNotFoundError: No module named 'matplotlib'
+    import matplotlib.pyplot as plt
+ModuleNotFoundError: No module named 'matplotlib'
+E0304 07:28:44.006000 1691514 site-packages/torch/distributed/elastic/multiprocessing/api.py:984] failed (exitcode: 1) local_rank: 0 (pid: 1691808) of binary: /users/PAS3184/tejasnaik/.conda/envs/DRIP/bin/python
+Traceback (most recent call last):
+  File "/users/PAS3184/tejasnaik/.conda/envs/DRIP/bin/torchrun", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/users/PAS3184/tejasnaik/.conda/envs/DRIP/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/users/PAS3184/tejasnaik/.conda/envs/DRIP/lib/python3.11/site-packages/torch/distributed/run.py", line 991, in main
+    run(args)
+  File "/users/PAS3184/tejasnaik/.conda/envs/DRIP/lib/python3.11/site-packages/torch/distributed/run.py", line 982, in run
+    elastic_launch(
+  File "/users/PAS3184/tejasnaik/.conda/envs/DRIP/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/users/PAS3184/tejasnaik/.conda/envs/DRIP/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 317, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+src/task1_newcodebase.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-03-04_07:28:44
+  host      : a0023.ten.osc.edu
+  rank      : 1 (local_rank: 1)
+  exitcode  : 1 (pid: 1691809)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[2]:
+  time      : 2026-03-04_07:28:44
+  host      : a0023.ten.osc.edu
+  rank      : 2 (local_rank: 2)
+  exitcode  : 1 (pid: 1691810)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[3]:
+  time      : 2026-03-04_07:28:44
+  host      : a0023.ten.osc.edu
+  rank      : 3 (local_rank: 3)
+  exitcode  : 1 (pid: 1691811)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-03-04_07:28:44
+  host      : a0023.ten.osc.edu
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 1691808)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

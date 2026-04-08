@@ -5,7 +5,8 @@
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=64G
+#SBATCH --partition=quad
+#SBATCH --mem=256G
 #SBATCH --account=PAS2836
 
 module load miniconda3/24.1.2-py310
