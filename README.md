@@ -55,6 +55,12 @@ for ImageNet
 python src/boundary_visual_IN.py
 ```
 
+examples:
+
+| boundaries | attention maps |
+| ---------- | -------------- |
+| ![alt text](/src/boundary_vis/w2_4x_boundaries.png)| ![alt text](/src/boundary_vis/w5_4x_attention.png)
+
 ## LLaVA (Anvil)
 
 pretraining/token alignment:
