@@ -1,0 +1,45 @@
+#!/bin/bash
+#SBATCH --job-name=Apr9_SQA_reproduce
+#SBATCH --output=Apr9_SQA_reproduce.txt
+#SBATCH --time=0:20:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --partition=debug-nextgen
+#SBATCH --gpus-per-node=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=128G
+#SBATCH --account=PAS2836
+
+module load miniconda3/24.1.2-py310
+conda activate DRIP
+source activate DRIP
+
+export OMP_NUM_THREADS=16
+export MASTER_PORT=$((12000 + RANDOM % 20000))
+
+cd /users/PAS2912/yusenpeng/DRIP/
+
+mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced.jsonl
+
+python src/model_vqa_science.py \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
+    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/SQA_key.json \
+    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/images/test \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced.jsonl \
+    --single-pred-prompt \
+    --temperature 0 \
+    --conv-mode vicuna_v1
+
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced_output.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced_result.json
+
+python src/eval_science_qa.py \
+    --base-dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA \
+    --result-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced.jsonl \
+    --output-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced_output.jsonl \
+    --output-result /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced_result.json
+
+conda deactivate
+# End of script
