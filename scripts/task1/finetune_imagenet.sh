@@ -15,7 +15,7 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12001 + RANDOM % 20000))
 
-cd /users/PAS2912/yusenpeng/Fast-CLIP/
+cd /users/PAS2912/yusenpeng/DRIP/
 
 torchrun --nproc_per_node=4 src/task1_newcodebase.py \
     --model vit_b_16 --epochs 300 --batch-size 64 --opt adamw --lr 0.0003 --wd 0.3 \

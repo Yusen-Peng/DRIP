@@ -66,7 +66,9 @@ examples:
 pretraining/token alignment:
 
 ```bash
-sbatch scripts/task3/pretrain.sh
+# ascend
+sbatch scripts/task3/pretrain_ascend.sh
+# anvil
 ```
 
 finetuning/VQA SFT:

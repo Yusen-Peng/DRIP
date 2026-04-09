@@ -1,9 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=Apr7_DEBUGGING_pretrain
-#SBATCH --output=Apr7_DEBUGGING_pretrain.txt
+#SBATCH --job-name=Apr9_DEBUGGING_pretrain
+#SBATCH --output=Apr9_DEBUGGING_pretrain.txt
 #SBATCH --time=00:05:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
+#SBATCH --partition=debug-nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
@@ -17,7 +18,7 @@ export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 export WANDB_DISABLED=true
 
-cd /users/PAS2912/yusenpeng/Fast-CLIP/
+cd /users/PAS2912/yusenpeng/DRIP/
 
 deepspeed src/task3_llava.py \
     --deepspeed src/LLaVA_wrapper/scripts/mix_free.json \
