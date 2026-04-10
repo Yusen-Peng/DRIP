@@ -67,6 +67,12 @@ Evaluation:
 # SQA 
 # e.g.: Total: 4241, Correct: 2975, Accuracy: 70.15%, IMG-Accuracy: 69.46%
 sbatch scripts/task3/eval/eval_SQA.sh
+# TextVQA
+# e.g.: Accuracy: 58.25%
+sbatch scripts/task3/eval/eval_textVQA.sh
+# POPE
+# e.g.: 
+sbatch
 ```
 
 

@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=POPE_DRIP
-#SBATCH --output=POPE_DRIP.txt
+#SBATCH --job-name=Apr9_POPE_reproduce
+#SBATCH --output=Apr9_POPE_reproduce.txt
 #SBATCH --time=00:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -16,15 +16,9 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-cd /users/PAS2912/yusenpeng/Fast-CLIP/
-
-
-##### /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope
-
-mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope/answers
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/pope/answers/DRIP-finetune.jsonl
-
-#### /fs/scratch/PAS2836/yusenpeng_checkpoint/ViT-base-finetune
+cd /users/PAS2912/yusenpeng/DRIP/
+mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/original_reproduced.jsonl
 
 python src/model_vqa_loader.py \
     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-finetune-ALL \
