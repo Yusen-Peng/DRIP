@@ -86,7 +86,8 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
                 past_key_values,
                 labels,
                 images,
-                image_sizes
+                image_sizes,
+                inference=False # during forward(), we do training mode
             )
 
         return super().forward(
@@ -131,7 +132,8 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
                 None,
                 None,
                 images,
-                image_sizes=image_sizes
+                image_sizes=image_sizes,
+                inference=True # during generate(), we do inference mode
             )
         else:
             inputs_embeds = self.get_model().embed_tokens(inputs)
