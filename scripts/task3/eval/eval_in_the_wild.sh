@@ -1,9 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=in_the_wild_vitbaseline
-#SBATCH --output=in_the_wild_vitbaseline.txt
+#SBATCH --job-name=Apr10_wild_reproduce
+#SBATCH --output=Apr10_wild_reproduce.txt
 #SBATCH --time=00:25:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
+#SBATCH --partition=debug-nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -23,32 +24,31 @@ set -a
 source /users/PAS2912/yusenpeng/DRIP/.env
 set +a
 
-mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers/XLbased-DRIP-10x-16-5-7-finetune.jsonl
+mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/original_reproduced.jsonl
 
 python src/model_vqa.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/XLbased-DRIP-10x-16-5-7-finetune \
-    --model-base lmsys/vicuna-7b-v1.5 \
-    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/questions.jsonl \
-    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/images \
-    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers/XLbased-DRIP-10x-16-5-7-finetune.jsonl \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
+    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
+    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/images \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/original_reproduced.jsonl \
     --temperature 0 \
     --conv-mode vicuna_v1
 
-mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews/XLbased-DRIP-10x-16-5-7-finetune.jsonl
+mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/reviews
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/reviews/original_reproduced.jsonl
 
 python src/eval_gpt_review_bench.py \
-    --question /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/questions.jsonl \
-    --context /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/context.jsonl \
+    --question /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
+    --context /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/context.jsonl \
     --rule src/LLaVA_wrapper/llava_local/eval/table/rule.json \
     --answer-list \
-        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers_gpt4.jsonl \
-        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers/XLbased-DRIP-10x-16-5-7-finetune.jsonl \
+        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers_gpt4.jsonl \
+        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/original_reproduced.jsonl \
     --output \
-        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews/XLbased-DRIP-10x-16-5-7-finetune.jsonl
+        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/reviews/original_reproduced.jsonl
 
-python src/summarize_gpt_review.py -f /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/reviews/XLbased-DRIP-10x-16-5-7-finetune.jsonl
+python src/summarize_gpt_review.py -f /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/reviews/original_reproduced.jsonl
 
 conda deactivate
 # End of script
