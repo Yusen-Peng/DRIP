@@ -71,7 +71,7 @@ sbatch scripts/task3/eval/eval_textVQA.sh
 # POPE
 sbatch scripts/task3/eval/eval_POPE.sh
 # MM-Bench
-sbatch
+sbatch scripts/task3/eval/eval_MMBench.sh
 ```
 
 

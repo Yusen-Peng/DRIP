@@ -16,11 +16,11 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-cd /users/PAS2912/yusenpeng/Fast-CLIP/
+cd /users/PAS2912/yusenpeng/DRIP/
 
 # Load API key from .env
 set -a
-source /users/PAS2912/yusenpeng/Fast-CLIP/.env
+source /users/PAS2912/yusenpeng/DRIP/.env
 set +a
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_in_the_wild/answers
