@@ -61,6 +61,21 @@ examples:
 
 ## LLaVA Evaluation
 
+### Instruction
+
+Go to file `src/LLaVA_wrapper/llava_local/model/multimodal_encoder/builder.py` to configure merging strategies(ViT/original, Fixed/fixed pooling, DRIP/dynamic tokenization) and corresponding compression rate (0.5/2x, 0.25/4x, 0.1/10x):
+
+```python
+MERGE_STRATEGY = "Fixed" # "ViT" or "DRIP" "Fixed" and more!
+COMPRESSION_RATE = 0.25
+```
+
+Additional note: the ViT backbone from LLaVA checkpoint is `openai/clip-vit-large-patch14-336`.
+
+Then we are good to move onto benchmark experiments.
+
+### Benchmarks
+
 General VQA (4):
 
 ```bash

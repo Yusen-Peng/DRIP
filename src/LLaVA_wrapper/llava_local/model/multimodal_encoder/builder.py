@@ -9,7 +9,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         hardcoded. Need to be fixed later.
     """
     MERGE_STRATEGY = "Fixed" # "ViT" or "DRIP" "Fixed" and more!
-    COMPRESSION_RATE = 0.5
+    COMPRESSION_RATE = 0.1
     ############################################################
 
 
