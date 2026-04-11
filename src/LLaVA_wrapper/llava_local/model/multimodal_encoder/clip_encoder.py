@@ -63,6 +63,7 @@ class CLIPVisionTower(nn.Module):
             assert self.compression_rate is not None, "compression_rate must be provided for Fixed merge strategy."
             width = self.vision_tower.config.hidden_size
             self.null_token = nn.Parameter(torch.zeros(1, 1, width))
+            print(f"🐰🐰🐰 [INFO] Using Fixed merge strategy with compression rate {self.compression_rate}. This will keep {max(1, int(1/self.compression_rate))} tokens.")
         else:
             pass # no additional modules needed for plain ViT
 

@@ -74,12 +74,14 @@ sbatch scripts/task3/eval/eval_POPE.sh
 sbatch scripts/task3/eval/eval_MMBench.sh
 # LLaVA-in-the-wild
 sbatch scripts/task3/eval/eval_in_the_wild.sh
-# VQAv2
+# VQAv2 [🚨LONG🚨]
 # need to submit the result json file to:
 # https://eval.ai/web/challenges/challenge-page/830
 sbatch scripts/task3/eval/eval_VQAv2.sh
 # MME
 sbatch scripts/task3/eval/eval_MME.sh
+# GQA
+sbatch scripts/task3/eval/eval_GQA.sh
 ```
 
 

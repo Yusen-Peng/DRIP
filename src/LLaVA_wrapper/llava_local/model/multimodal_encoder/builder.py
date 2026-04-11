@@ -2,10 +2,16 @@ import os
 from .clip_encoder import CLIPVisionTowerS2, CLIPVisionTower
 
 def build_vision_tower(vision_tower_cfg, **kwargs):
-    # FIXME: all hardcoded. Need to be fixed later.
-    MERGE_STRATEGY = "ViT" # "ViT" or "DRIP" "Fixed" and more!
-    COMPRESSION_RATE = 0.25
-    FINETUNING_MODE = True
+
+
+    ############################################################
+    """
+        hardcoded. Need to be fixed later.
+    """
+    MERGE_STRATEGY = "Fixed" # "ViT" or "DRIP" "Fixed" and more!
+    COMPRESSION_RATE = 0.5
+    ############################################################
+
 
     vision_tower = getattr(vision_tower_cfg, 'mm_vision_tower', getattr(vision_tower_cfg, 'vision_tower', None))
     use_s2 = getattr(vision_tower_cfg, 's2', False)

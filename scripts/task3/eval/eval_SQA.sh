@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr9_SQA_reproduce
-#SBATCH --output=Apr9_SQA_reproduce.txt
+#SBATCH --job-name=Apr11_SQA_fixed_2x
+#SBATCH --output=Apr11_SQA_fixed_2x.txt
 #SBATCH --time=0:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,26 +20,26 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 cd /users/PAS2912/yusenpeng/DRIP/
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/fixed_2x.jsonl
 
 python src/model_vqa_science.py \
     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/SQA_key.json \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/images/test \
-    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced.jsonl \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/fixed_2x.jsonl \
     --single-pred-prompt \
     --temperature 0 \
     --conv-mode vicuna_v1
 
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced.jsonl
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced_output.jsonl
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced_result.json
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/fixed_2x.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/fixed_2x_output.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/fixed_2x_result.json
 
 python src/eval_science_qa.py \
     --base-dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA \
-    --result-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced.jsonl \
-    --output-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced_output.jsonl \
-    --output-result /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/original_reproduced_result.json
+    --result-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/fixed_2x.jsonl \
+    --output-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/fixed_2x_output.jsonl \
+    --output-result /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/fixed_2x_result.json
 
 conda deactivate
 # End of script
