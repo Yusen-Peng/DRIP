@@ -2,12 +2,12 @@ import os
 import argparse
 import json
 
-from llava.eval.m4c_evaluator import EvalAIAnswerProcessor
+from LLaVA_wrapper.llava_local.eval.m4c_evaluator import EvalAIAnswerProcessor
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir', type=str, default="./playground/data/eval/vqav2")
+    parser.add_argument('--dir', type=str, default="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2")
     parser.add_argument('--ckpt', type=str, required=True)
     parser.add_argument('--split', type=str, required=True)
     return parser.parse_args()

@@ -74,6 +74,8 @@ sbatch scripts/task3/eval/eval_POPE.sh
 sbatch scripts/task3/eval/eval_MMBench.sh
 # LLaVA-in-the-wild
 sbatch scripts/task3/eval/eval_in_the_wild.sh
+# VQAv2
+sbatch scripts/task3/eval/eval_VQAv2.sh
 ```
 
 
