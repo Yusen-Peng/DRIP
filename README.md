@@ -59,31 +59,53 @@ examples:
 | ---------- | -------------- |
 | ![alt text](/src/boundary_vis/w2_4x_boundaries.png)| ![alt text](/src/boundary_vis/w5_4x_attention.png)
 
-## LLaVA
+## LLaVA Evaluation
 
-Evaluation:
+General VQA (4):
 
 ```bash
 # SQA 
 sbatch scripts/task3/eval/eval_SQA.sh
-# TextVQA
-sbatch scripts/task3/eval/eval_textVQA.sh
-# POPE
-sbatch scripts/task3/eval/eval_POPE.sh
 # MM-Bench
 sbatch scripts/task3/eval/eval_MMBench.sh
-# LLaVA-in-the-wild
-sbatch scripts/task3/eval/eval_in_the_wild.sh
+# MME
+sbatch scripts/task3/eval/eval_MME.sh
 # VQAv2 [🚨LONG🚨]
 # need to submit the result json file to:
 # https://eval.ai/web/challenges/challenge-page/830
 sbatch scripts/task3/eval/eval_VQAv2.sh
-# MME
-sbatch scripts/task3/eval/eval_MME.sh
-# GQA
-sbatch scripts/task3/eval/eval_GQA.sh
 ```
 
+Reasoning (1):
+
+```bash
+# GQA
+sbatch scripts/task3/eval/eval_GQA.sh
+
+```
+
+OCR (1):
+
+```bash
+# TextVQA
+sbatch scripts/task3/eval/eval_textVQA.sh
+```
+
+Hallucination (1):
+
+```bash
+# POPE
+sbatch scripts/task3/eval/eval_POPE.sh
+```
+
+Free Response (1):
+
+```bash
+# LLaVA-in-the-wild
+sbatch scripts/task3/eval/eval_in_the_wild.sh
+```
+
+## LLaVA Finetuning
 
 pretraining/token alignment:
 
