@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr9_POPE_reproduce_TEST
-#SBATCH --output=Apr9_POPE_reproduce_TEST.txt
+#SBATCH --job-name=Apr9_POPE_reproduce
+#SBATCH --output=Apr9_POPE_reproduce.txt
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

@@ -76,6 +76,8 @@ sbatch scripts/task3/eval/eval_MMBench.sh
 sbatch scripts/task3/eval/eval_in_the_wild.sh
 # VQAv2
 sbatch scripts/task3/eval/eval_VQAv2.sh
+# MME
+sbatch scripts/task3/eval/eval_MME.sh
 ```
 
 
