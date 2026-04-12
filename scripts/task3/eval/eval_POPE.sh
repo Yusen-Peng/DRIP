@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr9_POPE_reproduce
-#SBATCH --output=Apr9_POPE_reproduce.txt
+#SBATCH --job-name=Apr9_POPE_fixed_10x
+#SBATCH --output=Apr9_POPE_fixed_10x.txt
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,20 +19,20 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/original_reproduced.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/fixed_10x.jsonl
 
 python src/model_vqa_loader.py \
     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/llava_pope_test.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/val2014 \
-    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/original_reproduced.jsonl \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/fixed_10x.jsonl \
     --temperature 0 \
     --conv-mode vicuna_v1
 
 python src/eval_pope.py \
     --annotation-dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/anno \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/llava_pope_test.jsonl \
-    --result-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/original_reproduced.jsonl
+    --result-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/fixed_10x.jsonl
 
 conda deactivate
 # End of script

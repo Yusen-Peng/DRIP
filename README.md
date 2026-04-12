@@ -63,7 +63,7 @@ examples:
 
 ### Instruction
 
-Go to file `src/LLaVA_wrapper/llava_local/model/multimodal_encoder/builder.py` to configure merging strategies(ViT/original, Fixed/fixed pooling, DRIP/dynamic tokenization) and corresponding compression rate (0.5/2x, 0.25/4x, 0.1/10x):
+Go to file [`src/LLaVA_wrapper/llava_local/model/multimodal_encoder/builder.py`](src/LLaVA_wrapper/llava_local/model/multimodal_encoder/builder.py) to configure merging strategies(ViT/original, Fixed/fixed pooling, DRIP/dynamic tokenization) and corresponding compression rate (0.5/2x, 0.25/4x, 0.1/10x):
 
 ```python
 MERGE_STRATEGY = "Fixed" # "ViT" or "DRIP" "Fixed" and more!
@@ -96,7 +96,6 @@ Reasoning (1):
 ```bash
 # GQA
 sbatch scripts/task3/eval/eval_GQA.sh
-
 ```
 
 OCR (1):

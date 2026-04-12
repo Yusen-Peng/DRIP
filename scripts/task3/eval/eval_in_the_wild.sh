@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr10_wild_reproduce
-#SBATCH --output=Apr10_wild_reproduce.txt
+#SBATCH --job-name=Apr10_wild_fixed_10x
+#SBATCH --output=Apr10_wild_fixed_10x.txt
 #SBATCH --time=00:25:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,19 +24,21 @@ set -a
 source /users/PAS2912/yusenpeng/DRIP/.env
 set +a
 
+VERSION=fixed_10x
+
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/original_reproduced.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl
 
 python src/model_vqa.py \
     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/images \
-    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/original_reproduced.jsonl \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl \
     --temperature 0 \
     --conv-mode vicuna_v1
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/reviews
-touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/reviews/original_reproduced.jsonl
+touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/reviews/${VERSION}.jsonl
 
 python src/eval_gpt_review_bench.py \
     --question /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
@@ -44,11 +46,11 @@ python src/eval_gpt_review_bench.py \
     --rule src/LLaVA_wrapper/llava_local/eval/table/rule.json \
     --answer-list \
         /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers_gpt4.jsonl \
-        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/original_reproduced.jsonl \
+        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl \
     --output \
-        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/reviews/original_reproduced.jsonl
+        /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/reviews/${VERSION}.jsonl
 
-python src/summarize_gpt_review.py -f /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/reviews/original_reproduced.jsonl
+python src/summarize_gpt_review.py -f /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/reviews/${VERSION}.jsonl
 
 conda deactivate
 # End of script

@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Ap11_GQA_reproduce
-#SBATCH --output=Ap11_GQA_reproduce.txt
+#SBATCH --job-name=Apr11_GQA_fixed_10x
+#SBATCH --output=Apr11_GQA_fixed_10x.txt
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,7 +24,7 @@ GQADIR="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data"
 OUTPUT_DIR=/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/answers/llava_gqa_testdev_balanced
 mkdir -p $OUTPUT_DIR
 
-OUTPUT_FILE=$OUTPUT_DIR/original_reproduced.jsonl
+OUTPUT_FILE=$OUTPUT_DIR/fixed_10x.jsonl
 
 python src/model_vqa_loader.py \
     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
@@ -39,7 +39,7 @@ python src/model_vqa_loader.py \
 MERGED_FILE=$OUTPUT_DIR/merge.jsonl
 cp $OUTPUT_FILE $MERGED_FILE
 
-Convert for evaluation
+# Convert for evaluation
 python src/convert_gqa_for_eval.py \
     --src $MERGED_FILE \
     --dst /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data/testdev_balanced_predictions.json

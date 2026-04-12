@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr11_SQA_fixed_10x_TEST
-#SBATCH --output=Apr11_SQA_fixed_10x_TEST.txt
+#SBATCH --job-name=Apr11_SQA_fixed_10x
+#SBATCH --output=Apr11_SQA_fixed_10x.txt
 #SBATCH --time=0:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

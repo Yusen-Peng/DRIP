@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr10_MME_reproduce
-#SBATCH --output=Apr10_MME_reproduce.txt
+#SBATCH --job-name=Apr11_MME_fixed_10x
+#SBATCH --output=Apr11_MME_fixed_10x.txt
 #SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,22 +20,21 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 cd /users/PAS2912/yusenpeng/DRIP/
 
 
-
 python src/model_vqa_loader.py \
     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/llava_mme.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/MME_Benchmark_release_version \
-    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/answers/original_reproduced.jsonl \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/answers/fixed_10x.jsonl \
     --temperature 0 \
     --conv-mode vicuna_v1
 
 cd /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME
 
-python convert_answer_to_mme.py --experiment original_reproduced
+python convert_answer_to_mme.py --experiment fixed_10x
 
 cd eval_tool
 
-python calculation.py --results_dir answers/original_reproduced
+python calculation.py --results_dir answers/fixed_10x
 
 conda deactivate
 # End of script
