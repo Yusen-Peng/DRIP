@@ -1,5 +1,5 @@
 <p align="center">
-<img src="docs/DRIP_new.png" width="800"/>
+<img src="docs/DRIP.png" width="700"/>
 </p>
 
 <h1 align="center">DRIP</h1>

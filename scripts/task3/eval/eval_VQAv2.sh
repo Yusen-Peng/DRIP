@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr11_VQAv2_fixed_2x
-#SBATCH --output=Apr11_VQAv2_fixed_2x.txt
+#SBATCH --job-name=Apr11_VQAv2_fixed_10x
+#SBATCH --output=Apr11_VQAv2_fixed_10x.txt
 #SBATCH --time=05:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -23,7 +23,7 @@ python src/model_vqa_loader.py \
     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/llava_vqav2_mscoco_test-dev2015.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/test2015 \
-    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/answers/fixed_2x.jsonl \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/answers/fixed_10x.jsonl \
     --num-chunks 1 \
     --chunk-idx 0 \
     --temperature 0 \
@@ -31,7 +31,7 @@ python src/model_vqa_loader.py \
 
 python src/convert_vqav2_for_submission.py \
     --split llava_vqav2_mscoco_test-dev2015 \
-    --ckpt fixed_2x
+    --ckpt fixed_10x
 
 conda deactivate
 # End of script

@@ -37,28 +37,13 @@ def hook_k(module, input, output):
 def hook_q(module, input, output):
     outputs['desired_q'] = output
 
-
-def outlier_dectection(attn):
-    attn_np = attn.to(dtype=torch.float32).cpu().numpy().flatten()
-
-    Q1 = np.percentile(attn_np, 25)
-    Q3 = np.percentile(attn_np, 75)
-    IQR = Q3 - Q1
-
-    # lower_bound = Q1 - 1.5 * IQR
-    upper_bound = Q3 + 1.5 * IQR
-
-    outlier_indices = np.where((attn_np > upper_bound))[0]
-
-    ratio = len(outlier_indices) / len(attn_np)
-    return ratio
 ####################################################################
 
 class CLIPVisionTower(nn.Module):
     def __init__(self, 
             vision_tower, 
             args,
-            merge_strategy="ViT", # "ViT" or "DRIP" or "Fixed"
+            merge_strategy="ViT",
             compression_rate=None, # None or a float number
             delay_load=False):
         super().__init__()
@@ -109,6 +94,13 @@ class CLIPVisionTower(nn.Module):
             width = self.vision_tower.config.hidden_size
             self.null_token = nn.Parameter(torch.zeros(1, 1, width))
             print(f"🐰🐰🐰 [INFO] Using Fixed merge strategy with compression rate {self.compression_rate}. This will keep every {max(1, int(1/self.compression_rate))} tokens.")
+        
+        elif self.merge_strategy == "PruMerge":
+            assert self.compression_rate is not None, "compression_rate must be provided for PruMerge merge strategy."
+            print(f"🐰🐰🐰 [INFO] Using LLaVA-PruMerge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens")
+
+
+
         else:
             pass # no additional modules needed for plain ViT
 
@@ -158,10 +150,10 @@ class CLIPVisionTower(nn.Module):
         image_features = image_features[:, 1:]
         return image_features
     
-    def token_prune_merge_advanced(self, images, if_adaptive=True, reduction_ratio = 1/8):
+    def token_prune_merge_advanced(self, images, reduction_ratio):
         '''
             LLaVA PruMerge
-            copy pasted from: 
+            code adapted from: 
             https://github.com/42Shawn/LLaVA-PruMerge/blob/main/llava/model/multimodal_encoder/clip_encoder.py#L85
         '''
         # token_indix_list = []
@@ -189,8 +181,6 @@ class CLIPVisionTower(nn.Module):
 
         cls_attn = attn[:, 0, 1:]  
 
-        if if_adaptive:
-            reduction_ratio = outlier_dectection(cls_attn)#*3.5
         _, idx = torch.topk(cls_attn, int(N*reduction_ratio), dim=1, largest=True)  # [B, left_tokens] , sorted=True
         index = idx.unsqueeze(-1).expand(-1, -1, C)  # [B, left_tokens, C]
 
@@ -245,16 +235,11 @@ class CLIPVisionTower(nn.Module):
 
         extra_one_token = torch.sum(non_topk * non_topk_attn.unsqueeze(-1), dim=1, keepdim=True)  # [B, 1, C]
         updated_x_others = torch.cat([updated_x_others, extra_one_token],dim=1)
-        image_features = updated_x_others
+
+
+        # NOTE: fix the type mismatch issue
+        image_features = updated_x_others.to(dtype=self.dtype)
         return image_features
-
-
-
-
-
-
-
-
 
 
     def forward(self, images, inference=False):
@@ -282,16 +267,23 @@ class CLIPVisionTower(nn.Module):
             return image_features
 
         else:
-            image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), output_hidden_states=True)
-            image_features = self.feature_select(image_forward_outs).to(images.dtype)
+            if self.merge_strategy == "PruMerge":
+                image_features = self.token_prune_merge_advanced(images, reduction_ratio=self.compression_rate)
+                # NOTE: we need to hardcode the precision/data type after PruMerge
+                image_features = image_features.to(dtype=torch.float16)
+            else:
+                image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), output_hidden_states=True)
+                image_features = self.feature_select(image_forward_outs).to(images.dtype)
 
-            if self.merge_strategy in ["DRIP", "Fixed"]:
-                if not inference:
-                    image_features, boundary_loss, _, _ = self._merge_patch_tokens(image_features, inference=False)
-                    return image_features, boundary_loss
-                else:
-                    image_features = self._merge_patch_tokens(image_features, inference=True)
+                if self.merge_strategy in ["DRIP", "Fixed"]:
+                    if not inference:
+                        image_features, boundary_loss, _, _ = self._merge_patch_tokens(image_features, inference=False)
+                        return image_features, boundary_loss
+                    else:
+                        image_features = self._merge_patch_tokens(image_features, inference=True)
             
+            # # TYPE DEBUG
+            # print(f"🍑🍑🍑 [DEBUG] image_features dtype: {image_features.dtype}, device: {image_features.device}", flush=True)
             return image_features
 
     @property
