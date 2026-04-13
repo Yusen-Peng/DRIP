@@ -11,11 +11,11 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             "Fixed": fixed pooling
             "PruMerge": LLaVA-PruMerge
             "ToME": ToME (to be added)
-            "DRIP": our design
+            "DRIP": our design (to be implemented)
     """
 
     MERGE_STRATEGY = "PruMerge" 
-    COMPRESSION_RATE = 0.25
+    COMPRESSION_RATE = 0.1
     ############################################################
 
 

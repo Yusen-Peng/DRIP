@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr12_MME_PruMerge_4x
-#SBATCH --output=Apr12_MME_PruMerge_4x.txt
+#SBATCH --job-name=Apr12_MME_PruMerge_10x
+#SBATCH --output=Apr12_MME_PruMerge_10x.txt
 #SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="PruMerge_4x"
+VERSION="PruMerge_10x"
 
 
 python src/model_vqa_loader.py \

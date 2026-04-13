@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr10_wild_fixed_10x
-#SBATCH --output=Apr10_wild_fixed_10x.txt
+#SBATCH --job-name=Apr12_wild_PruMerge_10x
+#SBATCH --output=Apr12_wild_PruMerge_10x.txt
 #SBATCH --time=00:25:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,7 +24,7 @@ set -a
 source /users/PAS2912/yusenpeng/DRIP/.env
 set +a
 
-VERSION=fixed_10x
+VERSION="PruMerge_10x"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl
