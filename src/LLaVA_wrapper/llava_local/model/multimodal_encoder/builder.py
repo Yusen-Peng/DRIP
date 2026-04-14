@@ -14,7 +14,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             "DRIP": our design (to be implemented)
     """
 
-    MERGE_STRATEGY = "PruMerge" 
+    MERGE_STRATEGY = "ViT"
     COMPRESSION_RATE = 0.1
     ############################################################
 
