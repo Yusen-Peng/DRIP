@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Apr12_VQAv2_PruMerge_2x
-#SBATCH --output=Apr12_VQAv2_PruMerge_2x.txt
-#SBATCH --time=06:00:00
+#SBATCH --job-name=Apr14_VQAv2_llava13B
+#SBATCH --output=Apr14_VQAv2_llava13B.txt
+#SBATCH --time=08:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=nextgen
@@ -17,12 +17,12 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="PruMerge_2x"
+VERSION="llava13B"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-13b-local \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/llava_vqav2_mscoco_test-dev2015.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/test2015 \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/answers/${VERSION}.jsonl \
