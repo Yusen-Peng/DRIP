@@ -135,6 +135,12 @@ finetuning/VQA SFT:
 sbatch scripts/task3/finetune.sh
 ```
 
+
+## Results
+
+![alt text](results/llava_7B_results.png)
+
+
 ## Contacts
 
 If you have any questions or suggestions, feel free to contact:
