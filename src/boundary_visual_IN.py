@@ -427,8 +427,8 @@ def main():
 
 
     
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_half_LR_no_warmup/model_121.pth"
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_half_LR_no_warmup_smart_init/model_80.pth"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_half_LR_no_warmup/model_186.pth"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_half_LR_no_warmup_smart_init/model_179.pth"
 
 
 
