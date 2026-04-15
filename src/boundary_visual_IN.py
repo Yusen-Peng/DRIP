@@ -192,8 +192,8 @@ def overlay_dtpvit_boundaries(
 def visualize_boundaries_single_multi_dtpvit(
     model: DTPViT,
     preprocess,
-    root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/image_samples/single_multi/",
-    save_path="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/single_multi_overlay_dtpvit.png",
+    root_dir="/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/image_samples/single_multi/",
+    save_path="/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/single_multi_overlay_dtpvit.png",
     mean=(0.485, 0.456, 0.406),
     std=(0.229, 0.224, 0.225),
 ):
@@ -369,8 +369,8 @@ def overlay_dtpvit_attention_no_patch(
 def visualize_attention_single_multi_dtpvit(
     model: DTPViT,
     preprocess,
-    root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/image_samples/single_multi/",
-    save_path="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/single_multi_attention_overlay_dtpvit.png",
+    root_dir="/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/image_samples/single_multi/",
+    save_path="/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/single_multi_attention_overlay_dtpvit.png",
     mean=(0.485, 0.456, 0.406),
     std=(0.229, 0.224, 0.225),
 ):
@@ -424,13 +424,11 @@ def main():
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup2/model_299.pth"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup5/model_299.pth"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup5_init/model_299.pth" 
+
+
     
-    
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_half_LR/model_0.pth"
-    
-    
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_half_LR_no_warmup/model_27.pth"
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_half_LR_no_warmup_smart_init/model_27.pth"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_half_LR_no_warmup/model_121.pth"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_half_LR_no_warmup_smart_init/model_80.pth"
 
 
 
@@ -479,14 +477,14 @@ def main():
     visualize_boundaries_single_multi_dtpvit(
         model,
         preprocess,
-        root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/image_samples/single_multi/",
-        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/dtpvit_single_multi_overlay.png",
+        root_dir="/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/image_samples/single_multi/",
+        save_path="/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/dtpvit_single_multi_overlay.png",
     )
     visualize_attention_single_multi_dtpvit(
         model,
         preprocess,
-        root_dir="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/image_samples/single_multi/",
-        save_path="/users/PAS2912/yusenpeng/Fast-CLIP/src/boundary_vis/dtpvit_single_multi_attention_overlay.png"
+        root_dir="/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/image_samples/single_multi/",
+        save_path="/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/dtpvit_single_multi_attention_overlay.png"
     )
 
 if __name__ == "__main__":
