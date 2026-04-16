@@ -63,7 +63,7 @@ examples:
 | ![alt text](/src/boundary_vis/dtpvit_single_multi_overlay.png) | ![alt text](/src/boundary_vis/dtpvit_single_multi_attention_overlay.png) |
 
 
-## LLaVA Evaluation
+## LLaVA
 
 ### Instruction
 
@@ -78,7 +78,7 @@ Additional note: the ViT backbone from LLaVA checkpoint is `openai/clip-vit-larg
 
 Then we are good to move onto benchmark experiments.
 
-### Benchmarks
+### Evaluation/Benchmarks
 
 General VQA (4):
 
@@ -125,7 +125,7 @@ sbatch scripts/task3/eval/eval_in_the_wild.sh
 
 ## LLaVA Finetuning
 
-pretraining/token alignment:
+pretraining (token alignment):
 
 ```bash
 # ascend

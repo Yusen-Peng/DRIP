@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr14_MMBench_llava13B
-#SBATCH --output=Apr14_MMBench_llava13B.txt
+#SBATCH --job-name=Apr15_MMBench_fixed_8x
+#SBATCH --output=Apr15_MMBench_fixed_8x.txt
 #SBATCH --time=00:25:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,14 +19,14 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="llava13B"
+VERSION="fixed_8x"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl
 
 python src/model_vqa_mmbench.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-13b-local \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/mmbench_dev_20230712.tsv \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl \
     --single-pred-prompt \

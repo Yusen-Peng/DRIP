@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr14_VQAv2_llava13B
-#SBATCH --output=Apr14_VQAv2_llava13B.txt
+#SBATCH --job-name=Apr15_VQAv2_fixed_8x
+#SBATCH --output=Apr15_VQAv2_fixed_8x.txt
 #SBATCH --time=08:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,7 +17,7 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="llava13B"
+VERSION="fixed_8x"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 

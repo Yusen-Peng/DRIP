@@ -15,7 +15,8 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     """
 
     MERGE_STRATEGY = "ViT"
-    COMPRESSION_RATE = 0.1
+    # 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
+    COMPRESSION_RATE = 0.125
     ############################################################
 
 
