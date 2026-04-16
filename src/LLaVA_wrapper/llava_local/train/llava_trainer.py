@@ -1,6 +1,8 @@
 import os
 import torch
 import torch.nn as nn
+import numpy as np
+import random
 
 from torch.utils.data import Sampler
 
@@ -228,6 +230,95 @@ class LLaVATrainer(Trainer):
     #     return self.optimizer
 
 
+    # def _load_rng_state(self, checkpoint):
+    #     # Load RNG states from `checkpoint`
+    #     if checkpoint is None:
+    #         return
+
+    #     if self.args.world_size > 1:
+    #         process_index = self.args.process_index
+    #         rng_file = os.path.join(checkpoint, f"rng_state_{process_index}.pth")
+    #         if not os.path.isfile(rng_file):
+    #             logger.info(
+    #                 f"Didn't find an RNG file for process {process_index}, if you are resuming a training that "
+    #                 "wasn't launched in a distributed fashion, reproducibility is not guaranteed."
+    #             )
+    #             return
+    #     else:
+    #         rng_file = os.path.join(checkpoint, "rng_state.pth")
+    #         if not os.path.isfile(rng_file):
+    #             logger.info(
+    #                 "Didn't find an RNG file, if you are resuming a training that was launched in a distributed "
+    #                 "fashion, reproducibility is not guaranteed."
+    #             )
+    #             return
+
+    #     checkpoint_rng_state = torch.load(rng_file)
+    #     random.setstate(checkpoint_rng_state["python"])
+    #     np.random.set_state(checkpoint_rng_state["numpy"])
+    #     torch.random.set_rng_state(checkpoint_rng_state["cpu"])
+    #     if torch.cuda.is_available():
+    #         if self.args.parallel_mode == ParallelMode.DISTRIBUTED:
+    #             torch.cuda.random.set_rng_state_all(checkpoint_rng_state["cuda"])
+    #         else:
+    #             try:
+    #                 torch.cuda.random.set_rng_state(checkpoint_rng_state["cuda"])
+    #             except Exception as e:
+    #                 logger.info(
+    #                     f"Didn't manage to set back the RNG states of the GPU because of the following error:\n {e}"
+    #                     "\nThis won't yield the same results as if the training had not been interrupted."
+    #                 )
+    #     if is_torch_xla_available():
+    #         xm.set_rng_state(checkpoint_rng_state["xla"])
+    #     if is_torch_npu_available():
+    #         if self.args.parallel_mode == ParallelMode.DISTRIBUTED:
+    #             torch.npu.random.set_rng_state_all(checkpoint_rng_state["npu"])
+    #         else:
+    #             try:
+    #                 torch.npu.random.set_rng_state(checkpoint_rng_state["npu"])
+    #             except Exception as e:
+    #                 logger.info(
+    #                     f"Didn't manage to set back the RNG states of the NPU because of the following error:\n {e}"
+    #                     "\nThis won't yield the same results as if the training had not been interrupted."
+    #                 )
+    #     if is_torch_mlu_available():
+    #         if self.args.parallel_mode == ParallelMode.DISTRIBUTED:
+    #             torch.mlu.random.set_rng_state_all(checkpoint_rng_state["mlu"])
+    #         else:
+    #             try:
+    #                 torch.mlu.random.set_rng_state(checkpoint_rng_state["mlu"])
+    #             except Exception as e:
+    #                 logger.info(
+    #                     f"Didn't manage to set back the RNG states of the MLU because of the following error:\n {e}"
+    #                     "\nThis won't yield the same results as if the training had not been interrupted."
+    #                 )
+
+
+    def _load_rng_state(self, checkpoint):
+        if checkpoint is None:
+            return
+
+        if self.args.world_size <= 1:
+            rng_file = os.path.join(checkpoint, "rng_state.pth")
+        else:
+            rng_file = os.path.join(checkpoint, f"rng_state_{self.args.process_index}.pth")
+
+        if not os.path.isfile(rng_file):
+            logger.info("Didn't find an RNG file, so skipping RNG state restore.")
+            return
+
+        # TRUSTED LOCAL CHECKPOINT: force legacy unpickling for RNG state
+        checkpoint_rng_state = torch.load(rng_file, weights_only=False)
+        random.setstate(checkpoint_rng_state["python"])
+        np.random.set_state(checkpoint_rng_state["numpy"])
+        torch.random.set_rng_state(checkpoint_rng_state["cpu"])
+
+        if torch.cuda.is_available():
+            if self.args.world_size <= 1:
+                torch.cuda.random.set_rng_state_all(checkpoint_rng_state["cuda"])
+            else:
+                torch.cuda.random.set_rng_state(checkpoint_rng_state["cuda"])
+
     # NOTE: mutual exclusive optimizer setup
     def create_optimizer(self):
         """
@@ -337,26 +428,52 @@ class LLaVATrainer(Trainer):
 
         return self.optimizer
 
-    def _save_checkpoint(self, model, trial, metrics=None):
-        if getattr(self.args, 'tune_mm_mlp_adapter', False):
-            from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
-            checkpoint_folder = f"{PREFIX_CHECKPOINT_DIR}-{self.state.global_step}"
+    # def _save_checkpoint(self, model, trial, metrics=None):
+    #     if getattr(self.args, 'tune_mm_mlp_adapter', False):
+    #         from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
+    #         checkpoint_folder = f"{PREFIX_CHECKPOINT_DIR}-{self.state.global_step}"
 
+    #         run_dir = self._get_output_dir(trial=trial)
+    #         output_dir = os.path.join(run_dir, checkpoint_folder)
+
+    #         # Only save Adapter
+    #         keys_to_match = ['mm_projector', 'vision_resampler']
+    #         if getattr(self.args, "use_im_start_end", False):
+    #             keys_to_match.extend(['embed_tokens', 'embed_in'])
+
+    #         weight_to_save = get_mm_adapter_state_maybe_zero_3(self.model.named_parameters(), keys_to_match)
+
+    #         if self.args.local_rank == 0 or self.args.local_rank == -1:
+    #             self.model.config.save_pretrained(output_dir)
+    #             torch.save(weight_to_save, os.path.join(output_dir, f'mm_projector.bin'))
+            
+    #         self.state.save_to_json(os.path.join(output_dir, "trainer_state.json"))
+
+    #     else:
+    #         super(LLaVATrainer, self)._save_checkpoint(model, trial, metrics)
+
+
+    def _save_checkpoint(self, model, trial, metrics=None):
+        super()._save_checkpoint(model, trial, metrics)
+
+        if getattr(self.args, "tune_mm_mlp_adapter", False):
+            from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
+
+            checkpoint_folder = f"{PREFIX_CHECKPOINT_DIR}-{self.state.global_step}"
             run_dir = self._get_output_dir(trial=trial)
             output_dir = os.path.join(run_dir, checkpoint_folder)
 
-            # Only save Adapter
-            keys_to_match = ['mm_projector', 'vision_resampler']
+            keys_to_match = ["mm_projector", "vision_resampler"]
             if getattr(self.args, "use_im_start_end", False):
-                keys_to_match.extend(['embed_tokens', 'embed_in'])
+                keys_to_match.extend(["embed_tokens", "embed_in"])
 
-            weight_to_save = get_mm_adapter_state_maybe_zero_3(self.model.named_parameters(), keys_to_match)
+            weight_to_save = get_mm_adapter_state_maybe_zero_3(
+                self.model.named_parameters(), keys_to_match
+            )
 
-            if self.args.local_rank == 0 or self.args.local_rank == -1:
-                self.model.config.save_pretrained(output_dir)
-                torch.save(weight_to_save, os.path.join(output_dir, f'mm_projector.bin'))
-        else:
-            super(LLaVATrainer, self)._save_checkpoint(model, trial, metrics)
+            if self.args.local_rank in (0, -1):
+                torch.save(weight_to_save, os.path.join(output_dir, "mm_projector.bin"))
+
 
     def _save(self, output_dir: Optional[str] = None, state_dict=None):
         if getattr(self.args, 'tune_mm_mlp_adapter', False):

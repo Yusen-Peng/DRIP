@@ -22,7 +22,7 @@ VERSION="fixed_8x"
 cd /users/PAS2912/yusenpeng/DRIP/
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-13b-local \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/llava_vqav2_mscoco_test-dev2015.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/test2015 \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/answers/${VERSION}.jsonl \

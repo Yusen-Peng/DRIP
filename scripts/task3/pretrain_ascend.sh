@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=Apr16_DEBUGGING_pretrain_single_nextgen
-#SBATCH --output=Apr16_DEBUGGING_pretrain_single_nextgen.txt
-#SBATCH --time=01:00:00
+#SBATCH --job-name=Apr16_7B_pretrain_round2
+#SBATCH --output=Apr16_7B_pretrain_round2.txt
+#SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=debug-nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256G
@@ -39,8 +39,8 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 32 \
     --save_strategy "steps" \
-    --save_steps 10 \
-    --save_total_limit 1 \
+    --save_steps 1 \
+    --save_total_limit 2 \
     --learning_rate 1e-3 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
