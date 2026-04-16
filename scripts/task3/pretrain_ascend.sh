@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=Apr9_DEBUGGING_pretrain
-#SBATCH --output=Apr9_DEBUGGING_pretrain.txt
+#SBATCH --job-name=Apr16_DEBUGGING_pretrain_single_nextgen
+#SBATCH --output=Apr16_DEBUGGING_pretrain_single_nextgen.txt
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=debug-nextgen
+#SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256G
@@ -17,10 +17,11 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 export WANDB_DISABLED=true
+export CUDA_VISIBLE_DEVICES=0
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-deepspeed src/task3_llava.py \
+deepspeed --num_gpus=1 src/task3_llava.py \
     --deepspeed src/LLaVA_wrapper/scripts/mix_free.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version plain \
@@ -32,13 +33,13 @@ deepspeed src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/DEBUG_LLAVA \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_OWN_pretrain \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 32 \
     --save_strategy "steps" \
-    --save_steps 24000 \
+    --save_steps 10 \
     --save_total_limit 1 \
     --learning_rate 1e-3 \
     --weight_decay 0. \
