@@ -15,3 +15,5 @@ README_private.md
 **/__pycache__/
 *.txt
 !requirements.txt
+*.out
+*.err

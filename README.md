@@ -125,7 +125,20 @@ sbatch scripts/task3/eval/eval_in_the_wild.sh
 
 ## LLaVA Finetuning
 
-pretraining (token alignment):
+### flash attention
+
+Before anything, make sure flash attention is installed:
+
+```bash
+# install
+sbatch flash_attn.sh
+# test
+sbatch test_flash_attn.sh
+# what to expect: 
+# torch.Size([1, 128, 8, 64]) torch.float16 cuda:0
+```
+
+### pretraining (token alignment)
 
 ```bash
 # ascend
@@ -133,7 +146,7 @@ sbatch scripts/task3/pretrain_ascend.sh
 # anvil
 ```
 
-finetuning/VQA SFT:
+### finetuning/VQA SFT
 
 ```bash
 sbatch scripts/task3/finetune.sh

@@ -875,6 +875,7 @@ def save_vision_tower(vt_core, out_path, local_rank=-1):
 
 def train(attn_implementation=None):
     global local_rank
+    print(f"🫁🫁🫁 {attn_implementation} 🫁🫁🫁", flush=True)
 
     parser = transformers.HfArgumentParser(
         (ModelArguments, DataArguments, TrainingArguments))
@@ -944,6 +945,9 @@ def train(attn_implementation=None):
             **bnb_model_from_pretrained_args
         )
     model.config.use_cache = False
+
+    print("🔥 attn_implementation arg:", attn_implementation, flush=True)
+    print("🔥 model.config._attn_implementation:", getattr(model.config, "_attn_implementation", None), flush=True)
 
     if model_args.freeze_backbone:
         model.model.requires_grad_(False)
