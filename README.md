@@ -141,8 +141,8 @@ sbatch test_flash_attn.sh
 ### pretraining (token alignment)
 
 ```bash
-# ascend
-sbatch scripts/task3/pretrain_ascend.sh
+# ascend with flash attention
+sbatch scripts/task3/pretrain_ascend_flash.sh
 # anvil
 ```
 

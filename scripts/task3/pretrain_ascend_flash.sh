@@ -1,16 +1,17 @@
 #!/bin/bash
 #SBATCH --job-name=Apr16_7B_pretrain_FLASH
 #SBATCH --output=Apr16_7B_pretrain_FLASH.txt
-#SBATCH --time=00:30:00
+#SBATCH --time=10:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=debug-nextgen
+#SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256G
 #SBATCH --account=PAS2836
 
 module load miniconda3/24.1.2-py310
+conda deactivate
 conda activate DRIP_flash
 source activate DRIP_flash
 
@@ -33,7 +34,7 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_pretrain \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \
@@ -47,7 +48,7 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
     --tf32 True \
-    --fp16 True \
+    --bf16 True \
     --model_max_length 2048 \
     --gradient_checkpointing True \
     --dataloader_num_workers 4 \

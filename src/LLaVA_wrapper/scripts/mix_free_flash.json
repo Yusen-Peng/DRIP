@@ -1,9 +1,9 @@
 {
   "fp16": {
-    "enabled": true
+    "enabled": false
   },
   "bf16": {
-    "enabled": false
+    "enabled": true
   },
   "train_micro_batch_size_per_gpu": "auto",
   "train_batch_size": "auto",
