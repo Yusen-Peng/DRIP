@@ -307,8 +307,10 @@ class LLaVATrainer(Trainer):
             logger.info("Didn't find an RNG file, so skipping RNG state restore.")
             return
 
+        
         # TRUSTED LOCAL CHECKPOINT: force legacy unpickling for RNG state
         checkpoint_rng_state = torch.load(rng_file, weights_only=False)
+        
         random.setstate(checkpoint_rng_state["python"])
         np.random.set_state(checkpoint_rng_state["numpy"])
         torch.random.set_rng_state(checkpoint_rng_state["cpu"])
@@ -318,6 +320,7 @@ class LLaVATrainer(Trainer):
                 torch.cuda.random.set_rng_state_all(checkpoint_rng_state["cuda"])
             else:
                 torch.cuda.random.set_rng_state(checkpoint_rng_state["cuda"])
+
 
     # NOTE: mutual exclusive optimizer setup
     def create_optimizer(self):
