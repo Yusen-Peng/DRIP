@@ -421,13 +421,14 @@ def visualize_attention_single_multi_dtpvit(
 
 def main():
 
-    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup2/model_299.pth"
+    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup2/model_299.pth"
+
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup5/model_299.pth"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_01_warmup5_init/model_299.pth" 
 
 
     
-    ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_half_LR_no_warmup/model_299.pth"
+    #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_half_LR_no_warmup/model_299.pth"
     #ckpt_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_DRIP_4x_half_LR_no_warmup_smart_init/model_179.pth"
 
 

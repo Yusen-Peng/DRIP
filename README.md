@@ -28,7 +28,7 @@ conda activate DRIP
 
 ## ImageNet (OSC pitzer)
 
-running experiments:
+running training experiments:
 
 ```bash
 sbatch scripts/task1/finetune_imagenet.sh
@@ -40,6 +40,12 @@ for ImageNet
 
 ```bash
 python src/boundary_visual_IN.py
+```
+
+running eval + analysis experiments:
+
+```bash
+sbatch scripts/task1/eval_imagenet.sh
 ```
 
 GFLOPs measurement:
@@ -60,7 +66,7 @@ examples:
 | imagenet_DRIP_4x_01_warmup2 | model_299.pth |
 | ![alt text](/src/boundary_vis/w2_4x_boundaries.png) | ![alt text](/src/boundary_vis/w2_4x_attention.png) |
 | imagenet_DRIP_4x_half_LR_no_warmup | model_299.pth |
-| ![alt text](/src/boundary_vis/dtpvit_single_multi_overlay.png) | ![alt text](/src/boundary_vis/dtpvit_single_multi_attention_overlay.png) |
+| ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_overlay.png) | ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_attention_overlay.png) |
 
 
 ## LLaVA

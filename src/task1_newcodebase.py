@@ -1019,6 +1019,155 @@ def evaluate(model, is_dtp: bool, criterion, data_loader, device, print_freq=100
     return metric_logger.acc1.global_avg
 
 
+
+def evaluate_with_class_stats(model, is_dtp: bool, criterion, data_loader, device, num_classes, class_names, print_freq=100, save_dir=None):
+    import csv
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    model.eval()
+    metric_logger = MetricLogger(delimiter="  ")
+    header = "Test: Class Analysis"
+
+    per_class_correct = torch.zeros(num_classes, dtype=torch.long, device=device)
+    per_class_total = torch.zeros(num_classes, dtype=torch.long, device=device)
+
+    num_processed_samples = 0
+
+    with torch.inference_mode():
+        for image, target in metric_logger.log_every(data_loader, print_freq, header):
+            image = image.to(device, non_blocking=True)
+            target = target.to(device, non_blocking=True)
+
+            if is_dtp:
+                output, boundary_loss = model(image, inference=True)
+                cls_loss = criterion(output, target)
+                loss = cls_loss + boundary_loss
+            else:
+                output = model(image)
+                loss = criterion(output, target)
+
+            pred = output.argmax(dim=1)
+
+            acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            batch_size = image.shape[0]
+
+            metric_logger.update(loss=loss.item())
+            metric_logger.meters["acc1"].update(acc1.item(), n=batch_size)
+            metric_logger.meters["acc5"].update(acc5.item(), n=batch_size)
+            num_processed_samples += batch_size
+
+            correct_mask = (pred == target)
+            per_class_total.index_add_(0, target, torch.ones_like(target, dtype=torch.long))
+            per_class_correct.index_add_(0, target, correct_mask.long())
+
+    # reduce across processes if distributed
+    if is_dist_avail_and_initialized():
+        dist.all_reduce(per_class_total, op=dist.ReduceOp.SUM)
+        dist.all_reduce(per_class_correct, op=dist.ReduceOp.SUM)
+        num_processed_samples = reduce_across_processes(num_processed_samples)
+
+    if (
+        hasattr(data_loader.dataset, "__len__")
+        and len(data_loader.dataset) != int(num_processed_samples)
+        and get_rank() == 0
+    ):
+        warnings.warn(
+            f"It looks like the dataset has {len(data_loader.dataset)} samples, but {int(num_processed_samples)} "
+            "samples were used for the validation, which might bias the results."
+        )
+
+    metric_logger.synchronize_between_processes()
+
+    per_class_acc = per_class_correct.float() / per_class_total.clamp(min=1).float()
+
+    print(
+        f"{header} Acc@1 {metric_logger.acc1.global_avg:.3f} Acc@5 {metric_logger.acc5.global_avg:.3f}",
+        flush=True
+    )
+
+    if is_main_process():
+        os.makedirs(save_dir, exist_ok=True)
+
+        per_class_correct_cpu = per_class_correct.cpu().numpy()
+        per_class_total_cpu = per_class_total.cpu().numpy()
+        per_class_acc_cpu = per_class_acc.cpu().numpy()
+
+        rows = []
+        for i in range(num_classes):
+            rows.append({
+                "class_idx": i,
+                "class_name": class_names[i],
+                "total": int(per_class_total_cpu[i]),
+                "correct": int(per_class_correct_cpu[i]),
+                "accuracy": float(per_class_acc_cpu[i]),
+            })
+
+        rows_sorted = sorted(rows, key=lambda x: x["accuracy"])
+
+        # save csv
+        csv_path = os.path.join(save_dir, "per_class_accuracy.csv")
+        with open(csv_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["class_idx", "class_name", "total", "correct", "accuracy"])
+            writer.writeheader()
+            writer.writerows(rows)
+
+        # histogram
+        plt.figure(figsize=(8, 5))
+        plt.hist(per_class_acc_cpu, bins=30)
+        plt.xlabel("Per-class accuracy")
+        plt.ylabel("Number of classes")
+        plt.title("Per-class Accuracy Distribution")
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_dir, "per_class_accuracy_hist.png"))
+        plt.close()
+
+        # worst 20
+        worst20 = rows_sorted[:20]
+        plt.figure(figsize=(12, 6))
+        plt.bar(range(len(worst20)), [x["accuracy"] for x in worst20])
+        plt.xticks(range(len(worst20)), [x["class_name"] for x in worst20], rotation=90)
+        plt.ylabel("Accuracy")
+        plt.title("Worst 20 Classes")
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_dir, "worst_20_classes.png"))
+        plt.close()
+
+        # best 20
+        best20 = rows_sorted[-20:]
+        plt.figure(figsize=(12, 6))
+        plt.bar(range(len(best20)), [x["accuracy"] for x in best20])
+        plt.xticks(range(len(best20)), [x["class_name"] for x in best20], rotation=90)
+        plt.ylabel("Accuracy")
+        plt.title("Best 20 Classes")
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_dir, "best_20_classes.png"))
+        plt.close()
+
+        # frequency vs accuracy
+        plt.figure(figsize=(8, 5))
+        plt.scatter(per_class_total_cpu, per_class_acc_cpu, alpha=0.7)
+        plt.xlabel("Samples per class")
+        plt.ylabel("Per-class accuracy")
+        plt.title("Class Frequency vs Accuracy")
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_dir, "freq_vs_acc.png"))
+        plt.close()
+
+        print("\nWorst 20 classes:", flush=True)
+        for row in worst20:
+            print(row, flush=True)
+
+        print("\nBest 20 classes:", flush=True)
+        for row in best20:
+            print(row, flush=True)
+
+        print(f"\nSaved class analysis to: {save_dir}", flush=True)
+
+    return metric_logger.acc1.global_avg, per_class_acc
+
+
+
 def _get_cache_path(filepath):
     import hashlib
 
@@ -1385,7 +1534,7 @@ def main(args):
         model_ema = ExponentialMovingAverage(model_without_ddp, device=device, decay=1.0 - alpha)
 
     if args.resume:
-        checkpoint = torch.load(args.resume, map_location="cpu", weights_only=True)
+        checkpoint = torch.load(args.resume, map_location="cpu", weights_only=False)
         model_without_ddp.load_state_dict(checkpoint["model"])
         if not args.test_only:
             optimizer.load_state_dict(checkpoint["optimizer"])
@@ -1396,14 +1545,31 @@ def main(args):
         if scaler:
             scaler.load_state_dict(checkpoint["scaler"])
 
+    # if args.test_only:
+    #     # We disable the cudnn benchmarking because it can noticeably affect the accuracy
+    #     torch.backends.cudnn.benchmark = False
+    #     torch.backends.cudnn.deterministic = True
+    #     if model_ema:
+    #         evaluate(model_ema, is_dtp, criterion, data_loader_test, device=device, log_suffix="EMA")
+    #     else:
+    #         evaluate(model, is_dtp, criterion, data_loader_test, device=device)
+    #     return
+
     if args.test_only:
-        # We disable the cudnn benchmarking because it can noticeably affect the accuracy
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
-        if model_ema:
-            evaluate(model_ema, is_dtp, criterion, data_loader_test, device=device, log_suffix="EMA")
-        else:
-            evaluate(model, is_dtp, criterion, data_loader_test, device=device)
+        eval_model = model_ema if model_ema is not None else model
+        evaluate_with_class_stats(
+            eval_model,
+            is_dtp,
+            criterion,
+            data_loader_test,
+            device=device,
+            num_classes=num_classes,
+            class_names=dataset.classes,
+            print_freq=args.print_freq,
+            save_dir="/users/PAS2912/yusenpeng/DRIP/",
+        )
         return
 
     print("Start training")
