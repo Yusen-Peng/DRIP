@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=Apr16_7B_finetune_DEBUG_FLASH
-#SBATCH --output=Apr16_7B_finetune_DEBUG_FLASH.log
-#SBATCH --time=01:00:00
+#SBATCH --job-name=Apr16_7B_finetune_DEBUG_full_cycle
+#SBATCH --output=Apr16_7B_finetune_DEBUG_full_cycle.log
+#SBATCH --time=85:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=debug-nextgen
+#SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -32,19 +32,19 @@ deepspeed src/task3_llava.py \
     --mm_projector_type mlp2x_gelu \
     --tf32 True \
     --bf16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_pretrain/checkpoint-460/mm_projector.bin \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_pretrain/checkpoint-850/mm_projector.bin \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DEBUG_FT_460 \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DEBUG_FT_850 \
     --num_train_epochs 1 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 32 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 50000 \
-    --save_total_limit 1 \
+    --save_steps 15 \
+    --save_total_limit 2 \
     --learning_rate 2e-5 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \

@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=Apr16_7B_pretrain_FLASH_round7
-#SBATCH --output=Apr16_7B_pretrain_FLASH_round7.txt
-#SBATCH --time=01:00:00
+#SBATCH --job-name=Apr16_7B_pretrain_FLASH_round13
+#SBATCH --output=Apr16_7B_pretrain_FLASH_round13.txt
+#SBATCH --time=10:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=debug-nextgen
+#SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --account=PAS2836
