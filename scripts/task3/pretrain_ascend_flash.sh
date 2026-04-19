@@ -1,12 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=Apr16_7B_pretrain_FLASH_round13
-#SBATCH --output=Apr16_7B_pretrain_FLASH_round13.txt
-#SBATCH --time=10:00:00
+#SBATCH --job-name=Apr16_7B_pretrain_FLASH_round15
+#SBATCH --output=Apr16_7B_pretrain_FLASH_round15.txt
+#SBATCH --time=05:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
+#SBATCH --mem=128G
 #SBATCH --account=PAS2836
 
 module load miniconda3/24.1.2-py310

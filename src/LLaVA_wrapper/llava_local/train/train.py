@@ -41,6 +41,8 @@ from src.LLaVA_wrapper.llava_local.model import *
 from src.LLaVA_wrapper.llava_local.mm_utils import tokenizer_image_token
 
 from PIL import Image
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 local_rank = None
