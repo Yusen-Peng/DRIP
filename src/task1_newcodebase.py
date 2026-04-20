@@ -1122,26 +1122,26 @@ def evaluate_with_class_stats(model, is_dtp: bool, criterion, data_loader, devic
         plt.savefig(os.path.join(save_dir, "per_class_accuracy_hist.png"))
         plt.close()
 
-        # worst 20
-        worst20 = rows_sorted[:20]
+        # worst 30 classes
+        worst30 = rows_sorted[:30]
         plt.figure(figsize=(12, 6))
-        plt.bar(range(len(worst20)), [x["accuracy"] for x in worst20])
-        plt.xticks(range(len(worst20)), [x["class_name"] for x in worst20], rotation=90)
+        plt.bar(range(len(worst30)), [x["accuracy"] for x in worst30])
+        plt.xticks(range(len(worst30)), [x["class_name"] for x in worst30], rotation=90)
         plt.ylabel("Accuracy")
-        plt.title("Worst 20 Classes")
+        plt.title("Worst 30 Classes")
         plt.tight_layout()
-        plt.savefig(os.path.join(save_dir, "worst_20_classes.png"))
+        plt.savefig(os.path.join(save_dir, "worst_30_classes.png"))
         plt.close()
 
-        # best 20
-        best20 = rows_sorted[-20:]
+        # best 30 classes
+        best30 = rows_sorted[-30:]
         plt.figure(figsize=(12, 6))
-        plt.bar(range(len(best20)), [x["accuracy"] for x in best20])
-        plt.xticks(range(len(best20)), [x["class_name"] for x in best20], rotation=90)
+        plt.bar(range(len(best30)), [x["accuracy"] for x in best30])
+        plt.xticks(range(len(best30)), [x["class_name"] for x in best30], rotation=90)
         plt.ylabel("Accuracy")
-        plt.title("Best 20 Classes")
+        plt.title("Best 30 Classes")
         plt.tight_layout()
-        plt.savefig(os.path.join(save_dir, "best_20_classes.png"))
+        plt.savefig(os.path.join(save_dir, "best_30_classes.png"))
         plt.close()
 
         # frequency vs accuracy
@@ -1154,17 +1154,39 @@ def evaluate_with_class_stats(model, is_dtp: bool, criterion, data_loader, devic
         plt.savefig(os.path.join(save_dir, "freq_vs_acc.png"))
         plt.close()
 
-        print("\nWorst 20 classes:", flush=True)
-        for row in worst20:
+        print("\nWorst 30 classes:", flush=True)
+        for row in worst30:
             print(row, flush=True)
 
-        print("\nBest 20 classes:", flush=True)
-        for row in best20:
+        print("\nBest 30 classes:", flush=True)
+        for row in best30:
             print(row, flush=True)
 
         print(f"\nSaved class analysis to: {save_dir}", flush=True)
 
     return metric_logger.acc1.global_avg, per_class_acc
+
+
+def get_imagenet_classname_mapping(dataset):
+    import urllib.request
+
+    # load official mapping
+    url = "https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"
+    class_names = urllib.request.urlopen(url).read().decode("utf-8").splitlines()
+
+    # dataset.classes = list of WNIDs in order
+    wnids = dataset.classes
+
+    # map index → class name
+    idx_to_name = {i: class_names[i] for i in range(len(class_names))}
+
+    # final mapping: wnid → readable name
+    wnid_to_name = {wnids[i]: idx_to_name[i] for i in range(len(wnids))}
+
+    return wnid_to_name
+
+
+
 
 
 
@@ -1559,6 +1581,11 @@ def main(args):
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
         eval_model = model_ema if model_ema is not None else model
+
+        # explicit mapping from wnid → readable class name
+        wnid_to_name = get_imagenet_classname_mapping(dataset)
+        class_names = [wnid_to_name[wnid] for wnid in dataset.classes]
+
         evaluate_with_class_stats(
             eval_model,
             is_dtp,
@@ -1566,7 +1593,7 @@ def main(args):
             data_loader_test,
             device=device,
             num_classes=num_classes,
-            class_names=dataset.classes,
+            class_names=class_names,
             print_freq=args.print_freq,
             save_dir="/users/PAS2912/yusenpeng/DRIP/",
         )

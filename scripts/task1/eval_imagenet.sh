@@ -18,7 +18,9 @@ export MASTER_PORT=$((12001 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-torchrun --nproc_per_node=1 src/task1_newcodebase.py \
+torchrun --nproc_per_node=1 \
+    --master_port=$MASTER_PORT \
+    src/task1_newcodebase.py \
     --device cuda \
     --batch-size 64 \
     --workers 16 \
