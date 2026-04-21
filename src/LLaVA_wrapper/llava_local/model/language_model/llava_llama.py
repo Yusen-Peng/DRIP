@@ -70,6 +70,8 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
         return_dict: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None
     ) -> Union[Tuple, CausalLMOutputWithPast]:
+        
+        boundary_loss = None
 
         if inputs_embeds is None:
             (
@@ -78,7 +80,8 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
                 attention_mask,
                 past_key_values,
                 inputs_embeds,
-                labels
+                labels,
+                boundary_loss,
             ) = self.prepare_inputs_labels_for_multimodal(
                 input_ids,
                 position_ids,
@@ -90,7 +93,20 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
                 inference=False # during forward(), we do training mode
             )
 
-        return super().forward(
+        # return super().forward(
+        #     input_ids=input_ids,
+        #     attention_mask=attention_mask,
+        #     position_ids=position_ids,
+        #     past_key_values=past_key_values,
+        #     inputs_embeds=inputs_embeds,
+        #     labels=labels,
+        #     use_cache=use_cache,
+        #     output_attentions=output_attentions,
+        #     output_hidden_states=output_hidden_states,
+        #     return_dict=return_dict,
+        #     cache_position=cache_position
+        # )
+        outputs = super().forward(
             input_ids=input_ids,
             attention_mask=attention_mask,
             position_ids=position_ids,
@@ -103,6 +119,22 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
             return_dict=return_dict,
             cache_position=cache_position
         )
+
+        if boundary_loss is not None and outputs.loss is not None:
+            boundary_loss_weight = getattr(self.config, "boundary_loss_weight", 1.0)
+            lm_loss = outputs.loss
+            total_loss = lm_loss + boundary_loss_weight * boundary_loss
+
+            if return_dict is False:
+                outputs = (total_loss,) + outputs[1:]
+            else:
+                outputs.loss = total_loss
+                outputs.boundary_loss = boundary_loss.detach()
+                outputs.lm_loss = lm_loss.detach()
+
+        return outputs
+
+
 
     @torch.no_grad()
     def generate(
@@ -124,7 +156,8 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
                 attention_mask,
                 _,
                 inputs_embeds,
-                _
+                _,
+                _,
             ) = self.prepare_inputs_labels_for_multimodal(
                 inputs,
                 position_ids,
