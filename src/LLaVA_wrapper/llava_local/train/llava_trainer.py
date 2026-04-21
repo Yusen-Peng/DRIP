@@ -14,7 +14,8 @@ from transformers.trainer import (
     ALL_LAYERNORM_LAYERS,
     logger,
 )
-from typing import List, Optional
+from typing import Dict, List, Optional
+from transformers.utils import is_torch_xla_available
 
 
 def maybe_zero_3(param, ignore_status=False, name=None):
@@ -487,13 +488,63 @@ class LLaVATrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
 
-        logs = {}
+        # Store the latest boundary loss and LM loss for logging purposes
+        self._latest_boundary_loss = None
+        self._latest_lm_loss = None
+
         if hasattr(outputs, "boundary_loss") and outputs.boundary_loss is not None:
-            logs["boundary_loss"] = outputs.boundary_loss.item()
+            self._latest_boundary_loss = outputs.boundary_loss.detach().float().item()
+
         if hasattr(outputs, "lm_loss") and outputs.lm_loss is not None:
-            logs["lm_loss"] = outputs.lm_loss.item()
-        if logs:
-            self.log(logs)
+            self._latest_lm_loss = outputs.lm_loss.detach().float().item()
 
         return (loss, outputs) if return_outputs else loss
+
+
+    def _maybe_log_save_evaluate(self, tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval):
+        if self.control.should_log and self.state.global_step > self._globalstep_last_logged:
+            if is_torch_xla_available():
+                # import torch_xla.core.xla_model as xm
+                # xm.mark_step()
+                pass
+
+            logs: Dict[str, float] = {}
+
+            # all_gather + mean() to get average loss over all processes
+            tr_loss_scalar = self._nested_gather(tr_loss).mean().item()
+
+            # reset tr_loss to zero
+            tr_loss -= tr_loss
+
+            logs["loss"] = round(tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
+            if grad_norm is not None:
+                logs["grad_norm"] = grad_norm.detach().item() if isinstance(grad_norm, torch.Tensor) else grad_norm
+            logs["learning_rate"] = self._get_learning_rate()
+
+            if getattr(self, "_latest_boundary_loss", None) is not None:
+                logs["latest_boundary_loss"] = self._latest_boundary_loss
+            if getattr(self, "_latest_lm_loss", None) is not None:
+                logs["latest_lm_loss"] = self._latest_lm_loss
+
+            self._total_loss_scalar += tr_loss_scalar
+            self._globalstep_last_logged = self.state.global_step
+            self.store_flos()
+
+            self.log(logs)
+
+        metrics = None
+        if self.control.should_evaluate:
+            metrics = self.evaluate(ignore_keys=ignore_keys_for_eval)
+            self._report_to_hp_search(trial, self.state.global_step, metrics)
+
+            # Run delayed LR scheduler now that metrics are populated
+            if isinstance(self.lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                metric_to_check = self.args.metric_for_best_model
+                if not metric_to_check.startswith("eval_"):
+                    metric_to_check = f"eval_{metric_to_check}"
+                self.lr_scheduler.step(metrics[metric_to_check])
+
+        if self.control.should_save:
+            self._save_checkpoint(model, trial, metrics=metrics)
+            self.control = self.callback_handler.on_save(self.args, self.state, self.control)
 

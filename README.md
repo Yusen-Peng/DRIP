@@ -155,7 +155,8 @@ sbatch scripts/task3/pretrain_ascend_flash.sh
 ### finetuning/VQA SFT
 
 ```bash
-sbatch scripts/task3/finetune.sh
+# ascend with flash attention
+sbatch scripts/task3/finetune_ascend_flash.sh
 ```
 
 

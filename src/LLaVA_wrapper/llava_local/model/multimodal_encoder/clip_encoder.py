@@ -282,8 +282,6 @@ class CLIPVisionTower(nn.Module):
                     else:
                         image_features = self._merge_patch_tokens(image_features, inference=True)
             
-            # # TYPE DEBUG
-            # print(f"🍑🍑🍑 [DEBUG] image_features dtype: {image_features.dtype}, device: {image_features.device}", flush=True)
             return image_features
 
     @property
