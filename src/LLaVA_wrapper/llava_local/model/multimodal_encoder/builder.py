@@ -10,13 +10,12 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             "ViT": original model checkpoint
             "Fixed": fixed pooling
             "PruMerge": LLaVA-PruMerge
-            "ToME": ToME (to be added)
-            "DRIP": our design (to be implemented)
+            "DRIP": our design
     """
 
-    MERGE_STRATEGY = "Fixed"
+    MERGE_STRATEGY = "DRIP"
     # 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
-    COMPRESSION_RATE = 0.25
+    COMPRESSION_RATE = 0.125
     ############################################################
 
 

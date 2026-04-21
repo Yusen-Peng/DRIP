@@ -89,6 +89,11 @@ class CLIPVisionTower(nn.Module):
                 threshold=0.5,
                 smart_init=False
             )
+            print(f"🐰🐰🐰 [INFO] Using DRIP merge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens.")
+            print("🌼🌼🌼 Boundary Predictor Params ---")
+            for name, p in self.boundary_predictor.named_parameters():
+                print(f"{name}: requires_grad={p.requires_grad}, shape={tuple(p.shape)}")
+
         elif self.merge_strategy == "Fixed":
             assert self.compression_rate is not None, "compression_rate must be provided for Fixed merge strategy."
             width = self.vision_tower.config.hidden_size

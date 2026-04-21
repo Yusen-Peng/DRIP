@@ -431,32 +431,7 @@ class LLaVATrainer(Trainer):
                 logger.info(f"skipped: {skipped/2**20}M params")
 
         return self.optimizer
-
-    # def _save_checkpoint(self, model, trial, metrics=None):
-    #     if getattr(self.args, 'tune_mm_mlp_adapter', False):
-    #         from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
-    #         checkpoint_folder = f"{PREFIX_CHECKPOINT_DIR}-{self.state.global_step}"
-
-    #         run_dir = self._get_output_dir(trial=trial)
-    #         output_dir = os.path.join(run_dir, checkpoint_folder)
-
-    #         # Only save Adapter
-    #         keys_to_match = ['mm_projector', 'vision_resampler']
-    #         if getattr(self.args, "use_im_start_end", False):
-    #             keys_to_match.extend(['embed_tokens', 'embed_in'])
-
-    #         weight_to_save = get_mm_adapter_state_maybe_zero_3(self.model.named_parameters(), keys_to_match)
-
-    #         if self.args.local_rank == 0 or self.args.local_rank == -1:
-    #             self.model.config.save_pretrained(output_dir)
-    #             torch.save(weight_to_save, os.path.join(output_dir, f'mm_projector.bin'))
-            
-    #         self.state.save_to_json(os.path.join(output_dir, "trainer_state.json"))
-
-    #     else:
-    #         super(LLaVATrainer, self)._save_checkpoint(model, trial, metrics)
-
-
+    
     def _save_checkpoint(self, model, trial, metrics=None):
         super()._save_checkpoint(model, trial, metrics)
 
@@ -475,8 +450,17 @@ class LLaVATrainer(Trainer):
                 self.model.named_parameters(), keys_to_match
             )
 
+            # save DRIP-specific weights separately
+            drip_keys_to_match = ["boundary_predictor", "null_token"]
+            drip_weight_to_save = get_mm_adapter_state_maybe_zero_3(
+                self.model.named_parameters(), drip_keys_to_match
+            )
+
             if self.args.local_rank in (0, -1):
                 torch.save(weight_to_save, os.path.join(output_dir, "mm_projector.bin"))
+                # only save if DRIP tensors exist
+                if len(drip_weight_to_save) > 0:
+                    torch.save(drip_weight_to_save, os.path.join(output_dir, "drip.bin"))
 
 
     def _save(self, output_dir: Optional[str] = None, state_dict=None):

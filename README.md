@@ -152,6 +152,12 @@ sbatch scripts/task3/pretrain_ascend_flash.sh
 # anvil
 ```
 
+double check where the boundary predictor is saved:
+
+```bash
+python -c "import torch; sd=torch.load('/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_TEST_DRIP/checkpoint-40/global_step40/mp_rank_00_model_states.pt', map_location='cpu'); print([k for k in sd['module'].keys() if 'boundary_predictor' in k])"
+```
+
 ### finetuning/VQA SFT
 
 ```bash
