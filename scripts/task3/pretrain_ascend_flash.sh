@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Apr16_7B_pretrain_FLASH_round16
-#SBATCH --output=Apr16_7B_pretrain_FLASH_round16.txt
-#SBATCH --time=05:00:00
+#SBATCH --job-name=Apr16_7B_pretrain_FLASH_round17
+#SBATCH --output=Apr16_7B_pretrain_FLASH_round17.txt
+#SBATCH --time=03:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=nextgen

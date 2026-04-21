@@ -483,3 +483,17 @@ class LLaVATrainer(Trainer):
             pass
         else:
             super(LLaVATrainer, self)._save(output_dir, state_dict)
+
+    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+        loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
+
+        logs = {}
+        if hasattr(outputs, "boundary_loss") and outputs.boundary_loss is not None:
+            logs["boundary_loss"] = outputs.boundary_loss.item()
+        if hasattr(outputs, "lm_loss") and outputs.lm_loss is not None:
+            logs["lm_loss"] = outputs.lm_loss.item()
+        if logs:
+            self.log(logs)
+
+        return (loss, outputs) if return_outputs else loss
+

@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Apr15_VQAv2_fixed_8x
-#SBATCH --output=Apr15_VQAv2_fixed_8x.txt
-#SBATCH --time=08:00:00
+#SBATCH --job-name=Apr20_VQAv2_fixed_8x
+#SBATCH --output=Apr20_VQAv2_fixed_8x.txt
+#SBATCH --time=07:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=nextgen

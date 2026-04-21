@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr14_wild_llava13B
-#SBATCH --output=Apr14_wild_llava13B.txt
+#SBATCH --job-name=Apr20_wild_fixed_8x
+#SBATCH --output=Apr20_wild_fixed_8x.txt
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,13 +24,13 @@ set -a
 source /users/PAS2912/yusenpeng/DRIP/.env
 set +a
 
-VERSION="llava13B"
+VERSION="fixed_8x"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl
 
 python src/model_vqa.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-13b-local \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/images \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl \
