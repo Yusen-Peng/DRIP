@@ -875,6 +875,18 @@ def save_vision_tower(vt_core, out_path, local_rank=-1):
 
 
 
+def save_drip_state(model: LlavaLlamaForCausalLM, output_dir):
+    named_params = list(model.named_parameters())
+    drip_keys_to_match = ["boundary_predictor", "null_token"]
+    drip_weight_to_save = get_mm_adapter_state_maybe_zero_3(
+        named_params, drip_keys_to_match
+    )
+    if len(drip_weight_to_save) > 0:
+        torch.save(drip_weight_to_save, os.path.join(output_dir, "drip.bin"))
+        print(f"🌊 Saved DRIP weights to {os.path.join(output_dir, 'drip.bin')}", flush=True)
+    else:
+        print("🌊 No DRIP weights found to save.", flush=True)
+
 def train(attn_implementation=None):
     global local_rank
     print(f"🫁🫁🫁 {attn_implementation} 🫁🫁🫁", flush=True)
@@ -927,9 +939,6 @@ def train(attn_implementation=None):
             # config.model_type = "llava_llama"  # patching for HuggingFace logic
             # config.parallelization_style = "none"  # fix for post_init crash
 
-            # print("🔥"*20)
-            # print(config)
-            # print("🔥"*20)
             model = LlavaLlamaForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
                 cache_dir=training_args.cache_dir,
@@ -1060,17 +1069,6 @@ def train(attn_implementation=None):
         training_args.use_im_start_end = model_args.mm_use_im_start_end
         model.config.mm_use_im_patch_token = model_args.mm_use_im_patch_token
         model.initialize_vision_tokenizer(model_args, tokenizer=tokenizer)
-    
-
-        ###################################################################################################
-        # FIXME: we have the option to also FINETUNE THE VISION TOWER
-        # for p in model.get_model().vision_tower.parameters():
-        #     p.requires_grad = True
-        
-        # for p in model.get_model().vision_tower.vision_tower.boundary_predictor.parameters():
-        #     p.requires_grad = True
-
-
 
         
         # FIXME: check if it's frozen or trainable
@@ -1144,9 +1142,15 @@ def train(attn_implementation=None):
             model.config.save_pretrained(training_args.output_dir)
             model.save_pretrained(training_args.output_dir, state_dict=state_dict)
             torch.save(non_lora_state_dict, os.path.join(training_args.output_dir, 'non_lora_trainables.bin'))
+            
+            save_drip_state(model, training_args.output_dir)
+
     else:
         safe_save_model_for_hf_trainer(trainer=trainer,
                                        output_dir=training_args.output_dir)
+        if training_args.local_rank == 0 or training_args.local_rank == -1:
+            
+            save_drip_state(model, training_args.output_dir)
 
 
     ddp_barrier()  # Barrier #1: everyone finished Trainer/HF/DS saving

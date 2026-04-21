@@ -40,7 +40,7 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 32 \
     --save_strategy "steps" \
-    --save_steps 3 \
+    --save_steps 5 \
     --save_total_limit 2 \
     --learning_rate 1e-3 \
     --weight_decay 0. \
