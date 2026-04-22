@@ -12,9 +12,6 @@ sys.path.insert(0, PROJECT_ROOT)
 
 from src.open_clip_local.BP import BoundaryPredictor, downsample
 
-
-####################################################################
-# copy pasted from LLaVA-PruMerge
 def complement_idx(idx, dim):
     a = torch.arange(dim, device=idx.device)
     ndim = idx.ndim
@@ -37,7 +34,7 @@ def hook_k(module, input, output):
 def hook_q(module, input, output):
     outputs['desired_q'] = output
 
-####################################################################
+
 
 class CLIPVisionTower(nn.Module):
     def __init__(self, 
@@ -45,12 +42,14 @@ class CLIPVisionTower(nn.Module):
             args,
             merge_strategy="ViT",
             compression_rate=None, # None or a float number
+            drip_weight_path=None,
             delay_load=False):
         super().__init__()
         self.is_loaded = False
         self.vision_tower_name = vision_tower
         self.merge_strategy = merge_strategy
         self.compression_rate = compression_rate
+        self.drip_weight_path = drip_weight_path
         self.select_layer = args.mm_vision_select_layer
         self.select_feature = getattr(args, 'mm_vision_select_feature', 'patch')
 
@@ -60,6 +59,30 @@ class CLIPVisionTower(nn.Module):
             self.load_model()
         else:
             self.cfg_only = CLIPVisionConfig.from_pretrained(self.vision_tower_name)
+    
+
+    def load_drip_weights(self, drip_weight_path):
+        print(f"🌊🌊🌊 [INFO] Loading DRIP weights from {drip_weight_path}")
+        sd = torch.load(drip_weight_path, map_location="cpu")
+        bp_prefix = "model.vision_tower.boundary_predictor."
+        null_key = "model.vision_tower.null_token"
+        bp_sd = {k[len(bp_prefix):]: v for k, v in sd.items() if k.startswith(bp_prefix)}
+        missing, unexpected = self.boundary_predictor.load_state_dict(bp_sd, strict=True)
+        print("🌊🌊🌊 [INFO] Loaded BP keys:")
+        for k in bp_sd.keys():
+            print(f"    {k}")
+
+        if null_key in sd:
+            with torch.no_grad():
+                self.null_token.copy_(sd[null_key])
+            print("🌊🌊🌊 [INFO] Loaded null_token")
+        else:
+            print("⚠️ [INFO] null_token not found in drip.bin")
+        if missing:
+            print(f"⚠️ [INFO] Missing BP keys: {missing}")
+        if unexpected:
+            print(f"⚠️ [INFO] Unexpected BP keys: {unexpected}")
+        return missing, unexpected
 
 
     def load_model(self, device_map=None):
@@ -90,9 +113,13 @@ class CLIPVisionTower(nn.Module):
                 smart_init=False
             )
             print(f"🐰🐰🐰 [INFO] Using DRIP merge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens.")
-            print("🌼🌼🌼 Boundary Predictor Params ---")
-            for name, p in self.boundary_predictor.named_parameters():
-                print(f"{name}: requires_grad={p.requires_grad}, shape={tuple(p.shape)}")
+            
+            if self.drip_weight_path is not None:
+                missing, unexpected = self.load_drip_weights(self.drip_weight_path)
+                assert len(missing) == 0, f"Missing keys when loading DRIP weights: {missing}"
+                assert len(unexpected) == 0, f"Unexpected keys when loading DRIP weights: {unexpected}"
+                print(f"🦄🦄🦄 [INFO] Loaded DRIP weights from {self.drip_weight_path}")
+
 
         elif self.merge_strategy == "Fixed":
             assert self.compression_rate is not None, "compression_rate must be provided for Fixed merge strategy."

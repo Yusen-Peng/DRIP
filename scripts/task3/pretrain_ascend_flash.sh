@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr20_7B_TEST_DRIP
-#SBATCH --output=Apr20_7B_TEST_DRIP.txt
+#SBATCH --job-name=Apr20_7B_TEST_DRIP_resume
+#SBATCH --output=Apr20_7B_TEST_DRIP_resume.txt
 #SBATCH --time=00:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
