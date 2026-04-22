@@ -1056,6 +1056,15 @@ def train(attn_implementation=None):
             for p in model.get_model().mm_projector.parameters():
                 p.requires_grad = True
 
+            # make sure that BP is trainable during training
+            vt = model.get_model().vision_tower
+            if hasattr(vt, 'boundary_predictor'):
+                for p in vt.boundary_predictor.parameters():
+                    p.requires_grad = True
+            if hasattr(vt, 'null_token'):
+                vt.null_token.requires_grad = True
+
+
         model.config.freeze_mm_mlp_adapter = training_args.freeze_mm_mlp_adapter
         if training_args.freeze_mm_mlp_adapter:
             for p in model.get_model().mm_projector.parameters():
