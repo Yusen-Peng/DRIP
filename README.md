@@ -171,6 +171,18 @@ sbatch scripts/task3/finetune_ascend_flash.sh
 ```
 
 
+## LLaVA boundary visualization
+
+For LLaVA visualization, a GPU is definietely needed:
+
+```bash
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00
+module load miniconda3/24.1.2-py310
+conda activate DRIP_flash
+python src/boundary_visual_LLaVA.py
+```
+
+
 ## Results
 
 ![alt text](results/llava_7B_results.png)
