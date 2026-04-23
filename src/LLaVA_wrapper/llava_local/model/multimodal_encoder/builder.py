@@ -13,7 +13,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             "DRIP": our design
     """
 
-    MERGE_STRATEGY = "DRIP"
+    MERGE_STRATEGY = "ViT"
     # 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
     COMPRESSION_RATE = 0.125
     DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_TEST_DRIP/checkpoint-60/drip.bin"

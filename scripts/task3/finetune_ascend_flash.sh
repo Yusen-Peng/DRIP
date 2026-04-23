@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Apr20_7B_finetune_FLASH_round1
-#SBATCH --output=Apr20_7B_finetune_FLASH_round1.log
-#SBATCH --time=70:00:00
+#SBATCH --job-name=Apr23_7B_finetune_FLASH_ALL_ONCE
+#SBATCH --output=Apr23_7B_finetune_FLASH_ALL_ONCE.log
+#SBATCH --time=85:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=nextgen
@@ -36,7 +36,7 @@ deepspeed src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE \
     --num_train_epochs 1 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \

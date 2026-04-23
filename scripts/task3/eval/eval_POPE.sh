@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr20_POPE_fixed_8x
-#SBATCH --output=Apr20_POPE_fixed_8x.txt
+#SBATCH --job-name=Apr23_POPE_7B_training_reproduced
+#SBATCH --output=Apr23_POPE_7B_training_reproduced.txt
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,14 +17,15 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="fixed_8x"
+VERSION="7B_training_reproduced"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/${VERSION}.jsonl
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_lora \
+    --model-base lmsys/vicuna-7b-v1.5 \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/llava_pope_test.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/val2014 \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/${VERSION}.jsonl \

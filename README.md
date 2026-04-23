@@ -152,17 +152,6 @@ sbatch scripts/task3/pretrain_ascend_flash.sh
 # anvil
 ```
 
-sanity check on the saved boundary predictor:
-
-```bash
-python -c "
-import torch
-sd=torch.load('/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_TEST_DRIP/checkpoint-30/drip.bin', map_location='cpu')
-for k, v in sd.items():
-    print(f'{k:70s} shape={tuple(v.shape)} mean={v.float().mean():.4f} std={v.float().std(unbiased=False):.4f} min={v.min():.4f} max={v.max():.4f}')
-"
-```
-
 ### finetuning/VQA SFT
 
 ```bash
