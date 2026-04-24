@@ -119,6 +119,8 @@ class CLIPVisionTower(nn.Module):
                 assert len(missing) == 0, f"Missing keys when loading DRIP weights: {missing}"
                 assert len(unexpected) == 0, f"Unexpected keys when loading DRIP weights: {unexpected}"
                 print(f"🦄🦄🦄 [INFO] Loaded DRIP weights from {self.drip_weight_path}")
+            else:
+                print(f"🐴🐴🐴 [INFO] No DRIP weights provided, initializing DRIP modules from scratch.")
 
 
         elif self.merge_strategy == "Fixed":

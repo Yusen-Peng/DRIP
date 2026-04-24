@@ -65,8 +65,8 @@ examples:
 | ---------- | -------------- |
 | imagenet_DRIP_4x_01_warmup2 | model_299.pth |
 | ![alt text](/src/boundary_vis/w2_4x_boundaries.png) | ![alt text](/src/boundary_vis/w2_4x_attention.png) |
-| imagenet_DRIP_4x_half_LR_no_warmup | model_299.pth |
-| ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_overlay.png) | ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_attention_overlay.png) |
+<!-- | imagenet_DRIP_4x_half_LR_no_warmup | model_299.pth |
+| ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_overlay.png) | ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_attention_overlay.png) | -->
 
 
 ## LLaVA
@@ -149,7 +149,6 @@ sbatch test_flash_attn.sh
 ```bash
 # ascend with flash attention
 sbatch scripts/task3/pretrain_ascend_flash.sh
-# anvil
 ```
 
 ### finetuning/VQA SFT
@@ -171,10 +170,9 @@ conda activate DRIP_flash
 python src/boundary_visual_LLaVA.py
 ```
 
+visualization examples:
 
-## Results
-
-![alt text](results/llava_7B_results.png)
+![alt text](src/boundary_vis/LLaVA_results/llava_drip_boundaries_2x5.png)
 
 
 ## Contacts

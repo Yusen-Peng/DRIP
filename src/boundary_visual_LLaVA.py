@@ -208,7 +208,8 @@ def visualize_original_10_images_2x5(
 
 
 def main():
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_TEST_DRIP/checkpoint-115/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/checkpoint-80/drip.bin"
+    COMPRESSION_RATE = 0.25
 
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -216,7 +217,7 @@ def main():
         vision_tower_name="openai/clip-vit-large-patch14-336",
         mm_vision_select_layer=-1,
         mm_vision_select_feature="patch",
-        compression_rate=0.125,
+        compression_rate=COMPRESSION_RATE,
         drip_weight_path=DRIP_WEIGHT_PATH,
         device=device,
     )
