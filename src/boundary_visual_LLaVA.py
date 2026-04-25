@@ -208,12 +208,12 @@ def visualize_original_10_images_2x5(
 
 
 def main():
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
-    COMPRESSION_RATE = 0.25
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
+    # COMPRESSION_RATE = 0.25
 
 
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_2x_pretrain/checkpoint-30/drip.bin"
-    # COMPRESSION_RATE = 0.5
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_2x_pretrain/drip.bin"
+    COMPRESSION_RATE = 0.5
 
 
     device = "cuda" if torch.cuda.is_available() else "cpu"

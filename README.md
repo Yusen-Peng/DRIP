@@ -73,10 +73,10 @@ examples:
 
 ### Instruction
 
-Go to file [`src/LLaVA_wrapper/llava_local/model/multimodal_encoder/builder.py`](src/LLaVA_wrapper/llava_local/model/multimodal_encoder/builder.py) to configure merging strategies(ViT/original, Fixed/fixed pooling, DRIP/dynamic tokenization) and corresponding compression rate (0.5/2x, 0.25/4x, 0.1/10x):
+Go to file [`src/LLaVA_wrapper/llava_local/model/multimodal_encoder/builder.py`](src/LLaVA_wrapper/llava_local/model/multimodal_encoder/builder.py) to configure merging strategies and corresponding compression rate:
 
 ```python
-MERGE_STRATEGY = "Fixed" # "ViT" or "DRIP" "Fixed" and more!
+MERGE_STRATEGY = "Fixed" # "ViT" or "DRIP" or "Fixed" or "PruMerge"
 COMPRESSION_RATE = 0.25
 ```
 
@@ -164,7 +164,7 @@ sbatch scripts/task3/finetune_ascend_flash.sh
 For LLaVA visualization, a GPU is definietely needed:
 
 ```bash
-salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-nextgen --time 00:05:00
 module load miniconda3/24.1.2-py310
 conda activate DRIP_flash
 python src/boundary_visual_LLaVA.py
@@ -172,9 +172,9 @@ python src/boundary_visual_LLaVA.py
 
 ### visualization examples
 
-2x compression:
+2x compression (checkpoint):
 
-TBD
+![alt text](src/boundary_vis/LLaVA_results/2x_pretrain_llava_drip_boundaries_2x5.png)
 
 4x compression:
 

@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr23_MMBench_7B_training_reproduced
-#SBATCH --output=Apr23_MMBench_7B_training_reproduced.txt
+#SBATCH --job-name=Apr25_MMBench_7B_DRIP_lite_4x
+#SBATCH --output=Apr25_MMBench_7B_DRIP_lite_4x.txt
 #SBATCH --time=00:25:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,20 +19,29 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="7B_training_reproduced"
+VERSION="DRIP_lite_4x"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl
 
 python src/model_vqa_mmbench.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_lora \
-    --model-base lmsys/vicuna-7b-v1.5 \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/mmbench_dev_20230712.tsv \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl \
     --single-pred-prompt \
     --temperature 0 \
     --conv-mode vicuna_v1
+
+
+# python src/model_vqa_mmbench.py \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_lora \
+#     --model-base lmsys/vicuna-7b-v1.5 \
+#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/mmbench_dev_20230712.tsv \
+#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl \
+#     --single-pred-prompt \
+#     --temperature 0 \
+#     --conv-mode vicuna_v1
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers_upload/mmbench_dev_20230712
 

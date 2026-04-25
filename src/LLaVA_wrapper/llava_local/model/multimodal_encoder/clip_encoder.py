@@ -149,6 +149,13 @@ class CLIPVisionTower(nn.Module):
 
         elif self.merge_strategy  == "DRIP":
             patch_transposed = patch_tokens.transpose(0, 1)  # [L, B, D]
+
+            if hasattr(self, "boundary_predictor"):
+                self.boundary_predictor.to(device=patch_tokens.device, dtype=patch_tokens.dtype)
+
+            if hasattr(self, "null_token"):
+                self.null_token.data = self.null_token.data.to(device=patch_tokens.device, dtype=patch_tokens.dtype)
+            
             if inference:
                 _, hard_boundaries = self.boundary_predictor.inference(patch_transposed)
             else:

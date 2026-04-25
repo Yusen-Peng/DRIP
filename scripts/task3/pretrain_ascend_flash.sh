@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Apr24_7B_DRIP_2x_pretrain_round1
-#SBATCH --output=Apr24_7B_DRIP_2x_pretrain_round1.txt
-#SBATCH --time=20:00:00
+#SBATCH --job-name=Apr24_7B_DRIP_2x_pretrain_round2
+#SBATCH --output=Apr24_7B_DRIP_2x_pretrain_round2.txt
+#SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=nextgen
