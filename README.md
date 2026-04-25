@@ -170,9 +170,15 @@ conda activate DRIP_flash
 python src/boundary_visual_LLaVA.py
 ```
 
-visualization examples:
+### visualization examples
 
-![alt text](src/boundary_vis/LLaVA_results/llava_drip_boundaries_2x5.png)
+2x compression:
+
+TBD
+
+4x compression:
+
+![alt text](src/boundary_vis/LLaVA_results/4x_pretrain_llava_drip_boundaries_2x5.png)
 
 
 ## Contacts
