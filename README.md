@@ -183,7 +183,7 @@ DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_fi
 For LLaVA visualization, a GPU is definietely needed:
 
 ```bash
-salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-nextgen --time 00:05:00
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-nextgen --time 00:15:00
 module load miniconda3/24.1.2-py310
 conda activate DRIP_flash
 python src/boundary_visual_LLaVA.py
@@ -191,13 +191,17 @@ python src/boundary_visual_LLaVA.py
 
 ### visualization examples
 
-2x compression (checkpoint):
+2x compression after llava pretraining:
 
 ![alt text](src/boundary_vis/LLaVA_results/2x_pretrain_llava_drip_boundaries_2x5.png)
 
-4x compression:
+4x compression after llava pretraining:
 
 ![alt text](src/boundary_vis/LLaVA_results/4x_pretrain_llava_drip_boundaries_2x5.png)
+
+4x compression after llava finetuning (1020 steps for now):
+
+![alt text](src/boundary_vis/LLaVA_results/4x_1020_finetune_llava_drip_boundaries_2x5.png)
 
 
 ### checking if BP changes
