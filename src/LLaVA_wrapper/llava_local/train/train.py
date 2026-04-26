@@ -1056,13 +1056,31 @@ def train(attn_implementation=None):
             for p in model.get_model().mm_projector.parameters():
                 p.requires_grad = True
 
-            # make sure that BP is trainable during training
+            # make sure that BP is trainable during pretraining/alignment
             vt = model.get_model().vision_tower
             if hasattr(vt, 'boundary_predictor'):
                 for p in vt.boundary_predictor.parameters():
                     p.requires_grad = True
             if hasattr(vt, 'null_token'):
                 vt.null_token.requires_grad = True
+        else:
+
+            # FIXME: should we train BP during finetuning?
+            vt = model.get_model().vision_tower
+            if hasattr(vt, 'boundary_predictor'):
+                for p in vt.boundary_predictor.parameters():
+                    p.requires_grad = True
+            if hasattr(vt, 'null_token'):
+                vt.null_token.requires_grad = True
+        
+        vt = model.get_model().vision_tower
+        if hasattr(vt, 'boundary_predictor') and hasattr(vt, 'null_token'):
+            # check if trainable (boundary_predictor and null_token)
+            trainable = any(p.requires_grad for p in vt.boundary_predictor.parameters()) and vt.null_token.requires_grad
+            if trainable:
+                print("🔥🔥🔥 Boundary predictor is trainable.", flush=True)
+            else:
+                print("🥶🥶🥶 Boundary predictor is frozen.", flush=True)
 
 
         model.config.freeze_mm_mlp_adapter = training_args.freeze_mm_mlp_adapter
@@ -1078,14 +1096,6 @@ def train(attn_implementation=None):
         training_args.use_im_start_end = model_args.mm_use_im_start_end
         model.config.mm_use_im_patch_token = model_args.mm_use_im_patch_token
         model.initialize_vision_tokenizer(model_args, tokenizer=tokenizer)
-
-        
-        # FIXME: check if it's frozen or trainable
-        print(f"########## check ##########:", flush=True)
-        vision_trainable = any(p.requires_grad for p in model.get_model().vision_tower.parameters())
-        print(f"the vision tower is trainable: {vision_trainable}", flush=True)
-        print(f"########## check ##########:", flush=True)
-        ###################################################################################################
 
 
     if training_args.bits in [4, 8]:
@@ -1109,27 +1119,6 @@ def train(attn_implementation=None):
                     tokenizer=tokenizer,
                     args=training_args,
                     **data_module)
-    
-
-    # ensure ViT params are in the optimizer groups
-    try:
-        vt_wrapper = model.get_model().vision_tower
-        vt_core = getattr(vt_wrapper, "vision_tower", vt_wrapper)
-        vt_param_ids = {id(p) for p in vt_core.parameters()}
-        # Build optimizer now so we can inspect groups (HF Trainer will do it on first use;
-        # we'll force creation by calling the property)
-        _ = trainer.create_optimizer()
-        n_in_groups = 0
-        for i, g in enumerate(trainer.optimizer.param_groups):
-            ids = {id(p) for p in g["params"]}
-            hit = len(ids & vt_param_ids)
-            if hit:
-                print(f"[check] opt group {i} contains {hit} ViT tensors, wd={g.get('weight_decay')}, lr={g.get('lr')}", flush=True)
-                n_in_groups += hit
-        print(f"[check] total ViT tensors present in optimizer: {n_in_groups}", flush=True)
-    except Exception as e:
-        print("[check] ViT optimizer membership check failed:", e, flush=True)
-
 
 
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):

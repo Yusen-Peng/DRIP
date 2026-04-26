@@ -76,8 +76,9 @@ examples:
 Go to file [`src/LLaVA_wrapper/llava_local/model/multimodal_encoder/builder.py`](src/LLaVA_wrapper/llava_local/model/multimodal_encoder/builder.py) to configure merging strategies and corresponding compression rate:
 
 ```python
-MERGE_STRATEGY = "Fixed" # "ViT" or "DRIP" or "Fixed" or "PruMerge"
+MERGE_STRATEGY = "DRIP" # "ViT" or "DRIP" or "Fixed" or "PruMerge"
 COMPRESSION_RATE = 0.25
+DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
 ```
 
 Additional note: the ViT backbone from LLaVA checkpoint is `openai/clip-vit-large-patch14-336`.

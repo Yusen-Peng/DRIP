@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Apr23_7B_finetune_FLASH_ALL_ONCE
-#SBATCH --output=Apr23_7B_finetune_FLASH_ALL_ONCE.log
-#SBATCH --time=85:00:00
+#SBATCH --job-name=Apr25_7B_finetune_DRIP_train
+#SBATCH --output=Apr25_7B_finetune_DRIP_train.txt
+#SBATCH --time=70:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=nextgen
@@ -32,11 +32,11 @@ deepspeed src/task3_llava.py \
     --mm_projector_type mlp2x_gelu \
     --tf32 True \
     --bf16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_pretrain/mm_projector.bin \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/mm_projector.bin \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train \
     --num_train_epochs 1 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \

@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr25_SQA_DRIP_lite_4x
-#SBATCH --output=Apr25_SQA_DRIP_lite_4x.log
+#SBATCH --job-name=Apr25_SQA_DRIP_lite_2x
+#SBATCH --output=Apr25_SQA_DRIP_lite_2x.log
 #SBATCH --time=0:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,7 +18,7 @@ export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 
-VERSION="DRIP_lite_4x"
+VERSION="DRIP_lite_2x"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
