@@ -200,6 +200,41 @@ python src/boundary_visual_LLaVA.py
 ![alt text](src/boundary_vis/LLaVA_results/4x_pretrain_llava_drip_boundaries_2x5.png)
 
 
+### checking if BP changes
+
+```bash
+python - <<'PY'
+import torch
+a_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
+b_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-1020/drip.bin"
+
+def normalize(sd):
+    out = {}
+    for k, v in sd.items():
+        if "vision_tower.boundary_predictor." in k:
+            nk = k.split("vision_tower.boundary_predictor.", 1)[1]
+            out[nk] = v.detach().float().cpu()
+        elif k.endswith("vision_tower.null_token") or k == "null_token":
+            out["null_token"] = v.detach().float().cpu()
+    return out
+a = normalize(torch.load(a_path, map_location="cpu"))
+b = normalize(torch.load(b_path, map_location="cpu"))
+print("keys A:", sorted(a.keys()))
+print("keys B:", sorted(b.keys()))
+for k in sorted(set(a) & set(b)):
+    x, y = a[k], b[k]
+    d = y - x
+    print(f"\n{k}")
+    print(f"  A norm:     {x.norm().item():.6g}")
+    print(f"  B norm:     {y.norm().item():.6g}")
+    print(f"  diff norm:  {d.norm().item():.6g}")
+    print(f"  rel diff:   {(d.norm() / (x.norm() + 1e-12)).item():.6g}")
+    print(f"  max abs:    {d.abs().max().item():.6g}")
+    print(f"  allclose:   {torch.allclose(x, y)}")
+PY
+```
+
+
 ## Contacts
 
 If you have any questions or suggestions, feel free to contact:
