@@ -60,21 +60,41 @@ class CLIPVisionTower(nn.Module):
         else:
             self.cfg_only = CLIPVisionConfig.from_pretrained(self.vision_tower_name)
     
-
     def load_drip_weights(self, drip_weight_path):
         print(f"🌊🌊🌊 [INFO] Loading DRIP weights from {drip_weight_path}")
         sd = torch.load(drip_weight_path, map_location="cpu")
-        bp_prefix = "model.vision_tower.boundary_predictor."
-        null_key = "model.vision_tower.null_token"
-        bp_sd = {k[len(bp_prefix):]: v for k, v in sd.items() if k.startswith(bp_prefix)}
-        missing, unexpected = self.boundary_predictor.load_state_dict(bp_sd, strict=True)
+
+        bp_anchor = "vision_tower.boundary_predictor."
+        null_suffix = "vision_tower.null_token"
+
+        bp_sd = {}
+        null_tensor = None
+
+        for k, v in sd.items():
+            if bp_anchor in k:
+                # keep only BoundaryPredictor's internal keys:
+                # boundary_predictor.0.weight, boundary_predictor.0.bias, ...
+                new_k = k.split(bp_anchor, 1)[1]
+                bp_sd[new_k] = v
+
+            if k.endswith(null_suffix):
+                null_tensor = v
+
         print("🌊🌊🌊 [INFO] Loaded BP keys:")
         for k in bp_sd.keys():
             print(f"    {k}")
 
-        if null_key in sd:
+        if len(bp_sd) == 0:
+            raise RuntimeError(
+                f"No boundary_predictor weights found in {drip_weight_path}. "
+                f"First keys: {list(sd.keys())[:10]}"
+            )
+
+        missing, unexpected = self.boundary_predictor.load_state_dict(bp_sd, strict=True)
+
+        if null_tensor is not None:
             with torch.no_grad():
-                self.null_token.copy_(sd[null_key])
+                self.null_token.copy_(null_tensor)
             print("🌊🌊🌊 [INFO] Loaded null_token")
         else:
             print("⚠️ [INFO] null_token not found in drip.bin")
@@ -83,7 +103,6 @@ class CLIPVisionTower(nn.Module):
         if unexpected:
             print(f"⚠️ [INFO] Unexpected BP keys: {unexpected}")
         return missing, unexpected
-
 
     def load_model(self, device_map=None):
         if self.is_loaded:

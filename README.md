@@ -152,11 +152,29 @@ sbatch test_flash_attn.sh
 sbatch scripts/task3/pretrain_ascend_flash.sh
 ```
 
+When resuming from an existing checkpoint, **make sure** to update the DRIP weight path `DRIP_WEIGHT_PATH` accordingly:
+
+```python
+DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
+```
+
 ### finetuning/VQA SFT
 
 ```bash
 # ascend with flash attention
 sbatch scripts/task3/finetune_ascend_flash.sh
+```
+
+When resuming from an existing checkpoint, **make sure** to update the DRIP weight path `DRIP_WEIGHT_PATH`
+
+```python
+DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-1020/drip.bin"
+```
+
+**AND** the MLP projector path in the SLURM scripts:
+
+```bash
+--pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-1020/mm_projector.bin \
 ```
 
 
