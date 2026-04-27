@@ -199,9 +199,13 @@ python src/boundary_visual_LLaVA.py
 
 ![alt text](src/boundary_vis/LLaVA_results/4x_pretrain_llava_drip_boundaries_2x5.png)
 
-4x compression after llava finetuning (1020 steps for now):
+4x compression after llava finetuning (2661 steps for now):
 
-![alt text](src/boundary_vis/LLaVA_results/4x_1020_finetune_llava_drip_boundaries_2x5.png)
+![alt text](src/boundary_vis/LLaVA_results/4x_2661_sft_llava_drip_boundaries_2x5.png)
+
+4x compression after full llava finetuning:
+
+TBD
 
 
 ### checking if BP changes
