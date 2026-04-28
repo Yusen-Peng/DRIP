@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=Apr27_7B_finetune_DRIP_train_round3
 #SBATCH --output=Apr27_7B_finetune_DRIP_train_round3.txt
-#SBATCH --time=7:00:00
+#SBATCH --time=1:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=debug-nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
