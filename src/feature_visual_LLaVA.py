@@ -312,7 +312,7 @@ def visualize_feature_diff_side_by_side_10_images(
     mode="2D",  # "1D" or "2D"
     cmap_name="gray",
     titles=None,
-    figsize=(24, 9),
+    figsize=(24, 6),
     dpi=300,
     title_fontsize=10,
 ):
@@ -351,7 +351,7 @@ def visualize_feature_diff_side_by_side_10_images(
         axes[row, col].axis("off")
 
         axes[row, col + 1].imshow(heat, cmap=cmap_name, interpolation="nearest")
-        axes[row, col + 1].set_title(f"{mode} heat", fontsize=title_fontsize)
+        axes[row, col + 1].set_title(f"{mode} feature similarity", fontsize=title_fontsize)
         axes[row, col + 1].axis("off")
 
     # plt.tight_layout(w_pad=0.2, h_pad=0.2)

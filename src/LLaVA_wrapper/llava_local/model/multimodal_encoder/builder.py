@@ -17,7 +17,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     # 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
     COMPRESSION_RATE = 0.25
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-2661/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-2769/drip.bin"
 
     ############################################################
 
