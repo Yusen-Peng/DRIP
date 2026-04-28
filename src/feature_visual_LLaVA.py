@@ -7,9 +7,23 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 import torchvision.transforms.functional as TF
+from sklearn.decomposition import PCA
 PROJECT_ROOT = "/users/PAS2912/yusenpeng/DRIP"
 sys.path.insert(0, PROJECT_ROOT)
 from src.LLaVA_wrapper.llava_local.model.multimodal_encoder.clip_encoder import CLIPVisionTower
+
+
+def compute_pca_pc1_heatmap(patch_tokens, grid_h, grid_w, normalize_tokens=True):
+    x = patch_tokens.float()
+    if normalize_tokens:
+        x = torch.nn.functional.normalize(x, dim=-1)
+    x_np = x.numpy()  # [L, D]
+    pca = PCA(n_components=1)
+    pc1 = pca.fit_transform(x_np).squeeze(-1)  # [L]
+    heat: np.ndarray = minmax_norm(pc1)
+    return heat.reshape(grid_h, grid_w), float(pca.explained_variance_ratio_[0])
+
+
 
 
 def unnormalize_img(
@@ -276,61 +290,42 @@ def compute_feature_difference_2D(patch_tokens, grid_h, grid_w):
     heat = heat / count.clamp_min(1)
     return minmax_norm(heat.numpy())
 
-
-def overlay_heatmap_on_image(img_3chw, heatmap, alpha=0.45, cmap_name="magma"):
-    """
-    img_3chw: processed CLIP image tensor [3, H, W]
-    heatmap: [grid_h, grid_w], normalized 0-1 numpy array
-    """
-    orig = unnormalize_img(img_3chw)
-    orig_pil = TF.to_pil_image(orig).convert("RGB")
-    orig_np = np.array(orig_pil).astype(np.float32) / 255.0
-
-    img_h, img_w = orig_np.shape[:2]
-
-    # resize 24x24 heatmap to image size
-    heat_pil = Image.fromarray((heatmap * 255).astype(np.uint8)).resize(
-        (img_w, img_h),
-        resample=Image.BILINEAR,
-    )
-    heat_resized = np.array(heat_pil).astype(np.float32) / 255.0
-
-    cmap = plt.get_cmap(cmap_name)
-    heat_rgb = cmap(heat_resized)[..., :3]  # drop alpha channel
-
-    overlay = (1 - alpha) * orig_np + alpha * heat_rgb
-    overlay = np.clip(overlay * 255, 0, 255).astype(np.uint8)
-
-    return Image.fromarray(overlay)
-
-
 @torch.no_grad()
 def visualize_feature_diff_side_by_side_10_images(
     model,
     image_paths,
     save_path,
-    mode="2D",  # "1D" or "2D"
+    mode,
     cmap_name="gray",
     titles=None,
-    figsize=(24, 6),
+    figsize=(15, 10),  # taller now
     dpi=300,
     title_fontsize=10,
 ):
     """
     Layout:
-    row 0: img1 orig | img1 heat | img2 orig | img2 heat | ... img5
-    row 1: img6 orig | img6 heat | img7 orig | img7 heat | ... img10
+    row 0: img1 orig | img2 orig | ... img5
+    row 1: img1 heat | img2 heat | ... img5
+    row 2: img6 orig | img7 orig | ... img10
+    row 3: img6 heat | img7 heat | ... img10
     """
     assert len(image_paths) == 10, f"Expected 10 images, got {len(image_paths)}"
 
     if titles is None:
         titles = [os.path.splitext(os.path.basename(p))[0] for p in image_paths]
 
-    fig, axes = plt.subplots(2, 10, figsize=figsize)
+    fig, axes = plt.subplots(4, 5, figsize=figsize)
 
     for idx, p in enumerate(image_paths):
-        row = idx // 5
-        col = (idx % 5) * 2
+        col = idx % 5
+
+        # top group (images 0–4)
+        if idx < 5:
+            orig_row = 0
+            heat_row = 1
+        else:
+            orig_row = 2
+            heat_row = 3
 
         img_tensor = load_img_with_processor(p, model.image_processor)
 
@@ -341,29 +336,35 @@ def visualize_feature_diff_side_by_side_10_images(
 
         if mode == "1D":
             heat = compute_feature_difference_1D(patch_tokens, grid_h, grid_w)
+            heat_title = "1D dissim"
         elif mode == "2D":
             heat = compute_feature_difference_2D(patch_tokens, grid_h, grid_w)
+            heat_title = "2D dissim"
+        elif mode.upper() == "PCA":
+            heat, evr = compute_pca_pc1_heatmap(patch_tokens, grid_h, grid_w)
+            heat_title = f"PCA ({evr * 100:.1f}%)"
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
-        axes[row, col].imshow(orig_pil)
-        axes[row, col].set_title(titles[idx], fontsize=title_fontsize)
-        axes[row, col].axis("off")
+        # ---- ORIGINAL ----
+        axes[orig_row, col].imshow(orig_pil)
+        axes[orig_row, col].set_title(titles[idx], fontsize=title_fontsize)
+        axes[orig_row, col].axis("off")
 
-        axes[row, col + 1].imshow(heat, cmap=cmap_name, interpolation="nearest")
-        axes[row, col + 1].set_title(f"{mode} feature similarity", fontsize=title_fontsize)
-        axes[row, col + 1].axis("off")
+        # ---- HEAT ----
+        axes[heat_row, col].imshow(heat, cmap=cmap_name, interpolation="nearest")
+        axes[heat_row, col].set_title(heat_title, fontsize=title_fontsize)
+        axes[heat_row, col].axis("off")
 
-    # plt.tight_layout(w_pad=0.2, h_pad=0.2)
-    plt.tight_layout(pad=0.2)
-    plt.subplots_adjust(hspace=0.05, wspace=0.05)
+    plt.tight_layout(pad=0.3)
+    plt.subplots_adjust(hspace=0.15, wspace=0.05)
 
     save_dir = os.path.dirname(save_path)
     if save_dir:
         os.makedirs(save_dir, exist_ok=True)
 
     plt.savefig(save_path, bbox_inches="tight", dpi=dpi)
-    print(f"Saved {mode} side-by-side feature-diff figure to: {save_path}")
+    print(f"Saved {mode} 4x5 layout figure to: {save_path}")
     plt.close(fig)
 
 
@@ -398,8 +399,9 @@ def main():
     visualize_feature_diff_side_by_side_10_images(
         model=model,
         image_paths=image_paths,
-        save_path="/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/llava_feature_diff_2D_overlay_2x5.png",
-        mode="2D"
+        save_path="/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/llava_feature_pca_pc1_2x5.png",
+        mode="PCA",
+        cmap_name="gray"
     )
 
 if __name__ == "__main__":

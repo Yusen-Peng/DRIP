@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr27_7B_finetune_DRIP_train_round4
-#SBATCH --output=Apr27_7B_finetune_DRIP_train_round4.txt
+#SBATCH --job-name=Apr27_7B_finetune_DRIP_train_round9
+#SBATCH --output=Apr27_7B_finetune_DRIP_train_round9.txt
 #SBATCH --time=1:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -32,7 +32,7 @@ deepspeed src/task3_llava.py \
     --mm_projector_type mlp2x_gelu \
     --tf32 True \
     --bf16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-2769/mm_projector.bin \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-3300/mm_projector.bin \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \

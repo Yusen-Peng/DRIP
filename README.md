@@ -242,7 +242,7 @@ for k in sorted(set(a) & set(b)):
 PY
 ```
 
-## LLaVA image feature similarity analysis
+## LLaVA image feature analysis
 
 ```bash
 salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-nextgen --time 00:15:00
@@ -250,6 +250,10 @@ module load miniconda3/24.1.2-py310
 conda activate DRIP_flash
 python src/feature_visual_LLaVA.py
 ```
+
+PCA upon 24th-layer features:
+
+![alt text](src/boundary_vis/LLaVA_results/llava_feature_pca_pc1_2x5.png)
 
 
 ## Contacts
