@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr26_wild_LLaVA_7B_FLASH_finetune_ALL_ONCE_lora
-#SBATCH --output=Apr26_wild_LLaVA_7B_FLASH_finetune_ALL_ONCE_lora.txt
+#SBATCH --job-name=Apr29_wild_LLaVA_7B_DRIP_4x_finetune_train_lora
+#SBATCH --output=Apr29_wild_LLaVA_7B_DRIP_4x_finetune_train_lora.txt
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,7 +24,7 @@ set -a
 source /users/PAS2912/yusenpeng/DRIP/.env
 set +a
 
-VERSION="LLaVA_7B_FLASH_finetune_ALL_ONCE_lora"
+VERSION="LLaVA_7B_DRIP_4x_finetune_train_lora"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl
@@ -38,7 +38,7 @@ touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/a
 #     --conv-mode vicuna_v1
 
 python src/model_vqa.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_lora \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora \
     --model-base lmsys/vicuna-7b-v1.5 \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/images \
