@@ -179,6 +179,14 @@ class CLIPVisionTower(nn.Module):
                 _, hard_boundaries = self.boundary_predictor.inference(patch_transposed)
             else:
                 _, hard_boundaries = self.boundary_predictor(patch_transposed)
+            
+
+            """
+                enforce the last token to be a boundary token
+            """
+            last = torch.ones_like(hard_boundaries[:, -1:])
+            hard_boundaries = torch.cat([hard_boundaries[:, :-1], last], dim=1)
+
         else:
             raise ValueError(f'Unknown merge strategy: {self.merge_strategy}')
 

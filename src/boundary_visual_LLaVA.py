@@ -76,6 +76,12 @@ def get_llava_drip_hard_boundaries(model: CLIPVisionTower, img_3chw: torch.Tenso
     patch_transposed = patch_tokens.transpose(0, 1)  # [L, B, D]
     _, hard_boundaries = model.boundary_predictor.inference(patch_transposed, verbose=verbose)
 
+    """
+        enforce the last token to be a boundary token
+    """
+    last = torch.ones_like(hard_boundaries[:, -1:])
+    hard_boundaries = torch.cat([hard_boundaries[:, :-1], last], dim=1)
+
     return hard_boundaries[0].detach().float().cpu(), grid_h, grid_w
 
 
@@ -210,7 +216,10 @@ def visualize_original_10_images_2x5(
 def main():
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora/drip.bin"
+
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_last_force/checkpoint-150/drip.bin" 
+    
     COMPRESSION_RATE = 0.25
 
 

@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=Apr24_7B_DRIP_2x_pretrain_round2
-#SBATCH --output=Apr24_7B_DRIP_2x_pretrain_round2.txt
-#SBATCH --time=3:00:00
+#SBATCH --job-name=Apr29_7B_DRIP_4x_pretrain_last_force_round2
+#SBATCH --output=Apr29_7B_DRIP_4x_pretrain_last_force_round2.txt
+#SBATCH --time=1:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=debug-nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -34,7 +34,7 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_2x_pretrain \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_last_force \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \
