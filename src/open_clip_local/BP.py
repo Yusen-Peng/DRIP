@@ -39,45 +39,6 @@ def downsample(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: torch
     shortened_hidden = torch.einsum('lbd,bls->sbd', hidden, weights)
     return shortened_hidden
 
-
-def downsample_with_indices(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: torch.Tensor):
-    B, L = boundaries.shape
-    _, _, D = hidden.shape
-
-    boundaries = boundaries.to(dtype=torch.long).clone()  # [B, L]
-
-    # Number of segments per example and across the batch
-    seg_counts = boundaries.sum(dim=1)                    # [B]
-    S = int(seg_counts.max().item())
-
-    # If no segments at all in the batch, return a single null segment
-    # FIXME: there is a bug here
-    if S == 0:
-        # shape [1, B, D]
-        return null_group.expand(1, B, D).to(hidden.dtype).to(hidden.device)
-
-    # Build [B, L, S] template of segment indices 0..S-1
-    seg_ids = torch.arange(S, device=boundaries.device).view(1, 1, S)        # [1,1,S]
-    seg_ids = seg_ids.expand(B, L, S)                                        # [B,L,S]
-
-    # Segment index for each token position: 0,0,0,1,1,2,... (per-example)
-    # cumulative_num_boundaries counts boundaries up to and including pos i
-    cumulative = boundaries.cumsum(dim=1)                                    # [B,L]
-    real_segment_index = cumulative - boundaries                             # [B,L]
-
-    # One-hot membership mask: token at (b, l) belongs to segment k iff k == real_segment_index[b,l]
-    membership = (real_segment_index.unsqueeze(-1) == seg_ids).to(hidden.dtype)  # [B,L,S]
-
-    # Normalize over L so each segment’s weights sum to 1
-    denom = membership.sum(dim=1, keepdim=True).clamp_min(1e-9)              # [B,1,S]
-    weights = membership / denom                                             # [B,L,S]
-
-    # Weighted average over tokens -> [S, B, D]
-    shortened_hidden = torch.einsum('lbd,bls->sbd', hidden, weights)
-
-    rep_idx = membership.argmax(dim=1).to(torch.long) # NOTE: the key line
-    return shortened_hidden, rep_idx
-
 class BoundaryPredictor(nn.Module):
     def __init__(self, d_model, d_inner, activation_function,
                  temp, prior, bp_type, threshold=0.5, smart_init=False,
@@ -194,6 +155,67 @@ class BoundaryPredictor(nn.Module):
     https://github.com/goombalab/hnet/blob/main/hnet/modules/dc.py
 """
 
+
+class H_Net(BoundaryPredictor):
+    def __init__(
+        self, d_model, d_inner, activation_function,
+        temp, prior, bp_type, threshold=0.5, smart_init=False,
+        image_size=None, patch_size=None, embed_dim=None,
+        device=None, dtype=None
+    ):
+        super().__init__(
+            d_model=d_model,
+            d_inner=d_inner,
+            activation_function=activation_function,
+            temp=temp,
+            prior=prior,
+            bp_type=bp_type,
+            threshold=threshold,
+            smart_init=smart_init,
+            image_size=image_size,
+            patch_size=patch_size,
+            embed_dim=embed_dim,
+        )
+        factory_kwargs = {"device": device, "dtype": dtype}
+        self.q_proj_layer = nn.Linear(d_model, d_model, bias=False, **factory_kwargs)
+        self.k_proj_layer = nn.Linear(d_model, d_model, bias=False, **factory_kwargs)
+        eye_tensor = torch.eye(d_model, **factory_kwargs)
+        with torch.no_grad():
+            self.q_proj_layer.weight.copy_(eye_tensor)
+            self.k_proj_layer.weight.copy_(eye_tensor)
+        self.q_proj_layer.weight._no_reinit = True
+        self.k_proj_layer.weight._no_reinit = True
+
+    def _compute_keep_prob(self, hidden_states):
+        # hidden_states: [L, B, D]
+        hidden_states = hidden_states.transpose(0, 1)  # [B, L, D]
+        q = F.normalize(self.q_proj_layer(hidden_states[:, :-1]), dim=-1, eps=1e-6)
+        k = F.normalize(self.k_proj_layer(hidden_states[:, 1:]), dim=-1, eps=1e-6)
+        cos_sim = torch.einsum("bld,bld->bl", q, k).clamp(-1.0, 1.0)
+        keep_prob = ((1.0 - cos_sim) / 2.0).clamp(0.0, 1.0)  # [B, L-1]
+        return keep_prob
+
+    def forward(self, hidden_states, verbose=False):
+        keep_prob = self._compute_keep_prob(hidden_states)
+        bernoulli = torch.distributions.relaxed_bernoulli.RelaxedBernoulli(
+            temperature=self.temp,
+            probs=keep_prob,
+        )
+        soft_boundaries = bernoulli.rsample()                 # [B, L]
+        hard_boundaries = (soft_boundaries > self.threshold).float()
+        hard_boundaries = hard_boundaries - soft_boundaries.detach() + soft_boundaries
+        return soft_boundaries, hard_boundaries
+
+    def inference(self, hidden_states, verbose=False):
+        soft_boundaries = self._compute_keep_prob(hidden_states)  # [B, L]
+        hard_boundaries = (soft_boundaries > self.threshold).float()
+        return soft_boundaries, hard_boundaries
+
+
+##################################################################################
+##################################################################################
+
+
 class RoutingModule(nn.Module):
 
     def __init__(self, prior, d_model, device=None, dtype=None):
@@ -272,3 +294,43 @@ class RoutingModule(nn.Module):
         ) * (N / (N - 1.0))
 
         return loss_ratio.mean()
+
+
+
+def downsample_with_indices(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: torch.Tensor):
+    B, L = boundaries.shape
+    _, _, D = hidden.shape
+
+    boundaries = boundaries.to(dtype=torch.long).clone()  # [B, L]
+
+    # Number of segments per example and across the batch
+    seg_counts = boundaries.sum(dim=1)                    # [B]
+    S = int(seg_counts.max().item())
+
+    # If no segments at all in the batch, return a single null segment
+    # FIXME: there is a bug here
+    if S == 0:
+        # shape [1, B, D]
+        return null_group.expand(1, B, D).to(hidden.dtype).to(hidden.device)
+
+    # Build [B, L, S] template of segment indices 0..S-1
+    seg_ids = torch.arange(S, device=boundaries.device).view(1, 1, S)        # [1,1,S]
+    seg_ids = seg_ids.expand(B, L, S)                                        # [B,L,S]
+
+    # Segment index for each token position: 0,0,0,1,1,2,... (per-example)
+    # cumulative_num_boundaries counts boundaries up to and including pos i
+    cumulative = boundaries.cumsum(dim=1)                                    # [B,L]
+    real_segment_index = cumulative - boundaries                             # [B,L]
+
+    # One-hot membership mask: token at (b, l) belongs to segment k iff k == real_segment_index[b,l]
+    membership = (real_segment_index.unsqueeze(-1) == seg_ids).to(hidden.dtype)  # [B,L,S]
+
+    # Normalize over L so each segment’s weights sum to 1
+    denom = membership.sum(dim=1, keepdim=True).clamp_min(1e-9)              # [B,1,S]
+    weights = membership / denom                                             # [B,L,S]
+
+    # Weighted average over tokens -> [S, B, D]
+    shortened_hidden = torch.einsum('lbd,bls->sbd', hidden, weights)
+
+    rep_idx = membership.argmax(dim=1).to(torch.long) # NOTE: the key line
+    return shortened_hidden, rep_idx

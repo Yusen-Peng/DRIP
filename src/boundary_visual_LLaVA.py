@@ -217,9 +217,9 @@ def main():
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_last_force/drip.bin" 
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_temp02/checkpoint-220/drip.bin"
 
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_last_force/drip.bin" 
-    
     COMPRESSION_RATE = 0.25
 
 
@@ -256,10 +256,13 @@ def main():
         title_fontsize=12,
     )
 
+
+    split = DRIP_WEIGHT_PATH.split("/")[5]
+    save_path = f"/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/{split}.png"
     visualize_10_images_2x5(
         model=model,
         image_paths=image_paths,
-        save_path="/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/llava_drip_boundaries_2x5.png",
+        save_path=save_path,
         alpha=0.4,
         titles=None,
         verbose=False,

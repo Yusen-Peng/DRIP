@@ -43,6 +43,7 @@ class CLIPVisionTower(nn.Module):
             merge_strategy="ViT",
             compression_rate=None, # None or a float number
             drip_weight_path=None,
+            temperature=None,
             delay_load=False):
         super().__init__()
         self.is_loaded = False
@@ -50,6 +51,7 @@ class CLIPVisionTower(nn.Module):
         self.merge_strategy = merge_strategy
         self.compression_rate = compression_rate
         self.drip_weight_path = drip_weight_path
+        self.temperature = temperature
         self.select_layer = args.mm_vision_select_layer
         self.select_feature = getattr(args, 'mm_vision_select_feature', 'patch')
 
@@ -125,21 +127,22 @@ class CLIPVisionTower(nn.Module):
                 d_model=width,
                 d_inner=int(width * mlp_ratio),
                 activation_function="gelu",
-                temp=0.1,
+                temp=self.temperature,
                 prior=self.compression_rate,
                 bp_type='gumbel',
                 threshold=0.5,
                 smart_init=False
             )
             print(f"🐰🐰🐰 [INFO] Using DRIP merge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens.")
-            
+            print(f"🌪🌪🌪 [INFO] sampling temperature during training: {self.temperature}")
+
             if self.drip_weight_path is not None:
                 missing, unexpected = self.load_drip_weights(self.drip_weight_path)
                 assert len(missing) == 0, f"Missing keys when loading DRIP weights: {missing}"
                 assert len(unexpected) == 0, f"Unexpected keys when loading DRIP weights: {unexpected}"
                 print(f"🦄🦄🦄 [INFO] Loaded DRIP weights from {self.drip_weight_path}")
             else:
-                print(f"🐴🐴🐴 [INFO] No DRIP weights provided, initializing DRIP modules from scratch.")
+                print(f"🐴🐴🐴 [INFO] No DRIP weights provided, initializing DRIP modules from scratch.")            
 
 
         elif self.merge_strategy == "Fixed":

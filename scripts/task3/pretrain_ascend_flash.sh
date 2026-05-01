@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr29_7B_DRIP_4x_pretrain_last_force_round13
-#SBATCH --output=Apr29_7B_DRIP_4x_pretrain_last_force_round13.txt
+#SBATCH --job-name=May1_7B_DRIP_4x_pretrain_temperature02_round1
+#SBATCH --output=May1_7B_DRIP_4x_pretrain_temperature02_round1.txt
 #SBATCH --time=1:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -34,7 +34,7 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_last_force \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_temp02 \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \
