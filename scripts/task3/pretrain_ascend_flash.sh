@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr29_7B_DRIP_4x_pretrain_last_force_round2
-#SBATCH --output=Apr29_7B_DRIP_4x_pretrain_last_force_round2.txt
+#SBATCH --job-name=Apr29_7B_DRIP_4x_pretrain_last_force_round13
+#SBATCH --output=Apr29_7B_DRIP_4x_pretrain_last_force_round13.txt
 #SBATCH --time=1:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
