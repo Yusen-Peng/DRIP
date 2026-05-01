@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr29_SQA_LLaVA_7B_DRIP_4x_finetune_train_lora
-#SBATCH --output=Apr29_SQA_LLaVA_7B_DRIP_4x_finetune_train_lora.log
+#SBATCH --job-name=May1_SQA_LLaVA_7B_DRIP_4x_pretrain_last_force
+#SBATCH --output=May1_SQA_LLaVA_7B_DRIP_4x_pretrain_last_force.log
 #SBATCH --time=0:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,32 +18,32 @@ export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 
-VERSION="LLaVA_7B_DRIP_4x_finetune_train_lora"
+VERSION="LLaVA_7B_DRIP_4x_pretrain_last_force"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.jsonl
 
-# python src/model_vqa_science.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
-#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/SQA_key.json \
-#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/images/test \
-#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.jsonl \
-#     --single-pred-prompt \
-#     --temperature 0 \
-#     --conv-mode vicuna_v1
-
-
 python src/model_vqa_science.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora \
-    --model-base lmsys/vicuna-7b-v1.5 \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/SQA_key.json \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/images/test \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.jsonl \
     --single-pred-prompt \
     --temperature 0 \
     --conv-mode vicuna_v1
+
+
+# python src/model_vqa_science.py \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora \
+#     --model-base lmsys/vicuna-7b-v1.5 \
+#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/SQA_key.json \
+#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/images/test \
+#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.jsonl \
+#     --single-pred-prompt \
+#     --temperature 0 \
+#     --conv-mode vicuna_v1
 
 
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.jsonl
