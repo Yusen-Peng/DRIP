@@ -10,7 +10,7 @@ FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
 sys.path.insert(0, PROJECT_ROOT)
 
-from src.open_clip_local.BP import BoundaryPredictor, downsample
+from src.open_clip_local.BP import BoundaryPredictor, downsample, H_Net
 
 def complement_idx(idx, dim):
     a = torch.arange(dim, device=idx.device)
@@ -118,21 +118,36 @@ class CLIPVisionTower(nn.Module):
 
         self.is_loaded = True
 
-        if self.merge_strategy == "DRIP":
+        if self.merge_strategy == "DRIP" or self.merge_strategy == "DRIP-H":
             assert self.compression_rate is not None, "Compression rate must be provided for DRIP merge strategy."
             width = self.vision_tower.config.hidden_size
             mlp_ratio = self.vision_tower.config.intermediate_size / self.vision_tower.config.hidden_size
             self.null_token = nn.Parameter(torch.zeros(1, 1, width))
-            self.boundary_predictor = BoundaryPredictor(
-                d_model=width,
-                d_inner=int(width * mlp_ratio),
-                activation_function="gelu",
-                temp=self.temperature,
-                prior=self.compression_rate,
-                bp_type='gumbel',
-                threshold=0.5,
-                smart_init=False
-            )
+            
+            if self.merge_strategy == "DRIP-H":
+                self.boundary_predictor = H_Net(
+                    d_model=width,
+                    d_inner=int(width * mlp_ratio),
+                    activation_function="gelu",
+                    temp=self.temperature,
+                    prior=self.compression_rate,
+                    bp_type='gumbel',
+                    threshold=0.5,
+                    smart_init=False
+                )
+                print(f"🐶🐶🐶 [INFO] Using DRIP H-Net merge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens.")
+                print(f"🌪🌪🌪 [INFO] sampling temperature during training: {self.temperature}")
+            else:
+                self.boundary_predictor = BoundaryPredictor(
+                    d_model=width,
+                    d_inner=int(width * mlp_ratio),
+                    activation_function="gelu",
+                    temp=self.temperature,
+                    prior=self.compression_rate,
+                    bp_type='gumbel',
+                    threshold=0.5,
+                    smart_init=False
+                )
             print(f"🐰🐰🐰 [INFO] Using DRIP merge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens.")
             print(f"🌪🌪🌪 [INFO] sampling temperature during training: {self.temperature}")
 
@@ -169,7 +184,7 @@ class CLIPVisionTower(nn.Module):
             hard_boundaries = torch.zeros(B, L, device=patch_tokens.device)
             hard_boundaries[:, indices] = 1
 
-        elif self.merge_strategy  == "DRIP":
+        elif self.merge_strategy  == "DRIP" or self.merge_strategy == "DRIP-H":
             patch_transposed = patch_tokens.transpose(0, 1)  # [L, B, D]
 
             if hasattr(self, "boundary_predictor"):
@@ -207,6 +222,8 @@ class CLIPVisionTower(nn.Module):
             if self.merge_strategy == "Fixed":
                 boundary_loss = patch_tokens.new_zeros(())
             elif self.merge_strategy == "DRIP":
+                boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
+            elif self.merge_strategy == "DRIP-H":
                 boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
             else:
                 raise ValueError(f'Unknown merge strategy: {self.merge_strategy}')
@@ -322,7 +339,7 @@ class CLIPVisionTower(nn.Module):
                 image_forward_out = self.vision_tower(image.to(device=self.device, dtype=self.dtype).unsqueeze(0), output_hidden_states=True)
                 image_feature = self.feature_select(image_forward_out).to(image.dtype)
 
-                if self.merge_strategy in ["DRIP", "Fixed"]:
+                if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
                     if not inference:
                         image_feature, boundary_loss, _, _ = self._merge_patch_tokens(image_feature, inference=False)
                         boundary_losses.append(boundary_loss)
@@ -331,7 +348,7 @@ class CLIPVisionTower(nn.Module):
 
                 image_features.append(image_feature)
 
-            if not inference and self.merge_strategy in ["DRIP", "Fixed"]:
+            if not inference and self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
                 boundary_loss = torch.stack(boundary_losses).mean()
                 return image_features, boundary_loss
 
@@ -346,7 +363,7 @@ class CLIPVisionTower(nn.Module):
                 image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), output_hidden_states=True)
                 image_features = self.feature_select(image_forward_outs).to(images.dtype)
 
-                if self.merge_strategy in ["DRIP", "Fixed"]:
+                if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
                     if not inference:
                         image_features, boundary_loss, _, _ = self._merge_patch_tokens(image_features, inference=False)
                         return image_features, boundary_loss

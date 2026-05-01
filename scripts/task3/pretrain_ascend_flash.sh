@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May1_7B_DRIP_4x_pretrain_temperature02_round1
-#SBATCH --output=May1_7B_DRIP_4x_pretrain_temperature02_round1.txt
+#SBATCH --job-name=May1_7B_DRIP_4x_pretrain_temperature02_round2
+#SBATCH --output=May1_7B_DRIP_4x_pretrain_temperature02_round2.txt
 #SBATCH --time=1:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
