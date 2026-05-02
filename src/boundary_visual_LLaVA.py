@@ -36,6 +36,7 @@ def build_llava_drip_vision_tower(
     mm_vision_select_feature="patch",
     compression_rate=0.125,
     drip_weight_path="/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_TEST_DRIP/checkpoint-60/drip.bin",
+    merge_strategy="DRIP",
     device="cuda",
 ):
     args = SimpleNamespace(
@@ -48,7 +49,7 @@ def build_llava_drip_vision_tower(
     model = CLIPVisionTower(
         vision_tower=vision_tower_name,
         args=args,
-        merge_strategy="DRIP",
+        merge_strategy=merge_strategy,
         compression_rate=compression_rate,
         drip_weight_path=drip_weight_path,
         delay_load=False,
@@ -220,8 +221,8 @@ def main():
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_last_force/drip.bin" 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_temp02/checkpoint-530/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_temp05/checkpoint-540/drip.bin"
-    DRIP_WEIGHT_PATH = None
-
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_hnet/checkpoint-110/drip.bin"
+    MERGE_STRATEGY = "DRIP-H" # "DRIP" or "DRIP-H"
     COMPRESSION_RATE = 0.25
 
 
@@ -236,6 +237,7 @@ def main():
         mm_vision_select_feature="patch",
         compression_rate=COMPRESSION_RATE,
         drip_weight_path=DRIP_WEIGHT_PATH,
+        merge_strategy=MERGE_STRATEGY,
         device=device,
     )
 

@@ -187,12 +187,21 @@ class H_Net(BoundaryPredictor):
         self.k_proj_layer.weight._no_reinit = True
 
     def _compute_keep_prob(self, hidden_states):
-        # hidden_states: [L, B, D]
-        hidden_states = hidden_states.transpose(0, 1)  # [B, L, D]
+        # hidden_states: [L, B, D]        
+        # [B, L, D]
+        hidden_states = hidden_states.transpose(0, 1)  
+        # [B, L-1, D]
         q = F.normalize(self.q_proj_layer(hidden_states[:, :-1]), dim=-1, eps=1e-6)
+        # [B, L-1, D]
         k = F.normalize(self.k_proj_layer(hidden_states[:, 1:]), dim=-1, eps=1e-6)
+        # [B, L-1]
         cos_sim = torch.einsum("bld,bld->bl", q, k).clamp(-1.0, 1.0)
-        keep_prob = ((1.0 - cos_sim) / 2.0).clamp(0.0, 1.0)  # [B, L-1]
+        # [B, L-1]
+        transition_prob = ((1.0 - cos_sim) / 2.0).clamp(0.0, 1.0)
+        # [B, 1]
+        last_prob = torch.ones(transition_prob.size(0), 1, device=transition_prob.device, dtype=transition_prob.dtype)
+        # [B, L-1] + [B, 1] -> [B, L]
+        keep_prob = torch.cat([transition_prob, last_prob], dim=1)
         return keep_prob
 
     def forward(self, hidden_states, verbose=False):
