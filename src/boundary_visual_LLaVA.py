@@ -94,6 +94,8 @@ def overlay_llava_drip_boundaries(
     verbose=False,
 ):
     hard_1d, grid_h, grid_w = get_llava_drip_hard_boundaries(model, img_3chw, verbose=verbose)
+    # let's count how many patches are selected as boundary tokens
+    num_boundary_patches = hard_1d.sum().item()
     hard_mask = hard_1d.view(grid_h, grid_w).numpy()
 
     orig = unnormalize_img(img_3chw)
@@ -122,7 +124,7 @@ def overlay_llava_drip_boundaries(
 
                 # overlay_np[y0:y1, x0:x1] = ((1 - alpha) * patch + alpha * color).astype(np.uint8)
 
-    return Image.fromarray(overlay_np), hard_mask
+    return Image.fromarray(overlay_np), hard_mask, num_boundary_patches
 
 
 def visualize_10_images_2x5(
@@ -142,15 +144,17 @@ def visualize_10_images_2x5(
     assert len(image_paths) == 10, f"Expected exactly 10 images, got {len(image_paths)}"
 
     overlays = []
+    num_boundary_patches_list = []
     for p in image_paths:
         img_tensor = load_img_with_processor(p, model.image_processor)
-        overlay_pil, _ = overlay_llava_drip_boundaries(
+        overlay_pil, _, num_boundary_patches = overlay_llava_drip_boundaries(
             model,
             img_tensor,
             alpha=alpha,
             verbose=verbose,
         )
         overlays.append(overlay_pil)
+        num_boundary_patches_list.append(int(num_boundary_patches))
 
     if titles is None:
         titles = [os.path.splitext(os.path.basename(p))[0] for p in image_paths]
@@ -158,9 +162,9 @@ def visualize_10_images_2x5(
     fig, axes = plt.subplots(2, 5, figsize=figsize)
     axes = axes.flatten()
 
-    for ax, ov, t in zip(axes, overlays, titles):
+    for ax, ov, t, num_boundary_patches in zip(axes, overlays, titles, num_boundary_patches_list):
         ax.imshow(ov)
-        ax.set_title(t, fontsize=title_fontsize)
+        ax.set_title(f"{t} ({num_boundary_patches}/576, {num_boundary_patches/576*100:.1f}%)", fontsize=title_fontsize)
         ax.axis("off")
     plt.tight_layout()
     save_dir = os.path.dirname(save_path)
@@ -217,12 +221,12 @@ def visualize_original_10_images_2x5(
 def main():
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_last_force/drip.bin" 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_temp02/checkpoint-530/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_temp05/checkpoint-540/drip.bin"
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_hnet/checkpoint-180/drip.bin"
-    MERGE_STRATEGY = "DRIP-H" # "DRIP" or "DRIP-H"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_hnet/checkpoint-180/drip.bin"
+    MERGE_STRATEGY = "DRIP" # "DRIP" or "DRIP-H"
     COMPRESSION_RATE = 0.25
 
 
