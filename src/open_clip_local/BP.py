@@ -2,6 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import pandas as pd
+import os
 from dataclasses import dataclass
 
 def downsample(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: torch.Tensor):
@@ -136,17 +138,6 @@ class BoundaryPredictor(nn.Module):
         # apply hard thresholding during inference
         soft_boundaries = boundary_probs
         hard_boundaries = (soft_boundaries > self.threshold).float()
-
-        if verbose:
-            print("================================")
-            np.set_printoptions(suppress=True, precision=4)
-            print(f"raw logits:")
-            print(boundary_logits.cpu().numpy())
-            print(f"probabilities after sigmoid:")
-            print(soft_boundaries.cpu().numpy())
-            print(f"hard boundaries after thresholding:")
-            print(hard_boundaries.cpu().numpy())
-            print("================================")
 
         return soft_boundaries, hard_boundaries
 

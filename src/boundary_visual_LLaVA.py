@@ -75,15 +75,14 @@ def get_llava_drip_hard_boundaries(model: CLIPVisionTower, img_3chw: torch.Tenso
     assert L_patch == grid_h * grid_w, f"Expected {grid_h * grid_w} patches, got {L_patch}"
 
     patch_transposed = patch_tokens.transpose(0, 1)  # [L, B, D]
-    _, hard_boundaries = model.boundary_predictor.inference(patch_transposed, verbose=verbose)
-
+    soft_boundaries, hard_boundaries = model.boundary_predictor.inference(patch_transposed)
     """
         enforce the last token to be a boundary token
     """
     last = torch.ones_like(hard_boundaries[:, -1:])
     hard_boundaries = torch.cat([hard_boundaries[:, :-1], last], dim=1)
 
-    return hard_boundaries[0].detach().float().cpu(), grid_h, grid_w
+    return hard_boundaries[0].detach().float().cpu(), soft_boundaries[0].detach().float().cpu(), grid_h, grid_w
 
 
 @torch.no_grad()
@@ -93,10 +92,11 @@ def overlay_llava_drip_boundaries(
     alpha=0.4,
     verbose=False,
 ):
-    hard_1d, grid_h, grid_w = get_llava_drip_hard_boundaries(model, img_3chw, verbose=verbose)
+    hard_1d, soft_1d, grid_h, grid_w = get_llava_drip_hard_boundaries(model, img_3chw, verbose=verbose)
     # let's count how many patches are selected as boundary tokens
     num_boundary_patches = hard_1d.sum().item()
     hard_mask = hard_1d.view(grid_h, grid_w).numpy()
+    soft_mask = soft_1d.view(grid_h, grid_w).numpy()
 
     orig = unnormalize_img(img_3chw)
     orig_img = TF.to_pil_image(orig).convert("RGB")
@@ -124,13 +124,13 @@ def overlay_llava_drip_boundaries(
 
                 # overlay_np[y0:y1, x0:x1] = ((1 - alpha) * patch + alpha * color).astype(np.uint8)
 
-    return Image.fromarray(overlay_np), hard_mask, num_boundary_patches
+    return Image.fromarray(overlay_np), hard_mask, soft_mask, num_boundary_patches
 
 
 def visualize_10_images_2x5(
     model: CLIPVisionTower,
     image_paths,
-    save_path,
+    save_path: str,
     alpha=0.4,
     titles=None,
     verbose=False,
@@ -145,9 +145,10 @@ def visualize_10_images_2x5(
 
     overlays = []
     num_boundary_patches_list = []
+    soft_masks = []
     for p in image_paths:
         img_tensor = load_img_with_processor(p, model.image_processor)
-        overlay_pil, _, num_boundary_patches = overlay_llava_drip_boundaries(
+        overlay_pil, _, soft_mask, num_boundary_patches = overlay_llava_drip_boundaries(
             model,
             img_tensor,
             alpha=alpha,
@@ -155,6 +156,7 @@ def visualize_10_images_2x5(
         )
         overlays.append(overlay_pil)
         num_boundary_patches_list.append(int(num_boundary_patches))
+        soft_masks.append(soft_mask)
 
     if titles is None:
         titles = [os.path.splitext(os.path.basename(p))[0] for p in image_paths]
@@ -174,6 +176,40 @@ def visualize_10_images_2x5(
     print(f"Saved 2x5 figure to: {save_path}")
     plt.close(fig)
 
+    # save the soft boundary probabilities as a separate figure
+    soft_save_path = save_path.replace(".png", "_soft_probs.pdf")
+    fig, axes = plt.subplots(2, 5, figsize=figsize)
+    axes = axes.flatten()
+    for ax, soft_mask, t in zip(axes, soft_masks, titles):
+        if isinstance(soft_mask, torch.Tensor):
+            soft_mask = soft_mask.detach().cpu().float().numpy()
+        soft_mask = np.asarray(soft_mask)
+        if soft_mask.ndim == 3:
+            soft_mask = soft_mask.squeeze(0)
+        if soft_mask.ndim == 1:
+            grid_h = grid_w = int(np.sqrt(soft_mask.shape[0]))
+            assert grid_h * grid_w == soft_mask.shape[0], soft_mask.shape
+            soft_mask = soft_mask.reshape(grid_h, grid_w)
+        grid_h, grid_w = soft_mask.shape
+        im = ax.imshow(soft_mask, cmap="viridis", vmin=0.0, vmax=1.0)
+        for i in range(grid_h):
+            for j in range(grid_w):
+                ax.text(
+                    j,
+                    i,
+                    f"{soft_mask[i, j]:.2f}",
+                    ha="center",
+                    va="center",
+                    fontsize=3,
+                    color="white" if soft_mask[i, j] < 0.5 else "black",
+                )
+        ax.set_title(f"{t}: soft boundary probs", fontsize=title_fontsize)
+        ax.set_xticks([])
+        ax.set_yticks([])
+    plt.tight_layout()
+    plt.savefig(soft_save_path, bbox_inches="tight", dpi=dpi)
+    print(f"Saved soft probability figure to: {soft_save_path}")
+    plt.close(fig)
 
 def visualize_original_10_images_2x5(
     model: CLIPVisionTower,
@@ -273,7 +309,7 @@ def main():
         save_path=save_path,
         alpha=0.4,
         titles=None,
-        verbose=False,
+        verbose=True,
         figsize=(20, 8),
         dpi=300,
         title_fontsize=12,

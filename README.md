@@ -199,7 +199,7 @@ python src/boundary_visual_LLaVA.py
 
 ![alt text](src/boundary_vis/LLaVA_results/4x_pretrain_llava_drip_boundaries_2x5.png)
 
-4x compression after full llava finetuning:
+4x compression after llava finetuning:
 
 ![alt text](src/boundary_vis/LLaVA_results/4x_finetune_llava_drip_boundaries_2x5.png)
 
