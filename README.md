@@ -191,17 +191,13 @@ python src/boundary_visual_LLaVA.py
 
 ### visualization examples
 
-2x compression after llava pretraining:
+4x compression after **llava pretraining**:
 
-![alt text](src/boundary_vis/LLaVA_results/2x_pretrain_llava_drip_boundaries_2x5.png)
+![alt text](src/boundary_vis/LLaVA_results/LLaVA_7B_DRIP_4x_pretrain.png)
 
-4x compression after llava pretraining:
+4x compression after **llava finetuning (lora)**:
 
-![alt text](src/boundary_vis/LLaVA_results/4x_pretrain_llava_drip_boundaries_2x5.png)
-
-4x compression after llava finetuning:
-
-![alt text](src/boundary_vis/LLaVA_results/4x_finetune_llava_drip_boundaries_2x5.png)
+![alt text](src/boundary_vis/LLaVA_results/LLaVA_7B_DRIP_4x_finetune_train_lora.png)
 
 
 ### checking if BP changes

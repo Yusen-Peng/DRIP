@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Apr29_VQAv2_LLaVA_7B_DRIP_4x_finetune_train_lora
-#SBATCH --output=Apr29_VQAv2_LLaVA_7B_DRIP_4x_finetune_train_lora.txt
-#SBATCH --time=05:00:00
+#SBATCH --job-name=May3_VQAv2_LLaVA_7B_DRIP_4x_finetune_corrected
+#SBATCH --output=May3_VQAv2_LLaVA_7B_DRIP_4x_finetune_corrected.txt
+#SBATCH --time=06:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=nextgen
@@ -17,7 +17,7 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_7B_DRIP_4x_finetune_train_lora"
+VERSION="LLaVA_7B_DRIP_4x_finetune_corrected"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
