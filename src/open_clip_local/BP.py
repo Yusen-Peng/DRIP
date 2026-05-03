@@ -96,10 +96,6 @@ class BoundaryPredictor(nn.Module):
 
         soft_boundaries = bernoulli.rsample()
 
-        # # FIXME: ablation
-        # soft_boundaries = boundary_probs
-
-
         hard_boundaries = (soft_boundaries > self.threshold).float()
         hard_boundaries = (
             hard_boundaries - soft_boundaries.detach() + soft_boundaries
@@ -131,13 +127,47 @@ class BoundaryPredictor(nn.Module):
         loss_boundaries = -binomial.log_prob(target_count).mean() / total_count
         return loss_boundaries
 
-    def inference(self, hidden, verbose: bool = False):
-        boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
-        boundary_probs = torch.sigmoid(boundary_logits)
+    # def inference(self, hidden, verbose: bool = False):
+    #     boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
+    #     boundary_probs = torch.sigmoid(boundary_logits)
         
-        # apply hard thresholding during inference
+    #     # apply hard thresholding during inference
+    #     soft_boundaries = boundary_probs
+    #     hard_boundaries = (soft_boundaries > self.threshold).float()
+
+    #     return soft_boundaries, hard_boundaries
+
+    def inference(self, hidden, verbose: bool = False):
+        # hidden: [T, B, D]
+        boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)  # [B, T]
+        boundary_probs = torch.sigmoid(boundary_logits)  # [B, T]
+        
         soft_boundaries = boundary_probs
-        hard_boundaries = (soft_boundaries > self.threshold).float()
+
+        _, T = soft_boundaries.shape
+        k = int(round(T * self.compression_rate))
+        k = max(1, min(k, T))  # safety clamp
+
+        # top-k routing: select exactly k boundaries per sample
+        _, topk_idx = torch.topk(soft_boundaries, k=k, dim=-1)
+
+        hard_boundaries = torch.zeros_like(soft_boundaries)
+        hard_boundaries.scatter_(dim=-1, index=topk_idx, value=1.0)
+
+        if verbose:
+            print("================================")
+            np.set_printoptions(suppress=True, precision=4)
+            print(f"compression_rate: {self.compression_rate}")
+            print(f"T: {T}, target k: {k}")
+            print(f"raw logits:")
+            print(boundary_logits.cpu().numpy())
+            print(f"probabilities after sigmoid:")
+            print(boundary_probs.cpu().numpy())
+            print(f"hard boundaries after top-k:")
+            print(hard_boundaries.cpu().numpy())
+            print(f"num boundaries per sample:")
+            print(hard_boundaries.sum(dim=-1).cpu().numpy())
+            print("================================")
 
         return soft_boundaries, hard_boundaries
 
