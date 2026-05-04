@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=May4_7B_ORIGINAL_finetune
 #SBATCH --output=May4_7B_ORIGINAL_finetune.txt
-#SBATCH --time=80:00:00
+#SBATCH --time=1:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=nextgen

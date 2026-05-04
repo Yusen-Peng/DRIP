@@ -1,10 +1,6 @@
 {
-  "fp16": {
-    "enabled": false
-  },
-  "bf16": {
-    "enabled": true
-  },
+  "fp16": { "enabled": false },
+  "bf16": { "enabled": true },
 
   "train_micro_batch_size_per_gpu": "auto",
   "train_batch_size": "auto",
@@ -22,15 +18,7 @@
     "allgather_bucket_size": 50000000
   },
 
-  "optimizer": {
-    "type": "DeepSpeedCPUAdam",
-    "params": {
-      "lr": "auto",
-      "betas": "auto",
-      "eps": "auto",
-      "weight_decay": "auto"
-    }
-  },
+  "zero_force_ds_cpu_optimizer": false,
 
   "gradient_clipping": "auto",
   "steps_per_print": 2000
