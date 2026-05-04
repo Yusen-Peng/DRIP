@@ -173,7 +173,8 @@ class CLIPVisionTower(nn.Module):
 
 
         else:
-            pass # no additional modules needed for plain ViT
+            # no additional modules needed for plain ViT
+            print(f"🩵🩵🩵 [INFO] Using original ViT features without merging. This will keep all tokens ({self.num_patches} tokens).")
 
     def _merge_patch_tokens(self, patch_tokens: torch.Tensor, inference=False):
         B, L, D = patch_tokens.shape
