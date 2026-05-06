@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May3_GQA_LLaVA_7B_DRIP_4x_finetune_corrected
-#SBATCH --output=May3_GQA_LLaVA_7B_DRIP_4x_finetune_corrected.txt
+#SBATCH --job-name=May5_GQA_LLaVA_7B_LoRA_checkpoint
+#SBATCH --output=May5_GQA_LLaVA_7B_LoRA_checkpoint.log
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,7 +24,7 @@ GQADIR="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data"
 OUTPUT_DIR=/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/answers/llava_gqa_testdev_balanced
 mkdir -p $OUTPUT_DIR
 
-OUTPUT_FILE=$OUTPUT_DIR/LLaVA_7B_DRIP_4x_finetune_corrected.jsonl
+OUTPUT_FILE=$OUTPUT_DIR/LLaVA_7B_LoRA_checkpoint.jsonl
 
 # python src/model_vqa_loader.py \
 #     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
@@ -37,7 +37,7 @@ OUTPUT_FILE=$OUTPUT_DIR/LLaVA_7B_DRIP_4x_finetune_corrected.jsonl
 #     --conv-mode vicuna_v1
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-lora-local \
     --model-base lmsys/vicuna-7b-v1.5 \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/llava_gqa_testdev_balanced.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data/images \

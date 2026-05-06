@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Apr19_eval_imagenet_DRIP
-#SBATCH --output=Apr19_eval_imagenet_DRIP.txt
+#SBATCH --job-name=May4_RE_eval_imagenet_DRIP
+#SBATCH --output=May4_RE_eval_imagenet_DRIP.txt
 #SBATCH --time=0:20:00
 #SBATCH --ntasks=1
 #SBATCH --partition=debug-nextgen

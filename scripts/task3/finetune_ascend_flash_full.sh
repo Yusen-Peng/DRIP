@@ -4,7 +4,7 @@
 #SBATCH --time=1:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=debug-quad
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -25,7 +25,7 @@ mkdir -p $TRITON_CACHE_DIR
 cd /users/PAS2912/yusenpeng/DRIP/
 
 deepspeed --master_port $MASTER_PORT src/task3_llava.py \
-    --deepspeed src/LLaVA_wrapper/scripts/finetune_mem_efficient.json \
+    --deepspeed src/LLaVA_wrapper/scripts/finetune.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version v1 \
     --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json \
