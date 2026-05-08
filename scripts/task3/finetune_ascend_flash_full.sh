@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=May4_7B_ORIGINAL_finetune
 #SBATCH --output=May4_7B_ORIGINAL_finetune.txt
-#SBATCH --time=1:00:00
+#SBATCH --time=0:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=debug-quad
-#SBATCH --gpus-per-node=1
+#SBATCH --gpus-per-node=2
+#SBATCH --partition=quad
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
@@ -18,9 +18,6 @@ source activate DRIP_flash
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 export WANDB_DISABLED=true
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-export TRITON_CACHE_DIR=/tmp/$USER/triton_cache
-mkdir -p $TRITON_CACHE_DIR
 
 cd /users/PAS2912/yusenpeng/DRIP/
 

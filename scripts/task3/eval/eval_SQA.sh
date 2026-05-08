@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May6_SQA_LLaVA_7B_Fixed_4x_finetune
-#SBATCH --output=May6_SQA_LLaVA_7B_Fixed_4x_finetune.log
+#SBATCH --job-name=May8_SQA_LLaVA_7B_PruMerge_4x_finetune
+#SBATCH --output=May8_SQA_LLaVA_7B_PruMerge_4x_finetune.log
 #SBATCH --time=0:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,7 +18,7 @@ export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 
-VERSION="LLaVA_7B_Fixed_4x_finetune"
+VERSION="LLaVA_7B_PruMerge_4x_finetune"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
@@ -36,7 +36,7 @@ touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.js
 
 
 python src/model_vqa_science.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_4x_finetune \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_lora \
     --model-base lmsys/vicuna-7b-v1.5 \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/SQA_key.json \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/images/test \

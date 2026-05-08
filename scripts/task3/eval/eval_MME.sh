@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May5_MME_LLaVA_7B_LoRA_checkpoint
-#SBATCH --output=May5_MME_LLaVA_7B_LoRA_checkpoint.log
+#SBATCH --job-name=May8_MME_LLaVA_7B_PruMerge_4x_finetune
+#SBATCH --output=May8_MME_LLaVA_7B_PruMerge_4x_finetune.log
 #SBATCH --time=00:15:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_LoRA_checkpoint"
+VERSION="LLaVA_7B_PruMerge_4x_finetune"
 
 
 # python src/model_vqa_loader.py \
@@ -31,7 +31,7 @@ VERSION="LLaVA_7B_LoRA_checkpoint"
 #     --conv-mode vicuna_v1
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-lora-local \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_lora \
     --model-base lmsys/vicuna-7b-v1.5 \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/llava_mme.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/MME_Benchmark_release_version \

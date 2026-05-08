@@ -127,15 +127,7 @@ class BoundaryPredictor(nn.Module):
         loss_boundaries = -binomial.log_prob(target_count).mean() / total_count
         return loss_boundaries
 
-    # def inference(self, hidden, verbose: bool = False):
-    #     boundary_logits = self.boundary_predictor(hidden).squeeze(-1).transpose(0, 1)
-    #     boundary_probs = torch.sigmoid(boundary_logits)
-        
-    #     # apply hard thresholding during inference
-    #     soft_boundaries = boundary_probs
-    #     hard_boundaries = (soft_boundaries > self.threshold).float()
 
-    #     return soft_boundaries, hard_boundaries
 
     def inference(self, hidden, verbose: bool = False):
         # hidden: [T, B, D]
