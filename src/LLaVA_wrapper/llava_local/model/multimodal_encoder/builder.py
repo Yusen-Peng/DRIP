@@ -14,14 +14,14 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             "DRIP-H": our BP with H-Net
     """
 
-    MERGE_STRATEGY = "DRIP"
+    MERGE_STRATEGY = "DRIP-H"
     # 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
     COMPRESSION_RATE = 0.25
     
 
     # FIXME: temperature tuning
-    # TEMPERATURE = 0.1
-    TEMPERATURE = 0.01
+    TEMPERATURE = 0.1
+    # TEMPERATURE = 0.01
     
     
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"

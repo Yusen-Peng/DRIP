@@ -148,8 +148,8 @@ class CLIPVisionTower(nn.Module):
                     threshold=0.5,
                     smart_init=False
                 )
-            print(f"🐰🐰🐰 [INFO] Using DRIP merge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens.")
-            print(f"🌪🌪🌪 [INFO] sampling temperature during training: {self.temperature}")
+                print(f"🐰🐰🐰 [INFO] Using DRIP merge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens.")
+                print(f"🌪🌪🌪 [INFO] sampling temperature during training: {self.temperature}")
 
             if self.drip_weight_path is not None:
                 missing, unexpected = self.load_drip_weights(self.drip_weight_path)

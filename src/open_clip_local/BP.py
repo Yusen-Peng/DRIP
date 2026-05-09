@@ -230,7 +230,28 @@ class H_Net(BoundaryPredictor):
 
     def inference(self, hidden_states, verbose=False):
         soft_boundaries = self._compute_keep_prob(hidden_states)  # [B, L]
-        hard_boundaries = (soft_boundaries > self.threshold).float()
+
+        _, T = soft_boundaries.shape
+        k = int(round(T * self.compression_rate))
+        k = max(1, min(k, T))  # safety clamp
+
+        # top-k routing: select exactly k boundaries per sample
+        _, topk_idx = torch.topk(soft_boundaries, k=k, dim=-1)
+
+        hard_boundaries = torch.zeros_like(soft_boundaries)
+        hard_boundaries.scatter_(dim=-1, index=topk_idx, value=1.0)
+
+        if verbose:
+            print("================================")
+            np.set_printoptions(suppress=True, precision=4)
+            print(f"compression_rate: {self.compression_rate}")
+            print(f"T: {T}, target k: {k}")
+            print(f"raw logits:")
+            print(hard_boundaries.cpu().numpy())
+            print(f"num boundaries per sample:")
+            print(hard_boundaries.sum(dim=-1).cpu().numpy())
+            print("================================")
+
         return soft_boundaries, hard_boundaries
 
 

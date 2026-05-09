@@ -263,10 +263,13 @@ def main():
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_temp05/checkpoint-540/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_hnet/checkpoint-180/drip.bin"
     
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_temp001/checkpoint-10/drip.bin"
+
+
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_temp001/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_Hnet_4x_pretrain/drip.bin"
     
     
-    MERGE_STRATEGY = "DRIP" # "DRIP" or "DRIP-H"
+    MERGE_STRATEGY = "DRIP-H" # "DRIP" or "DRIP-H"
     COMPRESSION_RATE = 0.25
 
 
