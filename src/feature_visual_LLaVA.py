@@ -25,6 +25,68 @@ def compute_pca_pc1_heatmap(patch_tokens, grid_h, grid_w, normalize_tokens=True)
 
 
 
+@torch.no_grad()
+
+def compute_cls_attention_heatmap(
+    model: CLIPVisionTower,
+    img_3chw: torch.Tensor,
+    layer_idx=23,
+    reduce_heads="mean",   # "mean" or "max"
+    log_scale=True
+):
+
+    device = model.device
+    dtype = model.dtype
+    storage = {}
+    def hook_q(module, inp, out):
+        storage["q"] = out.detach()
+
+    def hook_k(module, inp, out):
+        storage["k"] = out.detach()
+
+    attn_mod = model.vision_tower.vision_model.encoder.layers[layer_idx].self_attn
+    hq = attn_mod.q_proj.register_forward_hook(hook_q)
+    hk = attn_mod.k_proj.register_forward_hook(hook_k)
+    x = img_3chw.unsqueeze(0).to(device=device, dtype=dtype)
+    _ = model.vision_tower(x, output_hidden_states=True)
+
+    hq.remove()
+    hk.remove()
+
+    q = storage["q"]  # [B, T, D]
+    k = storage["k"]  # [B, T, D]
+
+    B, T, D = q.shape
+    num_heads = attn_mod.num_heads
+    head_dim = D // num_heads
+    scale = head_dim ** -0.5
+    q = q.view(B, T, num_heads, head_dim).transpose(1, 2)  # [B, H, T, Hd]
+    k = k.view(B, T, num_heads, head_dim).transpose(1, 2)  # [B, H, T, Hd]
+    attn = (q @ k.transpose(-2, -1)) * scale              # [B, H, T, T]
+    attn = torch.softmax(attn.float(), dim=-1)
+    cls_to_patch = attn[0, :, 0, 1:]                      # [H, L]
+
+    if reduce_heads == "mean":
+        score = cls_to_patch.mean(dim=0)
+    elif reduce_heads == "max":
+        score = cls_to_patch.max(dim=0).values
+    else:
+        raise ValueError(f"Unknown reduce_heads: {reduce_heads}")
+    
+    if log_scale:
+        score = torch.log1p(score * score.numel())
+
+    grid_h = model.num_patches_per_side
+    grid_w = model.num_patches_per_side
+    assert score.numel() == grid_h * grid_w
+    heat = minmax_norm(score.cpu().numpy())
+    return heat.reshape(grid_h, grid_w)
+
+
+
+
+
+
 
 def unnormalize_img(
     img_3chw,
@@ -296,6 +358,7 @@ def visualize_feature_diff_side_by_side_10_images(
     image_paths,
     save_path,
     mode,
+    reduce_heads=None,
     cmap_name="gray",
     titles=None,
     figsize=(15, 10),  # taller now
@@ -332,17 +395,21 @@ def visualize_feature_diff_side_by_side_10_images(
         orig = unnormalize_img(img_tensor)
         orig_pil = TF.to_pil_image(orig).convert("RGB")
 
-        patch_tokens, grid_h, grid_w = get_llava_patch_tokens(model, img_tensor)
-
         if mode == "1D":
+            patch_tokens, grid_h, grid_w = get_llava_patch_tokens(model, img_tensor)
             heat = compute_feature_difference_1D(patch_tokens, grid_h, grid_w)
             heat_title = "1D dissim"
         elif mode == "2D":
+            patch_tokens, grid_h, grid_w = get_llava_patch_tokens(model, img_tensor)
             heat = compute_feature_difference_2D(patch_tokens, grid_h, grid_w)
             heat_title = "2D dissim"
         elif mode.upper() == "PCA":
+            patch_tokens, grid_h, grid_w = get_llava_patch_tokens(model, img_tensor)
             heat, evr = compute_pca_pc1_heatmap(patch_tokens, grid_h, grid_w)
             heat_title = f"PCA ({evr * 100:.1f}%)"
+        elif mode.upper() == "CLS_ATTN":
+            heat = compute_cls_attention_heatmap(model, img_tensor, reduce_heads=reduce_heads)
+            heat_title = "CLS attn"
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
@@ -403,6 +470,25 @@ def main():
         mode="PCA",
         cmap_name="gray"
     )
+
+    visualize_feature_diff_side_by_side_10_images(
+        model=model,
+        image_paths=image_paths,
+        save_path=f"/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/llava_cls_attn_2x5_mean.png",
+        mode="CLS_ATTN",
+        cmap_name="gray",
+        reduce_heads="mean"
+    )
+
+    visualize_feature_diff_side_by_side_10_images(
+        model=model,
+        image_paths=image_paths,
+        save_path=f"/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/llava_cls_attn_2x5_max.png",
+        mode="CLS_ATTN",
+        cmap_name="gray",
+        reduce_heads="max"
+    )
+
 
 if __name__ == "__main__":
     main()

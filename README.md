@@ -90,16 +90,16 @@ Then we are good to move onto benchmark experiments.
 General VQA (4):
 
 ```bash
-# SQA 
-sbatch scripts/task3/eval/eval_SQA.sh
-# MM-Bench
-sbatch scripts/task3/eval/eval_MMBench.sh
-# MME
-sbatch scripts/task3/eval/eval_MME.sh
 # VQAv2 [🚨LONG🚨]
 # need to submit the result json file to:
 # https://eval.ai/web/challenges/challenge-page/830
 sbatch scripts/task3/eval/eval_VQAv2.sh
+# SQA 
+sbatch scripts/task3/eval/eval_SQA.sh
+# MME
+sbatch scripts/task3/eval/eval_MME.sh
+# MM-Bench
+sbatch scripts/task3/eval/eval_MMBench.sh
 ```
 
 Reasoning (1):
@@ -236,9 +236,9 @@ PY
 
 ## LLaVA image feature analysis
 
-We conduct two types of analysis on image features: PCA and token cosine similarity.
+We conduct multiple analyses on image features: (1) PCA; (2) CLS attention; (3) token cosine dissimilarity.
 
-### PCA
+### PCA and CLS attention
 
 ```bash
 salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-nextgen --time 00:15:00
@@ -250,6 +250,16 @@ python src/feature_visual_LLaVA.py
 PCA upon 24th-layer features:
 
 ![alt text](src/boundary_vis/LLaVA_results/llava_feature_pca_pc1_2x5.png)
+
+CLS attention (head-mean) upon 24th-layer features:
+
+![alt text](src/boundary_vis/LLaVA_results/llava_cls_attn_2x5_mean.png)
+
+CLS attention (head-max) upon 24th-layer features:
+
+![alt text](src/boundary_vis/LLaVA_results/llava_cls_attn_2x5_max.png)
+
+
 
 ### token cosine similarity
 
