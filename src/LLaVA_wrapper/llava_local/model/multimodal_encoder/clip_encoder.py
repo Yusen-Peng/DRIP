@@ -254,21 +254,21 @@ class CLIPVisionTower(nn.Module):
 
         #forward pass
         image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), output_hidden_states=True)
-        cls_token_last_layer =image_forward_outs.hidden_states[self.select_layer][:, 0:1]
+        cls_token_last_layer = image_forward_outs.hidden_states[self.select_layer][:, 0:1]
         image_features = self.feature_select(image_forward_outs).to(images.dtype)
-        B, N, C = image_features.shape
+        B, N, C = image_features.shape # [B, N, C]
 
         #extract desired layer's k and q and remove hooks; calculate attention
-        desired_layer_k = outputs["desired_k"]
-        desired_layer_q = outputs["desired_q"]
+        desired_layer_k = outputs["desired_k"] # [B, N+1, C]
+        desired_layer_q = outputs["desired_q"] # [B, N+1, C]
 
         hook_handle_k.remove()
         hook_handle_q.remove()
 
         attn = (desired_layer_q @ desired_layer_k.transpose(-2, -1)) * C ** -0.5
-        attn = F.softmax(attn, dim=-1)
+        attn = F.softmax(attn, dim=-1) # [B, N+1, N+1]
 
-        cls_attn = attn[:, 0, 1:]  
+        cls_attn = attn[:, 0, 1:] # [B, N]
 
         _, idx = torch.topk(cls_attn, int(N*reduction_ratio), dim=1, largest=True)  # [B, left_tokens] , sorted=True
         index = idx.unsqueeze(-1).expand(-1, -1, C)  # [B, left_tokens, C]

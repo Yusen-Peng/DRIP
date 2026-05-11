@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May9_MME_LLaVA_7B_DRIP_Hnet_4x_pretrain
-#SBATCH --output=May9_MME_LLaVA_7B_DRIP_Hnet_4x_pretrain.log
+#SBATCH --job-name=May11_MME_LLaVA_7B_DRIP_10x_pretrain
+#SBATCH --output=May11_MME_LLaVA_7B_DRIP_10x_pretrain.log
 #SBATCH --time=00:15:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_DRIP_Hnet_4x_pretrain"
+VERSION="LLaVA_7B_DRIP_10x_pretrain"
 
 
 python src/model_vqa_loader.py \

@@ -26,7 +26,7 @@ conda deactivate
 conda activate DRIP
 ```
 
-## ImageNet (OSC pitzer)
+<!-- ## ImageNet (OSC pitzer)
 
 running training experiments:
 
@@ -66,10 +66,10 @@ examples:
 | imagenet_DRIP_4x_01_warmup2 | model_299.pth |
 | ![alt text](/src/boundary_vis/w2_4x_boundaries.png) | ![alt text](/src/boundary_vis/w2_4x_attention.png) |
 <!-- | imagenet_DRIP_4x_half_LR_no_warmup | model_299.pth |
-| ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_overlay.png) | ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_attention_overlay.png) | -->
+| ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_overlay.png) | ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_attention_overlay.png) | --> -->
 
 
-## LLaVA
+## LLaVA 1.5 Experiments
 
 ### Instruction
 
@@ -199,40 +199,10 @@ python src/boundary_visual_LLaVA.py
 
 ![alt text](src/boundary_vis/LLaVA_results/LLaVA_7B_DRIP_4x_finetune_train_lora.png)
 
+10x compression after **llava pretraining**:
 
-### checking if BP changes
+![alt text](src/boundary_vis/LLaVA_results/LLaVA_7B_DRIP_10x_pretrain.png)
 
-```bash
-python - <<'PY'
-import torch
-a_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
-b_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-1020/drip.bin"
-
-def normalize(sd):
-    out = {}
-    for k, v in sd.items():
-        if "vision_tower.boundary_predictor." in k:
-            nk = k.split("vision_tower.boundary_predictor.", 1)[1]
-            out[nk] = v.detach().float().cpu()
-        elif k.endswith("vision_tower.null_token") or k == "null_token":
-            out["null_token"] = v.detach().float().cpu()
-    return out
-a = normalize(torch.load(a_path, map_location="cpu"))
-b = normalize(torch.load(b_path, map_location="cpu"))
-print("keys A:", sorted(a.keys()))
-print("keys B:", sorted(b.keys()))
-for k in sorted(set(a) & set(b)):
-    x, y = a[k], b[k]
-    d = y - x
-    print(f"\n{k}")
-    print(f"  A norm:     {x.norm().item():.6g}")
-    print(f"  B norm:     {y.norm().item():.6g}")
-    print(f"  diff norm:  {d.norm().item():.6g}")
-    print(f"  rel diff:   {(d.norm() / (x.norm() + 1e-12)).item():.6g}")
-    print(f"  max abs:    {d.abs().max().item():.6g}")
-    print(f"  allclose:   {torch.allclose(x, y)}")
-PY
-```
 
 ## LLaVA image feature analysis
 
