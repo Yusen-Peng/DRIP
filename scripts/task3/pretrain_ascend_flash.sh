@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=May10_7B_DRIP_2x_pretrain_continue
-#SBATCH --output=May10_7B_DRIP_2x_pretrain_continue.txt
-#SBATCH --time=10:00:00
+#SBATCH --job-name=May19_7B_Fixed_8x_pretrain
+#SBATCH --output=May19_7B_DRIP_8x_pretrain.txt
+#SBATCH --time=15:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=nextgen
@@ -16,7 +16,7 @@ conda activate DRIP_flash
 source activate DRIP_flash
 
 export OMP_NUM_THREADS=16
-export MASTER_PORT=$((12000 + RANDOM % 20000))
+export MASTER_PORT=$((13000 + RANDOM % 20000))
 export WANDB_DISABLED=true
 export CUDA_VISIBLE_DEVICES=0
 
@@ -34,7 +34,7 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_2x_pretrain \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_8x_pretrain \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \

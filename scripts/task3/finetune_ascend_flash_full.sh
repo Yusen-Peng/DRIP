@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=May4_7B_ORIGINAL_finetune
-#SBATCH --output=May4_7B_ORIGINAL_finetune.txt
+#SBATCH --job-name=May19_7B_ORIGINAL_finetune
+#SBATCH --output=May19_7B_ORIGINAL_finetune.txt
 #SBATCH --time=0:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=2
-#SBATCH --partition=quad
+#SBATCH --partition=gpu
+#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
@@ -21,7 +21,7 @@ export WANDB_DISABLED=true
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-deepspeed --master_port $MASTER_PORT src/task3_llava.py \
+deepspeed src/task3_llava.py \
     --deepspeed src/LLaVA_wrapper/scripts/finetune.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version v1 \

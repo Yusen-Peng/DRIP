@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May8_POPE_LLaVA_7B_DRIP_Hnet_4x_pretrain
-#SBATCH --output=May8_POPE_LLaVA_7B_DRIP_Hnet_4x_pretrain.log
+#SBATCH --job-name=May12_POPE_LLaVA_7B_DRIP_8x_pretrain
+#SBATCH --output=May12_POPE_LLaVA_7B_DRIP_8x_pretrain.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,7 +17,7 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_7B_DRIP_Hnet_4x_pretrain"
+VERSION="LLaVA_7B_DRIP_8x_pretrain"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers

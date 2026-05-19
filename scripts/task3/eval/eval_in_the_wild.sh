@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May9_wild_LLaVA_7B_DRIP_Hnet_4x_pretrain
-#SBATCH --output=May9_wild_LLaVA_7B_DRIP_Hnet_4x_pretrain.log
+#SBATCH --job-name=May12_wild_LLaVA_7B_DRIP_8x_pretrain
+#SBATCH --output=May12_wild_LLaVA_7B_DRIP_8x_pretrain.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,7 +24,7 @@ set -a
 source /users/PAS2912/yusenpeng/DRIP/.env
 set +a
 
-VERSION="LLaVA_7B_DRIP_Hnet_4x_pretrain"
+VERSION="LLaVA_7B_DRIP_8x_pretrain"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl

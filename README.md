@@ -1,6 +1,6 @@
-<p align="center">
+<!-- <p align="center">
 <img src="docs/DRIP.png" width="700"/>
-</p>
+</p> -->
 
 <h1 align="center">DRIP</h1>
 <h2 align="center">Dynamic Patch Pooling for Efficient Visual Instruction Tuning</h2>
@@ -245,11 +245,12 @@ example:
 ![alt text](src/boundary_vis/LLaVA_results/cosine/pancake_orig_seq_adj_cosine.png)
 
 
-## Contacts
+## Benchmark Results
 
-If you have any questions or suggestions, feel free to contact:
+LLaVA 7B:
 
-- Yusen Peng (peng.1007@osu.edu)
-- Sachin Kumar (kumar.1145@osu.edu)
+![alt text](results/llava_7B_results.png)
 
-Or describe it in Issues.
+LLaVA 13B:
+
+coming soon!

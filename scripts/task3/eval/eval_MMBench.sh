@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May11_MMBench_LLaVA_7B_DRIP_10x_pretrain
-#SBATCH --output=May11_MMBench_LLaVA_7B_DRIP_10x_pretrain.log
+#SBATCH --job-name=May11_MMBench_LLaVA_7B_DRIP_8x_pretrain
+#SBATCH --output=May11_MMBench_LLaVA_7B_DRIP_8x_pretrain.log
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_DRIP_10x_pretrain"
+VERSION="LLaVA_7B_DRIP_8x_pretrain"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712
