@@ -1,11 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=May19_7B_ORIGINAL_finetune
-#SBATCH --output=May19_7B_ORIGINAL_finetune.txt
-#SBATCH --time=0:10:00
+#SBATCH --job-name=May20_7B_ORIGINAL_finetune
+#SBATCH --output=May20_7B_ORIGINAL_finetune.txt
+#SBATCH --time=00:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=gpu
-#SBATCH --gpus-per-node=1
+#SBATCH --gpus-per-node=2
+#SBATCH --gpu-bind=none
+#SBATCH --partition=quad
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
@@ -18,11 +19,15 @@ source activate DRIP_flash
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 export WANDB_DISABLED=true
+export SLURM_GPU_BIND=none
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-deepspeed src/task3_llava.py \
-    --deepspeed src/LLaVA_wrapper/scripts/finetune.json \
+echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
+nvidia-smi
+
+deepspeed --master_port $MASTER_PORT src/task3_llava.py \
+    --deepspeed src/LLaVA_wrapper/scripts/finetune_zero3.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version v1 \
     --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json \
@@ -40,6 +45,7 @@ deepspeed src/task3_llava.py \
     --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 1 \
     --gradient_accumulation_steps 128 \
+    --accelerator_config '{"gradient_accumulation_kwargs":{"sync_each_batch":true}}' \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
     --save_steps 15 \

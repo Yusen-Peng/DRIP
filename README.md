@@ -1,7 +1,3 @@
-<!-- <p align="center">
-<img src="docs/DRIP.png" width="700"/>
-</p> -->
-
 <h1 align="center">DRIP</h1>
 <h2 align="center">Dynamic Patch Pooling for Efficient Visual Instruction Tuning</h2>
 
@@ -66,7 +62,7 @@ examples:
 | imagenet_DRIP_4x_01_warmup2 | model_299.pth |
 | ![alt text](/src/boundary_vis/w2_4x_boundaries.png) | ![alt text](/src/boundary_vis/w2_4x_attention.png) |
 <!-- | imagenet_DRIP_4x_half_LR_no_warmup | model_299.pth |
-| ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_overlay.png) | ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_attention_overlay.png) | --> -->
+| ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_overlay.png) | ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_attention_overlay.png) | -->
 
 
 ## LLaVA 1.5 Experiments
@@ -160,9 +156,25 @@ DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pr
 
 ### finetuning/VQA SFT
 
+We use ascend cluster with flash attention:
+
 ```bash
-# ascend with flash attention
+# LoRA finetuning
 sbatch scripts/task3/finetune_ascend_flash.sh
+# Full finetuning
+sbatch scripts/task3/finetune_ascend_flash_full.sh
+```
+
+We can SSH into GPUs to check its memory usage with:
+
+```bash
+ssh <node ID> nvidia-smi
+```
+
+and process status with:
+
+```bash
+ssh <node ID> "ps -fp <job ID>"
 ```
 
 When resuming from an existing checkpoint, **make sure to update the DRIP weight path `DRIP_WEIGHT_PATH`**
