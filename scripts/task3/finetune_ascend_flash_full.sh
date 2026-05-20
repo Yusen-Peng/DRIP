@@ -4,7 +4,8 @@
 #SBATCH --time=00:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-node=2
+#SBATCH --ntasks-per-node=1
+#SBATCH --gres=gpu:2
 #SBATCH --gpu-bind=none
 #SBATCH --partition=quad
 #SBATCH --cpus-per-task=16
@@ -26,7 +27,7 @@ cd /users/PAS2912/yusenpeng/DRIP/
 echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
 nvidia-smi
 
-deepspeed --master_port $MASTER_PORT src/task3_llava.py \
+torchrun --standalone --nproc_per_node=2 --master_port=$MASTER_PORT src/task3_llava.py \
     --deepspeed src/LLaVA_wrapper/scripts/finetune_zero3.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version v1 \
