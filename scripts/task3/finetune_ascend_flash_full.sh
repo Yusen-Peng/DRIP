@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=May20_7B_ORIGINAL_finetune
-#SBATCH --output=May20_7B_ORIGINAL_finetune.txt
-#SBATCH --time=00:20:00
+#SBATCH --job-name=May20_7B_Fixed_4x_full_ST_finetune
+#SBATCH --output=May20_7B_Fixed_4x_full_ST_finetune.txt
+#SBATCH --time=32:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:4
 #SBATCH --gpu-bind=none
 #SBATCH --partition=quad
 #SBATCH --cpus-per-task=16
@@ -27,7 +27,7 @@ cd /users/PAS2912/yusenpeng/DRIP/
 echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
 nvidia-smi
 
-torchrun --standalone --nproc_per_node=2 --master_port=$MASTER_PORT src/task3_llava.py \
+torchrun --standalone --nproc_per_node=4 --master_port=$MASTER_PORT src/task3_llava.py \
     --deepspeed src/LLaVA_wrapper/scripts/finetune_zero3.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version v1 \
@@ -37,11 +37,11 @@ torchrun --standalone --nproc_per_node=2 --master_port=$MASTER_PORT src/task3_ll
     --mm_projector_type mlp2x_gelu \
     --tf32 True \
     --bf16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_pretrain/mm_projector.bin \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_4x_pretrain/mm_projector.bin \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_4x_finetune_ALL \
     --num_train_epochs 1 \
     --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 1 \

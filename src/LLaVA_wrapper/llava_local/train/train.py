@@ -1120,6 +1120,14 @@ def train(attn_implementation=None):
                     args=training_args,
                     **data_module)
 
+    
+    
+    # fix invalid generation_config before checkpoint saving
+    if hasattr(model, "generation_config") and model.generation_config is not None:
+        model.generation_config.do_sample = False
+        model.generation_config.temperature = None
+        model.generation_config.top_p = None
+
 
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         trainer.train(resume_from_checkpoint=True)

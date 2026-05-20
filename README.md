@@ -159,9 +159,10 @@ DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pr
 We use ascend cluster with flash attention:
 
 ```bash
-# LoRA finetuning
+# LoRA finetuning - single GPU is fine
 sbatch scripts/task3/finetune_ascend_flash.sh
-# Full finetuning
+# Full finetuning - must be distributed
+# 2 GPUs OR 4 GPUs
 sbatch scripts/task3/finetune_ascend_flash_full.sh
 ```
 
