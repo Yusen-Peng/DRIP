@@ -12,9 +12,9 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             "DRIP-H": our BP with H-Net
     """
 
-    MERGE_STRATEGY = "Fixed"
+    MERGE_STRATEGY = "DRIP"
     # 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
-    COMPRESSION_RATE = 0.25
+    COMPRESSION_RATE = 0.1
     
 
     # FIXME: temperature tuning
@@ -33,14 +33,15 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         8x paths.
     """
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain/drip.bin"
-
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_finetune_train_lora/drip.bin"
 
     """
         10x paths.
     """
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_lora/drip.bin"
 
-    DRIP_WEIGHT_PATH = None
+    # DRIP_WEIGHT_PATH = None
 
     ############################################################
 
