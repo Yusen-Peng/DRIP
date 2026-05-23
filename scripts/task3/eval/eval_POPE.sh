@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May22_POPE_LLaVA_7B_Fixed_8x_finetune_train_full
-#SBATCH --output=May22_POPE_LLaVA_7B_Fixed_8x_finetune_train_full.log
+#SBATCH --job-name=May23_POPE_LLaVA_7B_PruMerge_4x_finetune_train_full
+#SBATCH --output=May23_POPE_LLaVA_7B_PruMerge_4x_finetune_train_full.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,7 +17,7 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_7B_Fixed_8x_finetune_train_full"
+VERSION="LLaVA_7B_PruMerge_4x_finetune_train_full"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers
@@ -25,7 +25,7 @@ touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/${VERSION}.j
 
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_8x_finetune_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/llava_pope_test.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/val2014 \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/${VERSION}.jsonl \
