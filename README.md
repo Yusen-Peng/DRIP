@@ -53,16 +53,7 @@ python src/FLOP.py --mode DRIP --compression_rate 0.25
 python src/FLOP.py --mode fixed_pooling --compression_rate 0.25
 # original ViT
 python src/FLOP.py --mode ViT
-```
-
-examples:
-
-| boundaries | attention maps |
-| ---------- | -------------- |
-| imagenet_DRIP_4x_01_warmup2 | model_299.pth |
-| ![alt text](/src/boundary_vis/w2_4x_boundaries.png) | ![alt text](/src/boundary_vis/w2_4x_attention.png) |
-<!-- | imagenet_DRIP_4x_half_LR_no_warmup | model_299.pth |
-| ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_overlay.png) | ![alt text](/src/boundary_vis/halfLR_dtpvit_single_multi_attention_overlay.png) | -->
+```-->
 
 
 ## LLaVA 1.5 Experiments
@@ -83,47 +74,10 @@ Then we are good to move onto benchmark experiments.
 
 ### Evaluation/Benchmarks
 
-General VQA (4):
+Do evaluation across all VQA benchmarks (VQAv2, SQA, MME, MMBench, GQA, TextVQA, POPE, LLaVA-wild):
 
 ```bash
-# VQAv2 [🚨LONG🚨]
-# need to submit the result json file to:
-# https://eval.ai/web/challenges/challenge-page/830
-sbatch scripts/task3/eval/eval_VQAv2.sh
-# SQA 
-sbatch scripts/task3/eval/eval_SQA.sh
-# MME
-sbatch scripts/task3/eval/eval_MME.sh
-# MM-Bench
-sbatch scripts/task3/eval/eval_MMBench.sh
-```
-
-Reasoning (1):
-
-```bash
-# GQA
-sbatch scripts/task3/eval/eval_GQA.sh
-```
-
-OCR (1):
-
-```bash
-# TextVQA
-sbatch scripts/task3/eval/eval_textVQA.sh
-```
-
-Hallucination (1):
-
-```bash
-# POPE
-sbatch scripts/task3/eval/eval_POPE.sh
-```
-
-Free Response (1):
-
-```bash
-# LLaVA-in-the-wild
-sbatch scripts/task3/eval/eval_in_the_wild.sh
+bash scripts/task3/eval/EVALUATE_ALL.sh
 ```
 
 ## LLaVA Finetuning
