@@ -470,26 +470,6 @@ class LLaVATrainer(Trainer):
         else:
             super(LLaVATrainer, self)._save(output_dir, state_dict)
 
-        # FIXED: we also need to save projector + DRIP into the same final output dir
-        if output_dir is None:
-            output_dir = self.args.output_dir
-        keys_to_match = ["mm_projector", "vision_resampler"]
-        if getattr(self.args, "use_im_start_end", False):
-            keys_to_match.extend(["embed_tokens", "embed_in"])
-        weight_to_save = get_mm_adapter_state_maybe_zero_3(self.model.named_parameters(), keys_to_match)
-        drip_keys_to_match = ["boundary_predictor", "null_token"]
-        drip_weight_to_save = get_mm_adapter_state_maybe_zero_3(self.model.named_parameters(), drip_keys_to_match)
-        if self.args.local_rank in (0, -1):
-            if len(weight_to_save) > 0:
-                torch.save(weight_to_save, os.path.join(output_dir, "mm_projector.bin"))
-            if len(drip_weight_to_save) > 0:
-                torch.save(drip_weight_to_save, os.path.join(output_dir, "drip.bin"))
-                print(f"🌊 Saved DRIP weights to {os.path.join(output_dir, 'drip.bin')}")
-        if torch.distributed.is_available() and torch.distributed.is_initialized():
-            torch.distributed.barrier(
-                device_ids=[self.args.local_rank] if self.args.local_rank >= 0 else None
-            )
-
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
 
