@@ -82,18 +82,7 @@ bash scripts/task3/eval/EVALUATE_ALL.sh
 
 ## LLaVA Finetuning
 
-### flash attention
-
-Before anything, make sure flash attention is installed:
-
-```bash
-# install
-sbatch flash_attn.sh
-# test
-sbatch test_flash_attn.sh
-# what to expect: 
-# torch.Size([1, 128, 8, 64]) torch.float16 cuda:0
-```
+Before anything, make sure flash attention is installed - instruction: [https://github.com/Yusen-Peng/EasyInstall#flash-attention](https://github.com/Yusen-Peng/EasyInstall#flash-attention).
 
 ### pretraining (token alignment)
 
