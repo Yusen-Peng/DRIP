@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May24_GQA_LLaVA_7B_Fixed_20x_pretrain
-#SBATCH --output=May24_GQA_LLaVA_7B_Fixed_20x_pretrain.log
+#SBATCH --job-name=May24_GQA_LLaVA_7B_Fixed_500x_pretrain
+#SBATCH --output=May24_GQA_LLaVA_7B_Fixed_500x_pretrain.log
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,7 +24,7 @@ GQADIR="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data"
 OUTPUT_DIR=/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/answers/llava_gqa_testdev_balanced
 mkdir -p $OUTPUT_DIR
 
-OUTPUT_FILE=$OUTPUT_DIR/LLaVA_7B_Fixed_20x_pretrain.jsonl
+OUTPUT_FILE=$OUTPUT_DIR/LLaVA_7B_Fixed_500x_pretrain.jsonl
 
 python src/model_vqa_loader.py \
     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \

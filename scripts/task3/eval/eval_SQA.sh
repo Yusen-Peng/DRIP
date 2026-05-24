@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May24_SQA_LLaVA_7B_Fixed_20x_pretrain
-#SBATCH --output=May24_SQA_LLaVA_7B_Fixed_20x_pretrain.log
+#SBATCH --job-name=May24_SQA_LLaVA_7B_Fixed_500x_pretrain
+#SBATCH --output=May24_SQA_LLaVA_7B_Fixed_500x_pretrain.log
 #SBATCH --time=0:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,7 +18,7 @@ export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 
-VERSION="LLaVA_7B_Fixed_20x_pretrain"
+VERSION="LLaVA_7B_Fixed_500x_pretrain"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 

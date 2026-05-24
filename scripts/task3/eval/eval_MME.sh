@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May24_MME_LLaVA_7B_Fixed_20x_pretrain
-#SBATCH --output=May24_MME_LLaVA_7B_Fixed_20x_pretrain.log
+#SBATCH --job-name=May24_MME_LLaVA_7B_Fixed_500x_pretrain
+#SBATCH --output=May24_MME_LLaVA_7B_Fixed_500x_pretrain.log
 #SBATCH --time=00:15:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_Fixed_20x_pretrain"
+VERSION="LLaVA_7B_Fixed_500x_pretrain"
 
 python src/model_vqa_loader.py \
     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
