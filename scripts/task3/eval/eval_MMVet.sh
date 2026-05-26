@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May26_MMVet_LLaVA_7B_PruMerge_8x_lora
-#SBATCH --output=May26_MMVet_LLaVA_7B_PruMerge_8x_lora.log
+#SBATCH --job-name=May26_MMVet_LLaVA_7B_Fixed_8x_finetune_train_lora
+#SBATCH --output=May26_MMVet_LLaVA_7B_Fixed_8x_finetune_train_lora.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,7 +17,7 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_7B_PruMerge_8x_lora"
+VERSION="LLaVA_7B_Fixed_8x_finetune_train_lora"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
@@ -30,7 +30,7 @@ cd /users/PAS2912/yusenpeng/DRIP/
 #     --conv-mode vicuna_v1
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_lora \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_8x_finetune_train_lora \
     --model-base lmsys/vicuna-7b-v1.5 \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/llava-mm-vet.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/images \

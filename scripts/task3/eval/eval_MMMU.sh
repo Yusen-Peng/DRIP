@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May26_MMMU_LLaVA_7B_PruMerge_8x_lora
-#SBATCH --output=May26_MMMU_LLaVA_7B_PruMerge_8x_lora.log
+#SBATCH --job-name=May26_MMMU_LLaVA_7B_Fixed_8x_finetune_train_lora
+#SBATCH --output=May26_MMMU_LLaVA_7B_Fixed_8x_finetune_train_lora.log
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_PruMerge_8x_lora"
+VERSION="LLaVA_7B_Fixed_8x_finetune_train_lora"
 
 # python src/model_vqa_mmmu.py \
 #     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
@@ -27,7 +27,7 @@ VERSION="LLaVA_7B_PruMerge_8x_lora"
 #     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
 
 python src/model_vqa_mmmu.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_lora \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_8x_finetune_train_lora \
     --model_base lmsys/vicuna-7b-v1.5 \
     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml

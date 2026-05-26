@@ -22,40 +22,6 @@ conda deactivate
 conda activate DRIP
 ```
 
-<!-- ## ImageNet (OSC pitzer)
-
-running training experiments:
-
-```bash
-sbatch scripts/task1/finetune_imagenet.sh
-```
-
-boundary visualization & attention map analysis:
-
-for ImageNet
-
-```bash
-python src/boundary_visual_IN.py
-```
-
-running eval + analysis experiments:
-
-```bash
-sbatch scripts/task1/eval_imagenet.sh
-```
-
-GFLOPs measurement:
-
-```bash
-# DRIP
-python src/FLOP.py --mode DRIP --compression_rate 0.25
-# Fixed pooling
-python src/FLOP.py --mode fixed_pooling --compression_rate 0.25
-# original ViT
-python src/FLOP.py --mode ViT
-```-->
-
-
 ## LLaVA 1.5 Experiments
 
 ### Instruction
@@ -145,80 +111,14 @@ conda activate DRIP_flash
 python src/boundary_visual_LLaVA.py
 ```
 
-### visualization examples
-
-4x compression after **llava pretraining**:
-
-![alt text](src/boundary_vis/LLaVA_results/LLaVA_7B_DRIP_4x_pretrain.png)
-
-4x compression after **llava finetuning (lora)**:
-
-![alt text](src/boundary_vis/LLaVA_results/LLaVA_7B_DRIP_4x_finetune_train_lora.png)
-
-8x compression after **llava pretraining**:
-
-![alt text](src/boundary_vis/LLaVA_results/LLaVA_7B_DRIP_8x_pretrain.png)
-
-8x compression after **llava finetuning (lora)**:
-
-![alt text](src/boundary_vis/LLaVA_results/LLaVA_7B_DRIP_8x_finetune_train_lora.png)
-
-10x compression after **llava pretraining**:
-
-![alt text](src/boundary_vis/LLaVA_results/LLaVA_7B_DRIP_10x_pretrain.png)
-
-10 compression after **llava finetuning (lora)**:
-
-![alt text](src/boundary_vis/LLaVA_results/LLaVA_7B_DRIP_10x_finetune_train_lora.png)
-
-
-## LLaVA image feature analysis
-
-We conduct multiple analyses on image features: (1) PCA; (2) CLS attention; (3) token cosine dissimilarity.
-
-### PCA and CLS attention
-
-```bash
-salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-nextgen --time 00:15:00
-module load miniconda3/24.1.2-py310
-conda activate DRIP_flash
-python src/feature_visual_LLaVA.py
-```
-
-PCA upon 24th-layer features:
-
-![alt text](src/boundary_vis/LLaVA_results/llava_feature_pca_pc1_2x5.png)
-
-CLS attention (head-mean) upon 24th-layer features:
-
-![alt text](src/boundary_vis/LLaVA_results/llava_cls_attn_2x5_mean.png)
-
-CLS attention (head-max) upon 24th-layer features:
-
-![alt text](src/boundary_vis/LLaVA_results/llava_cls_attn_2x5_max.png)
-
-
-
-### token cosine similarity
-
-```bash
-salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-nextgen --time 00:15:00
-module load miniconda3/24.1.2-py310
-conda activate DRIP_flash
-python src/cossim_visual_LLaVA.py
-```
-
-example:
-
-![alt text](src/boundary_vis/LLaVA_results/cosine/pancake_orig_seq_adj_cosine.png)
+You can find examples in [Boundaries.md](/Boundaries.md). You can also find interesting image feature analysis (PCA, CLS attention, cosine similarity) in [Features.md](/Features.md).
 
 
 ## Benchmark Results
 
-LLaVA 7B:
+[Overleaf Link (restricted)](https://www.overleaf.com/project/69d110e27f4d521bbd6449ec)
 
-![alt text](results/llava_7B_results.png)
+## Contact
 
-LLaVA 13B:
+Yusen Peng (peng.1007@osu.edu)
 
-coming soon!

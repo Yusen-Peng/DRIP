@@ -14,7 +14,6 @@ sbatch scripts/task3/eval/eval_MMBench.sh
 
 
 
-
 # Reasoning (2): GQA
 sbatch scripts/task3/eval/eval_GQA.sh
 # MMMU
