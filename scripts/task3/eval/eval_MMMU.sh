@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May24_MMMU_TEST_lora
-#SBATCH --output=May24_MMMU_TEST_lora.log
+#SBATCH --job-name=May25_MMMU_LLaVA_7B_DRIP_10x_pretrain
+#SBATCH --output=May25_MMMU_LLaVA_7B_DRIP_10x_pretrain.log
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,18 +19,18 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_checkpoint_lora"
-
-# python src/model_vqa_mmmu.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
-#     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
-#     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
+VERSION="LLaVA_7B_DRIP_10x_pretrain"
 
 python src/model_vqa_mmmu.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-lora-local \
-    --model_base lmsys/vicuna-7b-v1.5 \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-local \
     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
+
+# python src/model_vqa_mmmu.py \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-7b-lora-local \
+#     --model_base lmsys/vicuna-7b-v1.5 \
+#     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
+#     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
 
 
 python src/mmmu_main_eval_only.py \

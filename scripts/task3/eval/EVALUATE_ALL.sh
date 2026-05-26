@@ -15,14 +15,18 @@ sbatch scripts/task3/eval/eval_MMBench.sh
 
 
 
-# Reasoning (1): GQA
+# Reasoning (2): GQA
 sbatch scripts/task3/eval/eval_GQA.sh
+# # MMMU
+# sbatch scripts/task3/eval/eval_MMMU.sh
 
 
 
 
-# OCR (1): TextVQA
+# OCR (2): TextVQA
 sbatch scripts/task3/eval/eval_textVQA.sh
+# # OCRBench
+# sbatch scripts/task3/eval/eval_ocrbench.sh
 
 
 
@@ -32,8 +36,7 @@ sbatch scripts/task3/eval/eval_POPE.sh
 
 
 
-# Free Response (2): 
-# LLaVA-in-the-wild
+# Free Response (2): LLaVA-in-the-wild
 sbatch scripts/task3/eval/eval_in_the_wild.sh
 # # MM-Vet
 # # need to submit the result json file to:
