@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=May23_7B_Fixed_20x_pretrain
-#SBATCH --output=May23_7B_Fixed_20x_pretrain.txt
-#SBATCH --time=20:00:00
+#SBATCH --job-name=May27_LLaVA_7B_FLASH_pretrain_second_to_last
+#SBATCH --output=May27_LLaVA_7B_FLASH_pretrain_second_to_last.txt
+#SBATCH --time=40:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=nextgen
@@ -31,10 +31,10 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --vision_tower openai/clip-vit-large-patch14-336 \
     --mm_projector_type mlp2x_gelu \
     --tune_mm_mlp_adapter True \
-    --mm_vision_select_layer -1 \
+    --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_20x_pretrain \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_pretrain_second_to_last \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \
