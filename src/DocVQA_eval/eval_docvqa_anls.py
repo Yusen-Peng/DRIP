@@ -28,19 +28,22 @@ def normalize_answer(s):
     return s
 
 def anls_one(pred, golds, threshold=0.5):
+    # implementation is adapted based on the official math formula:
+    # https://rrc.cvc.uab.es/?ch=11&com=tasks
     pred = normalize_answer(pred)
     if len(pred) == 0:
         return 0.0
-
     best = 0.0
     for g in golds:
         gold = normalize_answer(g)
         if len(gold) == 0:
             continue
         dist = levenshtein(pred, gold)
-        sim = 1.0 - dist / max(len(pred), len(gold))
-        if sim < threshold:
+        nl = dist / max(len(pred), len(gold))
+        if nl >= threshold:
             sim = 0.0
+        else:
+            sim = 1.0 - nl
         best = max(best, sim)
     return best
 
@@ -82,8 +85,10 @@ def main():
 
     result = {
         "ANLS": mean(scores),
+        "Accuracy@NL<0.5": sum(s > 0 for s in scores) / len(scores),
+        "Accuracy@NL=0": sum(s == 1.0 for s in scores) / len(scores),
         "num_examples": len(scores),
-        "missing_predictions": missing,
+        "missing_predictions": missing
     }
 
     print(json.dumps(result, indent=2))
