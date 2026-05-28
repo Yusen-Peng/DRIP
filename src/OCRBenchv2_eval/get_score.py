@@ -84,19 +84,19 @@ def main():
 
     en_scores = {
         "text_recognition": en_text_recognition_list,
-        "text_detection": en_text_detection_list,
-        "text_spotting": en_text_spotting_list,
-        "relationship_extraction": en_relationship_extraction_list,
-        "element_parsing": en_element_parsing_list,
-        "mathematical_calculation": en_mathematical_calculation_list,
+        # "text_detection": en_text_detection_list,
+        # "text_spotting": en_text_spotting_list,
+        # "relationship_extraction": en_relationship_extraction_list,
+        # "element_parsing": en_element_parsing_list,
+        # "mathematical_calculation": en_mathematical_calculation_list,
         "visual_text_understanding": en_visual_text_understanding_list,
         "knowledge_reasoning": en_knowledge_reasoning_list
     }
 
     cn_scores = {
         "text_recognition": cn_text_recognition_list,
-        "relationship_extraction": cn_relationship_extraction_list,
-        "element_parsing": cn_element_parsing_list,
+        # "relationship_extraction": cn_relationship_extraction_list,
+        # "element_parsing": cn_element_parsing_list,
         "visual_text_understanding": cn_visual_text_understanding_list,
         "knowledge_reasoning": cn_knowledge_reasoning_list
     }

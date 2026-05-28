@@ -56,14 +56,12 @@ def _get_args():
     parser.add_argument("--num_beams", type=int, default=1)
     parser.add_argument("--max_new_tokens", type=int, default=128)
     parser.add_argument("--resume", action="store_true")
-    parser.add_argument("--single_word_prompt", action="store_true")
     return parser.parse_args()
 
 
-def build_question(question, single_word_prompt=False):
+def build_question(question):
     question = question.strip()
-    if single_word_prompt:
-        question += "\nAnswer the question using a single word or phrase."
+    question += "\nAnswer the question using a single word or phrase."
     return question
 
 
@@ -124,8 +122,7 @@ def eval_worker(args, data, eval_id, output_queue):
             image = row["image"].convert("RGB")
 
             qs = build_question(
-                row["question"],
-                args.single_word_prompt,
+                row["question"]
             )
 
             if model.config.mm_use_im_start_end:
@@ -273,7 +270,7 @@ if __name__ == "__main__":
 
         image = row["image"].convert("RGB")
 
-        qs = build_question(row["question"], args.single_word_prompt)
+        qs = build_question(row["question"])
 
         if model.config.mm_use_im_start_end:
 

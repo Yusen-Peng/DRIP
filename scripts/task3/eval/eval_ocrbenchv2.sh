@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=May27_OCRBenchV2_TEST
 #SBATCH --output=May27_OCRBenchV2_TEST.log
-#SBATCH --time=15:00:00
+#SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=nextgen
@@ -40,13 +40,25 @@ python src/model_vqa_ocrbenchv2.py \
 conda deactivate
 
 
-
 #### Evaluation ####
 ####################
 
 conda activate OCRv2Eval
+
+
+#### step1: merge json files
+
+python src/OCRBenchv2_eval/json_merge.py \
+    --pred /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/results/${VERSION}.json \
+    --out /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/results/${VERSION}_merged.json
+
+#### step2: run evaluation
+
+export NLTK_DATA=/fs/scratch/PAS2836/yusenpeng_dataset/nltk_data
+mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/scores
+
 python src/OCRBenchv2_eval/eval.py \
-    --input_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/results/${VERSION}.json \
+    --input_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/results/${VERSION}_merged.json \
     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/scores/${VERSION}_scores.json
 
 python src/OCRBenchv2_eval/get_score.py \
