@@ -1,3 +1,7 @@
+<p align="center">
+<img src="assets/DRIP-pipeline.png" width="500" height="400"/>
+</p>
+
 <h1 align="center">DRIP</h1>
 <h2 align="center">Dynamic Patch Pooling for Efficient Visual Instruction Tuning</h2>
 
@@ -11,15 +15,6 @@ module load conda # for Anvil
 conda create -n DRIP python=3.11 -y
 conda activate DRIP
 python -m pip install -r requirements.txt
-```
-
-activate an existing one:
-
-```bash
-module load miniconda3/24.1.2-py310 # for OSC
-module load conda # for Anvil
-conda deactivate
-conda activate DRIP
 ```
 
 ## LLaVA 1.5 Experiments
@@ -40,7 +35,7 @@ Then we are good to move onto benchmark experiments.
 
 ### Evaluation/Benchmarks
 
-Do evaluation across all VQA benchmarks (VQAv2, SQA, MME, MMBench, GQA, TextVQA, POPE, LLaVA-wild):
+Do evaluation across all **14** VQA benchmarks:
 
 ```bash
 bash scripts/task3/eval/EVALUATE_ALL.sh

@@ -21,7 +21,6 @@ sbatch scripts/task3/eval/eval_MMMU.sh
 
 
 
-
 # OCR (5): TextVQA
 sbatch scripts/task3/eval/eval_textVQA.sh
 # OCRBench
@@ -36,8 +35,6 @@ sbatch scripts/task3/eval/eval_ChartQAPro.sh
 
 # Hallucination (1): POPE
 sbatch scripts/task3/eval/eval_POPE.sh
-
-
 
 
 # Free Response (2): LLaVA-in-the-wild
