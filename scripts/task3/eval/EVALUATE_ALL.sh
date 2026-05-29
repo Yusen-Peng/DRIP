@@ -22,7 +22,7 @@ sbatch scripts/task3/eval/eval_MMMU.sh
 
 
 
-# OCR (3): TextVQA
+# OCR (5): TextVQA
 sbatch scripts/task3/eval/eval_textVQA.sh
 # OCRBench
 sbatch scripts/task3/eval/eval_ocrbench.sh
@@ -30,6 +30,8 @@ sbatch scripts/task3/eval/eval_ocrbench.sh
 sbatch scripts/task3/eval/eval_ocrbenchv2.sh
 # DocVQA
 sbatch scripts/task3/eval/eval_DocVQA.sh
+# ChartQAPro
+sbatch scripts/task3/eval/eval_ChartQAPro.sh
 
 
 # Hallucination (1): POPE

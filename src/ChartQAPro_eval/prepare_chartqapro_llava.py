@@ -35,26 +35,26 @@ def main():
     with open(llava_jsonl, "w") as f:
         for idx, sample in enumerate(tqdm(ds)):
 
-            # image = sample["image"]
-            # image_name = f"{idx}.png"
-            # image.save(os.path.join(image_dir, image_name))
             image_bytes = sample["image"]
             image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
             image_name = f"{idx}.png"
             image.save(os.path.join(image_dir, image_name))
-
             question = sample["Question"]
 
-            qid = str(idx)
+            if isinstance(question, list):
+                question_for_prompt = question[-1]
+            else:
+                question_for_prompt = question
 
+            qid = str(idx)
             row = {
                 "question_id": qid,
                 "image": image_name,
-                "text": question
+                "text": str(question_for_prompt)
             }
 
-            f.write(json.dumps(row) + "\n")
-
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            
             gt_entries.append({
                 "question_id": qid,
                 "Question": sample["Question"],
