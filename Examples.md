@@ -18,6 +18,7 @@ Visualize these examples by configuring the image ID one by one:
 salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-nextgen --time 00:05:00
 module load miniconda3/24.1.2-py310
 conda activate DRIP_flash
+# specify the image ID first
 python src/example_analysis/individual_boundaries.py
 ```
 

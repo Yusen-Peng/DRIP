@@ -4,7 +4,7 @@ import re
 import os
 import shutil
 
-NUMBER_OF_EXAMPLES = 20
+NUMBER_OF_EXAMPLES = 40
 
 
 class EvalAIAnswerProcessor:
