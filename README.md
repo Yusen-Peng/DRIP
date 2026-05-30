@@ -109,6 +109,22 @@ python src/boundary_visual_LLaVA.py
 You can find examples in [Boundaries.md](/Boundaries.md). You can also find interesting image feature analysis (PCA, CLS attention, cosine similarity) in [Features.md](/Features.md). Find more Benchmark example analaysis (i.e., case study) in [Examples.md](/Examples.md).
 
 
+## TFLOP measurement
+
+```bash
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-nextgen --time 00:30:00
+module load miniconda3/24.1.2-py310
+conda activate DRIP_flash
+# for full finetuned models
+python src/GFLOP_measurement.py --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full
+# for LoRA finetuned models
+python src/GFLOP_measurement.py --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_lora \
+    --model-base lmsys/vicuna-7b-v1.5
+```
+
+Important Note: for "DRIP", please go to (src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py)[src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py] line #93 to toggle ``inference=False`` to ``inference=True`` to accurately evaluate the TFLOPs during prefill stage.
+
+
 ## Benchmark Results
 
 [Overleaf Link (restricted)](https://www.overleaf.com/project/69d110e27f4d521bbd6449ec)
