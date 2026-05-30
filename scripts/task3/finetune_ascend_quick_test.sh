@@ -1,17 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=May29_LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT
-#SBATCH --output=May29_LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT.txt
-#SBATCH --time=40:00:00
+#SBATCH --job-name=May29_TEST_TRAIN_VIT
+#SBATCH --output=May29_TEST_TRAIN_VIT.txt
+#SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:4
-#SBATCH --gpu-bind=none
-#SBATCH --partition=quad
+#SBATCH --partition=debug-nextgen
+#SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
-#SBATCH --exclude=a0011,a0001
 
 module load miniconda3/24.1.2-py310
 module load cuda/12.6.2
@@ -21,15 +18,12 @@ source activate DRIP_flash
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 export WANDB_DISABLED=true
-export SLURM_GPU_BIND=none
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
-nvidia-smi
-
-torchrun --standalone --nproc_per_node=4 --master_port=$MASTER_PORT src/task3_llava.py \
-    --deepspeed src/LLaVA_wrapper/scripts/finetune_zero3.json \
+deepspeed src/task3_llava.py \
+    --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
+    --deepspeed src/LLaVA_wrapper/scripts/finetune.json \
     --model_name_or_path lmsys/vicuna-7b-v1.5 \
     --version v1 \
     --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json \
@@ -42,12 +36,11 @@ torchrun --standalone --nproc_per_node=4 --master_port=$MASTER_PORT src/task3_ll
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_lora_TEST_TRAIN_VIT \
     --num_train_epochs 1 \
-    --per_device_train_batch_size 1 \
-    --per_device_eval_batch_size 1 \
-    --gradient_accumulation_steps 128 \
-    --accelerator_config '{"gradient_accumulation_kwargs":{"sync_each_batch":true}}' \
+    --per_device_train_batch_size 4 \
+    --per_device_eval_batch_size 4 \
+    --gradient_accumulation_steps 32 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
     --save_steps 15 \

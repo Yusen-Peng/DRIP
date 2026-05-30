@@ -1098,6 +1098,15 @@ def train(attn_implementation=None):
         model.initialize_vision_tokenizer(model_args, tokenizer=tokenizer)
 
 
+        ################################################################################################
+        # FIXME: ablation: make vision tower trainable or not
+        # for p in model.get_model().vision_tower.parameters():
+        #     p.requires_grad = True
+        # print(f"🐣🐣🐣########## check ##########:", flush=True)
+        # vision_trainable = any(p.requires_grad for p in model.get_model().vision_tower.parameters())
+        # print(f"the vision tower is trainable: {vision_trainable}", flush=True)
+        ################################################################################################
+
     if training_args.bits in [4, 8]:
         from peft.tuners.lora import LoraLayer
         for name, module in model.named_modules():
