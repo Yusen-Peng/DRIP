@@ -127,6 +127,79 @@ def overlay_llava_drip_boundaries(
     return Image.fromarray(overlay_np), hard_mask, soft_mask, num_boundary_patches
 
 
+
+@torch.no_grad()
+def get_llava_fixed_hard_boundaries(model: CLIPVisionTower, img_3chw: torch.Tensor, verbose=False):
+    device = model.device
+    dtype = model.dtype
+
+    x = img_3chw.unsqueeze(0).to(device=device, dtype=dtype)
+    image_forward_outs = model.vision_tower(x, output_hidden_states=True)
+    patch_tokens = model.feature_select(image_forward_outs)  # [1, L, D]
+
+    B, L_patch, _ = patch_tokens.shape
+    assert B == 1, "Only single-image inference is supported."
+
+    grid_h = model.num_patches_per_side
+    grid_w = model.num_patches_per_side
+    assert L_patch == grid_h * grid_w, f"Expected {grid_h * grid_w} patches, got {L_patch}"
+
+    num_tokens_to_keep = max(1, int(L_patch * model.compression_rate))
+    indices = torch.linspace(0, L_patch - 1, steps=num_tokens_to_keep, device=patch_tokens.device).round().long()
+    hard_boundaries = torch.zeros(B, L_patch, device=patch_tokens.device)
+    hard_boundaries[:, indices] = 1
+
+    """
+        enforce the last token to be a boundary token
+    """
+    last = torch.ones_like(hard_boundaries[:, -1:])
+    hard_boundaries = torch.cat([hard_boundaries[:, :-1], last], dim=1)
+
+    return hard_boundaries[0].detach().float().cpu(), _, grid_h, grid_w
+
+
+@torch.no_grad()
+def overlay_llava_fixed_boundaries(
+    model: CLIPVisionTower,
+    img_3chw: torch.Tensor,
+    alpha=0.4,
+    verbose=False,
+):
+    hard_1d, _, grid_h, grid_w = get_llava_fixed_hard_boundaries(model, img_3chw, verbose=verbose)
+    # let's count how many patches are selected as boundary tokens
+    num_boundary_patches = hard_1d.sum().item()
+    hard_mask = hard_1d.view(grid_h, grid_w).numpy()
+    # soft_mask = soft_1d.view(grid_h, grid_w).numpy()
+
+    orig = unnormalize_img(img_3chw)
+    orig_img = TF.to_pil_image(orig).convert("RGB")
+    orig_np = np.array(orig_img).astype(np.uint8)
+
+    img_h, img_w = orig_np.shape[:2]
+    patch_h = img_h // grid_h
+    patch_w = img_w // grid_w
+
+    overlay_np = orig_np.copy()
+    for i in range(grid_h):
+        for j in range(grid_w):
+            if hard_mask[i, j] == 1.0:
+                y0, y1 = i * patch_h, (i + 1) * patch_h
+                x0, x1 = j * patch_w, (j + 1) * patch_w
+
+                patch = overlay_np[y0:y1, x0:x1]
+                
+                red = np.zeros_like(patch)
+                red[..., 0] = 255
+                overlay_np[y0:y1, x0:x1] = ((1 - alpha) * patch + alpha * red).astype(np.uint8)
+                # color = np.zeros_like(patch)
+                # color[..., 1] = 255   # G
+                # color[..., 2] = 255   # B  -> cyan
+
+                # overlay_np[y0:y1, x0:x1] = ((1 - alpha) * patch + alpha * color).astype(np.uint8)
+
+    return Image.fromarray(overlay_np), hard_mask, None, num_boundary_patches
+
+
 def visualize_10_images_2x5(
     model: CLIPVisionTower,
     image_paths,

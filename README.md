@@ -106,7 +106,7 @@ conda activate DRIP_flash
 python src/boundary_visual_LLaVA.py
 ```
 
-You can find examples in [Boundaries.md](/Boundaries.md). You can also find interesting image feature analysis (PCA, CLS attention, cosine similarity) in [Features.md](/Features.md).
+You can find examples in [Boundaries.md](/Boundaries.md). You can also find interesting image feature analysis (PCA, CLS attention, cosine similarity) in [Features.md](/Features.md). Find more Benchmark example analaysis (i.e., case study) in [Examples.md](/Examples.md).
 
 
 ## Benchmark Results
