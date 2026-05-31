@@ -125,11 +125,37 @@ python src/GFLOP_measurement.py --model-path /fs/scratch/PAS2836/yusenpeng_check
 Important Note: for "DRIP", please go to [src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py](src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py) line #93 to toggle ``inference=False`` to ``inference=True`` to accurately evaluate the TFLOPs during prefill stage.
 
 
-## Benchmark Results
+## Results
 
-[Overleaf Link (restricted)](https://www.overleaf.com/project/69d110e27f4d521bbd6449ec)
+LoRA finetuning with image features from ViT's last layer:
+
+![alt text](results/paper_figures/tradeoff_lora.png)
+
+CSV results: [results/lora_7B_last.csv](results/lora_7B_last.csv)
+
+Full finetuning with image features from ViT's last layer:
+
+![alt text](results/paper_figures/tradeoff_full.png)
+
+CSV results: [results/full_7B_last.csv](results/full_7B_last.csv)
+
+## Examples from TextVQA
+
+4x compression:
+
+![alt text](src/example_analysis/TextVQA_results/result_pngs/DRIP-examples_4x.png)
+
+8x compression:
+
+![alt text](src/example_analysis/TextVQA_results/result_pngs/DRIP-examples_8x.png)
+
+10 compression:
+
+![alt text](src/example_analysis/TextVQA_results/result_pngs/DRIP-examples_10x.png)
+
 
 ## Contact
 
-Yusen Peng (peng.1007@osu.edu)
+- Yusen Peng (peng.1007@osu.edu)
+- Sachin Kumar (kumar.1145@osu.edu)
 
