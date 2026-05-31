@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=May26_MMVet_LLaVA_7B_DRIP_10x_finetune_train_full
-#SBATCH --output=May26_MMVet_LLaVA_7B_DRIP_10x_finetune_train_full.log
+#SBATCH --job-name=May30_MMVet_LLaVA_7B_FLASH_second_to_last_finetune_full
+#SBATCH --output=May30_MMVet_LLaVA_7B_FLASH_second_to_last_finetune_full.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=debug-nextgen
+#SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -17,12 +17,12 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_7B_DRIP_10x_finetune_train_full"
+VERSION="May30_MMVet_LLaVA_7B_FLASH_second_to_last_finetune_full"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/llava-mm-vet.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/images \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/answers/${VERSION}.jsonl \

@@ -122,7 +122,7 @@ python src/GFLOP_measurement.py --model-path /fs/scratch/PAS2836/yusenpeng_check
     --model-base lmsys/vicuna-7b-v1.5
 ```
 
-Important Note: for "DRIP", please go to (src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py)[src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py] line #93 to toggle ``inference=False`` to ``inference=True`` to accurately evaluate the TFLOPs during prefill stage.
+Important Note: for "DRIP", please go to [src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py](src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py) line #93 to toggle ``inference=False`` to ``inference=True`` to accurately evaluate the TFLOPs during prefill stage.
 
 
 ## Benchmark Results
