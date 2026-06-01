@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May30_wild_LLaVA_7B_FLASH_second_to_last_finetune_full
-#SBATCH --output=May30_wild_LLaVA_7B_FLASH_second_to_last_finetune_full.log
+#SBATCH --job-name=Jun1_wild_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full
+#SBATCH --output=Jun1_wild_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,7 +24,7 @@ set -a
 source /users/PAS2912/yusenpeng/DRIP/.env
 set +a
 
-VERSION="LLaVA_7B_FLASH_second_to_last_finetune_full"
+VERSION="LLaVA_7B_PruMerge_10x_second_to_last_finetune_full"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl

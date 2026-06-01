@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May30_MME_LLaVA_7B_FLASH_second_to_last_finetune_full
-#SBATCH --output=May30_MME_LLaVA_7B_FLASH_second_to_last_finetune_full.log
+#SBATCH --job-name=Jun1_MME_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full
+#SBATCH --output=Jun1_MME_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full.log
 #SBATCH --time=00:15:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="May30_MMBench_LLaVA_7B_FLASH_second_to_last_finetune_full"
+VERSION="LLaVA_7B_PruMerge_10x_second_to_last_finetune_full"
 
 python src/model_vqa_loader.py \
     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full \

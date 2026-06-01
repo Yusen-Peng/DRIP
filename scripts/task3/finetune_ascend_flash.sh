@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May29_LLaVA_7B_FLASH_second_to_last_finetune_lora
-#SBATCH --output=May29_LLaVA_7B_FLASH_second_to_last_finetune_lora.txt
+#SBATCH --job-name=June1_LLaVA_7B_Fixed_4x_second_to_last_train_lora
+#SBATCH --output=June1_LLaVA_7B_Fixed_4x_second_to_last_train_lora.txt
 #SBATCH --time=80:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -32,11 +32,11 @@ deepspeed src/task3_llava.py \
     --mm_projector_type mlp2x_gelu \
     --tf32 True \
     --bf16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_pretrain_second_to_last/mm_projector.bin \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_4x_pretrain_second_to_last/mm_projector.bin \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_lora \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_4x_second_to_last_train_lora \
     --num_train_epochs 1 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \

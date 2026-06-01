@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May30_MMBench_LLaVA_7B_FLASH_second_to_last_finetune_full
-#SBATCH --output=May30_MMBench_LLaVA_7B_FLASH_second_to_last_finetune_full.log
+#SBATCH --job-name=Jun1_MMBench_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full
+#SBATCH --output=Jun1_MMBench_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full.log
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_FLASH_second_to_last_finetune_full"
+VERSION="LLaVA_7B_PruMerge_10x_second_to_last_finetune_full"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712

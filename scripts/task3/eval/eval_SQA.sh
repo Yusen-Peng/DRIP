@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May30_SQA_LLaVA_7B_FLASH_second_to_last_finetune_full
-#SBATCH --output=May30_SQA_LLaVA_7B_FLASH_second_to_last_finetune_full.log
+#SBATCH --job-name=Jun1_SQA_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full
+#SBATCH --output=Jun1_SQA_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full.log
 #SBATCH --time=0:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,7 +18,7 @@ export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 
-VERSION="LLaVA_7B_FLASH_second_to_last_finetune_full"
+VERSION="LLaVA_7B_PruMerge_10x_second_to_last_finetune_full"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 

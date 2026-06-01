@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=May31_LLaVA_7B_Fixed_10x_pretrain_second_to_last_round2
-#SBATCH --output=May31_LLaVA_7B_Fixed_10x_pretrain_second_to_last_round2.txt
+#SBATCH --job-name=May31_LLaVA_7B_DRIP_8x_pretrain_second_to_last_round3
+#SBATCH --output=May31_LLaVA_7B_DRIP_8x_pretrain_second_to_last_round3.txt
 #SBATCH --time=40:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=128G
+#SBATCH --mem=256G
 #SBATCH --account=PAS2836
 
 module load miniconda3/24.1.2-py310
@@ -34,7 +34,7 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --mm_vision_select_layer -2 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_10x_pretrain_second_to_last \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain_second_to_last \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \

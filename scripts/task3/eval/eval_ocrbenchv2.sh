@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May30_OCRBenchV2_LLaVA_7B_FLASH_second_to_last_finetune_full
-#SBATCH --output=May30_OCRBenchV2_LLaVA_7B_FLASH_second_to_last_finetune_full.log
+#SBATCH --job-name=Jun1_OCRBenchV2_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full
+#SBATCH --output=Jun1_OCRBenchV2_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full.log
 #SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,7 +20,7 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_FLASH_second_to_last_finetune_full"
+VERSION="LLaVA_7B_PruMerge_10x_second_to_last_finetune_full"
 
 
 #### Inference #####
