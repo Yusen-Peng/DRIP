@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Jun1_OCRBench_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full
-#SBATCH --output=Jun1_OCRBench_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full.log
+#SBATCH --job-name=June2_OCRBench_LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT
+#SBATCH --output=June2_OCRBench_LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT.log
 #SBATCH --time=00:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,11 +19,11 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_PruMerge_10x_second_to_last_finetune_full"
+VERSION="LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT"
 
 
 python src/model_vqa_ocrbench.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
     --save_name ${VERSION} \

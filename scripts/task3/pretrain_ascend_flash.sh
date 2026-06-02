@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=May31_LLaVA_7B_DRIP_8x_pretrain_second_to_last_round3
-#SBATCH --output=May31_LLaVA_7B_DRIP_8x_pretrain_second_to_last_round3.txt
+#SBATCH --job-name=Jun1_ABL_LLaVA_7B_DRIP_4x_Hnet_ablation_pretrain
+#SBATCH --output=Jun1_ABL_LLaVA_7B_DRIP_4x_Hnet_ablation_pretrain.txt
 #SBATCH --time=40:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -31,10 +31,10 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --vision_tower openai/clip-vit-large-patch14-336 \
     --mm_projector_type mlp2x_gelu \
     --tune_mm_mlp_adapter True \
-    --mm_vision_select_layer -2 \
+    --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain_second_to_last \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_Hnet_ablation_pretrain \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \

@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Jun1_wild_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full
-#SBATCH --output=Jun1_wild_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full.log
+#SBATCH --job-name=June2_wild_LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT
+#SBATCH --output=June2_wild_LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,13 +24,13 @@ set -a
 source /users/PAS2912/yusenpeng/DRIP/.env
 set +a
 
-VERSION="LLaVA_7B_PruMerge_10x_second_to_last_finetune_full"
+VERSION="LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl
 
 python src/model_vqa.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/images \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl \

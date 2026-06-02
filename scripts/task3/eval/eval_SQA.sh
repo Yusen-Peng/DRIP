@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Jun1_SQA_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full
-#SBATCH --output=Jun1_SQA_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full.log
+#SBATCH --job-name=June2_SQA_LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT
+#SBATCH --output=June2_SQA_LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT.log
 #SBATCH --time=0:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,7 +18,7 @@ export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 
-VERSION="LLaVA_7B_PruMerge_10x_second_to_last_finetune_full"
+VERSION="LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
@@ -26,7 +26,7 @@ mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.jsonl
 
 python src/model_vqa_science.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/SQA_key.json \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/images/test \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.jsonl \

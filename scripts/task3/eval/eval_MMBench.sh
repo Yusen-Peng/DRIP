@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Jun1_MMBench_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full
-#SBATCH --output=Jun1_MMBench_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full.log
+#SBATCH --job-name=June2_MMBench_LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT
+#SBATCH --output=June2_MMBench_LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT.log
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,14 +19,14 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_PruMerge_10x_second_to_last_finetune_full"
+VERSION="LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl
 
 python src/model_vqa_mmbench.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/mmbench_dev_20230712.tsv \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl \
     --single-pred-prompt \

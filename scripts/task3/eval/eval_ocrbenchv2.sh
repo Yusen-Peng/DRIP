@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Jun1_OCRBenchV2_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full
-#SBATCH --output=Jun1_OCRBenchV2_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full.log
+#SBATCH --job-name=June2_OCRBenchV2_LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT
+#SBATCH --output=June2_OCRBenchV2_LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT.log
 #SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,14 +20,14 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_PruMerge_10x_second_to_last_finetune_full"
+VERSION="LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT"
 
 
 #### Inference #####
 ####################
 
 python src/model_vqa_ocrbenchv2.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
@@ -38,7 +38,7 @@ python src/model_vqa_ocrbenchv2.py \
     --conv_mode vicuna_v1
 
 # python src/model_vqa_ocrbenchv2.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_lora \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_finetune_train_lora \
 #     --model_base lmsys/vicuna-7b-v1.5 \
 #     --dataset_path lmms-lab/OCRBench-v2 \
 #     --dataset_split test \

@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Jun1_DocVQA_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full
-#SBATCH --output=Jun1_DocVQA_LLaVA_7B_PruMerge_10x_second_to_last_finetune_full.log
+#SBATCH --job-name=June2_DocVQA_LLaVA_7B_FLASH_second_to_last_finetune_lora
+#SBATCH --output=June2_DocVQA_LLaVA_7B_FLASH_second_to_last_finetune_lora.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,26 +20,26 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP
 
 
-VERSION="LLaVA_7B_PruMerge_10x_second_to_last_finetune_full"
+VERSION="LLaVA_7B_FLASH_second_to_last_finetune_lora"
 echo "Running LLaVA inference..."
 
 
-python src/model_vqa_loader.py \
-  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full \
-  --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
-  --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \
-  --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
-  --temperature 0 \
-  --conv-mode llava_v1
-
 # python src/model_vqa_loader.py \
-#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_lora \
-#   --model-base lmsys/vicuna-7b-v1.5 \
+#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT \
 #   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
 #   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \
 #   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
 #   --temperature 0 \
 #   --conv-mode llava_v1
+
+python src/model_vqa_loader.py \
+  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_lora \
+  --model-base lmsys/vicuna-7b-v1.5 \
+  --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
+  --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \
+  --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
+  --temperature 0 \
+  --conv-mode llava_v1
 
 echo "Evaluating ANLS..."
 python src/DocVQA_eval/eval_docvqa_anls.py \
