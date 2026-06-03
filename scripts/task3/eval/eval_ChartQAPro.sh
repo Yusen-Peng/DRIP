@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=June2_ChartQAPro_LLaVA_7B_FLASH_second_to_last_finetune_lora
-#SBATCH --output=June2_ChartQAPro_LLaVA_7B_FLASH_second_to_last_finetune_lora.log
+#SBATCH --job-name=June3_ChartQAPro_LLaVA_7B_DRIP_10x_second_to_last_train_lora
+#SBATCH --output=June3_ChartQAPro_LLaVA_7B_DRIP_10x_second_to_last_train_lora.log
 #SBATCH --time=00:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,7 +20,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP
 
 
-VERSION="LLaVA_7B_FLASH_second_to_last_finetune_lora"
+VERSION="LLaVA_7B_DRIP_10x_second_to_last_train_lora"
 echo "Running LLaVA inference..."
 
 
@@ -33,7 +33,7 @@ echo "Running LLaVA inference..."
 #   --conv-mode llava_v1
 
 python src/model_vqa_chartqapro.py \
-  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_lora \
+  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \
   --model-base lmsys/vicuna-7b-v1.5 \
   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/images \
   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/chartqapro_test_llava.jsonl \
