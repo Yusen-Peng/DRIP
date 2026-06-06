@@ -614,6 +614,104 @@ def preprocess_plain(
     return dict(input_ids=input_ids, labels=targets)
 
 
+
+def preprocess_qwen_2(
+    sources,
+    tokenizer: transformers.PreTrainedTokenizer,
+    has_image: bool = False
+) -> Dict:
+    conv = conversation_lib.default_conversation.copy()
+    roles = {"human": conv.roles[0], "gpt": conv.roles[1]}
+
+    # Apply prompt templates
+    conversations = []
+    for i, source in enumerate(sources):
+        if roles[source[0]["from"]] != conv.roles[0]:
+            # Skip the first one if it is not from human
+            source = source[1:]
+
+        conv.messages = []
+        for j, sentence in enumerate(source):
+            role = roles[sentence["from"]]
+            assert role == conv.roles[j % 2], f"{i}"
+            conv.append_message(role, sentence["value"])
+        conversations.append(conv.get_prompt())
+
+    # Tokenize conversations
+
+    if has_image:
+        input_ids = torch.stack([tokenizer_image_token(prompt, tokenizer, return_tensors='pt') for prompt in conversations], dim=0)
+    else:
+        input_ids = tokenizer(
+            conversations,
+            return_tensors="pt",
+            padding="longest",
+            max_length=tokenizer.model_max_length,
+            truncation=True,
+        ).input_ids
+
+    targets = input_ids.clone()
+
+    assert conv.sep_style == conversation_lib.SeparatorStyle.QWEN_2
+
+    # Mask targets
+    sep = conv.sep + conv.roles[1] + ": "
+    for conversation, target in zip(conversations, targets):
+        total_len = int(target.ne(tokenizer.pad_token_id).sum())
+
+        rounds = conversation.split(conv.sep2)
+        rounds_len = len(rounds)
+        cur_len = 0
+        # target[:cur_len] = IGNORE_INDEX
+        for i, rou in enumerate(rounds):
+            if rou == "":
+                break
+
+            parts = rou.split(sep)
+            if len(parts) != 2:
+                break
+            parts[0] += sep
+
+            if has_image:
+                round_ids = tokenizer_image_token(rou, tokenizer)
+                instruction_ids = tokenizer_image_token(parts[0], tokenizer)
+                equal_parts = [x == y for x, y in zip(round_ids, instruction_ids)]
+
+                instruction_len = equal_parts.index(False) if False in equal_parts else len(equal_parts)
+                round_len = len(round_ids)
+
+            else:
+                round_ids = tokenizer(rou).input_ids
+                instruction_ids = tokenizer(parts[0]).input_ids
+                equal_parts = [x == y for x, y in zip(round_ids, instruction_ids)]
+            
+                instruction_len = equal_parts.index(False) if False in equal_parts else len(equal_parts)
+                round_len = len(round_ids)
+
+            if i != 0 and not tokenizer.legacy and IS_TOKENIZER_GREATER_THAN_0_14:
+                round_len += 1
+                instruction_len += 1
+
+            target[cur_len : cur_len + instruction_len] = IGNORE_INDEX
+
+            cur_len += round_len
+        target[cur_len:] = IGNORE_INDEX
+
+        if cur_len < tokenizer.model_max_length:
+            if cur_len != total_len + rounds_len - 2:
+                target[:] = IGNORE_INDEX
+                print(
+                    f"WARNING: tokenization mismatch: {cur_len} vs. {total_len}."
+                    f" (ignored)"
+                )
+
+    return dict(
+        input_ids=input_ids,
+        labels=targets,
+    )
+
+
+
 def preprocess(
     sources: Sequence[str],
     tokenizer: transformers.PreTrainedTokenizer,
@@ -634,6 +732,9 @@ def preprocess(
         return preprocess_v1(sources, tokenizer, has_image=has_image)
     if conversation_lib.default_conversation.version == "mpt":
         return preprocess_mpt(sources, tokenizer, has_image=has_image)
+    if conversation_lib.default_conversation.version.startswith("qwen_v2"):
+        return preprocess_qwen_2(sources, tokenizer, has_image=has_image)
+
     # add end signal and concatenate together
     conversations = []
     for source in sources:
@@ -700,7 +801,7 @@ class LazySupervisedDataset(Dataset):
         sources = self.list_data_dict[i]
         if isinstance(i, int):
             sources = [sources]
-        assert len(sources) == 1, "Don't know why it is wrapped to a list"  # FIXME
+        assert len(sources) == 1, "Don't know why it is wrapped to a list"
         if 'image' in sources[0]:
             image_file = self.list_data_dict[i]['image']
             image_folder = self.data_args.image_folder
@@ -930,14 +1031,6 @@ def train(attn_implementation=None):
                 **bnb_model_from_pretrained_args
             )
         else:
-            # # FIXME: this is a workaround for the HuggingFace logic
-            # config = transformers.AutoConfig.from_pretrained(
-            #     model_args.model_name_or_path,
-            #     trust_remote_code=True,
-            #     cache_dir=training_args.cache_dir
-            # )
-            # config.model_type = "llava_llama"  # patching for HuggingFace logic
-            # config.parallelization_style = "none"  # fix for post_init crash
 
             model = LlavaLlamaForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
@@ -949,7 +1042,7 @@ def train(attn_implementation=None):
     else:
         model = transformers.LlamaForCausalLM.from_pretrained(
             model_args.model_name_or_path,
-            config=config,  # FIXME: THIS IS MANDATORY!
+            config=config,
             cache_dir=training_args.cache_dir,
             attn_implementation=attn_implementation,
             torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
@@ -1019,6 +1112,14 @@ def train(attn_implementation=None):
             )
     elif model_args.version == "v0.5":
         tokenizer.pad_token = tokenizer.unk_token
+    
+    # FIXME
+    elif model_args.version == "qwen_v2":
+        conversation_lib.default_conversation = conversation_lib.conv_templates["qwen_v2"]
+        if tokenizer.pad_token_id is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        model.config.pad_token_id = tokenizer.pad_token_id
+    
     else:
         tokenizer.pad_token = tokenizer.unk_token
         if model_args.version in conversation_lib.conv_templates:
@@ -1035,7 +1136,6 @@ def train(attn_implementation=None):
         
         vision_tower = model.get_vision_tower()
         #vision_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
-        # FIXME: I am enforcing floa32 here
         if training_args.bf16:          # --bf16
             vision_tower.to(dtype=torch.bfloat16, device=training_args.device)
         elif training_args.fp16:        # --fp16
@@ -1065,7 +1165,6 @@ def train(attn_implementation=None):
                 vt.null_token.requires_grad = True
         else:
 
-            # FIXME: should we train BP during finetuning?
             vt = model.get_model().vision_tower
             if hasattr(vt, 'boundary_predictor'):
                 for p in vt.boundary_predictor.parameters():
@@ -1099,7 +1198,7 @@ def train(attn_implementation=None):
 
 
         ################################################################################################
-        # FIXME: ablation: make vision tower trainable or not
+        # ablation: make vision tower trainable or not
         # for p in model.get_model().vision_tower.parameters():
         #     p.requires_grad = True
         # print(f"🐣🐣🐣########## check ##########:", flush=True)
