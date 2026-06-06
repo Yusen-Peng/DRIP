@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Jun6_LLaVA_QWEN3_14B_pretrain
-#SBATCH --output=Jun6_LLaVA_QWEN3_14B_pretrain.txt
-#SBATCH --time=50:00:00
+#SBATCH --job-name=Jun6_LLaVA_Qwen2.5-14B_pretrain
+#SBATCH --output=Jun6_LLaVA_Qwen2.5-14B_pretrain.txt
+#SBATCH --time=60:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=quad
@@ -24,7 +24,7 @@ cd /users/PAS2912/yusenpeng/DRIP/
 
 deepspeed --num_gpus=1 src/task3_llava.py \
     --deepspeed src/LLaVA_wrapper/scripts/mix_free_flash.json \
-    --model_name_or_path /fs/scratch/PAS2836/yusenpeng_model_cache/Qwen3-14B \
+    --model_name_or_path Qwen/Qwen2.5-14B \
     --version qwen_v2 \
     --data_path /fs/scratch/PAS2836/yusenpeng_dataset/blip_laion_cc_sbu_558k.json \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_pretrain_images \
@@ -34,7 +34,7 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_QWEN3_14B_pretrain \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_pretrain \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \

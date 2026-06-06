@@ -1022,6 +1022,7 @@ def train(attn_implementation=None):
         print("We are using vision tower:", model_args.vision_tower)
 
         if 'mpt' in model_args.model_name_or_path:
+            print("We are using MPT model, loading with custom attention config.")
             config = transformers.AutoConfig.from_pretrained(model_args.model_name_or_path, trust_remote_code=True)
             config.attn_config['attn_impl'] = training_args.mpt_attn_impl
             model = LlavaMptForCausalLM.from_pretrained(
@@ -1030,8 +1031,18 @@ def train(attn_implementation=None):
                 cache_dir=training_args.cache_dir,
                 **bnb_model_from_pretrained_args
             )
+        
+        if 'qwen' in model_args.model_name_or_path.lower():
+            print("🎃🎃🎃 We are using Qwen models.")
+            model = LlavaQwen2ForCausalLM.from_pretrained(
+                model_args.model_name_or_path,
+                cache_dir=training_args.cache_dir,
+                attn_implementation=attn_implementation,
+                torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
+                **bnb_model_from_pretrained_args
+            )
         else:
-
+            print("🎲🎲🎲 We are using LLaMA models.")
             model = LlavaLlamaForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
                 cache_dir=training_args.cache_dir,
@@ -1120,6 +1131,13 @@ def train(attn_implementation=None):
         model.config.pad_token_id = tokenizer.pad_token_id
     
     else:
+        ######################################################################
+        if tokenizer.unk_token:
+            tokenizer.pad_token = tokenizer.unk_token
+        else: # use qwen
+            tokenizer.legacy = False
+        ######################################################################
+
         tokenizer.pad_token = tokenizer.unk_token
         if model_args.version in conversation_lib.conv_templates:
             conversation_lib.default_conversation = conversation_lib.conv_templates[model_args.version]

@@ -59,7 +59,15 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
             lora_cfg_pretrained = LlavaConfig.from_pretrained(model_path)
             tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
             print('Loading LLaVA from base model...')
-            model = LlavaLlamaForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=lora_cfg_pretrained, **kwargs)
+
+            if 'qwen' in model_name.lower():
+                print("🎃🎃🎃We are using Qwen models.")
+                model = LlavaQwen2ForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=lora_cfg_pretrained, **kwargs)
+            else:
+                print("🎲🎲🎲 We are using LLaMA models.")
+                model = LlavaLlamaForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=lora_cfg_pretrained, **kwargs)
+            
+            
             token_num, tokem_dim = model.lm_head.out_features, model.lm_head.in_features
             if model.lm_head.weight.shape[0] != token_num:
                 model.lm_head.weight = torch.nn.Parameter(torch.empty(token_num, tokem_dim, device=model.device, dtype=model.dtype))
@@ -98,7 +106,13 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
                 tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=True)
                 cfg_pretrained = AutoConfig.from_pretrained(model_path, trust_remote_code=True)
                 model = LlavaMptForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=cfg_pretrained, **kwargs)
+            if 'qwen' in model_name.lower():
+                print("🎃🎃🎃We are using Qwen models.")
+                tokenizer = AutoTokenizer.from_pretrained(model_base)
+                cfg_pretrained = AutoConfig.from_pretrained(model_path)
+                model = LlavaQwen2ForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=cfg_pretrained, **kwargs)
             else:
+                print("🎲🎲🎲 We are using LLaMA models.")
                 tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
                 cfg_pretrained = AutoConfig.from_pretrained(model_path)
                 model = LlavaLlamaForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=cfg_pretrained, **kwargs)
@@ -117,7 +131,16 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
                     low_cpu_mem_usage=True,
                     **kwargs
                 )
+            if 'qwen' in model_name.lower():
+                print("🎃🎃🎃We are using Qwen models.")
+                tokenizer = AutoTokenizer.from_pretrained(model_path)
+                model = LlavaQwen2ForCausalLM.from_pretrained(
+                    model_path,
+                    low_cpu_mem_usage=True,
+                    **kwargs
+                )
             else:
+                print("🎲🎲🎲 We are using LLaMA models.")
                 tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
                 model = LlavaLlamaForCausalLM.from_pretrained(
                     model_path,
