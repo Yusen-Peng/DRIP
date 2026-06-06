@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=Jun5_LLaVA_QWEN3_14B_pretrain
-#SBATCH --output=Jun5_LLaVA_QWEN3_14B_pretrain.txt
+#SBATCH --job-name=Jun6_LLaVA_QWEN3_14B_pretrain
+#SBATCH --output=Jun6_LLaVA_QWEN3_14B_pretrain.txt
 #SBATCH --time=50:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=quad
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=256G
+#SBATCH --mem=384G
 #SBATCH --account=PAS2836
 
 module load miniconda3/24.1.2-py310
@@ -24,7 +24,7 @@ cd /users/PAS2912/yusenpeng/DRIP/
 
 deepspeed --num_gpus=1 src/task3_llava.py \
     --deepspeed src/LLaVA_wrapper/scripts/mix_free_flash.json \
-    --model_name_or_path Qwen/Qwen3-14B \
+    --model_name_or_path /fs/scratch/PAS2836/yusenpeng_model_cache/Qwen3-14B \
     --version qwen_v2 \
     --data_path /fs/scratch/PAS2836/yusenpeng_dataset/blip_laion_cc_sbu_558k.json \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_pretrain_images \

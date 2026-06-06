@@ -13,8 +13,6 @@ class SeparatorStyle(Enum):
     MPT = auto()
     PLAIN = auto()
     LLAMA_2 = auto()
-    
-    # FIXME
     QWEN_2 = auto()
 
 
@@ -104,7 +102,6 @@ class Conversation:
                     ret += message + seps[i % 2]
                 else:
                     ret += ""
-        # FIXME
         elif self.sep_style == SeparatorStyle.QWEN_2:
             seps = [self.sep, self.sep2]
             ret = self.system + seps[0]
@@ -384,7 +381,6 @@ Answer the questions.""",
 )
 
 
-# FIXME
 conv_qwen_2 = Conversation(
     system="A chat between a curious user and an artificial intelligence assistant. "
     "The assistant gives helpful, detailed, and polite answers to the user's questions.",
@@ -404,11 +400,8 @@ conv_templates = {
     "default": conv_vicuna_v0,
     "v0": conv_vicuna_v0,
     "v1": conv_vicuna_v1,
-    "vicuna_v1": conv_vicuna_v1,
-    
-    # FIXME
+    "vicuna_v1": conv_vicuna_v1,    
     "qwen_v2": conv_qwen_2,
-
     "llama_2": conv_llama_2,
     "mistral_instruct": conv_mistral_instruct,
     "chatml_direct": conv_chatml_direct,
