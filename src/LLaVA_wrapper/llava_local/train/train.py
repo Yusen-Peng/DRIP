@@ -1113,7 +1113,6 @@ def train(attn_implementation=None):
     elif model_args.version == "v0.5":
         tokenizer.pad_token = tokenizer.unk_token
     
-    # FIXME
     elif model_args.version == "qwen_v2":
         conversation_lib.default_conversation = conversation_lib.conv_templates["qwen_v2"]
         if tokenizer.pad_token_id is None:
