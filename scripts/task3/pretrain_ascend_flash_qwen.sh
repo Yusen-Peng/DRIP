@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Jun6_LLaVA_Qwen2.5-14B_pretrain
-#SBATCH --output=Jun6_LLaVA_Qwen2.5-14B_pretrain.txt
-#SBATCH --time=60:00:00
+#SBATCH --job-name=Jun6_LLaVA_Qwen2.5-14B_Fixed_4x_pretrain
+#SBATCH --output=Jun6_LLaVA_Qwen2.5-14B_Fixed_4x_pretrain.txt
+#SBATCH --time=10:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=quad
@@ -9,6 +9,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=384G
 #SBATCH --account=PAS2836
+#SBATCH --exclude=a0021,a0013,a0008,a0003,a0011
 
 module load miniconda3/24.1.2-py310
 conda deactivate
@@ -34,7 +35,7 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_pretrain \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_Fixed_4x_pretrain \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \
@@ -54,6 +55,3 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --dataloader_num_workers 4 \
     --lazy_preprocess True
 
-
-# GitHub issues/tutorial:
-# https://github.com/haotian-liu/LLaVA/issues/1153

@@ -48,8 +48,10 @@ Before anything, make sure flash attention is installed - instruction: [https://
 ### pretraining (token alignment)
 
 ```bash
-# ascend with flash attention
+# LLaVA 1.5 with Vicuna 1.5 7B
 sbatch scripts/task3/pretrain_ascend_flash.sh
+# LLaVA 1.5 with Qwen 2.5 14B
+sbatch scripts/task3/pretrain_ascend_flash_qwen.sh
 ```
 
 When resuming from an existing checkpoint, **make sure to update the DRIP weight path `DRIP_WEIGHT_PATH` accordingly**:
@@ -68,6 +70,8 @@ sbatch scripts/task3/finetune_ascend_flash.sh
 # Full finetuning - must be distributed
 # 2 GPUs OR 4 GPUs
 sbatch scripts/task3/finetune_ascend_flash_full.sh
+# Qwen 2.5 14B
+sbatch scripts/task3/finetune_ascend_flash_full_qwen.sh
 ```
 
 We can SSH into GPUs to check its memory usage with:
@@ -138,6 +142,11 @@ Full finetuning with image features from ViT's last layer:
 ![alt text](results/paper_figures/tradeoff_full.png)
 
 CSV results: [results/full_7B_last.csv](results/full_7B_last.csv)
+
+
+## Significance Test
+
+Please refer to [Significance.md](/Significance.md) 
 
 ## Examples from TextVQA
 
