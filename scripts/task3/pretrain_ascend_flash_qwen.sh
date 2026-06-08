@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=Jun6_LLaVA_Qwen2.5-14B_Fixed_4x_pretrain
 #SBATCH --output=Jun6_LLaVA_Qwen2.5-14B_Fixed_4x_pretrain.txt
-#SBATCH --time=10:00:00
+#SBATCH --time=0:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=quad
@@ -9,7 +9,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=384G
 #SBATCH --account=PAS2836
-#SBATCH --exclude=a0021,a0013,a0008,a0003,a0011
+#SBATCH --exclude=a0009,a0008,a0013
 
 module load miniconda3/24.1.2-py310
 conda deactivate

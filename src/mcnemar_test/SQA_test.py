@@ -84,6 +84,8 @@ def main():
     print(f"b = {b}  (baseline correct, method wrong)")
     print(f"c = {c}  (baseline wrong, method correct)")
     print()
+
+    
     print(f"McNemar statistic: {result.statistic}")
     print(f"p-value: {result.pvalue:.8f}")
 
