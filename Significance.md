@@ -45,4 +45,11 @@ python src/mcnemar_test/GQA_test.py \
   --method-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/answers/llava_gqa_testdev_balanced/LLaVA_7B_DRIP_4x_finetune_train_full_predictions.json
 ```
 
-## 
+## MMMU
+
+```bash
+python src/mcnemar_test/MMMU_test.py \
+  --answer-path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answer_key/answer_dict_val.json \
+  --baseline-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/LLaVA_7B_Fixed_4x_finetune_train_full.json \
+  --method-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/LLaVA_7B_DRIP_4x_finetune_train_full.json
+```
