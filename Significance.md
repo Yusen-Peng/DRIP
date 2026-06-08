@@ -10,7 +10,16 @@ python src/mcnemar_test/SQA_test.py \
 
 ## MME
 
+```bash
+python src/mcnemar_test/MME_test.py \
+  --baseline-dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/eval_tool/answers/LLaVA_7B_Fixed_4x_finetune_train_full \
+  --method-dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/eval_tool/answers/LLaVA_7B_DRIP_4x_finetune_train_full \
+  --eval-type Perception
+```
+
+## MMBench
 
 ```bash
 
 ```
+
