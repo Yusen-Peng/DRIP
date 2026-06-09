@@ -98,3 +98,13 @@ python src/mcnemar_test/ChartQAPro_test.py \
   --method-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/results/LLaVA_7B_DRIP_4x_finetune_train_full.jsonl
 ```
 
+## POPE
+
+```bash
+python src/mcnemar_test/POPE_test.py \
+  --annotation-dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/anno \
+  --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/llava_pope_test.jsonl \
+  --baseline-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/LLaVA_7B_Fixed_4x_finetune_train_full.jsonl \
+  --method-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/LLaVA_7B_DRIP_4x_finetune_train_full.jsonl
+```
+
