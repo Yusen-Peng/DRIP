@@ -63,3 +63,10 @@ python src/mcnemar_test/TextVQA_test.py \
   --method-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/LLaVA_7B_DRIP_4x_finetune_train_full.jsonl
 ```
 
+## OCRBench
+
+```bash
+python src/mcnemar_test/OCRBench_test.py \
+  --baseline-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results/LLaVA_7B_Fixed_4x_finetune_train_full.json \
+  --method-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results/LLaVA_7B_DRIP_4x_finetune_train_full.json
+```
