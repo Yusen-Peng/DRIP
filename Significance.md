@@ -53,3 +53,13 @@ python src/mcnemar_test/MMMU_test.py \
   --baseline-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/LLaVA_7B_Fixed_4x_finetune_train_full.json \
   --method-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/LLaVA_7B_DRIP_4x_finetune_train_full.json
 ```
+
+## TextVQA
+
+```bash
+python src/mcnemar_test/TextVQA_test.py \
+  --annotation-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/TextVQA_0.5.1_val.json \
+  --baseline-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/LLaVA_7B_Fixed_4x_finetune_train_full.jsonl \
+  --method-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/LLaVA_7B_DRIP_4x_finetune_train_full.jsonl
+```
+
