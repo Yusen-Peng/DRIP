@@ -70,3 +70,26 @@ python src/mcnemar_test/OCRBench_test.py \
   --baseline-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results/LLaVA_7B_Fixed_4x_finetune_train_full.json \
   --method-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results/LLaVA_7B_DRIP_4x_finetune_train_full.json
 ```
+
+## OCRBench v2
+
+```bash
+python src/mcnemar_test/OCRBenchv2_test.py \
+  --baseline-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/scores/LLaVA_7B_Fixed_4x_finetune_train_full_scores.json \
+  --method-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/scores/LLaVA_7B_DRIP_4x_finetune_train_full_scores.json
+```
+
+## DocVQA
+
+```bash
+
+```
+
+
+## ChartQAPro
+
+
+```bash
+
+```
+
