@@ -82,7 +82,9 @@ python src/mcnemar_test/OCRBenchv2_test.py \
 ## DocVQA
 
 ```bash
-
+python src/mcnemar_test/DocVQA_test.py \
+  --baseline-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/LLaVA_7B_Fixed_4x_finetune_train_full_eval.json \
+  --method-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/LLaVA_7B_DRIP_4x_finetune_train_full_eval.json
 ```
 
 
