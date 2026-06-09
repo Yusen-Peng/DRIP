@@ -92,6 +92,9 @@ python src/mcnemar_test/DocVQA_test.py \
 
 
 ```bash
-
+python src/mcnemar_test/ChartQAPro_test.py \
+  --gt-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/chartqapro_test_gt.json \
+  --baseline-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/results/LLaVA_7B_Fixed_4x_finetune_train_full.jsonl \
+  --method-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/results/LLaVA_7B_DRIP_4x_finetune_train_full.jsonl
 ```
 
