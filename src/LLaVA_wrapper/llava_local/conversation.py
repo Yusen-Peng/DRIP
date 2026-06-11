@@ -102,16 +102,6 @@ class Conversation:
                     ret += message + seps[i % 2]
                 else:
                     ret += ""
-        # elif self.sep_style == SeparatorStyle.QWEN_2:
-        #     seps = [self.sep, self.sep2]
-        #     ret = self.system + seps[0]
-        #     for i, (role, message) in enumerate(messages):
-        #         if message:
-        #             if type(message) is tuple:
-        #                 message, _, _ = message
-        #             ret += role + ": " + message + seps[i % 2]
-        #         else:
-        #             ret += role + ":"
         elif self.sep_style == SeparatorStyle.QWEN_2:
             ret = ""
             if self.system:

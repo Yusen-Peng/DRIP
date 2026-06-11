@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=June3_VQAv2_LLaVA_7B_DRIP_10x_second_to_last_train_lora
-#SBATCH --output=June3_VQAv2_LLaVA_7B_DRIP_10x_second_to_last_train_lora.log
+#SBATCH --job-name=June10_VQAv2_LLaVA_7B_Fixed_4x_training_free
+#SBATCH --output=June10_VQAv2_LLaVA_7B_Fixed_4x_training_free.log
 #SBATCH --time=06:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,12 +17,12 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_7B_DRIP_10x_second_to_last_train_lora"
+VERSION="LLaVA_7B_Fixed_4x_training_free"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/llava_vqav2_mscoco_test-dev2015.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/test2015 \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/answers/${VERSION}.jsonl \

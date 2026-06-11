@@ -620,7 +620,7 @@ def preprocess_qwen_2(
     tokenizer: transformers.PreTrainedTokenizer,
     has_image: bool = False
 ) -> Dict:
-    conv = conversation_lib.default_conversation.copy()
+    conv = conversation_lib.conv_templates["qwen_v2"].copy()
     roles = {"human": conv.roles[0], "gpt": conv.roles[1]}
 
     # Apply prompt templates
@@ -674,19 +674,15 @@ def preprocess_qwen_2(
                 answer_start_tok = len(tokenizer_image_token(prefix_text, tokenizer))
                 answer_end_tok = len(tokenizer_image_token(supervised_text, tokenizer))
             else:
-                answer_start_tok = len(tokenizer(prefix_text).input_ids)
-                answer_end_tok = len(tokenizer(supervised_text).input_ids)
-            target[answer_start_tok:answer_end_tok] = input_ids[b, answer_start_tok:answer_end_tok]
+                answer_start_tok = len(tokenizer(prefix_text,add_special_tokens=False).input_ids)
+                answer_end_tok = len(tokenizer(supervised_text,add_special_tokens=False).input_ids)
+
+            seq_len = (input_ids[b] != tokenizer.pad_token_id).sum().item()
+            answer_start_tok = min(answer_start_tok, seq_len)
+            answer_end_tok = min(answer_end_tok, seq_len)
+            if answer_start_tok < answer_end_tok:
+                target[answer_start_tok:answer_end_tok] = input_ids[b, answer_start_tok:answer_end_tok]
             cur_pos = supervise_end_char
-        # if b == 0:
-        #     print("===== TRAIN CONVERSATION =====")
-        #     print(repr(conversation))
-        #     print("non-ignore labels:", int((target != IGNORE_INDEX).sum().item()))
-        #     debug = target.clone()
-        #     debug[debug == IGNORE_INDEX] = tokenizer.pad_token_id
-        #     print("===== SUPERVISED LABELS =====")
-        #     print(tokenizer.decode([int(x) for x in debug.tolist() if int(x) >= 0],skip_special_tokens=False))
-        #     exit()
 
     return dict(
         input_ids=input_ids,

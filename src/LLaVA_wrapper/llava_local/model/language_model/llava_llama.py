@@ -122,6 +122,10 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
 
         if boundary_loss is not None and outputs.loss is not None:
             boundary_loss_weight = getattr(self.config, "boundary_loss_weight", 1.0)
+
+            # # FIXME:
+            # boundary_loss_weight = getattr(self.config, "boundary_loss_weight", 10)
+
             lm_loss = outputs.loss
             total_loss = lm_loss + boundary_loss_weight * boundary_loss
 

@@ -11,7 +11,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
-#SBATCH --exclude=a0002,a0003,a0004,a0008,a0009,a0010,a0014,a0011
+#SBATCH --exclude=a0002,a0010,a0011,a0012
 
 module load miniconda3/24.1.2-py310
 module load cuda/12.6.2
