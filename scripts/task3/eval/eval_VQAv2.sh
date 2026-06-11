@@ -21,19 +21,8 @@ VERSION="LLaVA_7B_DRIP_10x_second_to_last_train_lora"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-# python src/model_vqa_loader.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT \
-#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/llava_vqav2_mscoco_test-dev2015.jsonl \
-#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/test2015 \
-#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/answers/${VERSION}.jsonl \
-#     --num-chunks 1 \
-#     --chunk-idx 0 \
-#     --temperature 0 \
-#     --conv-mode vicuna_v1
-
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \
-    --model-base lmsys/vicuna-7b-v1.5 \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/llava_vqav2_mscoco_test-dev2015.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/test2015 \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/answers/${VERSION}.jsonl \
@@ -41,6 +30,17 @@ python src/model_vqa_loader.py \
     --chunk-idx 0 \
     --temperature 0 \
     --conv-mode vicuna_v1
+
+# python src/model_vqa_loader.py \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \
+#     --model-base lmsys/vicuna-7b-v1.5 \
+#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/llava_vqav2_mscoco_test-dev2015.jsonl \
+#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/test2015 \
+#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/answers/${VERSION}.jsonl \
+#     --num-chunks 1 \
+#     --chunk-idx 0 \
+#     --temperature 0 \
+#     --conv-mode vicuna_v1
 
 python src/convert_vqav2_for_submission.py \
     --split llava_vqav2_mscoco_test-dev2015 \

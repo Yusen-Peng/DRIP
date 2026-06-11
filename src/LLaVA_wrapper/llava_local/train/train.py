@@ -637,8 +637,6 @@ def preprocess_qwen_2(
             conv.append_message(role, sentence["value"])
         conversations.append(conv.get_prompt())
 
-    # Tokenize conversations
-
     if has_image:
         input_ids = torch.stack([tokenizer_image_token(prompt, tokenizer, return_tensors='pt') for prompt in conversations], dim=0)
     else:
@@ -654,59 +652,41 @@ def preprocess_qwen_2(
 
     assert conv.sep_style == conversation_lib.SeparatorStyle.QWEN_2
 
-    # Mask targets
-    sep = conv.sep + conv.roles[1] + ": "
-    for conversation, target in zip(conversations, targets):
-        total_len = int(target.ne(tokenizer.pad_token_id).sum())
+    assistant_start = conv.roles[1] + "\n"   # "<|im_start|>assistant\n"
+    assistant_end = "<|im_end|>"
 
-        rounds = conversation.split(conv.sep2)
-        rounds_len = len(rounds)
-        cur_len = 0
-        # target[:cur_len] = IGNORE_INDEX
-        for i, rou in enumerate(rounds):
-            if rou == "":
+    for b, (conversation, target) in enumerate(zip(conversations, targets)):
+        target[:] = IGNORE_INDEX
+        cur_pos = 0
+        while True:
+            start_char = conversation.find(assistant_start, cur_pos)
+            if start_char == -1:
                 break
-
-            parts = rou.split(sep)
-            if len(parts) != 2:
+            answer_start_char = start_char + len(assistant_start)
+            answer_end_char = conversation.find(assistant_end, answer_start_char)
+            if answer_end_char == -1:
                 break
-            parts[0] += sep
-
+            # include <|im_end|> in the supervised target
+            supervise_end_char = answer_end_char + len(assistant_end)
+            prefix_text = conversation[:answer_start_char]
+            supervised_text = conversation[:supervise_end_char]
             if has_image:
-                round_ids = tokenizer_image_token(rou, tokenizer)
-                instruction_ids = tokenizer_image_token(parts[0], tokenizer)
-                equal_parts = [x == y for x, y in zip(round_ids, instruction_ids)]
-
-                instruction_len = equal_parts.index(False) if False in equal_parts else len(equal_parts)
-                round_len = len(round_ids)
-
+                answer_start_tok = len(tokenizer_image_token(prefix_text, tokenizer))
+                answer_end_tok = len(tokenizer_image_token(supervised_text, tokenizer))
             else:
-                round_ids = tokenizer(rou).input_ids
-                instruction_ids = tokenizer(parts[0]).input_ids
-                equal_parts = [x == y for x, y in zip(round_ids, instruction_ids)]
-            
-                instruction_len = equal_parts.index(False) if False in equal_parts else len(equal_parts)
-                round_len = len(round_ids)
-
-            # set the tokenizer legacy properly
-            tokenizer_legacy = getattr(tokenizer, "legacy", False)
-
-            if i != 0 and not tokenizer_legacy and IS_TOKENIZER_GREATER_THAN_0_14:
-                round_len += 1
-                instruction_len += 1
-
-            target[cur_len : cur_len + instruction_len] = IGNORE_INDEX
-
-            cur_len += round_len
-        target[cur_len:] = IGNORE_INDEX
-
-        if cur_len < tokenizer.model_max_length:
-            if cur_len != total_len + rounds_len - 2:
-                target[:] = IGNORE_INDEX
-                print(
-                    f"WARNING: tokenization mismatch: {cur_len} vs. {total_len}."
-                    f" (ignored)"
-                )
+                answer_start_tok = len(tokenizer(prefix_text).input_ids)
+                answer_end_tok = len(tokenizer(supervised_text).input_ids)
+            target[answer_start_tok:answer_end_tok] = input_ids[b, answer_start_tok:answer_end_tok]
+            cur_pos = supervise_end_char
+        # if b == 0:
+        #     print("===== TRAIN CONVERSATION =====")
+        #     print(repr(conversation))
+        #     print("non-ignore labels:", int((target != IGNORE_INDEX).sum().item()))
+        #     debug = target.clone()
+        #     debug[debug == IGNORE_INDEX] = tokenizer.pad_token_id
+        #     print("===== SUPERVISED LABELS =====")
+        #     print(tokenizer.decode([int(x) for x in debug.tolist() if int(x) >= 0],skip_special_tokens=False))
+        #     exit()
 
     return dict(
         input_ids=input_ids,
@@ -847,6 +827,17 @@ class LazySupervisedDataset(Dataset):
             # image does not exist in the data, but the model is multimodal
             crop_size = self.data_args.image_processor.crop_size
             data_dict['image'] = torch.zeros(3, crop_size['height'], crop_size['width'])
+        
+
+        if i == 0:
+            labels = data_dict["labels"][0] if data_dict["labels"].dim() == 2 else data_dict["labels"]
+            print("non-ignore labels:", (labels != IGNORE_INDEX).sum().item())
+            debug_labels = labels.clone()
+            debug_labels[debug_labels == IGNORE_INDEX] = self.tokenizer.pad_token_id
+            print(self.tokenizer.decode([x for x in debug_labels.tolist() if x >= 0], skip_special_tokens=False))
+            exit()
+
+
         return data_dict
 
 

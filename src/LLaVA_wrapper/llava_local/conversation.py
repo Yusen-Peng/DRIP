@@ -102,16 +102,25 @@ class Conversation:
                     ret += message + seps[i % 2]
                 else:
                     ret += ""
+        # elif self.sep_style == SeparatorStyle.QWEN_2:
+        #     seps = [self.sep, self.sep2]
+        #     ret = self.system + seps[0]
+        #     for i, (role, message) in enumerate(messages):
+        #         if message:
+        #             if type(message) is tuple:
+        #                 message, _, _ = message
+        #             ret += role + ": " + message + seps[i % 2]
+        #         else:
+        #             ret += role + ":"
         elif self.sep_style == SeparatorStyle.QWEN_2:
-            seps = [self.sep, self.sep2]
-            ret = self.system + seps[0]
-            for i, (role, message) in enumerate(messages):
-                if message:
-                    if type(message) is tuple:
-                        message, _, _ = message
-                    ret += role + ": " + message + seps[i % 2]
+            ret = ""
+            if self.system:
+                ret += "<|im_start|>system\n" + self.system + "<|im_end|>\n"
+            for role, message in messages:
+                if message is not None:
+                    ret += role + "\n" + message + "<|im_end|>\n"
                 else:
-                    ret += role + ":"
+                    ret += role + "\n"
         else:
             raise ValueError(f"Invalid style: {self.sep_style}")
 
@@ -381,16 +390,28 @@ Answer the questions.""",
 )
 
 
+# conv_qwen_2 = Conversation(
+#     system="A chat between a curious user and an artificial intelligence assistant. "
+#     "The assistant gives helpful, detailed, and polite answers to the user's questions.",
+#     roles=("USER", "ASSISTANT"),
+#     version="qwen_v2",
+#     messages=(),
+#     offset=0,
+#     sep_style=SeparatorStyle.QWEN_2,
+#     sep=" ",
+#     sep2="<|endoftext|>",
+# )
+
+
 conv_qwen_2 = Conversation(
-    system="A chat between a curious user and an artificial intelligence assistant. "
-    "The assistant gives helpful, detailed, and polite answers to the user's questions.",
-    roles=("USER", "ASSISTANT"),
+    system="You are a helpful assistant.",
+    roles=("<|im_start|>user", "<|im_start|>assistant"),
     version="qwen_v2",
     messages=(),
     offset=0,
     sep_style=SeparatorStyle.QWEN_2,
-    sep=" ",
-    sep2="<|endoftext|>",
+    sep="<|im_end|>\n",
+    sep2="<|im_end|>\n",
 )
 
 
