@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=Jun13_LLaVA_7B_SigLIP_pretrain
 #SBATCH --output=Jun13_LLaVA_7B_SigLIP_pretrain.txt
-#SBATCH --time=00:30:00
+#SBATCH --time=35:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=debug-nextgen
+#SBATCH --partition=quad
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256G

@@ -408,6 +408,23 @@ class CLIPVisionTower(nn.Module):
         return (self.config.image_size // self.config.patch_size) ** 2
 
 
+class TimmImageProcessor:
+    def __init__(self, transform, data_config):
+        self.transform = transform
+        self.data_config = data_config
+        input_size = data_config.get("input_size", None)
+        if input_size is not None:
+            self.size = {"shortest_edge": input_size[-1]}
+            self.crop_size = {"height": input_size[-2], "width": input_size[-1]}
+        else:
+            self.size = {}
+            self.crop_size = {}
+    def preprocess(self, image, return_tensors=None):
+        pixel_values = self.transform(image)
+        if return_tensors == "pt":
+            pixel_values = pixel_values.unsqueeze(0)
+        return {"pixel_values": pixel_values}
+
 class TimmVisionTower(CLIPVisionTower):
     def __init__(self,
             vision_tower,
@@ -490,12 +507,11 @@ class TimmVisionTower(CLIPVisionTower):
         self.vision_tower.config = self._make_timm_config()
 
         data_config = resolve_model_data_config(self.vision_tower)
-        self.image_processor = create_transform(**data_config, is_training=False)
-
+        transform = create_transform(**data_config, is_training=False)
+        self.image_processor = TimmImageProcessor(transform, data_config)        
+        
+        
         print(f"🍑🍑🍑🍑 [INFO] Loaded timm image processor for {self.vision_tower_name} with resolution: {self.image_processor.size}")
-        print(f"🍑🍑🍑🍑 [INFO] timm data_config: {data_config}")
-        print(f"🍑🍑🍑🍑 [INFO] timm grid_size: {self.vision_tower.config.grid_size}")
-        print(f"🍑🍑🍑🍑 [INFO] timm hidden_size: {self.vision_tower.config.hidden_size}")
 
         self.is_loaded = True
         if self.merge_strategy == "DRIP" or self.merge_strategy == "DRIP-H":
