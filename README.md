@@ -5,6 +5,10 @@
 <h1 align="center">DRIP</h1>
 <h2 align="center">Dynamic Patch Pooling for Efficient Visual Instruction Tuning</h2>
 
+## TL;DR
+
+![alt text](assets/teaser.png)
+
 ## Environment setup
 
 Create a new conda enviornment from scratch:
