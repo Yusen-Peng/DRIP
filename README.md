@@ -3,7 +3,7 @@
 </p>
 
 <h1 align="center">DRIP</h1>
-<h2 align="center">Dynamic Patch Pooling for Efficient Visual Instruction Tuning</h2>
+<h2 align="center">Dynamic Image Tokenization for Efficient VLMs</h2>
 
 ## TL;DR
 
@@ -54,8 +54,10 @@ Before anything, make sure flash attention is installed.
 ```bash
 # LLaVA 1.5 with Vicuna 1.5 7B
 sbatch scripts/task3/pretrain_ascend_flash.sh
-# LLaVA 1.5 with Qwen 2.5 14B
+# LLaVA 1.5 with Qwen 2.5 14B instruct
 sbatch scripts/task3/pretrain_ascend_flash_qwen.sh
+# LLaVA 1.5 with timm/vit_large_patch16_siglip_384.v2_webli
+sbatch scripts/task3/pretrain_ascend_flash_siglip.sh
 ```
 
 When resuming from an existing checkpoint, **make sure to update the DRIP weight path `DRIP_WEIGHT_PATH` accordingly**:

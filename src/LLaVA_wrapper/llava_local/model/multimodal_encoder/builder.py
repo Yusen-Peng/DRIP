@@ -1,5 +1,5 @@
 import os
-from .clip_encoder import CLIPVisionTowerS2, CLIPVisionTower
+from .clip_encoder import CLIPVisionTowerS2, CLIPVisionTower, TimmVisionTower
 
 def build_vision_tower(vision_tower_cfg, **kwargs):
 
@@ -24,13 +24,12 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     """
         4x paths.
     """
+    # main experiments    
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_full/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_second_to_last_train_lora/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_second_to_last_train_full/drip.bin"
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_DRIP_4x_pretrain/drip.bin"
 
     
     # ablations
@@ -40,7 +39,13 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     # -- H-Net
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_Hnet_ablation_pretrain/drip.bin"
     # -- loss ratio
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
+
+
+    # Qwen experiments
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_DRIP_4x_pretrain/drip.bin"
+
+
 
     """
         8x paths.
@@ -64,7 +69,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_DRIP_10x_pretrain/drip.bin"
 
-    # DRIP_WEIGHT_PATH = None
+    DRIP_WEIGHT_PATH = None
 
     ############################################################
 
@@ -83,5 +88,19 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
                 drip_weight_path=DRIP_WEIGHT_PATH,
                 temperature=TEMPERATURE,
                 **kwargs)
+    
+    elif vision_tower.startswith("timm/"):
+        if use_s2:
+            raise NotImplementedError("S2 is not implemented for TimmVisionTower yet.")
+        else:
+            return TimmVisionTower(
+                vision_tower=vision_tower,
+                args=vision_tower_cfg,
+                merge_strategy=MERGE_STRATEGY,
+                compression_rate=COMPRESSION_RATE,
+                drip_weight_path=DRIP_WEIGHT_PATH,
+                temperature=TEMPERATURE,
+                **kwargs
+            )
     else:
         raise ValueError(f'Unknown vision tower: {vision_tower}')

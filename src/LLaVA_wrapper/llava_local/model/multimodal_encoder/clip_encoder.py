@@ -6,6 +6,9 @@ import os
 import sys
 import numpy as np
 from transformers import CLIPVisionModel, CLIPImageProcessor, CLIPVisionConfig
+from types import SimpleNamespace
+import timm
+from timm.data import resolve_model_data_config, create_transform
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
 sys.path.insert(0, PROJECT_ROOT)
@@ -404,6 +407,235 @@ class CLIPVisionTower(nn.Module):
     def num_patches(self):
         return (self.config.image_size // self.config.patch_size) ** 2
 
+
+class TimmVisionTower(CLIPVisionTower):
+    def __init__(self,
+            vision_tower,
+            args,
+            merge_strategy="ViT",
+            compression_rate=None,
+            drip_weight_path=None,
+            temperature=None,
+            delay_load=False):
+        nn.Module.__init__(self)
+
+        self.is_loaded = False
+        self.vision_tower_name = vision_tower
+        self.merge_strategy = merge_strategy
+        self.compression_rate = compression_rate
+        self.drip_weight_path = drip_weight_path
+        self.temperature = temperature
+        self.select_layer = args.mm_vision_select_layer
+        self.select_feature = getattr(args, 'mm_vision_select_feature', 'patch')
+
+        if not delay_load:
+            self.load_model()
+        elif getattr(args, 'unfreeze_mm_vision_tower', False):
+            self.load_model()
+        else:
+            raise NotImplementedError(
+                "delay_load=True for timm vision towers needs a cfg_only adapter. "
+                "For now use delay_load=False."
+            )
+
+    def _make_timm_config(self):
+        model = self.vision_tower
+        hidden_size = model.num_features
+
+        # ViT MLP hidden dimension, analogous to CLIP config.intermediate_size
+        if hasattr(model.blocks[0].mlp, "fc1"):
+            intermediate_size = model.blocks[0].mlp.fc1.out_features
+        elif hasattr(model.blocks[0].mlp, "w1"):
+            intermediate_size = model.blocks[0].mlp.w1.out_features
+        else:
+            intermediate_size = hidden_size * 4
+
+        patch_size = model.patch_embed.patch_size
+        if isinstance(patch_size, tuple):
+            patch_size = patch_size[0]
+
+        image_size = model.patch_embed.img_size
+        if isinstance(image_size, tuple):
+            image_size = image_size[0]
+
+        grid_size = model.patch_embed.grid_size
+        if isinstance(grid_size, tuple):
+            grid_h, grid_w = grid_size
+        else:
+            grid_h = grid_w = grid_size
+
+        return SimpleNamespace(
+            hidden_size=hidden_size,
+            intermediate_size=intermediate_size,
+            image_size=image_size,
+            patch_size=patch_size,
+            grid_size=(grid_h, grid_w),
+        )
+
+    def load_model(self, device_map=None):
+        if self.is_loaded:
+            print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
+            return
+
+        timm_name = self.vision_tower_name
+        if timm_name.startswith("timm/"):
+            timm_name = timm_name[len("timm/"):]
+        self.vision_tower = timm.create_model(
+            timm_name,
+            pretrained=True,
+            num_classes=0
+        )
+
+        self.vision_tower.requires_grad_(False)
+        self.vision_tower.config = self._make_timm_config()
+
+        data_config = resolve_model_data_config(self.vision_tower)
+        self.image_processor = create_transform(**data_config, is_training=False)
+
+        print(f"🍑🍑🍑🍑 [INFO] Loaded timm image processor for {self.vision_tower_name} with resolution: {self.image_processor.size}")
+        print(f"🍑🍑🍑🍑 [INFO] timm data_config: {data_config}")
+        print(f"🍑🍑🍑🍑 [INFO] timm grid_size: {self.vision_tower.config.grid_size}")
+        print(f"🍑🍑🍑🍑 [INFO] timm hidden_size: {self.vision_tower.config.hidden_size}")
+
+        self.is_loaded = True
+        if self.merge_strategy == "DRIP" or self.merge_strategy == "DRIP-H":
+            assert self.compression_rate is not None, "Compression rate must be provided for DRIP merge strategy."
+            width = self.vision_tower.config.hidden_size
+            mlp_ratio = self.vision_tower.config.intermediate_size / self.vision_tower.config.hidden_size
+            self.null_token = nn.Parameter(torch.zeros(1, 1, width))
+            if self.merge_strategy == "DRIP-H":
+                self.boundary_predictor = H_Net(
+                    d_model=width,
+                    d_inner=int(width * mlp_ratio),
+                    activation_function="gelu",
+                    temp=self.temperature,
+                    prior=self.compression_rate,
+                    bp_type='gumbel',
+                    threshold=0.5,
+                    smart_init=False
+                )
+                print(f"🐶🐶🐶 [INFO] Using DRIP H-Net merge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens.")
+                print(f"🌪🌪🌪 [INFO] sampling temperature during training: {self.temperature}")
+            else:
+                self.boundary_predictor = BoundaryPredictor(
+                    d_model=width,
+                    d_inner=int(width * mlp_ratio),
+                    activation_function="gelu",
+                    temp=self.temperature,
+                    prior=self.compression_rate,
+                    bp_type='gumbel',
+                    threshold=0.5,
+                    smart_init=False
+                )
+                print(f"🐰🐰🐰 [INFO] Using DRIP merge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens.")
+                print(f"🌪🌪🌪 [INFO] sampling temperature during training: {self.temperature}")
+
+            if self.drip_weight_path is not None:
+                missing, unexpected = self.load_drip_weights(self.drip_weight_path)
+                assert len(missing) == 0, f"Missing keys when loading DRIP weights: {missing}"
+                assert len(unexpected) == 0, f"Unexpected keys when loading DRIP weights: {unexpected}"
+                print(f"🦄🦄🦄 [INFO] Loaded DRIP weights from {self.drip_weight_path}")
+            else:
+                print(f"🐴🐴🐴 [INFO] No DRIP weights provided, initializing DRIP modules from scratch.")
+
+        elif self.merge_strategy == "Fixed":
+            assert self.compression_rate is not None, "compression_rate must be provided for Fixed merge strategy."
+            width = self.vision_tower.config.hidden_size
+            self.null_token = nn.Parameter(torch.zeros(1, 1, width))
+            print(f"🐰🐰🐰 [INFO] Using Fixed merge strategy with compression rate {self.compression_rate}. This will keep every {max(1, int(1/self.compression_rate))} tokens.")
+
+        elif self.merge_strategy == "PruMerge":
+            raise NotImplementedError(
+                "PruMerge is CLIP-specific in your implementation because it hooks "
+                "vision_model.encoder.layers[23].self_attn.k_proj/q_proj."
+            )
+
+        else:
+            print(f"🩵🩵🩵 [INFO] Using original timm ViT features without merging. This will keep all tokens ({self.num_patches} tokens).")
+
+    def feature_select(self, image_forward_outs):
+        image_features = image_forward_outs
+        if image_features.ndim != 3:
+            raise RuntimeError(f"Expected timm forward_features output [B, N, D], got {image_features.shape}")
+
+        num_prefix_tokens = getattr(self.vision_tower, "num_prefix_tokens", 0)
+
+        # Most ViT/SigLIP models may return prefix/class tokens first.
+        if num_prefix_tokens > 0:
+            image_features = image_features[:, num_prefix_tokens:]
+
+        return image_features
+
+    def forward(self, images, inference=False):
+        if isinstance(images, list):
+            image_features = []
+            boundary_losses = []
+
+            for image in images:
+                image_forward_out = self.vision_tower.forward_features(
+                    image.to(device=self.device, dtype=self.dtype).unsqueeze(0)
+                )
+                image_feature = self.feature_select(image_forward_out).to(image.dtype)
+
+                if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+                    if not inference:
+                        image_feature, boundary_loss, _, _ = self._merge_patch_tokens(image_feature, inference=False)
+                        boundary_losses.append(boundary_loss)
+                    else:
+                        image_feature = self._merge_patch_tokens(image_feature, inference=True)
+
+                image_features.append(image_feature)
+
+            if not inference and self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+                boundary_loss = torch.stack(boundary_losses).mean()
+                return image_features, boundary_loss
+
+            return image_features
+
+        else:
+            image_forward_outs = self.vision_tower.forward_features(
+                images.to(device=self.device, dtype=self.dtype)
+            )
+            image_features = self.feature_select(image_forward_outs).to(images.dtype)
+
+            if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+                if not inference:
+                    image_features, boundary_loss, _, _ = self._merge_patch_tokens(image_features, inference=False)
+                    return image_features, boundary_loss
+                else:
+                    image_features = self._merge_patch_tokens(image_features, inference=True)
+            return image_features
+
+    @property
+    def dtype(self):
+        return next(self.vision_tower.parameters()).dtype
+
+    @property
+    def device(self):
+        return next(self.vision_tower.parameters()).device
+
+    @property
+    def config(self):
+        return self.vision_tower.config
+
+    @property
+    def hidden_size(self):
+        return self.config.hidden_size
+
+    @property
+    def num_patches_per_side(self):
+        grid_h, grid_w = self.config.grid_size
+        assert grid_h == grid_w, f"Expected square grid, got {self.config.grid_size}"
+        return grid_h
+
+    @property
+    def num_patches(self):
+        grid_h, grid_w = self.config.grid_size
+        return grid_h * grid_w
+
+
+#######################################################################################
+################################# NOT USED ############################################
 
 class CLIPVisionTowerS2(CLIPVisionTower):
     def __init__(self, vision_tower, args, delay_load=False):
