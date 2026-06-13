@@ -87,8 +87,16 @@ if __name__ == "__main__":
         merge_strategy=MERGE_STRATEGY,
         device=device,
     )
-    image_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/original_images/{IMAGE_ID}.jpg"
-    save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/boundary_maps/{IMAGE_ID}_DRIP_overlay.png"
+    # image_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/original_images/{IMAGE_ID}.jpg"
+    # save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/boundary_maps/{IMAGE_ID}_DRIP_overlay.png"
+    # visualize_single_image(model, drip=True, image_path=image_path, save_path=save_path, alpha=0.4, verbose=True)
+    # save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/boundary_maps/{IMAGE_ID}_FIXED_overlay.png"
+    # visualize_single_image(model, drip=False, image_path=image_path, save_path=save_path, alpha=0.4, verbose=True)
+
+
+
+    image_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/MME_results/original_images/MME_example.jpg"
+    save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/MME_results/boundary_maps/MME_example_DRIP_overlay.png"
     visualize_single_image(model, drip=True, image_path=image_path, save_path=save_path, alpha=0.4, verbose=True)
-    save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/boundary_maps/{IMAGE_ID}_FIXED_overlay.png"
+    save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/MME_results/boundary_maps/MME_example_FIXED_overlay.png"
     visualize_single_image(model, drip=False, image_path=image_path, save_path=save_path, alpha=0.4, verbose=True)

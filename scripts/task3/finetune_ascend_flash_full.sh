@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=June11_LLaVA_7B_DRIP_4x_ratio_ablation_train_full
-#SBATCH --output=June11_LLaVA_7B_DRIP_4x_ratio_ablation_train_full.txt
+#SBATCH --job-name=June13_LLaVA_7B_DRIP_4x_ratio_ablation_train_full
+#SBATCH --output=June13_LLaVA_7B_DRIP_4x_ratio_ablation_train_full.txt
 #SBATCH --time=60:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -11,7 +11,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
-#SBATCH --exclude=a0010,a0011,a0001
+#SBATCH --exclude=a0010,a0011,a0014
 
 module load miniconda3/24.1.2-py310
 module load cuda/12.6.2

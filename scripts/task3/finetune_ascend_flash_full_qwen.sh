@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=June7_LLaVA_Qwen2.5-14B_train_full
-#SBATCH --output=June7_LLaVA_Qwen2.5-14B_train_full.txt
+#SBATCH --job-name=June13_LLaVA_Qwen2.5-14B_train_full_continue
+#SBATCH --output=June13_LLaVA_Qwen2.5-14B_train_full_continue.txt
 #SBATCH --time=60:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -38,7 +38,7 @@ torchrun --standalone --nproc_per_node=4 --master_port=$MASTER_PORT src/task3_ll
     --mm_projector_type mlp2x_gelu \
     --tf32 True \
     --bf16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_pretrain/mm_projector.bin \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_pretrain/checkpoint-1680/mm_projector.bin \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \

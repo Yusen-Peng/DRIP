@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Jun10_LLaVA_Qwen2.5-14B-Instruct_pretrain
-#SBATCH --output=Jun10_LLaVA_Qwen2.5-14B-Instruct_pretrain.txt
-#SBATCH --time=55:00:00
+#SBATCH --job-name=Jun13_LLaVA_Qwen2.5-14B-Instruct_pretrain_continue
+#SBATCH --output=Jun13_LLaVA_Qwen2.5-14B-Instruct_pretrain_continue.txt
+#SBATCH --time=15:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=quad

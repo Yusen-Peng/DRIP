@@ -26,7 +26,7 @@ Go to file [`src/LLaVA_wrapper/llava_local/model/multimodal_encoder/builder.py`]
 ```python
 MERGE_STRATEGY = "DRIP" # "ViT" or "DRIP" or "Fixed" or "PruMerge"
 COMPRESSION_RATE = 0.25
-DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
+DRIP_WEIGHT_PATH = "/path/to/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
 ```
 
 Additional note: the ViT backbone from LLaVA checkpoint is `openai/clip-vit-large-patch14-336`.
@@ -43,7 +43,7 @@ bash scripts/task3/eval/EVALUATE_ALL.sh
 
 ## LLaVA Finetuning
 
-Before anything, make sure flash attention is installed - instruction: [https://github.com/Yusen-Peng/EasyInstall#flash-attention](https://github.com/Yusen-Peng/EasyInstall#flash-attention).
+Before anything, make sure flash attention is installed.
 
 ### pretraining (token alignment)
 
@@ -57,7 +57,7 @@ sbatch scripts/task3/pretrain_ascend_flash_qwen.sh
 When resuming from an existing checkpoint, **make sure to update the DRIP weight path `DRIP_WEIGHT_PATH` accordingly**:
 
 ```python
-DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
+DRIP_WEIGHT_PATH = "/path/to/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
 ```
 
 ### finetuning/VQA SFT
@@ -89,13 +89,13 @@ ssh <node ID> "ps -fp <job ID>"
 When resuming from an existing checkpoint, **make sure to update the DRIP weight path `DRIP_WEIGHT_PATH`**
 
 ```python
-DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-1020/drip.bin"
+DRIP_WEIGHT_PATH = "/path/to/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-1020/drip.bin"
 ```
 
 **AND the MLP projector path in the SLURM scripts**:
 
 ```bash
---pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-1020/mm_projector.bin \
+--pretrain_mm_mlp_adapter /path/to/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-1020/mm_projector.bin \
 ```
 
 
@@ -120,9 +120,9 @@ salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition de
 module load miniconda3/24.1.2-py310
 conda activate DRIP_flash
 # for full finetuned models
-python src/GFLOP_measurement.py --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full
+python src/GFLOP_measurement.py --model-path /path/to/LLaVA_7B_FLASH_finetune_ALL_ONCE_full
 # for LoRA finetuned models
-python src/GFLOP_measurement.py --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_lora \
+python src/GFLOP_measurement.py --model-path /path/to/LLaVA_7B_FLASH_finetune_ALL_ONCE_lora \
     --model-base lmsys/vicuna-7b-v1.5
 ```
 
@@ -161,10 +161,4 @@ Please refer to [Significance.md](/Significance.md)
 10 compression:
 
 ![alt text](src/example_analysis/TextVQA_results/result_pngs/DRIP-examples_10x.png)
-
-
-## Contact
-
-- Yusen Peng (peng.1007@osu.edu)
-- Sachin Kumar (kumar.1145@osu.edu)
 

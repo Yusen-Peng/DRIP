@@ -320,7 +320,14 @@ class LLaVATrainer(Trainer):
             if self.args.world_size <= 1:
                 torch.cuda.random.set_rng_state_all(checkpoint_rng_state["cuda"])
             else:
-                torch.cuda.random.set_rng_state(checkpoint_rng_state["cuda"])
+                # torch.cuda.random.set_rng_state(checkpoint_rng_state["cuda"])
+                ################################################
+                cuda_rng_state = checkpoint_rng_state["cuda"]
+                if isinstance(cuda_rng_state, list):
+                    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+                    torch.cuda.random.set_rng_state(cuda_rng_state[local_rank], device=local_rank)
+                else:
+                    torch.cuda.random.set_rng_state(cuda_rng_state)
 
 
     # NOTE: mutual exclusive optimizer setup

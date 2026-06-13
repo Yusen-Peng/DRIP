@@ -48,6 +48,13 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 local_rank = None
 
 
+
+import os, json, traceback
+DEBUG_PATH = f"/fs/scratch/PAS2836/yusenpeng_dataset/llava_getitem_rank{os.environ.get('RANK', 'x')}.jsonl"
+
+
+
+
 def rank0_print(*args):
     if local_rank == 0:
         print(*args)
@@ -822,18 +829,7 @@ class LazySupervisedDataset(Dataset):
         elif self.data_args.is_multimodal:
             # image does not exist in the data, but the model is multimodal
             crop_size = self.data_args.image_processor.crop_size
-            data_dict['image'] = torch.zeros(3, crop_size['height'], crop_size['width'])
-        
-
-        if i == 0:
-            labels = data_dict["labels"][0] if data_dict["labels"].dim() == 2 else data_dict["labels"]
-            print("non-ignore labels:", (labels != IGNORE_INDEX).sum().item())
-            debug_labels = labels.clone()
-            debug_labels[debug_labels == IGNORE_INDEX] = self.tokenizer.pad_token_id
-            print(self.tokenizer.decode([x for x in debug_labels.tolist() if x >= 0], skip_special_tokens=False))
-            exit()
-
-
+            data_dict['image'] = torch.zeros(3, crop_size['height'], crop_size['width'])       
         return data_dict
 
 
