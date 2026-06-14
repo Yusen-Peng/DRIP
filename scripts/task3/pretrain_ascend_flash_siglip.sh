@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Jun13_LLaVA_7B_SigLIP_pretrain
-#SBATCH --output=Jun13_LLaVA_7B_SigLIP_pretrain.txt
-#SBATCH --time=35:00:00
+#SBATCH --job-name=Jun13_LLaVA_7B_SigLIP_pretrain_512
+#SBATCH --output=Jun13_LLaVA_7B_SigLIP_pretrain_512.txt
+#SBATCH --time=80:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=quad
@@ -28,13 +28,13 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --version plain \
     --data_path /fs/scratch/PAS2836/yusenpeng_dataset/blip_laion_cc_sbu_558k.json \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_pretrain_images \
-    --vision_tower timm/vit_large_patch16_siglip_384.v2_webli \
+    --vision_tower timm/vit_large_patch16_siglip_512.v2_webli \
     --mm_projector_type mlp2x_gelu \
     --tune_mm_mlp_adapter True \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_pretrain \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_pretrain_512 \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \

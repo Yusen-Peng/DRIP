@@ -1226,18 +1226,24 @@ def train(attn_implementation=None):
                                               data_args=data_args)
 
 
+    # fix invalid generation_config before Trainer sees/saves it
+    if hasattr(model, "generation_config") and model.generation_config is not None:
+        model.generation_config.do_sample = False
+        model.generation_config.temperature = None
+        model.generation_config.top_p = None
+        model.generation_config.top_k = None
+
+
     trainer = LLaVATrainer(model=model,
                     tokenizer=tokenizer,
                     args=training_args,
                     **data_module)
 
-    
-    
-    # fix invalid generation_config before checkpoint saving
-    if hasattr(model, "generation_config") and model.generation_config is not None:
-        model.generation_config.do_sample = False
-        model.generation_config.temperature = None
-        model.generation_config.top_p = None
+    # # fix invalid generation_config before checkpoint saving
+    # if hasattr(model, "generation_config") and model.generation_config is not None:
+    #     model.generation_config.do_sample = False
+    #     model.generation_config.temperature = None
+    #     model.generation_config.top_p = None
 
 
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
