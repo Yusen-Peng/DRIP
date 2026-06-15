@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=June10_GQA_LLaVA_7B_Fixed_4x_training_free
-#SBATCH --output=June10_GQA_LLaVA_7B_Fixed_4x_training_free.log
+#SBATCH --job-name=0614_GQA_LLaVA_7B_DRIP_4x_Hnet_ablation_train_full
+#SBATCH --output=0614_GQA_LLaVA_7B_DRIP_4x_Hnet_ablation_train_full.log
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,10 +24,10 @@ GQADIR="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data"
 OUTPUT_DIR=/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/answers/llava_gqa_testdev_balanced
 mkdir -p $OUTPUT_DIR
 
-OUTPUT_FILE=$OUTPUT_DIR/LLaVA_7B_Fixed_4x_training_free.jsonl
+OUTPUT_FILE=$OUTPUT_DIR/LLaVA_7B_DRIP_4x_Hnet_ablation_train_full.jsonl
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_Hnet_ablation_train_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/llava_gqa_testdev_balanced.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data/images \
     --answers-file $OUTPUT_FILE \

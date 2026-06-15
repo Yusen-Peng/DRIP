@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=June10_MMMU_LLaVA_7B_Fixed_4x_training_free
-#SBATCH --output=June10_MMMU_LLaVA_7B_Fixed_4x_training_free.log
+#SBATCH --job-name=0614_MMMU_LLaVA_7B_DRIP_4x_Hnet_ablation_train_full
+#SBATCH --output=0614_MMMU_LLaVA_7B_DRIP_4x_Hnet_ablation_train_full.log
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,10 +19,10 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_Fixed_4x_training_free"
+VERSION="LLaVA_7B_DRIP_4x_Hnet_ablation_train_full"
 
 python src/model_vqa_mmmu.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_Hnet_ablation_train_full \
     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
 

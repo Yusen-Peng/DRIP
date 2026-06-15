@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Jun13_LLaVA_7B_SigLIP_pretrain_512
-#SBATCH --output=Jun13_LLaVA_7B_SigLIP_pretrain_512.txt
-#SBATCH --time=80:00:00
+#SBATCH --job-name=Jun14_LLaVA_7B_SigLIP_pretrain_512_DRIP_10x
+#SBATCH --output=Jun14_LLaVA_7B_SigLIP_pretrain_512_DRIP_10x.txt
+#SBATCH --time=30:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=quad
@@ -9,6 +9,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256G
 #SBATCH --account=PAS2836
+#SBATCH --exclude=a0004,a0001,a0011,a0011,a0010,a0022,a0006,a0007,a0002
 
 module load miniconda3/24.1.2-py310
 conda deactivate
@@ -34,7 +35,7 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_pretrain_512 \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_pretrain_512_DRIP_10x \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \

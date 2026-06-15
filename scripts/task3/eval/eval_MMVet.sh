@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=June10_MMVet_LLaVA_7B_Fixed_4x_training_free
-#SBATCH --output=June10_MMVet_LLaVA_7B_Fixed_4x_training_free.log
+#SBATCH --job-name=0614_MMVet_LLaVA_7B_DRIP_4x_Hnet_ablation_train_full
+#SBATCH --output=0614_MMVet_LLaVA_7B_DRIP_4x_Hnet_ablation_train_full.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,12 +17,12 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_7B_Fixed_4x_training_free"
+VERSION="LLaVA_7B_DRIP_4x_Hnet_ablation_train_full"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_Hnet_ablation_train_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/llava-mm-vet.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/images \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/answers/${VERSION}.jsonl \

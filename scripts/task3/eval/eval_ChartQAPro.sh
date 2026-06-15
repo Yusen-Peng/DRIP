@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=June10_ChartQAPro_LLaVA_7B_Fixed_4x_training_free
-#SBATCH --output=June10_ChartQAPro_LLaVA_7B_Fixed_4x_training_free.log
+#SBATCH --job-name=0614_ChartQAPro_LLaVA_7B_DRIP_4x_Hnet_ablation_train_full
+#SBATCH --output=0614_ChartQAPro_LLaVA_7B_DRIP_4x_Hnet_ablation_train_full.log
 #SBATCH --time=00:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,12 +20,12 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP
 
 
-VERSION="LLaVA_7B_Fixed_4x_training_free"
+VERSION="LLaVA_7B_DRIP_4x_Hnet_ablation_train_full"
 echo "Running LLaVA inference..."
 
 
 python src/model_vqa_chartqapro.py \
-  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
+  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_Hnet_ablation_train_full \
   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/images \
   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/chartqapro_test_llava.jsonl \
   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/results/${VERSION}.jsonl \

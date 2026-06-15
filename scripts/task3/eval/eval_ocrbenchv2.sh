@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=June10_OCRBenchV2_LLaVA_7B_Fixed_4x_training_free
-#SBATCH --output=June10_OCRBenchV2_LLaVA_7B_Fixed_4x_training_free.log
+#SBATCH --job-name=0614_OCRBenchV2_LLaVA_7B_DRIP_4x_Hnet_ablation_train_full
+#SBATCH --output=0614_OCRBenchV2_LLaVA_7B_DRIP_4x_Hnet_ablation_train_full.log
 #SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,14 +20,14 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_Fixed_4x_training_free"
+VERSION="LLaVA_7B_DRIP_4x_Hnet_ablation_train_full"
 
 
 #### Inference #####
 ####################
 
 python src/model_vqa_ocrbenchv2.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_Hnet_ablation_train_full \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \

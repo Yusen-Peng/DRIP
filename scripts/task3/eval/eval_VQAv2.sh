@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=June10_VQAv2_LLaVA_7B_Fixed_4x_training_free
-#SBATCH --output=June10_VQAv2_LLaVA_7B_Fixed_4x_training_free.log
+#SBATCH --job-name=0614_VQAv2_LLaVA_7B_DRIP_4x_Hnet_ablation_train_full
+#SBATCH --output=0614_VQAv2_LLaVA_7B_DRIP_4x_Hnet_ablation_train_full.log
 #SBATCH --time=06:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=quad
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -17,12 +17,12 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_7B_Fixed_4x_training_free"
+VERSION="LLaVA_7B_DRIP_4x_Hnet_ablation_train_full"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_Hnet_ablation_train_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/llava_vqav2_mscoco_test-dev2015.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/test2015 \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/answers/${VERSION}.jsonl \

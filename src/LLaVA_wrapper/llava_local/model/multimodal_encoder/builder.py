@@ -12,7 +12,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             "DRIP-H": our BP with H-Net
     """
 
-    MERGE_STRATEGY = "ViT"
+    MERGE_STRATEGY = "DRIP"
     # main result: 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
     # limit test: 20x - 0.05, 100x - 0.01, 500x - 0.002
     COMPRESSION_RATE = 0.25
@@ -38,9 +38,11 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_temp001_train_full/drip.bin"
     # -- H-Net
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_Hnet_ablation_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_Hnet_ablation_train_full/drip.bin"
+
     # -- loss ratio
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
-
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_ratio_ablation_train_full/drip.bin"
 
     # Qwen experiments
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_DRIP_4x_pretrain/drip.bin"
@@ -69,7 +71,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_DRIP_10x_pretrain/drip.bin"
 
-    DRIP_WEIGHT_PATH = None
+    # DRIP_WEIGHT_PATH = None
 
     ############################################################
 
