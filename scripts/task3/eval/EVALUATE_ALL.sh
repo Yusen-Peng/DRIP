@@ -4,7 +4,7 @@
 # VQAv2 [🚨LONG🚨]
 # need to submit the result json file to:
 # https://eval.ai/web/challenges/challenge-page/830
-sbatch scripts/task3/eval/eval_VQAv2.sh
+# sbatch scripts/task3/eval/eval_VQAv2.sh
 # SQA 
 sbatch scripts/task3/eval/eval_SQA.sh
 # MME
@@ -26,7 +26,7 @@ sbatch scripts/task3/eval/eval_textVQA.sh
 # OCRBench
 sbatch scripts/task3/eval/eval_ocrbench.sh
 # OCRBench-v2
-sbatch scripts/task3/eval/eval_ocrbenchv2.sh
+# sbatch scripts/task3/eval/eval_ocrbenchv2.sh
 # DocVQA
 sbatch scripts/task3/eval/eval_DocVQA.sh
 # ChartQAPro

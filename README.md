@@ -78,6 +78,8 @@ sbatch scripts/task3/finetune_ascend_flash.sh
 sbatch scripts/task3/finetune_ascend_flash_full.sh
 # Qwen 2.5 14B
 sbatch scripts/task3/finetune_ascend_flash_full_qwen.sh
+# SIGLIP2
+sbatch scripts/task3/finetune_ascend_flash_siglip.sh
 ```
 
 We can SSH into GPUs to check its memory usage with:

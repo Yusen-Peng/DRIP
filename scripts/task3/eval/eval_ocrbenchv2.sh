@@ -1,14 +1,15 @@
 #!/bin/bash
-#SBATCH --job-name=0614_OCRBenchV2_LLaVA_7B_DRIP_4x_Hnet_ablation_train_full
-#SBATCH --output=0614_OCRBenchV2_LLaVA_7B_DRIP_4x_Hnet_ablation_train_full.log
+#SBATCH --job-name=0615_OCRBenchV2_LLaVA_7B_DRIP_4x_ratio_ablation_train_full
+#SBATCH --output=0615_OCRBenchV2_LLaVA_7B_DRIP_4x_ratio_ablation_train_full.log
 #SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=quad
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
+#SBATCH --exclude=a0001,a0011,a0014
 
 module load miniconda3/24.1.2-py310
 conda activate DRIP
@@ -20,14 +21,14 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_DRIP_4x_Hnet_ablation_train_full"
+VERSION="LLaVA_7B_DRIP_4x_ratio_ablation_train_full"
 
 
 #### Inference #####
 ####################
 
 python src/model_vqa_ocrbenchv2.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_Hnet_ablation_train_full \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_ratio_ablation_train_full/checkpoint-1215 \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \

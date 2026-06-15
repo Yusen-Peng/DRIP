@@ -9,7 +9,6 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256G
 #SBATCH --account=PAS2836
-#SBATCH --exclude=a0004,a0001,a0011,a0011,a0010,a0022,a0006,a0007,a0002
 
 module load miniconda3/24.1.2-py310
 conda deactivate
