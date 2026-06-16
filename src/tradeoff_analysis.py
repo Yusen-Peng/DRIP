@@ -1,6 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
+import matplotlib as mpl
+from matplotlib.lines import Line2D
+import numpy as np
 
 
 def get_category(model_name):
@@ -12,82 +14,188 @@ def get_category(model_name):
         return "DRIP"
     elif model_name.startswith("LLaVA"):
         return "LLaVA"
-    else:
-        return "Other"
+    return "Other"
+
+
+def pretty_model_name(name):
+    return (
+        name.replace("fixed pooling", "Fixed")
+            .replace("LLaVA-1.5-7B", "LLaVA")
+    )
+
+
+def setup_plot_style():
+    mpl.rcParams.update({
+        "font.family": "serif",
+        "font.size": 12,
+        "axes.titlesize": 15,
+        "axes.labelsize": 13,
+        "legend.fontsize": 11,
+        "xtick.labelsize": 11,
+        "ytick.labelsize": 11,
+        "axes.linewidth": 1.1,
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+    })
 
 
 def plot_tradeoff(df, score_col, ylabel, title, save_path):
-    category_colors = {
-        "LLaVA": "tab:gray",
-        "Fixed pooling": "tab:orange",
-        "PruMerge": "tab:green",
-        "DRIP": "tab:red",
-        "Other": "tab:gray",
+    setup_plot_style()
+
+    colors = {
+        "LLaVA": "#6E6E6E",
+        "Fixed pooling": "#F28E2B",
+        "PruMerge": "#59A14F",
+        "DRIP": "#E15759",
+    }
+
+    markers = {
+        "LLaVA": "o",
+        "Fixed pooling": "s",
+        "PruMerge": "^",
+        "DRIP": "D",
     }
 
     df = df.copy()
     df["Category"] = df["Model"].apply(get_category)
+
     baseline_tflops = df.loc[df["Model"] == "LLaVA-1.5-7B", "TFLOPs"].iloc[0]
     df["Speedup"] = baseline_tflops / df["TFLOPs"]
+    
+    # safety
+    df["TFLOPs"] = pd.to_numeric(df["TFLOPs"], errors="coerce")
+    df["OverallScore"] = pd.to_numeric(df["OverallScore"], errors="coerce")
+    df["OCRScore"] = pd.to_numeric(df["OCRScore"], errors="coerce")
 
-    plt.figure(figsize=(8, 6))
 
-    # Connect dots within each category
-    for category, group in df.groupby("Category"):
-        group = group.sort_values("Speedup")
+    fig, ax = plt.subplots(figsize=(7.2, 5.2))
 
-        plt.plot(
+    # Light background grid
+    ax.grid(True, which="major", alpha=0.18, linewidth=0.8)
+    ax.set_axisbelow(True)
+
+    # Plot category lines
+    plot_order = ["LLaVA", "Fixed pooling", "PruMerge", "DRIP"]
+
+    for category in plot_order:
+        group = df[df["Category"] == category].sort_values("Speedup")
+        if len(group) == 0:
+            continue
+
+        ax.plot(
             group["Speedup"],
             group[score_col],
-            color=category_colors.get(category, "tab:gray"),
-            linewidth=2.0,
-            marker="o",
-            alpha=0.75,
-            zorder=1,
-            label=category
+            color=colors[category],
+            linewidth=2.4 if category == "DRIP" else 1.8,
+            alpha=0.95 if category == "DRIP" else 0.75,
+            zorder=2,
         )
 
-    # Scatter + labels
+        ax.scatter(
+            group["Speedup"],
+            group[score_col],
+            s=95 if category == "DRIP" else 80,
+            color=colors[category],
+            marker=markers[category],
+            edgecolor="white",
+            linewidth=1.2,
+            zorder=3,
+        )
+
+    # Baseline horizontal reference
+    ax.axhline(
+        1.0,
+        color="black",
+        linewidth=1.0,
+        linestyle="--",
+        alpha=0.35,
+        zorder=1,
+    )
+
+    # Annotate only points, but cleaner
+    label_offsets = {
+        "LLaVA-1.5-7B": (8, -8),
+        "DRIP-4x": (-16, 10),
+        "DRIP-8x": (8, 8),
+        "DRIP-10x": (8, -10),
+        "fixed pooling-4x": (-30, -14),
+        "fixed pooling-8x": (8, -12),
+        "fixed pooling-10x": (8, -12),
+        "PruMerge-4x": (-28, -16),
+        "PruMerge-8x": (8, -12),
+        "PruMerge-10x": (8, -12),
+    }
+
     for _, row in df.iterrows():
-        category = row["Category"]
+        name = row["Model"]
+        dx, dy = label_offsets.get(name, (6, 6))
 
-        plt.scatter(
-            row["Speedup"],
-            row[score_col],
-            s=100,
-            color=category_colors.get(category, "tab:gray"),
-            edgecolor="black",
-            linewidth=0.5,
-            zorder=2
-        )
-
-        plt.annotate(
-            row["Model"],
-            (row["Speedup"], row[score_col]),
-            xytext=(-20, -10),
+        ax.annotate(
+            pretty_model_name(name),
+            xy=(row["Speedup"], row[score_col]),
+            xytext=(dx, dy),
             textcoords="offset points",
+            fontsize=9,
+            color="#222222",
             ha="left",
             va="center",
-            fontsize=8
         )
 
-    plt.xlabel("TFLOP Speedup over LLaVA-1.5-7B")
-    plt.title(title.replace("Compute", "Speedup"))
-    plt.ylabel(ylabel)
-    plt.title(title)
-    plt.grid(True, alpha=0.3, which="both")
-    plt.legend()
-    plt.xlim(0.8, 5.0)
-    plt.ylim(0.72, 1.01)
-    plt.tight_layout()
+    drip = df[df["Category"] == "DRIP"].sort_values("Speedup")
+    x = drip["Speedup"].astype(float).to_numpy()
+    y = drip[score_col].astype(float).to_numpy()
+    ax.fill_between(
+        x,
+        y,
+        0.72,
+        color=colors["DRIP"],
+        alpha=0.045,
+        zorder=0,
+    )
 
-    plt.savefig(save_path, dpi=300)
+    ax.set_title(title, pad=12, fontweight="bold")
+    ax.set_xlabel("TFLOP Speedup over LLaVA-1.5-7B")
+    ax.set_ylabel(ylabel)
+
+    ax.set_xlim(0.85, 4.75)
+    ax.set_ylim(0.72, 1.015)
+
+    # Cleaner legend
+    handles = [
+        Line2D(
+            [0], [0],
+            color=colors[c],
+            marker=markers[c],
+            linewidth=2.2,
+            markersize=7,
+            markeredgecolor="white",
+            label=c,
+        )
+        for c in plot_order
+    ]
+
+    ax.legend(
+        handles=handles,
+        frameon=True,
+        fancybox=True,
+        framealpha=0.92,
+        edgecolor="#DDDDDD",
+        loc="upper right",
+    )
+
+    # Remove top/right spines
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.tight_layout()
+
+    fig.savefig(save_path, dpi=400, bbox_inches="tight")
+    fig.savefig(save_path.replace(".png", ".pdf"), bbox_inches="tight")
     plt.show()
 
 
 if __name__ == "__main__":
-
-    CSV_ID = "lora_7B_second_to_last"
+    CSV_ID = "full_7B_last"
 
     df = pd.read_csv(f"results/{CSV_ID}.csv")
 
@@ -96,7 +204,7 @@ if __name__ == "__main__":
         "OCRBench",
         "OCRBenchv2",
         "DocVQA",
-        "ChartQAPro"
+        "ChartQAPro",
     ]
 
     all_metric_cols = [
@@ -113,26 +221,28 @@ if __name__ == "__main__":
         "ChartQAPro",
         "POPE",
         "LLaVA-Wild",
-        "MM-Vet"
+        "MM-Vet",
     ]
 
     baseline_row = df[df["Model"] == "LLaVA-1.5-7B"].iloc[0]
+
     relative = df[all_metric_cols].div(baseline_row[all_metric_cols], axis=1)
+
     df["OverallScore"] = relative[all_metric_cols].mean(axis=1)
     df["OCRScore"] = relative[ocr_cols].mean(axis=1)
 
     plot_tradeoff(
         df=df,
         score_col="OverallScore",
-        ylabel="Overall Relative Performance vs LLaVA-1.5-7B",
-        title="Overall Performance vs Compute",
-        save_path=f"results/{CSV_ID}_overall_tradeoff.png"
+        ylabel="Average Relative Performance",
+        title="Overall Performance-Compute Tradeoff",
+        save_path=f"results/{CSV_ID}_overall_tradeoff_pretty.png",
     )
 
     plot_tradeoff(
         df=df,
         score_col="OCRScore",
-        ylabel="OCR Relative Performance vs LLaVA-1.5-7B",
-        title="OCR Performance vs Compute",
-        save_path=f"results/{CSV_ID}_ocr_tradeoff.png"
+        ylabel="OCR Relative Performance",
+        title="OCR Performance-Compute Tradeoff",
+        save_path=f"results/{CSV_ID}_ocr_tradeoff_pretty.png",
     )
