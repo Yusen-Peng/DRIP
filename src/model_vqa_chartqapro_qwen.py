@@ -9,11 +9,12 @@ import os
 import sys
 from LLaVA_wrapper.llava_local.constants import IMAGE_TOKEN_INDEX, DEFAULT_IMAGE_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 from LLaVA_wrapper.llava_local.conversation import conv_templates, SeparatorStyle
-from LLaVA_wrapper.llava_local.model.builder import load_pretrained_model, LlavaLlamaForCausalLM, LlavaQwen2ForCausalLM
+from LLaVA_wrapper.llava_local.model.builder import load_pretrained_model
 from LLaVA_wrapper.llava_local.utils import disable_torch_init
 from LLaVA_wrapper.llava_local.mm_utils import tokenizer_image_token, process_images, get_model_name_from_path
 from PIL import Image
 import math
+
 
 def split_list(lst, n):
     """Split a list into n (roughly) equal-sized chunks"""
@@ -44,11 +45,9 @@ class CustomDataset(Dataset):
         else:
             qs = DEFAULT_IMAGE_TOKEN + '\n' + qs
         
-        """
-            FIXME
-        """
-        qs += "\nAnswer the question directly with a short phrase. Do not explain."
-        
+        # make sure that the question is crisp for eval
+        qs = qs + "\nAnswer the question using a single word or phrase."
+
         conv = conv_templates[args.conv_mode].copy()
         conv.append_message(conv.roles[0], qs)
         conv.append_message(conv.roles[1], None)
@@ -104,14 +103,26 @@ def eval_model(args):
         cur_prompt = line["text"]
 
         input_ids = input_ids.to(device='cuda', non_blocking=True)
-        attention_mask = torch.ones_like(input_ids, device=input_ids.device)
 
+        # with torch.inference_mode():
+        #     output_ids = model.generate(
+        #         input_ids,
+        #         images=image_tensor.to(dtype=torch.float16, device='cuda', non_blocking=True),
+        #         image_sizes=image_sizes,
+        #         do_sample=True if args.temperature > 0 else False,
+        #         temperature=args.temperature,
+        #         top_p=args.top_p,
+        #         num_beams=args.num_beams,
+        #         max_new_tokens=args.max_new_tokens,
+        #         use_cache=True)
+        
+        attention_mask = torch.ones_like(input_ids, device=input_ids.device)
         stop_ids = [
             tokenizer.eos_token_id,
             tokenizer.convert_tokens_to_ids("<|im_end|>"),
             tokenizer.convert_tokens_to_ids("<|endoftext|>"),
         ]
-
+    
         # stop_ids += newline_ids
         stop_ids = [x for x in stop_ids if x is not None and x != tokenizer.unk_token_id]
 
@@ -123,11 +134,15 @@ def eval_model(args):
                 image_sizes=image_sizes,
                 do_sample=True if args.temperature > 0 else False,
                 temperature=args.temperature,
+                top_p=args.top_p,
+                num_beams=args.num_beams,
                 max_new_tokens=args.max_new_tokens,
                 eos_token_id=stop_ids,
                 pad_token_id=tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id,
                 use_cache=True
             )
+
+
 
         outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
 
@@ -154,7 +169,7 @@ if __name__ == "__main__":
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--top_p", type=float, default=None)
     parser.add_argument("--num_beams", type=int, default=1)
-    parser.add_argument("--max_new_tokens", type=int, default=128)    
+    parser.add_argument("--max_new_tokens", type=int, default=128)
     args = parser.parse_args()
 
     eval_model(args)

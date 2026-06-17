@@ -79,7 +79,7 @@ sbatch scripts/task3/finetune_ascend_flash_full.sh
 # Qwen 2.5 14B
 sbatch scripts/task3/finetune_ascend_flash_full_qwen.sh
 # SIGLIP2
-sbatch scripts/task3/finetune_ascend_flash_siglip.sh
+sbatch scripts/task3/finetune_ascend_flash_full_siglip.sh
 ```
 
 We can SSH into GPUs to check its memory usage with:
@@ -132,6 +132,9 @@ python src/GFLOP_measurement.py --model-path /path/to/LLaVA_7B_FLASH_finetune_AL
 # for LoRA finetuned models
 python src/GFLOP_measurement.py --model-path /path/to/LLaVA_7B_FLASH_finetune_ALL_ONCE_lora \
     --model-base lmsys/vicuna-7b-v1.5
+# 🥶🥶🥶 For Qwen2.5 14B instruct, use debug-quad:
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-quad --time 00:30:00
+python src/GFLOP_measurement.py --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full --conv-mode qwen_v2
 ```
 
 Important Note: for "DRIP", please go to [src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py](src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py) line #93 to toggle ``inference=False`` to ``inference=True`` to accurately evaluate the TFLOPs during prefill stage.
