@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0617_MMVet_LLaVA_7B_SigLIP_512_DRIP_4x_train_all
-#SBATCH --output=0617_MMVet_LLaVA_7B_SigLIP_512_DRIP_4x_train_all.log
+#SBATCH --job-name=0617_MMVet_LLaVA_Qwen2.5-14B-Instruct_PruMerge_8x_train_full
+#SBATCH --output=0617_MMVet_LLaVA_Qwen2.5-14B-Instruct_PruMerge_8x_train_full.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,25 +17,25 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_7B_SigLIP_512_DRIP_4x_train_all"
+VERSION="LLaVA_Qwen2.5-14B-Instruct_PruMerge_8x_train_full"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_DRIP_4x_train_all \
-    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/llava-mm-vet.jsonl \
-    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/images \
-    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/answers/${VERSION}.jsonl \
-    --temperature 0 \
-    --conv-mode vicuna_v1
-
-# python src/model_vqa_loader_qwen.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full \
+# python src/model_vqa_loader.py \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_Fixed_8x_train_all \
 #     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/llava-mm-vet.jsonl \
 #     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/images \
 #     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/answers/${VERSION}.jsonl \
 #     --temperature 0 \
-#     --conv-mode qwen_v2
+#     --conv-mode vicuna_v1
+
+python src/model_vqa_loader_qwen.py \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full \
+    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/llava-mm-vet.jsonl \
+    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/images \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/answers/${VERSION}.jsonl \
+    --temperature 0 \
+    --conv-mode qwen_v2
 
 # python src/model_vqa_loader.py \
 #     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \
