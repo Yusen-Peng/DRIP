@@ -87,6 +87,13 @@ def call_llava_engine_df(args, sample, model, tokenizer=None, processor=None):
     return response
 
 
+# def llava_image_processor(raw_image, vis_processors=None):
+#     image_tensor = vis_processors.preprocess(raw_image, return_tensors='pt')['pixel_values'][0]
+#     return image_tensor
+
+
 def llava_image_processor(raw_image, vis_processors=None):
-    image_tensor = vis_processors.preprocess(raw_image, return_tensors='pt')['pixel_values'][0]
+    if hasattr(raw_image, "mode") and raw_image.mode != "RGB":
+        raw_image = raw_image.convert("RGB")
+    image_tensor = vis_processors.preprocess(raw_image, return_tensors="pt")["pixel_values"][0]
     return image_tensor

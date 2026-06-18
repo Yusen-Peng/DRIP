@@ -137,7 +137,7 @@ salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition de
 python src/GFLOP_measurement.py --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full --conv-mode qwen_v2
 ```
 
-Important Note: for "DRIP", please go to [src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py](src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py) line #93 to toggle ``inference=False`` to ``inference=True`` to accurately evaluate the TFLOPs during prefill stage.
+Important Note: for "DRIP", please go to [src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py](src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py) line #93 to temporarily toggle ``inference=False`` to ``inference=True`` to accurately evaluate the TFLOPs during prefill stage.
 
 
 ## Results

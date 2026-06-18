@@ -424,6 +424,14 @@ class TimmImageProcessor:
         if return_tensors == "pt":
             pixel_values = pixel_values.unsqueeze(0)
         return {"pixel_values": pixel_values}
+    
+    def __call__(self, images, return_tensors=None):
+        if isinstance(images, list):
+            pixel_values = [self.transform(image) for image in images]
+            pixel_values = torch.stack(pixel_values, dim=0)
+            return {"pixel_values": pixel_values}
+        return self.preprocess(images, return_tensors=return_tensors)
+
 
 class TimmVisionTower(CLIPVisionTower):
     def __init__(self,

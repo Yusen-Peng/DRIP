@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0616_MMMU_LLaVA_Qwen2.5-14B-Instruct_train_full
-#SBATCH --output=0616_MMMU_LLaVA_Qwen2.5-14B-Instruct_train_full.log
+#SBATCH --job-name=0617_MMMU_LLaVA_7B_SigLIP_512_train_all
+#SBATCH --output=0617_MMMU_LLaVA_7B_SigLIP_512_train_all.log
 #SBATCH --time=00:45:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,18 +19,18 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_Qwen2.5-14B-Instruct_train_full"
+VERSION="LLaVA_7B_SigLIP_512_train_all"
 
-# python src/model_vqa_mmmu.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_ratio_ablation_train_full/checkpoint-1215 \
-#     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
-#     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
-
-
-python src/model_vqa_mmmu_qwen.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full \
+python src/model_vqa_mmmu.py \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_train_all \
     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
+
+
+# python src/model_vqa_mmmu_qwen.py \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full \
+#     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
+#     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
 
 # python src/model_vqa_mmmu.py \
 #     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \

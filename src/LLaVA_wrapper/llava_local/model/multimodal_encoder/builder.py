@@ -11,17 +11,21 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             "DRIP": our BP with MLP
             "DRIP-H": our BP with H-Net
     """
+    # NOTE: This is irrelevant for CLIP-based models,
+    # but important for evaluating timm models such as SigLIPv2.
+    INFERENCE_MODE = True
+
 
     MERGE_STRATEGY = "ViT"
     # main result: 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
     # limit test: 20x - 0.05, 100x - 0.01, 500x - 0.002
-    COMPRESSION_RATE = 0.125
+    COMPRESSION_RATE = 0.1
 
     # FIXME: temperature tuning
     TEMPERATURE = 0.1
     # TEMPERATURE = 0.01
     
-    # DRIP_WEIGHT_PATH = None
+    DRIP_WEIGHT_PATH = None
 
     """
         4x paths.
@@ -65,7 +69,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
 
     # SigLIP 512 experiments
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_pretrain_512_DRIP_8x/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_pretrain_512_DRIP_8x/drip.bin"
 
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_DRIP_8x_pretrain/drip.bin"
@@ -78,6 +82,10 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_full/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_full/drip.bin"
+
+
+    # SigLIP 512 experiments
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_pretrain_512_DRIP_10x/drip.bin"
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_DRIP_10x_pretrain/drip.bin"
 
@@ -102,14 +110,27 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         if use_s2:
             raise NotImplementedError("S2 is not implemented for TimmVisionTower yet.")
         else:
-            return TimmVisionTower(
-                vision_tower=vision_tower,
-                args=vision_tower_cfg,
-                merge_strategy=MERGE_STRATEGY,
-                compression_rate=COMPRESSION_RATE,
-                drip_weight_path=DRIP_WEIGHT_PATH,
-                temperature=TEMPERATURE,
-                **kwargs
-            )
+            if INFERENCE_MODE:
+                kwargs.pop("delay_load", None)  # remove duplicate
+                return TimmVisionTower(
+                    vision_tower=vision_tower,
+                    args=vision_tower_cfg,
+                    merge_strategy=MERGE_STRATEGY,
+                    compression_rate=COMPRESSION_RATE,
+                    drip_weight_path=DRIP_WEIGHT_PATH,
+                    temperature=TEMPERATURE,
+                    delay_load=False, # don't delay for Timm models for proper inference
+                    **kwargs
+                )
+            else:
+                return TimmVisionTower(
+                    vision_tower=vision_tower,
+                    args=vision_tower_cfg,
+                    merge_strategy=MERGE_STRATEGY,
+                    compression_rate=COMPRESSION_RATE,
+                    drip_weight_path=DRIP_WEIGHT_PATH,
+                    temperature=TEMPERATURE,
+                    **kwargs
+                )
     else:
         raise ValueError(f'Unknown vision tower: {vision_tower}')
