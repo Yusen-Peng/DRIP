@@ -16,16 +16,16 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     INFERENCE_MODE = True
 
 
-    MERGE_STRATEGY = "ViT"
+    MERGE_STRATEGY = "DRIP"
     # main result: 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
     # limit test: 20x - 0.05, 100x - 0.01, 500x - 0.002
-    COMPRESSION_RATE = 0.1
+    COMPRESSION_RATE = 0.25
 
     # FIXME: temperature tuning
     TEMPERATURE = 0.1
     # TEMPERATURE = 0.01
     
-    DRIP_WEIGHT_PATH = None
+    # DRIP_WEIGHT_PATH = None
 
     """
         4x paths.
@@ -51,6 +51,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # SigLIP 512 experiments
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_pretrain_512_DRIP_4x/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_DRIP_4x_train_all/drip.bin"
 
 
     # Qwen experiments

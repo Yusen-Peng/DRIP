@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0617_SQA_LLaVA_7B_SigLIP_512_train_all
-#SBATCH --output=0617_SQA_LLaVA_7B_SigLIP_512_train_all.log
+#SBATCH --job-name=0617_SQA_LLaVA_7B_SigLIP_512_DRIP_4x_train_all
+#SBATCH --output=0617_SQA_LLaVA_7B_SigLIP_512_DRIP_4x_train_all.log
 #SBATCH --time=0:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,7 +18,7 @@ export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 
-VERSION="LLaVA_7B_SigLIP_512_train_all"
+VERSION="LLaVA_7B_SigLIP_512_DRIP_4x_train_all"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
@@ -26,7 +26,7 @@ mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.jsonl
 
 python src/model_vqa_science.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_train_all \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_DRIP_4x_train_all \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/SQA_key.json \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/images/test \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.jsonl \

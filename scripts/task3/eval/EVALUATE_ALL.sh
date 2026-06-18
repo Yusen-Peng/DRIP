@@ -8,7 +8,7 @@ sbatch scripts/task3/eval/eval_VQAv2.sh
 # SQA 
 sbatch scripts/task3/eval/eval_SQA.sh
 # MME
-# sbatch scripts/task3/eval/eval_MME.sh
+sbatch scripts/task3/eval/eval_MME.sh
 # MM-Bench
 sbatch scripts/task3/eval/eval_MMBench.sh
 
