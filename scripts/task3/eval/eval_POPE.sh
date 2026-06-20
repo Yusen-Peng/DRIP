@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0617_POPE_LLaVA_Qwen2.5-14B-Instruct_PruMerge_8x_train_full
-#SBATCH --output=0617_POPE_LLaVA_Qwen2.5-14B-Instruct_PruMerge_8x_train_full.log
+#SBATCH --job-name=0617_POPE_LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full
+#SBATCH --output=0617_POPE_LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full.log
 #SBATCH --time=00:50:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,7 +17,7 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_Qwen2.5-14B-Instruct_PruMerge_8x_train_full"
+VERSION="LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers

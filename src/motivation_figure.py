@@ -200,6 +200,9 @@ ax.text(
 )
 
 plt.tight_layout()
+# save pngs
 plt.savefig(f"{out_prefix}.png", dpi=300, bbox_inches="tight")
+# save pdfs 
+plt.savefig(f"{out_prefix}.pdf", bbox_inches="tight")
 plt.show()
 

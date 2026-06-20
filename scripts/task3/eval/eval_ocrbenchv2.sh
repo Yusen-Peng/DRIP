@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0617_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_PruMerge_8x_train_full
-#SBATCH --output=0617_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_PruMerge_8x_train_full.log
+#SBATCH --job-name=0617_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full
+#SBATCH --output=0617_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full.log
 #SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -21,7 +21,7 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_Qwen2.5-14B-Instruct_PruMerge_8x_train_full"
+VERSION="LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full"
 
 
 #### Inference #####

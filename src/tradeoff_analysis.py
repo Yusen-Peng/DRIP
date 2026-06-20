@@ -39,7 +39,7 @@ def setup_plot_style():
     })
 
 
-def plot_tradeoff(df, score_col, ylabel, title, save_path):
+def plot_tradeoff(ax, df, score_col, ylabel, title):
     setup_plot_style()
 
     colors = {
@@ -68,7 +68,7 @@ def plot_tradeoff(df, score_col, ylabel, title, save_path):
     df["OCRScore"] = pd.to_numeric(df["OCRScore"], errors="coerce")
 
 
-    fig, ax = plt.subplots(figsize=(7.2, 5.2))
+    # fig, ax = plt.subplots(figsize=(7.2, 5.2))
 
     # Light background grid
     ax.grid(True, which="major", alpha=0.18, linewidth=0.8)
@@ -154,7 +154,7 @@ def plot_tradeoff(df, score_col, ylabel, title, save_path):
     )
 
     ax.set_title(title, pad=12, fontweight="bold")
-    ax.set_xlabel("TFLOP Speedup over LLaVA-1.5-7B")
+    # ax.set_xlabel("TFLOP Speedup over LLaVA-1.5-7B")
     ax.set_ylabel(ylabel)
 
     ax.set_xlim(0.85, 4.75)
@@ -174,28 +174,29 @@ def plot_tradeoff(df, score_col, ylabel, title, save_path):
         for c in plot_order
     ]
 
-    ax.legend(
-        handles=handles,
-        frameon=True,
-        fancybox=True,
-        framealpha=0.92,
-        edgecolor="#DDDDDD",
-        loc="upper right",
-    )
+    # ax.legend(
+    #     handles=handles,
+    #     frameon=True,
+    #     fancybox=True,
+    #     framealpha=0.92,
+    #     edgecolor="#DDDDDD",
+    #     loc="lower left",
+    # )
 
     # Remove top/right spines
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    fig.tight_layout()
+    # fig.tight_layout()
 
-    fig.savefig(save_path, dpi=400, bbox_inches="tight")
-    fig.savefig(save_path.replace(".png", ".pdf"), bbox_inches="tight")
-    plt.show()
+    # fig.savefig(save_path, dpi=400, bbox_inches="tight")
+    # fig.savefig(save_path.replace(".png", ".pdf"), bbox_inches="tight")
+    # plt.show()
+    return handles
 
 
 if __name__ == "__main__":
-    CSV_ID = "full_7B_last"
+    CSV_ID = "lora_7B_last"
 
     df = pd.read_csv(f"results/{CSV_ID}.csv")
 
@@ -231,18 +232,105 @@ if __name__ == "__main__":
     df["OverallScore"] = relative[all_metric_cols].mean(axis=1)
     df["OCRScore"] = relative[ocr_cols].mean(axis=1)
 
-    plot_tradeoff(
+    # plot_tradeoff(
+    #     df=df,
+    #     score_col="OverallScore",
+    #     ylabel="Average Relative Performance",
+    #     title="Overall Performance-Compute Tradeoff",
+    #     save_path=f"results/{CSV_ID}_overall_tradeoff_pretty.png",
+    # )
+
+    # plot_tradeoff(
+    #     df=df,
+    #     score_col="OCRScore",
+    #     ylabel="OCR Relative Performance",
+    #     title="OCR Performance-Compute Tradeoff",
+    #     save_path=f"results/{CSV_ID}_ocr_tradeoff_pretty.png",
+    # )
+
+
+    setup_plot_style()
+
+    fig, axes = plt.subplots(
+
+        1,
+
+        2,
+
+        figsize=(13.8, 5.2),
+
+        sharey=True,
+
+    )
+
+    handles = plot_tradeoff(
+
+        ax=axes[0],
+
         df=df,
+
         score_col="OverallScore",
+
         ylabel="Average Relative Performance",
-        title="Overall Performance-Compute Tradeoff",
-        save_path=f"results/{CSV_ID}_overall_tradeoff_pretty.png",
+
+        title="Overall Performance",
+
     )
 
     plot_tradeoff(
+
+        ax=axes[1],
+
         df=df,
+
         score_col="OCRScore",
-        ylabel="OCR Relative Performance",
-        title="OCR Performance-Compute Tradeoff",
-        save_path=f"results/{CSV_ID}_ocr_tradeoff_pretty.png",
+
+        ylabel="",
+
+        title="OCR Performance",
+
     )
+
+    fig.legend(
+
+        handles=handles,
+
+        loc="lower center",
+
+        ncol=4,
+
+        frameon=True,
+
+        fancybox=True,
+
+        framealpha=0.95,
+
+        edgecolor="#DDDDDD",
+
+        bbox_to_anchor=(0.5, -0.02),
+
+    )
+
+    fig.supxlabel("TFLOP Speedup over LLaVA-1.5-7B", y=0.05)
+
+    plt.tight_layout(rect=[0, 0.08, 1, 1])
+
+    fig.savefig(
+
+        f"results/{CSV_ID}_tradeoff_combined.pdf",
+
+        bbox_inches="tight",
+
+    )
+
+    fig.savefig(
+
+        f"results/{CSV_ID}_tradeoff_combined.png",
+
+        dpi=400,
+
+        bbox_inches="tight",
+
+    )
+
+    plt.show()
