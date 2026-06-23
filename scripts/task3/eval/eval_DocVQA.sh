@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0617_DocVQA_LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full
-#SBATCH --output=0617_DocVQA_LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full.log
+#SBATCH --job-name=0621_DocVQA_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full
+#SBATCH --output=0621_DocVQA_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,12 +20,12 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP
 
 
-VERSION="LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full"
+VERSION="LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full"
 echo "Running LLaVA inference..."
 
 
 # python src/model_vqa_loader.py \
-#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_Fixed_8x_train_all \
+#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_DRIP_4x_train_all \
 #   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
 #   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \
 #   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
@@ -34,7 +34,7 @@ echo "Running LLaVA inference..."
 
 
 python src/model_vqa_loader_qwen.py \
-  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full \
+  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full \
   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \
   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
@@ -43,7 +43,7 @@ python src/model_vqa_loader_qwen.py \
 
 
 # python src/model_vqa_loader.py \
-#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \
+#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_second_to_last_train_lora \
 #   --model-base lmsys/vicuna-7b-v1.5 \
 #   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
 #   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \

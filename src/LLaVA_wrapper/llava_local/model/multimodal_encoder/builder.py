@@ -25,7 +25,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     TEMPERATURE = 0.1
     # TEMPERATURE = 0.01
     
-    # DRIP_WEIGHT_PATH = None
+    DRIP_WEIGHT_PATH = None
 
     """
         4x paths.
@@ -55,7 +55,8 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
 
     # Qwen experiments
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full/drip.bin"
 
 
     """
@@ -74,6 +75,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # qwen experiments
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_8x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_8x_train_full/drip.bin"
 
 
     """
@@ -92,7 +94,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     
     # Qwen experiments
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_pretrain/drip.bin"
-
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full/drip.bin"
 
 
     vision_tower = getattr(vision_tower_cfg, 'mm_vision_tower', getattr(vision_tower_cfg, 'vision_tower', None))

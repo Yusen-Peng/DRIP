@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0617_MMBench_LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full
-#SBATCH --output=0617_MMBench_LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full.log
+#SBATCH --job-name=0621_MMBench_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full
+#SBATCH --output=0621_MMBench_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full.log
 #SBATCH --time=00:50:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,14 +19,14 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full"
+VERSION="LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl
 
 # python src/model_vqa_mmbench.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_Fixed_8x_train_all \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_DRIP_4x_train_all \
 #     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/mmbench_dev_20230712.tsv \
 #     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl \
 #     --single-pred-prompt \
@@ -34,7 +34,7 @@ touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_d
 #     --conv-mode vicuna_v1
 
 python src/model_vqa_mmbench_qwen.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/mmbench_dev_20230712.tsv \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl \
     --single-pred-prompt \
@@ -43,7 +43,7 @@ python src/model_vqa_mmbench_qwen.py \
 
 
 # python src/model_vqa_mmbench.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_Fixed_8x_train_full \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_DRIP_4x_train_full \
 #     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/mmbench_dev_20230712.tsv \
 #     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl \
 #     --single-pred-prompt \
@@ -53,7 +53,7 @@ python src/model_vqa_mmbench_qwen.py \
 
 
 # python src/model_vqa_mmbench.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_second_to_last_train_lora \
 #     --model-base lmsys/vicuna-7b-v1.5 \
 #     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/mmbench_dev_20230712.tsv \
 #     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl \

@@ -1,15 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=0617_VQAv2_LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full
-#SBATCH --output=0617_VQAv2_LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full.log
+#SBATCH --job-name=0621_VQAv2_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full
+#SBATCH --output=0621_VQAv2_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full.log
 #SBATCH --time=06:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=quad
+#SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
-#SBATCH --exclude=a0010,a0011,a0008,a0009
 
 module load miniconda3/24.1.2-py310
 conda activate DRIP
@@ -18,12 +17,12 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full"
+VERSION="LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
 # python src/model_vqa_loader.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_Fixed_8x_train_all \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_DRIP_4x_train_all \
 #     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/llava_vqav2_mscoco_test-dev2015.jsonl \
 #     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/test2015 \
 #     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/answers/${VERSION}.jsonl \
@@ -33,7 +32,7 @@ cd /users/PAS2912/yusenpeng/DRIP/
 #     --conv-mode vicuna_v1
 
 python src/model_vqa_loader_qwen.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/llava_vqav2_mscoco_test-dev2015.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/test2015 \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/answers/${VERSION}.jsonl \
@@ -45,7 +44,7 @@ python src/model_vqa_loader_qwen.py \
 
 
 # python src/model_vqa_loader.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_second_to_last_train_lora \
 #     --model-base lmsys/vicuna-7b-v1.5 \
 #     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/llava_vqav2_mscoco_test-dev2015.jsonl \
 #     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/test2015 \

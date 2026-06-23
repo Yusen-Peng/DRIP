@@ -1,15 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=0617_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full
-#SBATCH --output=0617_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full.log
+#SBATCH --job-name=0621_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full
+#SBATCH --output=0621_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full.log
 #SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=quad
+#SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
-#SBATCH --exclude=a0001,a0011,a0014
 
 module load miniconda3/24.1.2-py310
 conda activate DRIP
@@ -21,14 +20,14 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full"
+VERSION="LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full"
 
 
 #### Inference #####
 ####################
 
 # python src/model_vqa_ocrbenchv2.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_Fixed_8x_train_all \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_DRIP_4x_train_all \
 #     --dataset_path lmms-lab/OCRBench-v2 \
 #     --dataset_split test \
 #     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
@@ -39,7 +38,7 @@ VERSION="LLaVA_Qwen2.5-14B-Instruct_PruMerge_10x_train_full"
 #     --conv_mode vicuna_v1
 
 python src/model_vqa_ocrbenchv2_qwen.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
@@ -51,7 +50,7 @@ python src/model_vqa_ocrbenchv2_qwen.py \
 
 
 # python src/model_vqa_ocrbenchv2.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_second_to_last_train_lora \
 #     --model_base lmsys/vicuna-7b-v1.5 \
 #     --dataset_path lmms-lab/OCRBench-v2 \
 #     --dataset_split test \
