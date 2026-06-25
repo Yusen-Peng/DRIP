@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=Jun14_LLaVA_7B_SigLIP_pretrain_512_DRIP_10x
-#SBATCH --output=Jun14_LLaVA_7B_SigLIP_pretrain_512_DRIP_10x.txt
+#SBATCH --job-name=June24_LLaVA_7B_SigLIP_HF
+#SBATCH --output=June24_LLaVA_7B_SigLIP_HF.txt
 #SBATCH --time=30:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=quad
+#SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256G
@@ -28,13 +28,13 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --version plain \
     --data_path /fs/scratch/PAS2836/yusenpeng_dataset/blip_laion_cc_sbu_558k.json \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_pretrain_images \
-    --vision_tower timm/vit_large_patch16_siglip_512.v2_webli \
+    --vision_tower google/siglip-large-patch16-384 \
     --mm_projector_type mlp2x_gelu \
     --tune_mm_mlp_adapter True \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_pretrain_512_DRIP_10x \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \

@@ -56,7 +56,7 @@ Before anything, make sure flash attention is installed.
 sbatch scripts/task3/pretrain_ascend_flash.sh
 # LLaVA 1.5 with Qwen 2.5 14B instruct
 sbatch scripts/task3/pretrain_ascend_flash_qwen.sh
-# LLaVA 1.5 with timm/vit_large_patch16_siglip_384.v2_webli
+# LLaVA 1.5 with google/siglip-large-patch16-384
 sbatch scripts/task3/pretrain_ascend_flash_siglip.sh
 ```
 
@@ -78,7 +78,7 @@ sbatch scripts/task3/finetune_ascend_flash.sh
 sbatch scripts/task3/finetune_ascend_flash_full.sh
 # Qwen 2.5 14B
 sbatch scripts/task3/finetune_ascend_flash_full_qwen.sh
-# SIGLIP2
+# SIGLIP encoder
 sbatch scripts/task3/finetune_ascend_flash_full_siglip.sh
 ```
 
