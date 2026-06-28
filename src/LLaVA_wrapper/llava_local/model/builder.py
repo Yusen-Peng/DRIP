@@ -16,6 +16,7 @@
 import os
 import warnings
 import shutil
+import math
 
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, BitsAndBytesConfig
 import torch
@@ -186,6 +187,26 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
         if device_map != 'auto':
             vision_tower.to(device=device_map, dtype=torch.float16)
         image_processor = vision_tower.image_processor
+    
+
+        print(f"⛅⛅⛅ Token compression method: {vision_tower.merge_strategy}", flush=True)
+
+        if vision_tower.merge_strategy == "PruneSID":
+            from src.LLaVA_wrapper.llava_local.model.multimodal_encoder.clip_encoder import CLIPVisionTower_PruneSID
+            import types
+            vision_tower.forward = types.MethodType(CLIPVisionTower_PruneSID.forward, vision_tower)
+
+            from src.LLaVA_wrapper.llava_local.model.llava_arch import LlavaMetaForCausalLM
+            from src.LLaVA_wrapper.llava_local.model.llava_arch import prepare_inputs_labels_for_multimodal_prunesid, restore_image_features_sorted, encode_images_prunesid_multi, encode_images_prunesid
+            if hasattr(LlavaMetaForCausalLM, 'prepare_inputs_labels_for_multimodal'):
+                LlavaMetaForCausalLM.prepare_inputs_labels_for_multimodal = prepare_inputs_labels_for_multimodal_prunesid
+                LlavaMetaForCausalLM.restore_image_features_sorted = restore_image_features_sorted
+                LlavaMetaForCausalLM.encode_images_prunesid_multi = encode_images_prunesid_multi
+                LlavaMetaForCausalLM.encode_images_prunesid = encode_images_prunesid
+
+            num_patches = model.model.vision_tower.num_patches  # 576
+            keep_tokens = math.ceil(num_patches * model.model.vision_tower.compression_rate)
+            model.model.vision_tower.need_token_num = keep_tokens
 
     if hasattr(model.config, "max_sequence_length"):
         context_len = model.config.max_sequence_length

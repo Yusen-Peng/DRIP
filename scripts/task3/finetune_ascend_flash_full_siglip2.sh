@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=June26_LLaVA_7B_SigLIP_HF_finetune_full
-#SBATCH --output=June26_LLaVA_7B_SigLIP_HF_finetune_full.txt
+#SBATCH --job-name=June28_LLaVA_7B_SigLIP_HF_v2_finetune_full
+#SBATCH --output=June28_LLaVA_7B_SigLIP_HF_v2_finetune_full.txt
 #SBATCH --time=50:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -11,6 +11,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
+
 
 module load miniconda3/24.1.2-py310
 module load cuda/12.6.2
@@ -33,15 +34,15 @@ torchrun --standalone --nproc_per_node=4 --master_port=$MASTER_PORT src/task3_ll
     --version v1 \
     --data_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning \
-    --vision_tower google/siglip-large-patch16-384 \
+    --vision_tower google/siglip2-large-patch16-384 \
     --mm_projector_type mlp2x_gelu \
     --tf32 True \
     --bf16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF/mm_projector.bin \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2/mm_projector.bin \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_finetune_full \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_finetune_full \
     --num_train_epochs 1 \
     --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 1 \

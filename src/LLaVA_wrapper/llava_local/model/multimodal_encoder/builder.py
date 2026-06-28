@@ -8,16 +8,17 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         Instructions:
             "ViT": original model checkpoint
             "Fixed": fixed pooling
-            "PruMerge": LLaVA-PruMerge
+            "PruMerge": LLaVA-PruMerge (ICCV 2025)
             "DRIP": our BP with MLP
             "DRIP-H": our BP with H-Net
+            "PruneSID": PruneSID (ICLR 2026)
     """
     # NOTE: This is irrelevant for CLIP-based models,
     # but important for evaluating timm models such as SigLIPv2.
     INFERENCE_MODE = True
 
 
-    MERGE_STRATEGY = "DRIP"
+    MERGE_STRATEGY = "ViT"
     # main result: 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
     # limit test: 20x - 0.05, 100x - 0.01, 500x - 0.002
     COMPRESSION_RATE = 0.25
@@ -26,13 +27,13 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     TEMPERATURE = 0.1
     # TEMPERATURE = 0.01
     
-    # DRIP_WEIGHT_PATH = None
+    DRIP_WEIGHT_PATH = None
 
     """
         4x paths.
     """
     # main experiments    
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_full/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_second_to_last_train_lora/drip.bin"

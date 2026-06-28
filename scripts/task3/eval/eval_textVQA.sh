@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0621_textVQA_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full
-#SBATCH --output=0621_textVQA_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full.log
+#SBATCH --job-name=0628_textVQA_LLaVA_7B_SigLIP_HF_finetune_full
+#SBATCH --output=0628_textVQA_LLaVA_7B_SigLIP_HF_finetune_full.log
 #SBATCH --time=00:55:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,26 +17,26 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full"
+VERSION="LLaVA_7B_SigLIP_HF_finetune_full"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-# python src/model_vqa_loader.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_512_DRIP_4x_train_all \
-#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
-#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
-#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
-#     --temperature 0 \
-#     --conv-mode vicuna_v1
-
-
-python src/model_vqa_loader_qwen.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full \
+python src/model_vqa_loader.py \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_finetune_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
     --temperature 0 \
-    --conv-mode qwen_v2
+    --conv-mode vicuna_v1
+
+
+# python src/model_vqa_loader_qwen.py \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full \
+#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
+#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
+#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
+#     --temperature 0 \
+#     --conv-mode qwen_v2
 
 
 

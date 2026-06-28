@@ -58,6 +58,8 @@ sbatch scripts/task3/pretrain_ascend_flash.sh
 sbatch scripts/task3/pretrain_ascend_flash_qwen.sh
 # LLaVA 1.5 with google/siglip-large-patch16-384
 sbatch scripts/task3/pretrain_ascend_flash_siglip.sh
+# LLaVA 1.5 with SigLIP v2
+sbatch scripts/task3/pretrain_ascend_flash_siglip2.sh
 ```
 
 When resuming from an existing checkpoint, **make sure to update the DRIP weight path `DRIP_WEIGHT_PATH` accordingly**:
@@ -80,6 +82,8 @@ sbatch scripts/task3/finetune_ascend_flash_full.sh
 sbatch scripts/task3/finetune_ascend_flash_full_qwen.sh
 # SIGLIP encoder
 sbatch scripts/task3/finetune_ascend_flash_full_siglip.sh
+# SIGLIP v2
+
 ```
 
 We can SSH into GPUs to check its memory usage with:
