@@ -83,7 +83,7 @@ sbatch scripts/task3/finetune_ascend_flash_full_qwen.sh
 # SIGLIP encoder
 sbatch scripts/task3/finetune_ascend_flash_full_siglip.sh
 # SIGLIP v2
-
+sbatch scripts/task3/finetune_ascend_flash_full_siglip2.sh
 ```
 
 We can SSH into GPUs to check its memory usage with:

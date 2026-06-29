@@ -14,14 +14,18 @@ def get_category(model_name):
         return "DRIP"
     elif model_name.startswith("LLaVA"):
         return "LLaVA"
+    elif model_name.startswith("PruneSID"):
+        return "PruneSID"
     return "Other"
 
 
 def pretty_model_name(name):
-    return (
-        name.replace("fixed pooling", "Fixed")
-            .replace("LLaVA-1.5-7B", "LLaVA")
-    )
+    if name == "LLaVA-1.5-7B":
+        return "LLaVA"
+    if "-" in name and "DRIP" in name:
+        return name.split("-")[-1]   # "4x", "8x", "10x"
+    return ""
+
 
 
 def setup_plot_style():
@@ -46,6 +50,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         "LLaVA": "#6E6E6E",
         "Fixed pooling": "#F28E2B",
         "PruMerge": "#59A14F",
+        "PruneSID": "#4E79A7",
         "DRIP": "#E15759",
     }
 
@@ -53,6 +58,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         "LLaVA": "o",
         "Fixed pooling": "s",
         "PruMerge": "^",
+        "PruneSID": "P",
         "DRIP": "D",
     }
 
@@ -68,14 +74,12 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     df["OCRScore"] = pd.to_numeric(df["OCRScore"], errors="coerce")
 
 
-    # fig, ax = plt.subplots(figsize=(7.2, 5.2))
-
     # Light background grid
     ax.grid(True, which="major", alpha=0.18, linewidth=0.8)
     ax.set_axisbelow(True)
 
     # Plot category lines
-    plot_order = ["LLaVA", "Fixed pooling", "PruMerge", "DRIP"]
+    plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "DRIP"]
 
     for category in plot_order:
         group = df[df["Category"] == category].sort_values("Speedup")
@@ -94,11 +98,12 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         ax.scatter(
             group["Speedup"],
             group[score_col],
-            s=95 if category == "DRIP" else 80,
+            s=80,
             color=colors[category],
             marker=markers[category],
             edgecolor="white",
             linewidth=1.2,
+            alpha=0.85,   # <-- add this
             zorder=3,
         )
 
@@ -116,14 +121,17 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     label_offsets = {
         "LLaVA-1.5-7B": (8, -8),
         "DRIP-4x": (-16, 10),
-        "DRIP-8x": (8, 8),
-        "DRIP-10x": (8, -10),
+        "DRIP-8x": (-16, 10),
+        "DRIP-10x": (-16, 10),
         "fixed pooling-4x": (-30, -14),
         "fixed pooling-8x": (8, -12),
         "fixed pooling-10x": (8, -12),
         "PruMerge-4x": (-28, -16),
         "PruMerge-8x": (8, -12),
         "PruMerge-10x": (8, -12),
+        "PruneSID-4x": (-28, -16),
+        "PruneSID-8x": (8, -12),
+        "PruneSID-10x": (8, -12),
     }
 
     for _, row in df.iterrows():
@@ -174,29 +182,16 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         for c in plot_order
     ]
 
-    # ax.legend(
-    #     handles=handles,
-    #     frameon=True,
-    #     fancybox=True,
-    #     framealpha=0.92,
-    #     edgecolor="#DDDDDD",
-    #     loc="lower left",
-    # )
-
     # Remove top/right spines
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
     # fig.tight_layout()
-
-    # fig.savefig(save_path, dpi=400, bbox_inches="tight")
-    # fig.savefig(save_path.replace(".png", ".pdf"), bbox_inches="tight")
-    # plt.show()
     return handles
 
 
 if __name__ == "__main__":
-    CSV_ID = "lora_7B_last"
+    CSV_ID = "full_7B_last"
 
     df = pd.read_csv(f"results/{CSV_ID}.csv")
 
@@ -231,23 +226,6 @@ if __name__ == "__main__":
 
     df["OverallScore"] = relative[all_metric_cols].mean(axis=1)
     df["OCRScore"] = relative[ocr_cols].mean(axis=1)
-
-    # plot_tradeoff(
-    #     df=df,
-    #     score_col="OverallScore",
-    #     ylabel="Average Relative Performance",
-    #     title="Overall Performance-Compute Tradeoff",
-    #     save_path=f"results/{CSV_ID}_overall_tradeoff_pretty.png",
-    # )
-
-    # plot_tradeoff(
-    #     df=df,
-    #     score_col="OCRScore",
-    #     ylabel="OCR Relative Performance",
-    #     title="OCR Performance-Compute Tradeoff",
-    #     save_path=f"results/{CSV_ID}_ocr_tradeoff_pretty.png",
-    # )
-
 
     setup_plot_style()
 
@@ -297,7 +275,7 @@ if __name__ == "__main__":
 
         loc="lower center",
 
-        ncol=4,
+        ncol=5,
 
         frameon=True,
 

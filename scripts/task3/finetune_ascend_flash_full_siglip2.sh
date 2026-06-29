@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=June28_LLaVA_7B_SigLIP_HF_v2_finetune_full
-#SBATCH --output=June28_LLaVA_7B_SigLIP_HF_v2_finetune_full.txt
+#SBATCH --job-name=June29_LLaVA_7B_SigLIP_HF_v2_finetune_full
+#SBATCH --output=June29_LLaVA_7B_SigLIP_HF_v2_finetune_full.txt
 #SBATCH --time=50:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
