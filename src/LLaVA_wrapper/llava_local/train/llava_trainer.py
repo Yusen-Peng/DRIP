@@ -464,11 +464,21 @@ class LLaVATrainer(Trainer):
             self.model.named_parameters(), drip_keys_to_match
         )
 
+
+        
+        # save Perceiver-specific weights separately
+        perceiver_keys_to_match = ["perceiver_resampler"]
+        perceiver_weight_to_save = get_mm_adapter_state_maybe_zero_3(
+            self.model.named_parameters(), perceiver_keys_to_match
+        )
         if self.args.local_rank in (0, -1):
             torch.save(weight_to_save, os.path.join(output_dir, "mm_projector.bin"))
             # only save if DRIP tensors exist
             if len(drip_weight_to_save) > 0:
                 torch.save(drip_weight_to_save, os.path.join(output_dir, "drip.bin"))
+            # only save if Perceiver tensors exist
+            if len(perceiver_weight_to_save) > 0:
+                torch.save(perceiver_weight_to_save, os.path.join(output_dir, "perceiver.bin"))
 
 
     def _save(self, output_dir: Optional[str] = None, state_dict=None):

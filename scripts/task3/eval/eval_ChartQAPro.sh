@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0628_ChartQAPro_LLaVA_7B_FLASH_finetune_PruneSID_4x_full
-#SBATCH --output=0628_ChartQAPro_LLaVA_7B_FLASH_finetune_PruneSID_4x_full.log
+#SBATCH --job-name=0628_ChartQAPro_LLaVA_7B_FLASH_finetune_PruneSID_10x_full_second
+#SBATCH --output=0628_ChartQAPro_LLaVA_7B_FLASH_finetune_PruneSID_10x_full_second.log
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,12 +20,12 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP
 
 
-VERSION="LLaVA_7B_FLASH_finetune_PruneSID_4x_full"
+VERSION="LLaVA_7B_FLASH_finetune_PruneSID_10x_full_second"
 echo "Running LLaVA inference..."
 
 
 python src/model_vqa_chartqapro.py \
-  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
+  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full \
   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/images \
   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/chartqapro_test_llava.jsonl \
   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/results/${VERSION}.jsonl \
@@ -33,7 +33,7 @@ python src/model_vqa_chartqapro.py \
   --conv-mode llava_v1
 
 # python src/model_vqa_chartqapro_qwen.py \
-#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full \
+#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full \
 #   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/images \
 #   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/chartqapro_test_llava.jsonl \
 #   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/results/${VERSION}.jsonl \
@@ -43,7 +43,7 @@ python src/model_vqa_chartqapro.py \
 
 
 # python src/model_vqa_chartqapro.py \
-#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_second_to_last_train_lora \
+#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \
 #   --model-base lmsys/vicuna-7b-v1.5 \
 #   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/images \
 #   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/chartqapro_test_llava.jsonl \

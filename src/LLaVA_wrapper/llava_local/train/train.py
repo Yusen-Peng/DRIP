@@ -974,6 +974,22 @@ def save_drip_state(model: LlavaLlamaForCausalLM, output_dir):
     else:
         print("🌊 No DRIP weights found to save.", flush=True)
 
+def save_perceiver_state(model: LlavaLlamaForCausalLM, output_dir):
+    named_params = list(model.named_parameters())
+    perceiver_keys_to_match = ["perceiver_resampler"]
+    perceiver_weight_to_save = get_mm_adapter_state_maybe_zero_3(
+        named_params, perceiver_keys_to_match
+    )
+
+    if len(perceiver_weight_to_save) > 0:
+        out_path = os.path.join(output_dir, "perceiver.bin")
+        torch.save(perceiver_weight_to_save, out_path)
+        print(f"🌀 Saved Perceiver weights to {out_path}", flush=True)
+    else:
+        print("🌀 No Perceiver weights found to save.", flush=True)
+
+
+
 def train(attn_implementation=None):
     global local_rank
     print(f"🫁🫁🫁 {attn_implementation} 🫁🫁🫁", flush=True)
@@ -1166,6 +1182,9 @@ def train(attn_implementation=None):
                     p.requires_grad = True
             if hasattr(vt, 'null_token'):
                 vt.null_token.requires_grad = True
+            if hasattr(vt, 'perceiver_resampler'):
+                for p in vt.perceiver_resampler.parameters():
+                    p.requires_grad = True
         else:
 
             vt = model.get_model().vision_tower
@@ -1174,6 +1193,9 @@ def train(attn_implementation=None):
                     p.requires_grad = True
             if hasattr(vt, 'null_token'):
                 vt.null_token.requires_grad = True
+            if hasattr(vt, 'perceiver_resampler'):
+                for p in vt.perceiver_resampler.parameters():
+                    p.requires_grad = True
         
         vt = model.get_model().vision_tower
         if hasattr(vt, 'boundary_predictor') and hasattr(vt, 'null_token'):
@@ -1267,6 +1289,7 @@ def train(attn_implementation=None):
             torch.save(non_lora_state_dict, os.path.join(training_args.output_dir, 'non_lora_trainables.bin'))
             
             save_drip_state(model, training_args.output_dir)
+            save_perceiver_state(model, training_args.output_dir)
 
     else:
         safe_save_model_for_hf_trainer(trainer=trainer,
@@ -1274,6 +1297,7 @@ def train(attn_implementation=None):
         if training_args.local_rank == 0 or training_args.local_rank == -1:
             
             save_drip_state(model, training_args.output_dir)
+            save_perceiver_state(model, training_args.output_dir)
 
 
     ddp_barrier()  # Barrier #1: everyone finished Trainer/HF/DS saving

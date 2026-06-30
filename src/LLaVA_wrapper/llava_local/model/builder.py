@@ -192,6 +192,9 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
         print(f"⛅⛅⛅ Token compression method: {vision_tower.merge_strategy}", flush=True)
 
         if vision_tower.merge_strategy == "PruneSID":
+            """
+                This is where the token compression actually happens for PruneSID method!
+            """
             from src.LLaVA_wrapper.llava_local.model.multimodal_encoder.clip_encoder import CLIPVisionTower_PruneSID
             import types
             vision_tower.forward = types.MethodType(CLIPVisionTower_PruneSID.forward, vision_tower)

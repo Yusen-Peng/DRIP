@@ -12,13 +12,14 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             "DRIP": our BP with MLP
             "DRIP-H": our BP with H-Net
             "PruneSID": PruneSID (ICLR 2026)
+            "Perceiver": Perceiver (ICML 2021)
     """
     # NOTE: This is irrelevant for CLIP-based models,
     # but important for evaluating timm models such as SigLIPv2.
     INFERENCE_MODE = True
 
 
-    MERGE_STRATEGY = "PruneSID"
+    MERGE_STRATEGY = "Perceiver"
     # main result: 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
     # limit test: 20x - 0.05, 100x - 0.01, 500x - 0.002
     COMPRESSION_RATE = 0.25
@@ -28,6 +29,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     # TEMPERATURE = 0.01
     
     DRIP_WEIGHT_PATH = None
+    PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_4x_pretrain/checkpoint-130/perceiver.bin"
 
     """
         4x paths.
@@ -111,6 +113,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
                 merge_strategy=MERGE_STRATEGY,
                 compression_rate=COMPRESSION_RATE,
                 drip_weight_path=DRIP_WEIGHT_PATH,
+                perceiver_weight_path=PERCEIVER_WEIGHT_PATH,
                 temperature=TEMPERATURE,
                 **kwargs)
     elif vision_tower.startswith("google/"):

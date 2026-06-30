@@ -191,7 +191,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
 
 
 if __name__ == "__main__":
-    CSV_ID = "full_7B_last"
+    CSV_ID = "full_7B_second_to_last"
 
     df = pd.read_csv(f"results/{CSV_ID}.csv")
 

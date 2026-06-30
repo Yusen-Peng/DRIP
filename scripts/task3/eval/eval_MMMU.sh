@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0628_MMMU_LLaVA_7B_FLASH_finetune_PruneSID_4x_full
-#SBATCH --output=0628_MMMU_LLaVA_7B_FLASH_finetune_PruneSID_4x_full.log
+#SBATCH --job-name=0628_MMMU_LLaVA_7B_FLASH_finetune_PruneSID_10x_full_second
+#SBATCH --output=0628_MMMU_LLaVA_7B_FLASH_finetune_PruneSID_10x_full_second.log
 #SBATCH --time=00:45:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,21 +19,21 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_FLASH_finetune_PruneSID_4x_full"
+VERSION="LLaVA_7B_FLASH_finetune_PruneSID_10x_full_second"
 
 python src/model_vqa_mmmu.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full \
     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
 
 
 # python src/model_vqa_mmmu_qwen.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full \
 #     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
 #     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
 
 # python src/model_vqa_mmmu.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_second_to_last_train_lora \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \
 #     --model_base lmsys/vicuna-7b-v1.5 \
 #     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
 #     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml

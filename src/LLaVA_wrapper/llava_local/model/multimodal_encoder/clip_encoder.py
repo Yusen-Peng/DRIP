@@ -10,6 +10,9 @@ from transformers import CLIPVisionModel, CLIPImageProcessor, CLIPVisionConfig
 from types import SimpleNamespace
 import timm
 from timm.data import resolve_model_data_config, create_transform
+
+from .perceiver_utils import PerceiverResampler
+
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
 sys.path.insert(0, PROJECT_ROOT)
@@ -47,6 +50,7 @@ class CLIPVisionTower(nn.Module):
             merge_strategy="ViT",
             compression_rate=None, # None or a float number
             drip_weight_path=None,
+            perceiver_weight_path=None,
             temperature=None,
             delay_load=False):
         super().__init__()
@@ -55,6 +59,7 @@ class CLIPVisionTower(nn.Module):
         self.merge_strategy = merge_strategy
         self.compression_rate = compression_rate
         self.drip_weight_path = drip_weight_path
+        self.perceiver_weight_path = perceiver_weight_path
         self.temperature = temperature
         self.select_layer = args.mm_vision_select_layer
         self.select_feature = getattr(args, 'mm_vision_select_feature', 'patch')
@@ -109,6 +114,35 @@ class CLIPVisionTower(nn.Module):
         if unexpected:
             print(f"⚠️ [INFO] Unexpected BP keys: {unexpected}")
         return missing, unexpected
+
+    def load_perceiver_weights(self, perceiver_weight_path):
+        print(f"🌀🌀🌀 [INFO] Loading Perceiver weights from {perceiver_weight_path}")
+        sd = torch.load(perceiver_weight_path, map_location="cpu")
+        perceiver_anchor = "vision_tower.perceiver_resampler."
+
+        perceiver_sd = {}
+        for k, v in sd.items():
+            if perceiver_anchor in k:
+                new_k = k.split(perceiver_anchor, 1)[1]
+                perceiver_sd[new_k] = v
+
+        print("🌀🌀🌀 [INFO] Loaded Perceiver keys:")
+        for k in perceiver_sd.keys():
+            print(f"    {k}")
+        if len(perceiver_sd) == 0:
+            raise RuntimeError(
+                f"No perceiver_resampler weights found in {perceiver_weight_path}. "
+                f"First keys: {list(sd.keys())[:10]}"
+            )
+
+        missing, unexpected = self.perceiver_resampler.load_state_dict(perceiver_sd, strict=True)
+
+        if missing:
+            print(f"⚠️ [INFO] Missing Perceiver keys: {missing}")
+        if unexpected:
+            print(f"⚠️ [INFO] Unexpected Perceiver keys: {unexpected}")
+        return missing, unexpected
+
 
     def load_model(self, device_map=None):
         if self.is_loaded:
@@ -177,6 +211,29 @@ class CLIPVisionTower(nn.Module):
         elif self.merge_strategy == "PruneSID":
             assert self.compression_rate is not None, "compression_rate must be provided for PruneSID merge strategy."
             print(f"🐰🐰🐰 [INFO] Using PruneSID strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens")
+            print("🟢🟢🟢NOTE: PruneSID is implemented in src/LLaVA_wrapper/llava_local/model/builder.py (`load_pretrained_model` function)")
+
+        elif self.merge_strategy == "Perceiver":
+            assert self.compression_rate is not None, "compression_rate must be provided for Perceiver merge strategy."
+            
+            # compute the number of latents
+            width = self.vision_tower.config.hidden_size
+            num_latents = max(1, int(self.num_patches * self.compression_rate))
+            mlp_ratio = self.vision_tower.config.intermediate_size / self.vision_tower.config.hidden_size
+            
+            # create the PerceiverResampler module
+            self.perceiver_resampler = PerceiverResampler(dim=width, num_latents=num_latents, depth=1, ff_mult=int(mlp_ratio))
+            print(
+                f"🌀🌀🌀 [INFO] Using Perceiver resampler with compression rate {self.compression_rate}. "
+                f"This maps {self.num_patches} tokens -> {num_latents} learned latent tokens.")
+
+            if self.perceiver_weight_path is not None:
+                missing, unexpected = self.load_perceiver_weights(self.perceiver_weight_path)
+                assert len(missing) == 0, f"Missing keys when loading Perceiver weights: {missing}"
+                assert len(unexpected) == 0, f"Unexpected keys when loading Perceiver weights: {unexpected}"
+                print(f"🦄🦄🦄 [INFO] Loaded Perceiver weights from {self.perceiver_weight_path}")
+            else:
+                print("🐴🐴🐴 [INFO] No Perceiver weights provided, initializing Perceiver from scratch.")
 
 
         else:
@@ -353,6 +410,10 @@ class CLIPVisionTower(nn.Module):
                         boundary_losses.append(boundary_loss)
                     else:
                         image_feature = self._merge_patch_tokens(image_feature, inference=True)
+                
+                elif self.merge_strategy == "Perceiver":
+                    self.perceiver_resampler.to(device=image_features.device, dtype=image_features.dtype)
+                    image_features = self.perceiver_resampler(image_features)
 
                 image_features.append(image_feature)
 
@@ -377,6 +438,10 @@ class CLIPVisionTower(nn.Module):
                         return image_features, boundary_loss
                     else:
                         image_features = self._merge_patch_tokens(image_features, inference=True)
+                
+                elif self.merge_strategy == "Perceiver":
+                    self.perceiver_resampler.to(device=image_features.device, dtype=image_features.dtype)
+                    image_features = self.perceiver_resampler(image_features)
             
             return image_features
 

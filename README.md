@@ -148,13 +148,13 @@ Important Note: for "DRIP", please go to [src/LLaVA_wrapper/llava_local/model/la
 
 LoRA finetuning with image features from ViT's last layer:
 
-![alt text](results/paper_figures/tradeoff_lora.png)
+![alt text](results/lora_7B_last_tradeoff_combined.png)
 
 CSV results: [results/lora_7B_last.csv](results/lora_7B_last.csv)
 
 Full finetuning with image features from ViT's last layer:
 
-![alt text](results/paper_figures/tradeoff_full.png)
+![alt text](results/full_7B_last_tradeoff_combined.png)
 
 CSV results: [results/full_7B_last.csv](results/full_7B_last.csv)
 
