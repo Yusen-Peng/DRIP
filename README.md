@@ -58,7 +58,7 @@ sbatch scripts/task3/pretrain_ascend_flash.sh
 sbatch scripts/task3/pretrain_ascend_flash_qwen.sh
 # LLaVA 1.5 with google/siglip-large-patch16-384
 sbatch scripts/task3/pretrain_ascend_flash_siglip.sh
-# LLaVA 1.5 with SigLIP v2
+# LLaVA 1.5 with google/siglip2-large-patch16-384
 sbatch scripts/task3/pretrain_ascend_flash_siglip2.sh
 ```
 

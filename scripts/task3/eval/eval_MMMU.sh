@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=0628_MMMU_LLaVA_7B_FLASH_finetune_PruneSID_10x_full_second
-#SBATCH --output=0628_MMMU_LLaVA_7B_FLASH_finetune_PruneSID_10x_full_second.log
+#SBATCH --job-name=0702_MMMU_LLaVA_7B_Perceiver_8x_train_all
+#SBATCH --output=0702_MMMU_LLaVA_7B_Perceiver_8x_train_all.log
 #SBATCH --time=00:45:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=debug-nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -19,10 +19,10 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_FLASH_finetune_PruneSID_10x_full_second"
+VERSION="LLaVA_7B_Perceiver_8x_train_all"
 
 python src/model_vqa_mmmu.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_8x_train_all \
     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
 

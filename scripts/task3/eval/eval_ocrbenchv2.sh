@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0628_OCRBenchV2_LLaVA_7B_FLASH_finetune_PruneSID_10x_full_second
-#SBATCH --output=0628_OCRBenchV2_LLaVA_7B_FLASH_finetune_PruneSID_10x_full_second.log
+#SBATCH --job-name=0702_OCRBenchV2_LLaVA_7B_Perceiver_8x_train_all
+#SBATCH --output=0702_OCRBenchV2_LLaVA_7B_Perceiver_8x_train_all.log
 #SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,11 +20,11 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_FLASH_finetune_PruneSID_10x_full_second"
+VERSION="LLaVA_7B_Perceiver_8x_train_all"
 
 
 python src/model_vqa_ocrbenchv2.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_8x_train_all \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \

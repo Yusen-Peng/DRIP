@@ -15,21 +15,21 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             "Perceiver": Perceiver (ICML 2021)
     """
     # NOTE: This is irrelevant for CLIP-based models,
-    # but important for evaluating timm models such as SigLIPv2.
+    # but important for evaluating timm models.
     INFERENCE_MODE = True
 
 
     MERGE_STRATEGY = "Perceiver"
     # main result: 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
     # limit test: 20x - 0.05, 100x - 0.01, 500x - 0.002
-    COMPRESSION_RATE = 0.25
+    COMPRESSION_RATE = 0.125
 
     # FIXME: temperature tuning
     TEMPERATURE = 0.1
     # TEMPERATURE = 0.01
     
     DRIP_WEIGHT_PATH = None
-    PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_4x_pretrain/checkpoint-130/perceiver.bin"
+    # PERCEIVER_WEIGHT_PATH = None
 
     """
         4x paths.
@@ -41,6 +41,11 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_second_to_last_train_lora/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_second_to_last_train_full/drip.bin"
     
+
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_4x_pretrain/perceiver.bin"
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_4x_train_all/perceiver.bin"
+
+
     # ablations
     # -- temperature
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_temp001/drip.bin"
@@ -72,6 +77,9 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_second_to_last_train_lora/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_second_to_last_train_full/drip.bin"
 
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_8x_pretrain/perceiver.bin"
+    PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_8x_train_all/perceiver.bin"
+
 
     # SigLIP 512 experiments
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_pretrain_512_DRIP_8x/drip.bin"
@@ -90,6 +98,8 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_full/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_full/drip.bin"
+
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_pretrain/perceiver.bin"
 
 
     # SigLIP 512 experiments
