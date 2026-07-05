@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0702_OCRBenchV2_LLaVA_7B_Perceiver_10x_train_all
-#SBATCH --output=0702_OCRBenchV2_LLaVA_7B_Perceiver_10x_train_all.log
+#SBATCH --job-name=0702_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_train_full_PruneSID_10x
+#SBATCH --output=0702_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_train_full_PruneSID_10x.log
 #SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,22 +20,11 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_Perceiver_10x_train_all"
+VERSION="LLaVA_Qwen2.5-14B-Instruct_train_full_PruneSID_10x"
 
 
-python src/model_vqa_ocrbenchv2.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_train_all \
-    --dataset_path lmms-lab/OCRBench-v2 \
-    --dataset_split test \
-    --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
-    --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/results \
-    --save_name ${VERSION} \
-    --num_workers 1 \
-    --temperature 0 \
-    --conv_mode vicuna_v1
-
-# python src/model_vqa_ocrbenchv2_qwen.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full \
+# python src/model_vqa_ocrbenchv2.py \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_train_all \
 #     --dataset_path lmms-lab/OCRBench-v2 \
 #     --dataset_split test \
 #     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
@@ -43,7 +32,18 @@ python src/model_vqa_ocrbenchv2.py \
 #     --save_name ${VERSION} \
 #     --num_workers 1 \
 #     --temperature 0 \
-#     --conv_mode qwen_v2
+#     --conv_mode vicuna_v1
+
+python src/model_vqa_ocrbenchv2_qwen.py \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full \
+    --dataset_path lmms-lab/OCRBench-v2 \
+    --dataset_split test \
+    --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
+    --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/results \
+    --save_name ${VERSION} \
+    --num_workers 1 \
+    --temperature 0 \
+    --conv_mode qwen_v2
 
 
 # python src/model_vqa_ocrbenchv2.py \

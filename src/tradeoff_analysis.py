@@ -16,6 +16,8 @@ def get_category(model_name):
         return "LLaVA"
     elif model_name.startswith("PruneSID"):
         return "PruneSID"
+    elif model_name.startswith("Perceiver"):
+        return "Perceiver"
     return "Other"
 
 
@@ -52,6 +54,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         "PruMerge": "#59A14F",
         "PruneSID": "#4E79A7",
         "DRIP": "#E15759",
+        "Perceiver": "#B07AA1",
     }
 
     markers = {
@@ -60,6 +63,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         "PruMerge": "^",
         "PruneSID": "P",
         "DRIP": "D",
+        "Perceiver": "X",
     }
 
     df = df.copy()
@@ -79,7 +83,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     ax.set_axisbelow(True)
 
     # Plot category lines
-    plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "DRIP"]
+    plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "DRIP", "Perceiver"]
 
     for category in plot_order:
         group = df[df["Category"] == category].sort_values("Speedup")
@@ -132,6 +136,9 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         "PruneSID-4x": (-28, -16),
         "PruneSID-8x": (8, -12),
         "PruneSID-10x": (8, -12),
+        "Perceiver-4x": (-28, -16),
+        "Perceiver-8x": (8, -12),
+        "Perceiver-10x": (8, -12),
     }
 
     for _, row in df.iterrows():
@@ -191,7 +198,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
 
 
 if __name__ == "__main__":
-    CSV_ID = "full_7B_second_to_last"
+    CSV_ID = "full_7B_last"
 
     df = pd.read_csv(f"results/{CSV_ID}.csv")
 
@@ -275,7 +282,7 @@ if __name__ == "__main__":
 
         loc="lower center",
 
-        ncol=5,
+        ncol=len(handles),
 
         frameon=True,
 
