@@ -10,6 +10,7 @@ import torchvision.transforms.functional as TF
 PROJECT_ROOT = "/users/PAS2912/yusenpeng/DRIP"
 sys.path.insert(0, PROJECT_ROOT)
 from src.LLaVA_wrapper.llava_local.model.multimodal_encoder.clip_encoder import CLIPVisionTower
+from src.LLaVA_wrapper.llava_local.model.multimodal_encoder.siglip_encoder import SiglipVisionTower
 
 
 def unnormalize_img(
@@ -47,6 +48,34 @@ def build_llava_drip_vision_tower(
     )
 
     model = CLIPVisionTower(
+        vision_tower=vision_tower_name,
+        args=args,
+        merge_strategy=merge_strategy,
+        compression_rate=compression_rate,
+        drip_weight_path=drip_weight_path,
+        delay_load=False,
+    )
+    model = model.to(device).eval()
+    return model
+
+
+def build_llava_siglip_vision_tower(
+    vision_tower_name="google/siglip2-large-patch16-384",
+    mm_vision_select_layer=-1,
+    mm_vision_select_feature="patch",
+    compression_rate=0.125,
+    drip_weight_path="/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_TEST_DRIP/checkpoint-60/drip.bin",
+    merge_strategy="DRIP",
+    device="cuda",
+):
+    args = SimpleNamespace(
+        mm_vision_tower=vision_tower_name,
+        mm_vision_select_layer=mm_vision_select_layer,
+        mm_vision_select_feature=mm_vision_select_feature,
+        unfreeze_mm_vision_tower=False,
+    )
+
+    model = SiglipVisionTower(
         vision_tower=vision_tower_name,
         args=args,
         merge_strategy=merge_strategy,
@@ -129,7 +158,7 @@ def overlay_llava_drip_boundaries(
 
 
 @torch.no_grad()
-def get_llava_fixed_hard_boundaries(model: CLIPVisionTower, img_3chw: torch.Tensor, verbose=False):
+def get_llava_fixed_hard_boundaries(model: CLIPVisionTower | SiglipVisionTower, img_3chw: torch.Tensor, verbose=False):
     device = model.device
     dtype = model.dtype
 
@@ -348,26 +377,41 @@ def main():
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_lora/drip.bin"
 
 
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_Hnet_ablation_train_full/drip.bin"
-    
+
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_train_full/drip.bin"    
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_LEGACY/drip.bin"
 
 
-    
-    
-    MERGE_STRATEGY = "DRIP-H" # "DRIP" or "DRIP-H"
-    COMPRESSION_RATE = 0.25
-
+    MERGE_STRATEGY = "DRIP" # "DRIP" or "DRIP-H"
+    COMPRESSION_RATE = 0.1
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = build_llava_drip_vision_tower(
-        vision_tower_name="openai/clip-vit-large-patch14-336",
-        mm_vision_select_layer=-1,
-        mm_vision_select_feature="patch",
-        compression_rate=COMPRESSION_RATE,
-        drip_weight_path=DRIP_WEIGHT_PATH,
-        merge_strategy=MERGE_STRATEGY,
-        device=device,
-    )
+    
+    
+    if "clip" in DRIP_WEIGHT_PATH.lower():
+        model = build_llava_drip_vision_tower(
+            vision_tower_name="openai/clip-vit-large-patch14-336",
+            mm_vision_select_layer=-1,
+            mm_vision_select_feature="patch",
+            compression_rate=COMPRESSION_RATE,
+            drip_weight_path=DRIP_WEIGHT_PATH,
+            merge_strategy=MERGE_STRATEGY,
+            device=device,
+        )
+    elif "siglip" in DRIP_WEIGHT_PATH.lower():
+        model = build_llava_siglip_vision_tower(
+            vision_tower_name="google/siglip2-large-patch16-384",
+            mm_vision_select_layer=-1,
+            mm_vision_select_feature="patch",
+            compression_rate=COMPRESSION_RATE,
+            drip_weight_path=DRIP_WEIGHT_PATH,
+            merge_strategy=MERGE_STRATEGY,
+            device=device,
+        )
+    else:
+        raise ValueError(f"Unknown DRIP_WEIGHT_PATH: {DRIP_WEIGHT_PATH}")
+
+
 
     image_dir = "/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_examples/"
     image_paths = [

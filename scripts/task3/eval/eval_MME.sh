@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=0702_MME_LLaVA_Qwen2.5-14B-Instruct_train_full_PruneSID_10x
-#SBATCH --output=0702_MME_LLaVA_Qwen2.5-14B-Instruct_train_full_PruneSID_10x.log
+#SBATCH --job-name=0702_MME_LLaVA_7B_SigLIP_HF_v2_Fixed_4x_train_full_FREE
+#SBATCH --output=0702_MME_LLaVA_7B_SigLIP_HF_v2_Fixed_4x_train_full_FREE.log
 #SBATCH --time=00:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=quad
+#SBATCH --partition=debug-nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -19,23 +19,23 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_Qwen2.5-14B-Instruct_train_full_PruneSID_10x"
+VERSION="LLaVA_7B_SigLIP_HF_v2_Fixed_4x_train_full_FREE"
 
-# python src/model_vqa_loader.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_train_all \
-#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/llava_mme.jsonl \
-#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/MME_Benchmark_release_version \
-#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/answers/${VERSION}.jsonl \
-#     --temperature 0 \
-#     --conv-mode vicuna_v1
-
-python src/model_vqa_loader_qwen.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full \
+python src/model_vqa_loader.py \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_finetune_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/llava_mme.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/MME_Benchmark_release_version \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/answers/${VERSION}.jsonl \
     --temperature 0 \
-    --conv-mode qwen_v2
+    --conv-mode vicuna_v1
+
+# python src/model_vqa_loader_qwen.py \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full \
+#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/llava_mme.jsonl \
+#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/MME_Benchmark_release_version \
+#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/answers/${VERSION}.jsonl \
+#     --temperature 0 \
+#     --conv-mode qwen_v2
 
 # python src/model_vqa_loader.py \
 #     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full \
