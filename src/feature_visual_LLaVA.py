@@ -11,6 +11,7 @@ from sklearn.decomposition import PCA
 PROJECT_ROOT = "/users/PAS2912/yusenpeng/DRIP"
 sys.path.insert(0, PROJECT_ROOT)
 from src.LLaVA_wrapper.llava_local.model.multimodal_encoder.clip_encoder import CLIPVisionTower
+from src.LLaVA_wrapper.llava_local.model.multimodal_encoder.siglip_encoder import SiglipVisionTower
 
 
 def compute_pca_pc1_heatmap(patch_tokens, grid_h, grid_w, normalize_tokens=True):
@@ -121,14 +122,27 @@ def build_llava_drip_vision_tower(
         unfreeze_mm_vision_tower=False,
     )
 
-    model = CLIPVisionTower(
-        vision_tower=vision_tower_name,
-        args=args,
-        merge_strategy="DRIP",
-        compression_rate=compression_rate,
-        drip_weight_path=drip_weight_path,
-        delay_load=False,
-    )
+    if "clip" in vision_tower_name.lower():
+        model = CLIPVisionTower(
+            vision_tower=vision_tower_name,
+            args=args,
+            merge_strategy="DRIP",
+            compression_rate=compression_rate,
+            drip_weight_path=drip_weight_path,
+            delay_load=False,
+        )
+    elif "siglip" in vision_tower_name.lower():
+        model = SiglipVisionTower(
+            vision_tower=vision_tower_name,
+            args=args,
+            merge_strategy="DRIP",
+            compression_rate=compression_rate,
+            drip_weight_path=drip_weight_path,
+            delay_load=False,
+        )
+    else:
+        raise ValueError(f"Unknown vision_tower_name: {vision_tower_name}")
+
     model = model.to(device).eval()
     return model
 
@@ -435,19 +449,35 @@ def visualize_feature_diff_side_by_side_10_images(
     plt.close(fig)
 
 
-
 def main():
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_train_full/drip.bin"
+
     COMPRESSION_RATE = 0.25
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = build_llava_drip_vision_tower(
-        vision_tower_name="openai/clip-vit-large-patch14-336",
-        mm_vision_select_layer=-1,
-        mm_vision_select_feature="patch",
-        compression_rate=COMPRESSION_RATE,
-        drip_weight_path=DRIP_WEIGHT_PATH,
-        device=device,
-    )
+    if "siglip" in DRIP_WEIGHT_PATH.lower():
+        model = build_llava_drip_vision_tower(
+            vision_tower_name="google/siglip2-large-patch16-384",
+            mm_vision_select_layer=-1,
+            mm_vision_select_feature="patch",
+            compression_rate=COMPRESSION_RATE,
+            drip_weight_path=DRIP_WEIGHT_PATH,
+            device=device,
+        )
+        SAVE_PATH = "/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/llava_feature_pca_pc1_2x5_siglip2.png"
+    else:
+        model = build_llava_drip_vision_tower(
+            vision_tower_name="openai/clip-vit-large-patch14-336",
+            mm_vision_select_layer=-1,
+            mm_vision_select_feature="patch",
+            compression_rate=COMPRESSION_RATE,
+            drip_weight_path=DRIP_WEIGHT_PATH,
+            device=device,
+        )
+        SAVE_PATH = "/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/llava_feature_pca_pc1_2x5_clip.png"
+
+
     image_dir = "/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_examples/"
     image_paths = [
         os.path.join(image_dir, f)
@@ -457,37 +487,42 @@ def main():
 
     assert len(image_paths) == 10, f"Expected exactly 10 images in {image_dir}, found {len(image_paths)}!"
     
+
     visualize_feature_diff_side_by_side_10_images(
         model=model,
         image_paths=image_paths,
-        save_path="/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/llava_feature_diff_1D_overlay_2x5.png",
-        mode="1D"
-    )
-    visualize_feature_diff_side_by_side_10_images(
-        model=model,
-        image_paths=image_paths,
-        save_path="/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/llava_feature_pca_pc1_2x5.png",
+        save_path=SAVE_PATH,
         mode="PCA",
         cmap_name="gray"
     )
 
-    visualize_feature_diff_side_by_side_10_images(
-        model=model,
-        image_paths=image_paths,
-        save_path=f"/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/llava_cls_attn_2x5_mean.png",
-        mode="CLS_ATTN",
-        cmap_name="gray",
-        reduce_heads="mean"
-    )
+    
 
-    visualize_feature_diff_side_by_side_10_images(
-        model=model,
-        image_paths=image_paths,
-        save_path=f"/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/llava_cls_attn_2x5_max.png",
-        mode="CLS_ATTN",
-        cmap_name="gray",
-        reduce_heads="max"
-    )
+    # visualize_feature_diff_side_by_side_10_images(
+    #     model=model,
+    #     image_paths=image_paths,
+    #     save_path="/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/llava_feature_diff_1D_overlay_2x5.png",
+    #     mode="1D"
+    # )
+
+
+    # visualize_feature_diff_side_by_side_10_images(
+    #     model=model,
+    #     image_paths=image_paths,
+    #     save_path=f"/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/llava_cls_attn_2x5_mean.png",
+    #     mode="CLS_ATTN",
+    #     cmap_name="gray",
+    #     reduce_heads="mean"
+    # )
+
+    # visualize_feature_diff_side_by_side_10_images(
+    #     model=model,
+    #     image_paths=image_paths,
+    #     save_path=f"/users/PAS2912/yusenpeng/DRIP/src/boundary_vis/LLaVA_results/llava_cls_attn_2x5_max.png",
+    #     mode="CLS_ATTN",
+    #     cmap_name="gray",
+    #     reduce_heads="max"
+    # )
 
 
 if __name__ == "__main__":
