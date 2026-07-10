@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=June19_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full
-#SBATCH --output=June19_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full.txt
+#SBATCH --job-name=July9_LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full
+#SBATCH --output=July9_LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full.txt
 #SBATCH --time=60:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -37,11 +37,11 @@ torchrun --standalone --nproc_per_node=4 --master_port=$MASTER_PORT src/task3_ll
     --mm_projector_type mlp2x_gelu \
     --tf32 True \
     --bf16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain/mm_projector.bin \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_pretrain/mm_projector.bin \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full \
     --num_train_epochs 1 \
     --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 1 \

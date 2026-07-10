@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0702_wild_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full
-#SBATCH --output=0702_wild_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full.log
+#SBATCH --job-name=0702_wild_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp001
+#SBATCH --output=0702_wild_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp001.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,13 +24,13 @@ set -a
 source /users/PAS2912/yusenpeng/DRIP/.env
 set +a
 
-VERSION="LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full"
+VERSION="LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp001"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl
 
 python src/model_vqa.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp001 \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/images \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl \
