@@ -22,7 +22,7 @@ def get_category(model_name):
 
 
 def pretty_model_name(name):
-    if name == "LLaVA-1.5-7B":
+    if name == "LLaVA-1.5-7B" or name == "LLaVA-Qwen2.5-14B":
         return "LLaVA"
     if "-" in name and "DRIP" in name:
         return name.split("-")[-1]   # "4x", "8x", "10x"
@@ -69,7 +69,11 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     df = df.copy()
     df["Category"] = df["Model"].apply(get_category)
 
-    baseline_tflops = df.loc[df["Model"] == "LLaVA-1.5-7B", "TFLOPs"].iloc[0]
+    if 'qwen' in CSV_ID:
+        baseline_tflops = df.loc[df["Model"] == "LLaVA-Qwen2.5-14B", "TFLOPs"].iloc[0]
+    else:
+        baseline_tflops = df.loc[df["Model"] == "LLaVA-1.5-7B", "TFLOPs"].iloc[0]
+    
     df["Speedup"] = baseline_tflops / df["TFLOPs"]
     
     # safety
@@ -124,6 +128,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     # Annotate only points, but cleaner
     label_offsets = {
         "LLaVA-1.5-7B": (8, -8),
+        "LLaVA-Qwen2.5-14B": (8, -8),
         "DRIP-4x": (-16, 10),
         "DRIP-8x": (-16, 10),
         "DRIP-10x": (-16, 10),
@@ -169,10 +174,13 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     )
 
     ax.set_title(title, pad=12, fontweight="bold")
-    # ax.set_xlabel("TFLOP Speedup over LLaVA-1.5-7B")
     ax.set_ylabel(ylabel)
 
-    ax.set_xlim(0.85, 4.75)
+    if 'qwen' in CSV_ID:
+        ax.set_xlim(0.85, 5.95)
+    else:
+        ax.set_xlim(0.85, 4.75)
+    
     ax.set_ylim(0.72, 1.015)
 
     # Cleaner legend
@@ -198,7 +206,12 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
 
 
 if __name__ == "__main__":
-    CSV_ID = "full_7B_last"
+    # CSV_ID = "full_7B_last"
+    # CSV_ID = "full_7B_second_to_last"
+    # CSV_ID = "qwen14B_full_last"
+    # CSV_ID = "lora_7B_last"
+    CSV_ID = "lora_7B_second_to_last"
+
 
     df = pd.read_csv(f"results/{CSV_ID}.csv")
 
@@ -226,8 +239,11 @@ if __name__ == "__main__":
         "LLaVA-Wild",
         "MM-Vet",
     ]
-
-    baseline_row = df[df["Model"] == "LLaVA-1.5-7B"].iloc[0]
+    
+    if 'qwen' in CSV_ID:
+        baseline_row = df[df["Model"] == "LLaVA-Qwen2.5-14B"].iloc[0]
+    else:
+        baseline_row = df[df["Model"] == "LLaVA-1.5-7B"].iloc[0]
 
     relative = df[all_metric_cols].div(baseline_row[all_metric_cols], axis=1)
 
@@ -295,8 +311,10 @@ if __name__ == "__main__":
         bbox_to_anchor=(0.5, -0.02),
 
     )
-
-    fig.supxlabel("TFLOP Speedup over LLaVA-1.5-7B", y=0.05)
+    if 'qwen' in CSV_ID:
+        fig.supxlabel("TFLOP Speedup over LLaVA-Qwen2.5-14B", y=0.05)
+    else:
+        fig.supxlabel("TFLOP Speedup over LLaVA-1.5-7B", y=0.05)
 
     plt.tight_layout(rect=[0, 0.08, 1, 1])
 
