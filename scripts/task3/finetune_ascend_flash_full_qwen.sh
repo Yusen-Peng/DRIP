@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=July9_LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full
 #SBATCH --output=July9_LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full.txt
-#SBATCH --time=60:00:00
+#SBATCH --time=55:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --ntasks-per-node=1

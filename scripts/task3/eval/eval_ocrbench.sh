@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0702_OCRBench_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp001
-#SBATCH --output=0702_OCRBench_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp001.log
+#SBATCH --job-name=0702_OCRBench_LLaVA_7B_Perceiver_10x_train_all_second
+#SBATCH --output=0702_OCRBench_LLaVA_7B_Perceiver_10x_train_all_second.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,11 +19,11 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp001"
+VERSION="LLaVA_7B_Perceiver_10x_train_all_second"
 
 
 python src/model_vqa_ocrbench.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp001 \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_train_all_second \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
     --save_name ${VERSION} \
