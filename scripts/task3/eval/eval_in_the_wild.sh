@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0702_wild_LLaVA_7B_Perceiver_10x_train_all_second
-#SBATCH --output=0702_wild_LLaVA_7B_Perceiver_10x_train_all_second.log
+#SBATCH --job-name=0702_wild_LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora
+#SBATCH --output=0702_wild_LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,18 +24,18 @@ set -a
 source /users/PAS2912/yusenpeng/DRIP/.env
 set +a
 
-VERSION="LLaVA_7B_Perceiver_10x_train_all_second"
+VERSION="LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl
 
-python src/model_vqa.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_train_all_second \
-    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
-    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/images \
-    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl \
-    --temperature 0 \
-    --conv-mode vicuna_v1
+# python src/model_vqa.py \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_4x_train_all_second \
+#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
+#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/images \
+#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl \
+#     --temperature 0 \
+#     --conv-mode vicuna_v1
 
 
 # python src/model_vqa_qwen.py \
@@ -47,14 +47,14 @@ python src/model_vqa.py \
 #     --conv-mode qwen_v2
 
 
-# python src/model_vqa.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \
-#     --model-base lmsys/vicuna-7b-v1.5 \
-#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
-#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/images \
-#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl \
-#     --temperature 0 \
-#     --conv-mode vicuna_v1
+python src/model_vqa.py \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_lora \
+    --model-base lmsys/vicuna-7b-v1.5 \
+    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
+    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/images \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl \
+    --temperature 0 \
+    --conv-mode vicuna_v1
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/reviews
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/reviews/${VERSION}.jsonl

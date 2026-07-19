@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0702_MMMU_LLaVA_7B_Perceiver_10x_train_all_second
-#SBATCH --output=0702_MMMU_LLaVA_7B_Perceiver_10x_train_all_second.log
+#SBATCH --job-name=0702_MMMU_LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora
+#SBATCH --output=0702_MMMU_LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora.log
 #SBATCH --time=00:45:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,12 +19,12 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_Perceiver_10x_train_all_second"
+VERSION="LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora"
 
-python src/model_vqa_mmmu.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_train_all_second \
-    --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
-    --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
+# python src/model_vqa_mmmu.py \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_4x_train_all_second \
+#     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
+#     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
 
 
 # python src/model_vqa_mmmu_qwen.py \
@@ -32,11 +32,11 @@ python src/model_vqa_mmmu.py \
 #     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
 #     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
 
-# python src/model_vqa_mmmu.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \
-#     --model_base lmsys/vicuna-7b-v1.5 \
-#     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
-#     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
+python src/model_vqa_mmmu.py \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_lora \
+    --model_base lmsys/vicuna-7b-v1.5 \
+    --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \
+    --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
 
 python src/mmmu_main_eval_only.py \
     --output_path /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mmmu/answers/${VERSION}.json \

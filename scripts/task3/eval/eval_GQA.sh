@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0702_GQA_LLaVA_7B_Perceiver_10x_train_all_second
-#SBATCH --output=0702_GQA_LLaVA_7B_Perceiver_10x_train_all_second.log
+#SBATCH --job-name=0702_GQA_LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora
+#SBATCH --output=0702_GQA_LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora.log
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,17 +24,17 @@ GQADIR="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data"
 OUTPUT_DIR=/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/answers/llava_gqa_testdev_balanced
 mkdir -p $OUTPUT_DIR
 
-OUTPUT_FILE=$OUTPUT_DIR/LLaVA_7B_Perceiver_10x_train_all_second.jsonl
+OUTPUT_FILE=$OUTPUT_DIR/LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora.jsonl
 
-python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_train_all_second \
-    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/llava_gqa_testdev_balanced.jsonl \
-    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data/images \
-    --answers-file $OUTPUT_FILE \
-    --num-chunks 1 \
-    --chunk-idx 0 \
-    --temperature 0 \
-    --conv-mode vicuna_v1
+# python src/model_vqa_loader.py \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_4x_train_all_second \
+#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/llava_gqa_testdev_balanced.jsonl \
+#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data/images \
+#     --answers-file $OUTPUT_FILE \
+#     --num-chunks 1 \
+#     --chunk-idx 0 \
+#     --temperature 0 \
+#     --conv-mode vicuna_v1
 
 
 # python src/model_vqa_loader_qwen.py \
@@ -47,16 +47,16 @@ python src/model_vqa_loader.py \
 #     --temperature 0 \
 #     --conv-mode qwen_v2
 
-# python src/model_vqa_loader.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \
-#     --model-base lmsys/vicuna-7b-v1.5 \
-#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/llava_gqa_testdev_balanced.jsonl \
-#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data/images \
-#     --answers-file $OUTPUT_FILE \
-#     --num-chunks 1 \
-#     --chunk-idx 0 \
-#     --temperature 0 \
-#     --conv-mode vicuna_v1
+python src/model_vqa_loader.py \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_lora \
+    --model-base lmsys/vicuna-7b-v1.5 \
+    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/llava_gqa_testdev_balanced.jsonl \
+    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data/images \
+    --answers-file $OUTPUT_FILE \
+    --num-chunks 1 \
+    --chunk-idx 0 \
+    --temperature 0 \
+    --conv-mode vicuna_v1
 
 MERGED_FILE=$OUTPUT_DIR/merge.jsonl
 cp $OUTPUT_FILE $MERGED_FILE
