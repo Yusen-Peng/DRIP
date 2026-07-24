@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0702_SQA_LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora
-#SBATCH --output=0702_SQA_LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora.log
+#SBATCH --job-name=0722_SQA_LLaVA_Qwen2.5-14B-Instruct_Perceiver_4x_train_full
+#SBATCH --output=0722_SQA_LLaVA_Qwen2.5-14B-Instruct_Perceiver_4x_train_full.log
 #SBATCH --time=0:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,7 +18,7 @@ export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 
-VERSION="LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora"
+VERSION="LLaVA_Qwen2.5-14B-Instruct_Perceiver_4x_train_full"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
@@ -35,25 +35,25 @@ touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.js
 #     --conv-mode vicuna_v1
 
 
-# python src/model_vqa_science_qwen.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full \
-#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/SQA_key.json \
-#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/images/test \
-#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.jsonl \
-#     --single-pred-prompt \
-#     --temperature 0 \
-#     --conv-mode qwen_v2
-
-
-python src/model_vqa_science.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_lora \
-    --model-base lmsys/vicuna-7b-v1.5 \
+python src/model_vqa_science_qwen.py \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_Perceiver_4x_train_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/SQA_key.json \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/images/test \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.jsonl \
     --single-pred-prompt \
     --temperature 0 \
-    --conv-mode vicuna_v1
+    --conv-mode qwen_v2
+
+
+# python src/model_vqa_science.py \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_lora \
+#     --model-base lmsys/vicuna-7b-v1.5 \
+#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/SQA_key.json \
+#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/images/test \
+#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.jsonl \
+#     --single-pred-prompt \
+#     --temperature 0 \
+#     --conv-mode vicuna_v1
 
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}.jsonl
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/SQA/answers/${VERSION}_output.jsonl

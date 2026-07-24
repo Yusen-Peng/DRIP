@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0702_OCRBenchV2_LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora
-#SBATCH --output=0702_OCRBenchV2_LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora.log
+#SBATCH --job-name=0722_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_Perceiver_4x_train_full
+#SBATCH --output=0722_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_Perceiver_4x_train_full.log
 #SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,7 +20,7 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora"
+VERSION="LLaVA_Qwen2.5-14B-Instruct_Perceiver_4x_train_full"
 
 
 # python src/model_vqa_ocrbenchv2.py \
@@ -34,21 +34,8 @@ VERSION="LLaVA_7B_FLASH_finetune_PruneSID_4x_second_lora"
 #     --temperature 0 \
 #     --conv_mode vicuna_v1
 
-# python src/model_vqa_ocrbenchv2_qwen.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full \
-#     --dataset_path lmms-lab/OCRBench-v2 \
-#     --dataset_split test \
-#     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
-#     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/results \
-#     --save_name ${VERSION} \
-#     --num_workers 1 \
-#     --temperature 0 \
-#     --conv_mode qwen_v2
-
-
-python src/model_vqa_ocrbenchv2.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_lora \
-    --model_base lmsys/vicuna-7b-v1.5 \
+python src/model_vqa_ocrbenchv2_qwen.py \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_Perceiver_4x_train_full \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
@@ -56,7 +43,20 @@ python src/model_vqa_ocrbenchv2.py \
     --save_name ${VERSION} \
     --num_workers 1 \
     --temperature 0 \
-    --conv_mode vicuna_v1
+    --conv_mode qwen_v2
+
+
+# python src/model_vqa_ocrbenchv2.py \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_lora \
+#     --model_base lmsys/vicuna-7b-v1.5 \
+#     --dataset_path lmms-lab/OCRBench-v2 \
+#     --dataset_split test \
+#     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
+#     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/results \
+#     --save_name ${VERSION} \
+#     --num_workers 1 \
+#     --temperature 0 \
+#     --conv_mode vicuna_v1
 
 conda deactivate
 
