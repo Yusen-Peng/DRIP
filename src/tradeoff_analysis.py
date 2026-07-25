@@ -164,10 +164,13 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     drip = df[df["Category"] == "DRIP"].sort_values("Speedup")
     x = drip["Speedup"].astype(float).to_numpy()
     y = drip[score_col].astype(float).to_numpy()
+
+    lower_bound = 0.50 if 'qwen' in CSV_ID else 0.72
+
     ax.fill_between(
         x,
         y,
-        0.72,
+        lower_bound,
         color=colors["DRIP"],
         alpha=0.045,
         zorder=0,
@@ -178,10 +181,11 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
 
     if 'qwen' in CSV_ID:
         ax.set_xlim(0.85, 5.95)
+        ax.set_ylim(0.50, 1.015)
+
     else:
         ax.set_xlim(0.85, 4.75)
-    
-    ax.set_ylim(0.72, 1.015)
+        ax.set_ylim(0.72, 1.015)
 
     # Cleaner legend
     handles = [
@@ -208,9 +212,9 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
 if __name__ == "__main__":
     # CSV_ID = "full_7B_last"
     # CSV_ID = "full_7B_second_to_last"
-    # CSV_ID = "qwen14B_full_last"
+    CSV_ID = "qwen14B_full_last"
     # CSV_ID = "lora_7B_last"
-    CSV_ID = "lora_7B_second_to_last"
+    # CSV_ID = "lora_7B_second_to_last"
 
 
     df = pd.read_csv(f"results/{CSV_ID}.csv")

@@ -136,6 +136,7 @@ python src/GFLOP_measurement.py --model-path /path/to/LLaVA_7B_FLASH_finetune_AL
 # for LoRA finetuned models
 python src/GFLOP_measurement.py --model-path /path/to/LLaVA_7B_FLASH_finetune_ALL_ONCE_lora \
     --model-base lmsys/vicuna-7b-v1.5
+
 # 🥶🥶🥶 For Qwen2.5 14B instruct, use debug-quad to avoid OOM:
 salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-quad --time 00:30:00
 python src/GFLOP_measurement.py --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full --conv-mode qwen_v2
