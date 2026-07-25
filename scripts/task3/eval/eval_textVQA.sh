@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=0722_textVQA_LLaVA_Qwen2.5-14B-Instruct_Perceiver_4x_train_full
-#SBATCH --output=0722_textVQA_LLaVA_Qwen2.5-14B-Instruct_Perceiver_4x_train_full.log
+#SBATCH --job-name=0722_textVQA_LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full
+#SBATCH --output=0722_textVQA_LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full.log
 #SBATCH --time=00:55:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=quad
+#SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -17,12 +17,12 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_Qwen2.5-14B-Instruct_Perceiver_4x_train_full"
+VERSION="LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
 # python src/model_vqa_loader.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_4x_train_all_second \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_train_all_second \
 #     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
 #     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
 #     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
@@ -31,7 +31,7 @@ cd /users/PAS2912/yusenpeng/DRIP/
 
 
 python src/model_vqa_loader_qwen.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_Perceiver_4x_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
