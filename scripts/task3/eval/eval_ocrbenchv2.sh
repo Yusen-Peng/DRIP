@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0722_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full
-#SBATCH --output=0722_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full.log
+#SBATCH --job-name=0722_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full
+#SBATCH --output=0722_OCRBenchV2_LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full.log
 #SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,11 +20,11 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full"
+VERSION="LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full"
 
 
 # python src/model_vqa_ocrbenchv2.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_train_all_second \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_train_all_second \
 #     --dataset_path lmms-lab/OCRBench-v2 \
 #     --dataset_split test \
 #     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
@@ -35,7 +35,7 @@ VERSION="LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full"
 #     --conv_mode vicuna_v1
 
 python src/model_vqa_ocrbenchv2_qwen.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \

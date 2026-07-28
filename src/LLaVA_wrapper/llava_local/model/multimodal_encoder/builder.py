@@ -27,10 +27,11 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     # FIXME: temperature tuning
     # TEMPERATURE = 0.1
     # TEMPERATURE = 0.01
-    
-    # TEMPERATURE = 0.5
+
     # TEMPERATURE = 0.3
-    TEMPERATURE = 0.8
+    # TEMPERATURE = 0.5
+    # TEMPERATURE = 0.8
+    TEMPERATURE = 1.0
 
 
     
@@ -122,6 +123,11 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp001/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp001/drip.bin"
+
+
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp05/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp08/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp10/drip.bin"
 
 
     # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_pretrain/perceiver.bin"

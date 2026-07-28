@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0722_GQA_LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full
-#SBATCH --output=0722_GQA_LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full.log
+#SBATCH --job-name=0722_GQA_LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full
+#SBATCH --output=0722_GQA_LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full.log
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,10 +24,10 @@ GQADIR="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data"
 OUTPUT_DIR=/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/answers/llava_gqa_testdev_balanced
 mkdir -p $OUTPUT_DIR
 
-OUTPUT_FILE=$OUTPUT_DIR/LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full.jsonl
+OUTPUT_FILE=$OUTPUT_DIR/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full.jsonl
 
 # python src/model_vqa_loader.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_train_all_second \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_train_all_second \
 #     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/llava_gqa_testdev_balanced.jsonl \
 #     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data/images \
 #     --answers-file $OUTPUT_FILE \
@@ -38,7 +38,7 @@ OUTPUT_FILE=$OUTPUT_DIR/LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full.json
 
 
 python src/model_vqa_loader_qwen.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/llava_gqa_testdev_balanced.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data/images \
     --answers-file $OUTPUT_FILE \
