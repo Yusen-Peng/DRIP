@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=0722_OCRBench_LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full
-#SBATCH --output=0722_OCRBench_LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full.log
+#SBATCH --job-name=0722_OCRBench_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp08
+#SBATCH --output=0722_OCRBench_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp08.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=quad
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -19,28 +19,28 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full"
+VERSION="LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp08"
 
 
-# python src/model_vqa_ocrbench.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_train_all_second \
-#     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
-#     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
-#     --save_name ${VERSION} \
-#     --OCRBench_file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench.json \
-#     --temperature 0 \
-#     --conv_mode vicuna_v1 \
-#     --num_workers 1
-
-python src/model_vqa_ocrbench_qwen.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full \
+python src/model_vqa_ocrbench.py \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp08 \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
     --save_name ${VERSION} \
     --OCRBench_file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench.json \
     --temperature 0 \
-    --conv_mode qwen_v2 \
+    --conv_mode vicuna_v1 \
     --num_workers 1
+
+# python src/model_vqa_ocrbench_qwen.py \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full \
+#     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
+#     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
+#     --save_name ${VERSION} \
+#     --OCRBench_file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench.json \
+#     --temperature 0 \
+#     --conv_mode qwen_v2 \
+#     --num_workers 1
 
 # python src/model_vqa_ocrbench.py \
 #     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_lora \
