@@ -182,7 +182,9 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     if 'qwen' in CSV_ID:
         ax.set_xlim(0.85, 5.95)
         ax.set_ylim(0.50, 1.015)
-
+    elif 'SigLIP2' in CSV_ID:
+        ax.set_xlim(0.85, 4.75)
+        ax.set_ylim(0.80, 1.015)
     else:
         ax.set_xlim(0.85, 4.75)
         ax.set_ylim(0.72, 1.015)
@@ -212,9 +214,10 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
 if __name__ == "__main__":
     # CSV_ID = "full_7B_last"
     # CSV_ID = "full_7B_second_to_last"
-    CSV_ID = "qwen14B_full_last"
+    # CSV_ID = "qwen14B_full_last"
     # CSV_ID = "lora_7B_last"
     # CSV_ID = "lora_7B_second_to_last"
+    CSV_ID = "SigLIP2_7B_last"
 
 
     df = pd.read_csv(f"results/{CSV_ID}.csv")
