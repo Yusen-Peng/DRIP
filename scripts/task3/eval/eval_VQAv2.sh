@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=0722_VQAv2_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp08
-#SBATCH --output=0722_VQAv2_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp08.log
-#SBATCH --time=07:00:00
+#SBATCH --job-name=0722_VQAv2_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp10
+#SBATCH --output=0722_VQAv2_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp10.log
+#SBATCH --time=04:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=quad
@@ -17,12 +17,12 @@ source activate DRIP
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp08"
+VERSION="LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp10"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp08 \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp10 \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/llava_vqav2_mscoco_test-dev2015.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/test2015 \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/answers/${VERSION}.jsonl \

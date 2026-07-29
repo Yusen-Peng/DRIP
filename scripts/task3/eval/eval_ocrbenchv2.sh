@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0722_OCRBenchV2_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp08
-#SBATCH --output=0722_OCRBenchV2_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp08.log
+#SBATCH --job-name=0722_OCRBenchV2_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp10
+#SBATCH --output=0722_OCRBenchV2_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp10.log
 #SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,11 +20,11 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp08"
+VERSION="LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp10"
 
 
 python src/model_vqa_ocrbenchv2.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp08 \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp10 \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
