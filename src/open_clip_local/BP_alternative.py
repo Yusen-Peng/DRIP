@@ -91,7 +91,20 @@ def segments_to_matrix_diff_detached_cumsum(boundaries, upsample=False, leading_
         return mat
 
 
-def downsample(boundaries, hidden, null_group, leading_one=False):
+def new_downsample(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: torch.Tensor, leading_one=False):
+
+    B, L = boundaries.shape
+    _, _, D = hidden.shape
+
+    # Number of segments per example and across the batch
+    seg_counts = boundaries.sum(dim=1)                    # [B]
+    S = int(seg_counts.max().item())
+
+    # If no segments at all in the batch, return a single null segment
+    if S == 0:
+        # shape [1, B, D]
+        return null_group.expand(1, B, D).to(hidden.dtype).to(hidden.device)
+
     # B x L x S
     weights = segments_to_matrix_diff_detached_cumsum(boundaries, upsample=False, leading_one=leading_one)  # B x L x S
 
@@ -101,6 +114,7 @@ def downsample(boundaries, hidden, null_group, leading_one=False):
     #     [null_group.repeat(1, hidden.size(1), 1), shortened_hidden], dim=0
     # )
 
+    weights = weights.to(dtype=hidden.dtype)
 
     # NOTE: However, we are working on a bidirectional encoder, so we keep all groups
     shortened_hidden = torch.einsum('lbd,bls->sbd', hidden, weights)  # S x B x D, we keep all groups
