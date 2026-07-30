@@ -62,6 +62,10 @@ class BoundaryPredictor(nn.Module):
             activation_fn = nn.ReLU(inplace=True)
         elif activation_function == 'gelu':
             activation_fn = torch.nn.GELU()
+        elif activation_function == "silu":
+            activation_fn = nn.SiLU()
+        else:
+            raise ValueError(f"Unsupported activation function: {activation_function}")
 
         self.boundary_predictor = nn.Sequential(
             nn.Linear(d_model, d_inner),

@@ -127,6 +127,10 @@ class SiglipVisionTower(nn.Module):
         self.vision_tower = SiglipVisionModel.from_pretrained(self.vision_tower_name, device_map=device_map)
         self.vision_tower.requires_grad_(False)
 
+        activation_function = "gelu"
+        # activation_function = "silu" # FIXME: small ablation
+        print(f"🍋‍🟩🍋‍🟩🍋‍🟩 [INFO] Using activation function: {activation_function}")
+
         self.is_loaded = True
 
         if self.merge_strategy == "DRIP" or self.merge_strategy == "DRIP-H":
@@ -139,7 +143,7 @@ class SiglipVisionTower(nn.Module):
                 self.boundary_predictor = H_Net(
                     d_model=width,
                     d_inner=int(width * mlp_ratio),
-                    activation_function="gelu",
+                    activation_function=activation_function,
                     temp=self.temperature,
                     prior=self.compression_rate,
                     bp_type='gumbel',
@@ -152,7 +156,7 @@ class SiglipVisionTower(nn.Module):
                 self.boundary_predictor = BoundaryPredictor(
                     d_model=width,
                     d_inner=int(width * mlp_ratio),
-                    activation_function="gelu",
+                    activation_function=activation_function,
                     temp=self.temperature,
                     prior=self.compression_rate,
                     bp_type='gumbel',
@@ -207,7 +211,6 @@ class SiglipVisionTower(nn.Module):
                 print(f"🦄🦄🦄 [INFO] Loaded Perceiver weights from {self.perceiver_weight_path}")
             else:
                 print("🐴🐴🐴 [INFO] No Perceiver weights provided, initializing Perceiver from scratch.")
-
 
         else:
             # no additional modules needed for plain ViT

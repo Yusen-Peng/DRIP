@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=July26_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp10
-#SBATCH --output=July26_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp10.txt
+#SBATCH --job-name=July29_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp01_SiLU
+#SBATCH --output=July29_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp01_SiLU.txt
 #SBATCH --time=15:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -35,7 +35,7 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp10 \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp01_SiLU \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \

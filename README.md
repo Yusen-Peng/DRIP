@@ -164,17 +164,3 @@ CSV results: [results/full_7B_last.csv](results/full_7B_last.csv)
 
 Please refer to [Significance.md](/Significance.md) 
 
-## Examples from TextVQA
-
-4x compression:
-
-![alt text](src/example_analysis/TextVQA_results/result_pngs/DRIP-examples_4x.png)
-
-8x compression:
-
-![alt text](src/example_analysis/TextVQA_results/result_pngs/DRIP-examples_8x.png)
-
-10 compression:
-
-![alt text](src/example_analysis/TextVQA_results/result_pngs/DRIP-examples_10x.png)
-
