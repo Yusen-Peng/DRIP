@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=July30_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp01_new_downsample
 #SBATCH --output=July30_LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp01_new_downsample.txt
-#SBATCH --time=0:20:00
+#SBATCH --time=10:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=debug-nextgen
+#SBATCH --partition=gpu
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256G
