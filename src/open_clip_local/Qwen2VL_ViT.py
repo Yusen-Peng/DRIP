@@ -1001,9 +1001,3 @@ class Qwen2VLDRIP(nn.Module):
         else:
             return pooled # [B, output_dim]
 
-
-
-
-
-
-

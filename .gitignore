@@ -6,9 +6,14 @@ data/
 LM-TFM/*.pt
 logs/
 *.zip
-*.txt
 .env
 *.log
 *.tar
 *.pth
 transformers_copy*/
+README_private.md
+**/__pycache__/
+*.txt
+!requirements.txt
+*.out
+*.err

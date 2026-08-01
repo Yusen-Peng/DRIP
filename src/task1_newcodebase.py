@@ -15,8 +15,7 @@ from torchvision import datasets
 from torch.utils.data import DataLoader
 from open_clip_local import create_model_and_transforms
 from open_clip_local.model import DTPViT, VisionTransformer, HierarchicalDTPViT
-from open_clip_local.DTP_ViT import SingleAdaptedFixed, XL_Baseline
-from boundary_vis import load_dtpx_from_clip_checkpoint
+from open_clip_local.DTP_ViT import DTPViT_Fixed, XL_Baseline, DTPViT_Causal, DTPViT_CosSim
 from open_clip_local import CLIP
 from torch.cuda.amp import GradScaler
 from torch.cuda.amp import autocast
@@ -34,20 +33,20 @@ from swin import SingleAdaptedSwin, SwinTransformer
 
 # Other collected SOTA baselines
 from open_clip_local.EViT import EViT
-from open_clip_local.Qwen2VL_ViT import Qwen2VLVisionConfig, Qwen2VLViT
+from open_clip_local.Qwen2VL_ViT import Qwen2VLVisionConfig, Qwen2VLViT, Qwen2VLDRIP
 
 
 class VisionClassifier(nn.Module):
     def __init__(self, 
-                 backbone: DTPViT | SingleAdaptedFixed | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT | SingleAdaptedSwin | Qwen2VLViT, 
+                 backbone: DTPViT | DTPViT_Causal | DTPViT_Fixed | VisionTransformer | XL_Baseline | VisionTransformerDiffPruning | SwinTransformer | EViT | HierarchicalDTPViT | SingleAdaptedSwin | Qwen2VLViT | Qwen2VLDRIP, 
                  num_classes):
         super().__init__()
         self.backbone = backbone
-        if isinstance(backbone, DTPViT) or isinstance(backbone, XL_Baseline) or isinstance(backbone, SingleAdaptedFixed):
+        if isinstance(backbone, DTPViT) or isinstance(backbone, DTPViT_Causal) or isinstance(backbone, XL_Baseline) or isinstance(backbone, DTPViT_Fixed):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
         elif isinstance(backbone, VisionTransformer):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
-        elif isinstance(backbone, Qwen2VLViT):
+        elif isinstance(backbone, Qwen2VLViT) or isinstance(backbone, Qwen2VLDRIP):
             self.fc = nn.Linear(backbone.output_dim, num_classes)
         elif isinstance(backbone, VisionTransformerDiffPruning):
             self.fc = nn.Linear(backbone.num_classes, num_classes)
@@ -60,8 +59,11 @@ class VisionClassifier(nn.Module):
         elif isinstance(backbone, SingleAdaptedSwin):
             self.fc = nn.Linear(backbone.num_classes, num_classes)
 
-    def forward(self, x):
-        if isinstance(self.backbone, DTPViT) or isinstance(self.backbone, SingleAdaptedFixed):
+    def forward(self, x, inference: bool = False):
+        if isinstance(self.backbone, DTPViT):
+            outs, boundary_loss, _, _  = self.backbone(x, return_loss=True, inference=inference)
+            return self.fc(outs), boundary_loss
+        elif isinstance(self.backbone, DTPViT_Fixed) or isinstance(self.backbone, Qwen2VLDRIP):
             outs, boundary_loss, _, _  = self.backbone(x, return_loss=True)
             return self.fc(outs), boundary_loss
         else:
@@ -921,9 +923,9 @@ def train_one_epoch(model, is_dtp: bool, criterion, optimizer, data_loader, devi
     for i, (image, target) in tqdm(enumerate(metric_logger.log_every(data_loader, args.print_freq, header))):
         start_time = time.time()
         image, target = image.to(device), target.to(device)
-        with torch.cuda.amp.autocast(enabled=scaler is not None):
+        with torch.amp.autocast('cuda', enabled=scaler is not None):
             if is_dtp:
-                output, boundary_loss = model(image)
+                output, boundary_loss = model(image, inference=False)
                 cls_loss = criterion(output, target)
                 
                 # add boundary loss for back propagation
@@ -980,7 +982,7 @@ def evaluate(model, is_dtp: bool, criterion, data_loader, device, print_freq=100
             image = image.to(device, non_blocking=True)
             target = target.to(device, non_blocking=True)
             if is_dtp:
-                output, boundary_loss = model(image)
+                output, boundary_loss = model(image, inference=True)
                 cls_loss = criterion(output, target)
                 loss = cls_loss + boundary_loss
             else:
@@ -1015,6 +1017,177 @@ def evaluate(model, is_dtp: bool, criterion, data_loader, device, print_freq=100
 
     print(f"{header} Acc@1 {metric_logger.acc1.global_avg:.3f} Acc@5 {metric_logger.acc5.global_avg:.3f}", flush=True)
     return metric_logger.acc1.global_avg
+
+
+
+def evaluate_with_class_stats(model, is_dtp: bool, criterion, data_loader, device, num_classes, class_names, print_freq=100, save_dir=None):
+    import csv
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    model.eval()
+    metric_logger = MetricLogger(delimiter="  ")
+    header = "Test: Class Analysis"
+
+    per_class_correct = torch.zeros(num_classes, dtype=torch.long, device=device)
+    per_class_total = torch.zeros(num_classes, dtype=torch.long, device=device)
+
+    num_processed_samples = 0
+
+    with torch.inference_mode():
+        for image, target in metric_logger.log_every(data_loader, print_freq, header):
+            image = image.to(device, non_blocking=True)
+            target = target.to(device, non_blocking=True)
+
+            if is_dtp:
+                output, boundary_loss = model(image, inference=True)
+                cls_loss = criterion(output, target)
+                loss = cls_loss + boundary_loss
+            else:
+                output = model(image)
+                loss = criterion(output, target)
+
+            pred = output.argmax(dim=1)
+
+            acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            batch_size = image.shape[0]
+
+            metric_logger.update(loss=loss.item())
+            metric_logger.meters["acc1"].update(acc1.item(), n=batch_size)
+            metric_logger.meters["acc5"].update(acc5.item(), n=batch_size)
+            num_processed_samples += batch_size
+
+            correct_mask = (pred == target)
+            per_class_total.index_add_(0, target, torch.ones_like(target, dtype=torch.long))
+            per_class_correct.index_add_(0, target, correct_mask.long())
+
+    # reduce across processes if distributed
+    if is_dist_avail_and_initialized():
+        dist.all_reduce(per_class_total, op=dist.ReduceOp.SUM)
+        dist.all_reduce(per_class_correct, op=dist.ReduceOp.SUM)
+        num_processed_samples = reduce_across_processes(num_processed_samples)
+
+    if (
+        hasattr(data_loader.dataset, "__len__")
+        and len(data_loader.dataset) != int(num_processed_samples)
+        and get_rank() == 0
+    ):
+        warnings.warn(
+            f"It looks like the dataset has {len(data_loader.dataset)} samples, but {int(num_processed_samples)} "
+            "samples were used for the validation, which might bias the results."
+        )
+
+    metric_logger.synchronize_between_processes()
+
+    per_class_acc = per_class_correct.float() / per_class_total.clamp(min=1).float()
+
+    print(
+        f"{header} Acc@1 {metric_logger.acc1.global_avg:.3f} Acc@5 {metric_logger.acc5.global_avg:.3f}",
+        flush=True
+    )
+
+    if is_main_process():
+        os.makedirs(save_dir, exist_ok=True)
+
+        per_class_correct_cpu = per_class_correct.cpu().numpy()
+        per_class_total_cpu = per_class_total.cpu().numpy()
+        per_class_acc_cpu = per_class_acc.cpu().numpy()
+
+        rows = []
+        for i in range(num_classes):
+            rows.append({
+                "class_idx": i,
+                "class_name": class_names[i],
+                "total": int(per_class_total_cpu[i]),
+                "correct": int(per_class_correct_cpu[i]),
+                "accuracy": float(per_class_acc_cpu[i]),
+            })
+
+        rows_sorted = sorted(rows, key=lambda x: x["accuracy"])
+
+        # save csv
+        csv_path = os.path.join(save_dir, "per_class_accuracy.csv")
+        with open(csv_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["class_idx", "class_name", "total", "correct", "accuracy"])
+            writer.writeheader()
+            writer.writerows(rows)
+
+        # histogram
+        plt.figure(figsize=(8, 5))
+        plt.hist(per_class_acc_cpu, bins=30)
+        plt.xlabel("Per-class accuracy")
+        plt.ylabel("Number of classes")
+        plt.title("Per-class Accuracy Distribution")
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_dir, "per_class_accuracy_hist.png"))
+        plt.close()
+
+        # worst 30 classes
+        worst30 = rows_sorted[:30]
+        plt.figure(figsize=(12, 6))
+        plt.bar(range(len(worst30)), [x["accuracy"] for x in worst30])
+        plt.xticks(range(len(worst30)), [x["class_name"] for x in worst30], rotation=90)
+        plt.ylabel("Accuracy")
+        plt.title("Worst 30 Classes")
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_dir, "worst_30_classes.png"))
+        plt.close()
+
+        # best 30 classes
+        best30 = rows_sorted[-30:]
+        plt.figure(figsize=(12, 6))
+        plt.bar(range(len(best30)), [x["accuracy"] for x in best30])
+        plt.xticks(range(len(best30)), [x["class_name"] for x in best30], rotation=90)
+        plt.ylabel("Accuracy")
+        plt.title("Best 30 Classes")
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_dir, "best_30_classes.png"))
+        plt.close()
+
+        # frequency vs accuracy
+        plt.figure(figsize=(8, 5))
+        plt.scatter(per_class_total_cpu, per_class_acc_cpu, alpha=0.7)
+        plt.xlabel("Samples per class")
+        plt.ylabel("Per-class accuracy")
+        plt.title("Class Frequency vs Accuracy")
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_dir, "freq_vs_acc.png"))
+        plt.close()
+
+        print("\nWorst 30 classes:", flush=True)
+        for row in worst30:
+            print(row, flush=True)
+
+        print("\nBest 30 classes:", flush=True)
+        for row in best30:
+            print(row, flush=True)
+
+        print(f"\nSaved class analysis to: {save_dir}", flush=True)
+
+    return metric_logger.acc1.global_avg, per_class_acc
+
+
+def get_imagenet_classname_mapping(dataset):
+    import urllib.request
+
+    # load official mapping
+    url = "https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"
+    class_names = urllib.request.urlopen(url).read().decode("utf-8").splitlines()
+
+    # dataset.classes = list of WNIDs in order
+    wnids = dataset.classes
+
+    # map index → class name
+    idx_to_name = {i: class_names[i] for i in range(len(class_names))}
+
+    # final mapping: wnid → readable name
+    wnid_to_name = {wnids[i]: idx_to_name[i] for i in range(len(wnids))}
+
+    return wnid_to_name
+
+
+
+
 
 
 def _get_cache_path(filepath):
@@ -1170,22 +1343,29 @@ def main(args):
     print("Creating model")
     is_dtp = False
     MODE = args.MODE
+    COMPRESSION_RATE = args.RATE
+    TEMP = args.TEMP
+
+    width=768
+    mlp_ratio=4.0
 
     if MODE == "DRIP":
-        compression_rate = 0.1 # 0.25 for 4x, 0.1 for 10x
         empty_backbone = DTPViT(
             image_size=RESOLUTION,
             patch_size=patch_size,
-            width=768,
+            width=width,
             layers=12,
             depth=(4, 8, 0),
-            compression_rate=compression_rate,
-            heads=768 // 64,
-            mlp_ratio=4.0,
-            temp=0.5,
-            pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
-            flop_measure=False # need to learn real boundaries
+            compression_rate=COMPRESSION_RATE,
+            heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            temp=TEMP,
+            output_dim=512,
+            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
+            pool_type='avg',
+            smart_init=args.smart_init
         )
+        print(f"😛😛😛temperature is set to: {TEMP}😛😛😛", flush=True)
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
         is_dtp = True # NOTE: important!
@@ -1193,22 +1373,39 @@ def main(args):
     elif MODE == "fixed_pooling":
         compression_rate = 0.25 # 0.25 for 4x, 0.1 for 10x
         print(f"Using fixed pooling with compression rate {compression_rate}", flush=True)
-        empty_backbone = SingleAdaptedFixed(
+        empty_backbone = DTPViT_Fixed(
+            image_size=RESOLUTION,
+            patch_size=patch_size,
+            width=width,
+            layers=12,
+            depth=(4, 8, 0),
+            compression_rate=COMPRESSION_RATE,
+            heads=width // 64,
+            mlp_ratio=mlp_ratio,
+            temp=TEMP,
+            output_dim=512,
+            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
+            pool_type='avg'
+        )       
+        backbone = empty_backbone
+        model = VisionClassifier(backbone, num_classes).to(device)
+        is_dtp = True # NOTE: important!
+    
+    elif MODE == "ViT":
+        print(f"use **ViT** with patch size {patch_size} and resolution {RESOLUTION}!")
+        empty_backbone = VisionTransformer(
             image_size=RESOLUTION,
             patch_size=patch_size,
             width=768,
             layers=12,
-            depth=(4, 8, 0),
-            compression_rate=compression_rate,
             heads=768 // 64,
             mlp_ratio=4.0,
-            temp=0.5,
-            pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
-            flop_measure=False # need to learn real boundaries
+            output_dim=512
         )
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
-        is_dtp = True # NOTE: important!
+        model.to(device)
+
     elif MODE == "ViT-RP":
 
         print("😵‍💫😵‍💫😵‍💫Using Qwen2VL Vision Transformer...😵‍💫😵‍💫😵‍💫")
@@ -1227,42 +1424,35 @@ def main(args):
         backbone = empty_backbone
         model = VisionClassifier(backbone, num_classes).to(device)
 
-    else:
-        use_XL_backbone = (MODE == "XL")
-        print(f"are we using XL backbone? {use_XL_backbone}", flush=True)
-        if use_XL_backbone:
-            print("use XL backbone!")
-            patch_size = 16
-            empty_backbone = XL_Baseline(
-                image_size=RESOLUTION,
-                patch_size=patch_size,
-                width=768,
-                layers=12,
-                depth=12,
-                compression_rate=0.25,
-                heads=768 // 64,
-                mlp_ratio=4.0,
-                temp=0.5,
-                pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
-            )            
-            backbone = empty_backbone
-            model = VisionClassifier(backbone, num_classes).to(device)
+    elif MODE == "DRIP-RP":
+        #COMPRESSION_RATE = 0.25 # 0.25 for 4x, 0.1 for 10x
+        COMPRESSION_RATE = 0.1 # 0.25 for 4x, 0.1 for 10x
 
-        else:
-            print(f"use **ViT** with patch size {patch_size} and resolution {RESOLUTION}!")
-            empty_backbone = VisionTransformer(
-                image_size=RESOLUTION,
-                patch_size=patch_size,
-                width=768,
-                layers=12,
-                heads=768 // 64,
-                mlp_ratio=4.0,
-                output_dim=512
-            )
-            backbone = empty_backbone
-            model = VisionClassifier(backbone, num_classes).to(device)
-        
-        model.to(device)
+        print(f"🥶🥶🥶🥶Calculating GFLOPs for Qwen2VL-DRIP with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
+        config = Qwen2VLVisionConfig(
+            depth=12,
+            embed_dim=768,
+            hidden_size=768 * 4,
+            mlp_ratio=4.0,
+            num_heads=768 // 64,
+            in_channels=3,
+            patch_size=patch_size,
+            spatial_merge_size=1,
+            temporal_patch_size=1,
+        )
+        empty_backbone = Qwen2VLDRIP(
+            config=config,
+            depth=(4, 8, 0),
+            temp=0.5,
+            compression_rate=COMPRESSION_RATE,
+            threshold=0.5
+        )
+        backbone = empty_backbone
+        model = VisionClassifier(backbone, num_classes).to(device)
+        is_dtp = True # NOTE: important!
+
+    else:
+        raise ValueError(f"Invalid MODE {MODE}. Supported MODEs are ViT, DRIP, DRIP_Causal, DRIP_CosSim, fixed_pooling, ViT-RP and DRIP-RP.")
 
     if args.distributed and args.sync_bn:
         model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
@@ -1338,7 +1528,7 @@ def main(args):
 
     model_without_ddp = model
     if args.distributed:
-        if MODE == "ViT" and not use_XL_backbone:
+        if MODE == "ViT":
             model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
         else:
             # we need to tolerate conditional execution for DRIP
@@ -1366,7 +1556,7 @@ def main(args):
         model_ema = ExponentialMovingAverage(model_without_ddp, device=device, decay=1.0 - alpha)
 
     if args.resume:
-        checkpoint = torch.load(args.resume, map_location="cpu", weights_only=True)
+        checkpoint = torch.load(args.resume, map_location="cpu", weights_only=False)
         model_without_ddp.load_state_dict(checkpoint["model"])
         if not args.test_only:
             optimizer.load_state_dict(checkpoint["optimizer"])
@@ -1377,14 +1567,36 @@ def main(args):
         if scaler:
             scaler.load_state_dict(checkpoint["scaler"])
 
+    # if args.test_only:
+    #     # We disable the cudnn benchmarking because it can noticeably affect the accuracy
+    #     torch.backends.cudnn.benchmark = False
+    #     torch.backends.cudnn.deterministic = True
+    #     if model_ema:
+    #         evaluate(model_ema, is_dtp, criterion, data_loader_test, device=device, log_suffix="EMA")
+    #     else:
+    #         evaluate(model, is_dtp, criterion, data_loader_test, device=device)
+    #     return
+
     if args.test_only:
-        # We disable the cudnn benchmarking because it can noticeably affect the accuracy
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
-        if model_ema:
-            evaluate(model_ema, is_dtp, criterion, data_loader_test, device=device, log_suffix="EMA")
-        else:
-            evaluate(model, is_dtp, criterion, data_loader_test, device=device)
+        eval_model = model_ema if model_ema is not None else model
+
+        # explicit mapping from wnid → readable class name
+        wnid_to_name = get_imagenet_classname_mapping(dataset)
+        class_names = [wnid_to_name[wnid] for wnid in dataset.classes]
+
+        evaluate_with_class_stats(
+            eval_model,
+            is_dtp,
+            criterion,
+            data_loader_test,
+            device=device,
+            num_classes=num_classes,
+            class_names=class_names,
+            print_freq=args.print_freq,
+            save_dir="/users/PAS2912/yusenpeng/DRIP/",
+        )
         return
 
     print("Start training")
@@ -1556,6 +1768,9 @@ def get_args_parser(add_help=True):
     # NOTE: pick your model!
     # "DRIP" or "fixed_pooling" or "ViT" or "XL" or "ViT-RP"
     parser.add_argument("--MODE", type=str, help="which model to use buddy")
+    parser.add_argument("--RATE", type=float, help="compression rate for DRIP and fixed pooling models")
+    parser.add_argument("--TEMP", type=float, help="temperature for DRIP models; -1 for no sampling")
+    parser.add_argument("--smart-init", action="store_true", help="whether to use smart initialization for DRIP models")
     return parser
 
 

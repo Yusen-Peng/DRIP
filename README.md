@@ -1,82 +1,166 @@
 <p align="center">
-<img src="docs/DRIP_new.png" width="800"/>
+<img src="assets/DRIP-pipeline.png" width="500" height="400"/>
 </p>
 
 <h1 align="center">DRIP</h1>
-<h2 align="center">Dynamic Patch Pooling for Efficient Vision Transformers</h2>
+<h2 align="center">Dynamic Image Tokenization for Efficient VLMs</h2>
 
-### Debugging with interactive node
+## TL;DR
+
+![alt text](assets/teaser.png)
+
+## Environment setup
+
+Create a new conda enviornment from scratch:
 
 ```bash
-salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --time 0:15:00
-```
-
-## Activate Conda Env
-
-```bash
-module load miniconda3/24.1.2-py310
-conda deactivate
+module load miniconda3/24.1.2-py310 # for OSC
+module load conda # for Anvil
+conda create -n DRIP python=3.11 -y
 conda activate DRIP
-# a simple imagenet example (smaller batch size, single worker)
-torchrun --nproc_per_node=1 src/task1_newcodebase.py --model vit_b_16 --epochs 300 --batch-size 32 --opt adamw --lr 0.0003 --wd 0.3 --lr-scheduler cosineannealinglr --lr-warmup-method linear --lr-warmup-epochs 30  --workers 1 --lr-warmup-decay 0.033 --amp --label-smoothing 0.11 --mixup-alpha 0.2 --auto-augment ra --clip-grad-norm 1 --ra-sampler --cutmix-alpha 1.0 --output-dir /fs/scratch/PAS2836/yusenpeng_checkpoint/imagenet_ViT_RP --MODE ViT-RP
+python -m pip install -r requirements.txt
 ```
 
+## LLaVA 1.5 Experiments
 
-## Experiments
+### Instruction
 
-### ImageNet from scratch
+Go to file [`src/LLaVA_wrapper/llava_local/model/multimodal_encoder/builder.py`](src/LLaVA_wrapper/llava_local/model/multimodal_encoder/builder.py) to configure merging strategies and corresponding compression rate:
+
+```python
+MERGE_STRATEGY = "DRIP" # "ViT" or "DRIP" or "Fixed" or "PruMerge"
+COMPRESSION_RATE = 0.25
+DRIP_WEIGHT_PATH = "/path/to/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
+```
+
+Additional note: the ViT backbone from LLaVA checkpoint is `openai/clip-vit-large-patch14-336`.
+
+Then we are good to move onto benchmark experiments.
+
+### Evaluation/Benchmarks
+
+Do evaluation across all **14** VQA benchmarks:
 
 ```bash
-sbatch scripts/task1/finetune_imagenet.sh
+bash scripts/task3/eval/EVALUATE_ALL.sh
 ```
 
-### CLIP pretraining from scratch
+## LLaVA Finetuning
+
+Before anything, make sure flash attention is installed.
+
+### pretraining (token alignment)
 
 ```bash
-sbatch scripts/task2/multi_gpu_ascend.sh
+# LLaVA 1.5 with Vicuna 1.5 7B
+sbatch scripts/task3/pretrain_ascend_flash.sh
+# LLaVA 1.5 with Qwen 2.5 14B instruct
+sbatch scripts/task3/pretrain_ascend_flash_qwen.sh
+# LLaVA 1.5 with google/siglip-large-patch16-384
+sbatch scripts/task3/pretrain_ascend_flash_siglip.sh
+# LLaVA 1.5 with google/siglip2-large-patch16-384
+sbatch scripts/task3/pretrain_ascend_flash_siglip2.sh
 ```
 
-### LLaVA
+When resuming from an existing checkpoint, **make sure to update the DRIP weight path `DRIP_WEIGHT_PATH` accordingly**:
 
-pretraining (low-resouce is fine):
+```python
+DRIP_WEIGHT_PATH = "/path/to/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
+```
+
+### finetuning/VQA SFT
+
+We use ascend cluster with flash attention:
 
 ```bash
-sbatch scripts/task3/pretrain.sh
+# LoRA finetuning - single GPU is fine
+sbatch scripts/task3/finetune_ascend_flash.sh
+# Full finetuning - must be distributed
+# 2 GPUs OR 4 GPUs
+sbatch scripts/task3/finetune_ascend_flash_full.sh
+# Qwen 2.5 14B
+sbatch scripts/task3/finetune_ascend_flash_full_qwen.sh
+# SIGLIP encoder
+sbatch scripts/task3/finetune_ascend_flash_full_siglip.sh
+# SIGLIP v2
+sbatch scripts/task3/finetune_ascend_flash_full_siglip2.sh
 ```
 
-finetuning:
+We can SSH into GPUs to check its memory usage with:
 
 ```bash
-sbatch scripts/task3/finetune.sh
+ssh <node ID> nvidia-smi
 ```
 
-## Handy Commands
-
-monitor all jobs:
+and process status with:
 
 ```bash
-squeue -u yusenpeng
+ssh <node ID> "ps -fp <job ID>"
 ```
 
-check when a specific job can start running:
+When resuming from an existing checkpoint, **make sure to update the DRIP weight path `DRIP_WEIGHT_PATH`**
+
+```python
+DRIP_WEIGHT_PATH = "/path/to/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-1020/drip.bin"
+```
+
+**AND the MLP projector path in the SLURM scripts**:
 
 ```bash
-squeue --start -j <JOB_ID>
+--pretrain_mm_mlp_adapter /path/to/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-1020/mm_projector.bin \
 ```
 
-## GPU usage check
+
+## LLaVA boundary visualization
+
+For LLaVA visualization, a GPU is definietely needed:
 
 ```bash
-squeue -p quad -o "%.18i %.9P %.20j %.15u %.2t %.10M %.6D %R"
-squeue -p nextgen -o "%.18i %.9P %.20j %.15u %.2t %.10M %.6D %R"
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-nextgen --time 00:05:00
+module load miniconda3/24.1.2-py310
+conda activate DRIP_flash
+python src/boundary_visual_LLaVA.py
 ```
 
+You can find examples in [Boundaries.md](/Boundaries.md). You can also find interesting image feature analysis (PCA, CLS attention, cosine similarity) in [Features.md](/Features.md). Find more Benchmark example analaysis (i.e., case study) in [Examples.md](/Examples.md).
 
-## Contacts
 
-If you have any questions or suggestions, feel free to contact:
+## TFLOP measurement
 
-- Yusen Peng (peng.1007@osu.edu)
-- Sachin Kumar (kumar.1145@osu.edu)
+```bash
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-nextgen --time 00:30:00
+module load miniconda3/24.1.2-py310
+conda activate DRIP_flash
+# for full finetuned models
+python src/GFLOP_measurement.py --model-path /path/to/LLaVA_7B_FLASH_finetune_ALL_ONCE_full
+# for LoRA finetuned models
+python src/GFLOP_measurement.py --model-path /path/to/LLaVA_7B_FLASH_finetune_ALL_ONCE_lora \
+    --model-base lmsys/vicuna-7b-v1.5
 
-Or describe it in Issues.
+# 🥶🥶🥶 For Qwen2.5 14B instruct, use debug-quad to avoid OOM:
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-quad --time 00:30:00
+python src/GFLOP_measurement.py --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_train_full --conv-mode qwen_v2
+```
+
+Important Note: for "DRIP", please go to [src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py](src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py) line #93 to temporarily toggle ``inference=False`` to ``inference=True`` to accurately evaluate the TFLOPs during prefill stage.
+
+
+## Results
+
+LoRA finetuning with image features from ViT's last layer:
+
+![alt text](results/lora_7B_last_tradeoff_combined.png)
+
+CSV results: [results/lora_7B_last.csv](results/lora_7B_last.csv)
+
+Full finetuning with image features from ViT's last layer:
+
+![alt text](results/full_7B_last_tradeoff_combined.png)
+
+CSV results: [results/full_7B_last.csv](results/full_7B_last.csv)
+
+
+## Significance Test
+
+Please refer to [Significance.md](/Significance.md) 
+

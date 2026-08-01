@@ -16,6 +16,7 @@
 import os
 import warnings
 import shutil
+import math
 
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, BitsAndBytesConfig
 import torch
@@ -50,21 +51,24 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
     if use_flash_attn:
         kwargs['attn_implementation'] = 'flash_attention_2'
 
-    if 'llava' in model_name.lower() or 'drip' in model_name.lower() or 'vit' in model_name.lower() or 'pooling' in model_name.lower():
+    if 'llava' in model_name.lower():
         # Load LLaVA model
-        if ( 'lora' in model_name.lower() or 'drip' in model_name.lower() or 'vit' in model_name.lower() or 'pooling' in model_name.lower()) and model_base is None:
+        if 'lora' in model_name.lower() and model_base is None:
             warnings.warn('There is `lora` in model name but no `model_base` is provided. If you are loading a LoRA model, please provide the `model_base` argument. Detailed instruction: https://github.com/haotian-liu/LLaVA#launch-a-model-worker-lora-weights-unmerged.')
-        if ( 'lora' in model_name.lower() or 'drip' in model_name.lower() or 'vit' in model_name.lower() or 'pooling' in model_name.lower()) and model_base is not None:
-            
-            print("🎉" * 20)
-            print("this is the right place! Good luck!")
-            print("🎉" * 20)            
-
+        if 'lora' in model_name.lower() and model_base is not None:
             from src.LLaVA_wrapper.llava_local.model.language_model.llava_llama import LlavaConfig
             lora_cfg_pretrained = LlavaConfig.from_pretrained(model_path)
             tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
             print('Loading LLaVA from base model...')
-            model = LlavaLlamaForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=lora_cfg_pretrained, **kwargs)
+
+            if 'qwen' in model_name.lower():
+                print("🎃🎃🎃We are using Qwen models.")
+                model = LlavaQwen2ForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=lora_cfg_pretrained, **kwargs)
+            else:
+                print("🎲🎲🎲 We are using LLaMA models.")
+                model = LlavaLlamaForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=lora_cfg_pretrained, **kwargs)
+            
+            
             token_num, tokem_dim = model.lm_head.out_features, model.lm_head.in_features
             if model.lm_head.weight.shape[0] != token_num:
                 model.lm_head.weight = torch.nn.Parameter(torch.empty(token_num, tokem_dim, device=model.device, dtype=model.dtype))
@@ -103,7 +107,13 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
                 tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=True)
                 cfg_pretrained = AutoConfig.from_pretrained(model_path, trust_remote_code=True)
                 model = LlavaMptForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=cfg_pretrained, **kwargs)
+            elif 'qwen' in model_name.lower():
+                print("🎃🎃🎃We are using Qwen models.")
+                tokenizer = AutoTokenizer.from_pretrained(model_base)
+                cfg_pretrained = AutoConfig.from_pretrained(model_path)
+                model = LlavaQwen2ForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=cfg_pretrained, **kwargs)
             else:
+                print("🎲🎲🎲 We are using LLaMA models.")
                 tokenizer = AutoTokenizer.from_pretrained(model_base, use_fast=False)
                 cfg_pretrained = AutoConfig.from_pretrained(model_path)
                 model = LlavaLlamaForCausalLM.from_pretrained(model_base, low_cpu_mem_usage=True, config=cfg_pretrained, **kwargs)
@@ -122,7 +132,16 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
                     low_cpu_mem_usage=True,
                     **kwargs
                 )
+            elif 'qwen' in model_name.lower():
+                print("🎃🎃🎃We are using Qwen models.")
+                tokenizer = AutoTokenizer.from_pretrained(model_path)
+                model = LlavaQwen2ForCausalLM.from_pretrained(
+                    model_path,
+                    low_cpu_mem_usage=True,
+                    **kwargs
+                )
             else:
+                print("🎲🎲🎲 We are using LLaMA models.")
                 tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
                 model = LlavaLlamaForCausalLM.from_pretrained(
                     model_path,
@@ -153,10 +172,7 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
 
     image_processor = None
 
-    if 'llava' in model_name.lower() or 'drip' in model_name.lower() or 'vit' in model_name.lower() or 'pooling' in model_name.lower():
-        print("🔑" * 20)
-        print("let's get the image processor here!")
-        print("🔑" * 20)
+    if 'llava' in model_name.lower():
         mm_use_im_start_end = getattr(model.config, "mm_use_im_start_end", False)
         mm_use_im_patch_token = getattr(model.config, "mm_use_im_patch_token", True)
         if mm_use_im_patch_token:
@@ -171,16 +187,33 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
         if device_map != 'auto':
             vision_tower.to(device=device_map, dtype=torch.float16)
         image_processor = vision_tower.image_processor
+    
+
+        print(f"⛅⛅⛅ Token compression method: {vision_tower.merge_strategy}", flush=True)
+
+        if vision_tower.merge_strategy == "PruneSID":
+            """
+                This is where the token compression actually happens for PruneSID method!
+            """
+            from src.LLaVA_wrapper.llava_local.model.multimodal_encoder.clip_encoder import CLIPVisionTower_PruneSID
+            import types
+            vision_tower.forward = types.MethodType(CLIPVisionTower_PruneSID.forward, vision_tower)
+
+            from src.LLaVA_wrapper.llava_local.model.llava_arch import LlavaMetaForCausalLM
+            from src.LLaVA_wrapper.llava_local.model.llava_arch import prepare_inputs_labels_for_multimodal_prunesid, restore_image_features_sorted, encode_images_prunesid_multi, encode_images_prunesid
+            if hasattr(LlavaMetaForCausalLM, 'prepare_inputs_labels_for_multimodal'):
+                LlavaMetaForCausalLM.prepare_inputs_labels_for_multimodal = prepare_inputs_labels_for_multimodal_prunesid
+                LlavaMetaForCausalLM.restore_image_features_sorted = restore_image_features_sorted
+                LlavaMetaForCausalLM.encode_images_prunesid_multi = encode_images_prunesid_multi
+                LlavaMetaForCausalLM.encode_images_prunesid = encode_images_prunesid
+
+            num_patches = model.model.vision_tower.num_patches  # 576
+            keep_tokens = math.ceil(num_patches * model.model.vision_tower.compression_rate)
+            model.model.vision_tower.need_token_num = keep_tokens
 
     if hasattr(model.config, "max_sequence_length"):
         context_len = model.config.max_sequence_length
     else:
         context_len = 2048
-
-    # Move mm_projector to the correct device
-    if hasattr(model.model, "mm_projector"):
-        print("[INFO] Moving mm_projector to correct device...")
-        model.model.mm_projector = model.model.mm_projector.to(device)
-        print(f"[DEBUG] mm_projector now on: {next(model.model.mm_projector.parameters()).device}")
 
     return tokenizer, model, image_processor, context_len

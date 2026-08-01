@@ -7,7 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from datasets import load_dataset
-from flash_attn import flash_attn_qkvpacked_func, flash_attn_qkvpacked_fp8_func, flash_attn_varlen_qkvpacked_func, flash_attn_varlen_qkvpacked_fp8_func
+from flash_attn import flash_attn_qkvpacked_func, flash_attn_qkvpacked_fp8_func 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"using device: {device}")

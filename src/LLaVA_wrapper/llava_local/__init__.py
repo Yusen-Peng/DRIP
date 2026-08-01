@@ -7,3 +7,5 @@ PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../.."))
 sys.path.insert(0, PROJECT_ROOT)
 
 from src.LLaVA_wrapper.llava_local.model.language_model.llava_llama import LlavaLlamaForCausalLM
+from src.LLaVA_wrapper.llava_local.model.language_model.llava_qwen import LlavaQwen2ForCausalLM, LlavaConfig
+

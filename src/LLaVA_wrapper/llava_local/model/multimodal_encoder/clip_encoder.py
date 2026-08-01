@@ -1,246 +1,66 @@
 import torch
 import torch.nn as nn
-from typing import Tuple, Dict, Any, Optional, List
+import torch.nn.functional as F
+from typing import Tuple
 import os
 import sys
-from collections import OrderedDict
+import numpy as np
+import math
 from transformers import CLIPVisionModel, CLIPImageProcessor, CLIPVisionConfig
+from types import SimpleNamespace
+import timm
+from timm.data import resolve_model_data_config, create_transform
+
+from .perceiver_utils import PerceiverResampler
+
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
 sys.path.insert(0, PROJECT_ROOT)
-from src.open_clip_local.DTP_ViT import DTPViT, SingleAdaptedFixed, SingleAdaptedSwin
-from src.open_clip_local.model import VisionTransformer
-from src.boundary_vis import load_dtpx_from_clip_checkpoint, weight_transfer, weight_transfer_baseline
-from src.boundary_vis_dev import load_dtp_from_clip_checkpoint, load_vit_from_clip_checkpoint
 
-@torch.no_grad()
-def load_fixed_pooling(
-    model: nn.Module,
-    ckpt_path: str,
-    map_location: str = "cpu",
-    strict_head: bool = True,   # if False, exclude head.* from BOTH ckpt and model
-    verbose: bool = True,
-) -> Tuple[nn.Module, Dict[str, Any]]:
-    """
-    Loader for SingleAdaptedFixed from a CLIP/DRIP-style checkpoint.
+from src.open_clip_local.BP import BoundaryPredictor, downsample, H_Net
 
-    It will:
-      - Look for visual / vision_tower weights and strip prefixes:
-          * module.visual., visual., module.vision_tower., vision_tower.
-      - Optionally remap short_blocks.* -> post_blocks.* for the post stack.
-      - Handle patch_embed.proj.* vs flat patch_embed.* depending on model.
-      - Optionally drop head.* if strict_head=False.
-      - Enforce strict key/shape matching (except for the optional head case).
-    """
+def complement_idx(idx, dim):
+    a = torch.arange(dim, device=idx.device)
+    ndim = idx.ndim
+    dims = idx.shape
+    n_idx = dims[-1]
+    dims = dims[:-1] + (-1, )
+    for i in range(1, ndim):
+        a = a.unsqueeze(0)
+    a = a.expand(*dims)
+    masked = torch.scatter(a, -1, idx, 0)
+    compl, _ = torch.sort(masked, dim=-1, descending=False)
+    compl = compl.permute(-1, *tuple(range(ndim - 1)))
+    compl = compl[n_idx:].permute(*(tuple(range(1, ndim)) + (0,)))
+    return compl
 
-    # 0) Read checkpoint
-    raw = torch.load(ckpt_path, map_location=map_location)
-    if isinstance(raw, dict):
-        if "state_dict" in raw:
-            sd = raw["state_dict"]
-        elif "model" in raw and isinstance(raw["model"], dict):
-            sd = raw["model"]
-        else:
-            sd = raw
-    else:
-        sd = raw
+outputs = {}
+def hook_k(module, input, output):
+    outputs['desired_k'] = output
 
-    if not isinstance(sd, dict):
-        raise ValueError("Unsupported checkpoint format: expected a state_dict-like mapping.")
+def hook_q(module, input, output):
+    outputs['desired_q'] = output
 
-    # Model keys
-    model_sd = model.state_dict()
-    model_keys = set(model_sd.keys())
-
-    # Does model expect patch_embed.proj.* or flat patch_embed.*?
-    expects_patch_proj = any(k.startswith("patch_embed.proj.") for k in model_keys)
-    expects_patch_flat = any(
-        k.startswith("patch_embed.weight") or k.startswith("patch_embed.bias")
-        for k in model_keys
-    )
-
-    # Helper: strip common prefixes
-    def strip_prefixes(k: str) -> Optional[str]:
-        # Most CLIP-style checkpoints
-        if k.startswith("module.visual."):
-            return k[len("module.visual."):]
-        if k.startswith("visual."):
-            return k[len("visual."):]
-        # Sometimes saved as vision_tower
-        if k.startswith("module.vision_tower."):
-            return k[len("module.vision_tower."):]
-        if k.startswith("vision_tower."):
-            return k[len("vision_tower."):]
-        # Already in local SingleAdaptedFixed format
-        return k
-
-    # Remap visual / tower side into SingleAdaptedFixed layout
-    def remap(inner: str) -> Optional[str]:
-        # ----- patch embed -----
-        if inner.startswith("patch_embed.proj."):
-            # keep proj layout if model expects it; otherwise flatten
-            if expects_patch_proj:
-                return inner
-            if expects_patch_flat:
-                return inner.replace("patch_embed.proj.", "patch_embed.", 1)
-            # if neither is expected, just keep and let strict check complain
-            return inner
-
-        if inner.startswith("patch_embed.") and not inner.startswith("patch_embed.proj."):
-            # This is already flat; keep as-is and let strict checks handle mismatches
-            return inner
-
-        # ----- positional embeddings -----
-        # SingleAdaptedFixed uses pos_pre and pos_post explicitly.
-        # If checkpoint has them, keep them; if it only has pos_emb, we just ignore that.
-        if inner.startswith(("pos_pre", "pos_post")):
-            return inner
-        if inner.startswith("pos_emb"):
-            # we don't try to split a single pos_emb into pre/post → ignore
-            return None
-
-        # ----- transformer blocks -----
-        # pre_blocks.* maps directly
-        if inner.startswith("pre_blocks."):
-            return inner
-
-        # short_blocks.* in ckpt → post_blocks.* in Fixed
-        if inner.startswith("short_blocks."):
-            return inner.replace("short_blocks.", "post_blocks.", 1)
-
-        # If checkpoint already uses post_blocks.*, keep it
-        if inner.startswith("post_blocks."):
-            return inner
-
-        # ----- norm + head + merge -----
-        if inner.startswith(("post_ln.", "head.", "merge.")):
-            return inner
-
-        # Everything else (boundary_predictor, down_ln, null_token, etc.) → drop
-        return None
-
-    mapped: Dict[str, torch.Tensor] = OrderedDict()
-    for k, v in sd.items():
-        inner = strip_prefixes(k)
-        if inner is None:
-            continue
-        mk = remap(inner)
-        if mk is None:
-            continue
-        if (not strict_head) and mk.startswith("head."):
-            # Drop head from source if strict_head=False
-            continue
-        mapped[mk] = v
-
-    # 1) Block index sanity for pre / post
-    def _idxs(prefix: str) -> List[int]:
-        out = []
-        pref = prefix + "."
-        for k in mapped.keys():
-            if k.startswith(pref):
-                try:
-                    out.append(int(k.split(".")[1]))
-                except Exception:
-                    pass
-        return sorted(set(out))
-
-    pre_idx  = _idxs("pre_blocks")
-    post_idx = _idxs("post_blocks")
-
-    exp_pre  = list(range(len(getattr(model, "pre_blocks", []))))
-    exp_post = list(range(len(getattr(model, "post_blocks", []))))
-
-    if verbose:
-        print(f"[fixed] pre_blocks in ckpt:  {pre_idx}  (expected {exp_pre})")
-        print(f"[fixed] post_blocks in ckpt: {post_idx} (expected {exp_post})")
-
-    if pre_idx != exp_pre or post_idx != exp_post:
-        raise RuntimeError(
-            f"[fixed] Block index mismatch.\n"
-            f"  ckpt pre_blocks:  {pre_idx} vs expected {exp_pre}\n"
-            f"  ckpt post_blocks: {post_idx} vs expected {exp_post}"
-        )
-
-    # 2) Strict key/shape validation
-    target_keys = set(model_keys)
-    if not strict_head:
-        target_keys = {k for k in target_keys if not k.startswith("head.")}
-
-    src_keys = set(mapped.keys())
-
-    missing = sorted(target_keys - src_keys)
-    unexpected = sorted(src_keys - target_keys)
-
-    shape_mismatch: List[Tuple[str, Tuple[int, ...], Tuple[int, ...]]] = []
-    for k in sorted(src_keys & target_keys):
-        if tuple(model_sd[k].shape) != tuple(mapped[k].shape):
-            shape_mismatch.append((k, tuple(mapped[k].shape), tuple(model_sd[k].shape)))
-
-    if missing or unexpected or shape_mismatch:
-        lines = ["[fixed] Checkpoint does not exactly match SingleAdaptedFixed."]
-        if missing:
-            lines.append(f"  - Missing in ckpt ({len(missing)}): {missing[:12]}{' ...' if len(missing)>12 else ''}")
-        if unexpected:
-            lines.append(f"  - Unexpected in ckpt ({len(unexpected)}): {unexpected[:12]}{' ...' if len(unexpected)>12 else ''}")
-        if shape_mismatch:
-            preview = [f"{k}: ckpt{ck} vs model{mk}" for k, ck, mk in shape_mismatch[:12]]
-            lines.append(
-                f"  - Shape mismatches ({len(shape_mismatch)}): "
-                + "; ".join(preview)
-                + (" ..." if len(shape_mismatch) > 12 else "")
-            )
-        raise RuntimeError("\n".join(lines))
-
-    # 3) Actually load
-    # Use strict=False because we've already manually enforced key/shape matches
-    model.load_state_dict({k: mapped[k] for k in sorted(src_keys)}, strict=False)
-
-    if verbose:
-        print(f"[fixed] Loaded {len(src_keys)} tensors into SingleAdaptedFixed.")
-
-    info: Dict[str, Any] = {
-        "loaded": sorted(src_keys),
-        "pre_blocks_indices_ckpt": pre_idx,
-        "post_blocks_indices_ckpt": post_idx,
-        "strict_head": strict_head,
-    }
-
-    return model, info
-
-
-def load_finetuned_vision_tower(vt_core, path_or_dir, strict: bool=False, device: str=None, dtype=None):
-    """
-    vt_core: the VisionTransformer module itself (NOT a wrapper).
-    path_or_dir: directory containing 'vision_tower.pt' OR a direct '.pt' file path.
-    """
-    print(f"vt_core type: {type(vt_core)}")
-    # Load weights on CPU, then into module
-    state = torch.load(path_or_dir, map_location="cpu")
-
-    missing, unexpected = vt_core.load_state_dict(state, strict=strict)
-    if missing or unexpected:
-        print(f"[vision_tower] load_state_dict: missing={missing}, unexpected={unexpected}", flush=True)
-
-    vt_core.eval() # no gradients
-
-    # Device / dtype placement
-    if device is None:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-    vt_core.to(device=device)
-    if dtype is not None:
-        vt_core.to(dtype=dtype)
-
-    print(f"[vision_tower] Loaded finetuned weights from {path_or_dir}", flush=True)
-    return vt_core
 
 
 class CLIPVisionTower(nn.Module):
-    def __init__(self, vision_tower, args, delay_load=False):
+    def __init__(self, 
+            vision_tower, 
+            args,
+            merge_strategy="ViT",
+            compression_rate=None, # None or a float number
+            drip_weight_path=None,
+            perceiver_weight_path=None,
+            temperature=None,
+            delay_load=False):
         super().__init__()
-
         self.is_loaded = False
-
         self.vision_tower_name = vision_tower
+        self.merge_strategy = merge_strategy
+        self.compression_rate = compression_rate
+        self.drip_weight_path = drip_weight_path
+        self.perceiver_weight_path = perceiver_weight_path
+        self.temperature = temperature
         self.select_layer = args.mm_vision_select_layer
         self.select_feature = getattr(args, 'mm_vision_select_feature', 'patch')
 
@@ -250,6 +70,79 @@ class CLIPVisionTower(nn.Module):
             self.load_model()
         else:
             self.cfg_only = CLIPVisionConfig.from_pretrained(self.vision_tower_name)
+    
+    def load_drip_weights(self, drip_weight_path):
+        print(f"🌊🌊🌊 [INFO] Loading DRIP weights from {drip_weight_path}")
+        sd = torch.load(drip_weight_path, map_location="cpu")
+
+        bp_anchor = "vision_tower.boundary_predictor."
+        null_suffix = "vision_tower.null_token"
+
+        bp_sd = {}
+        null_tensor = None
+
+        for k, v in sd.items():
+            if bp_anchor in k:
+                # keep only BoundaryPredictor's internal keys:
+                # boundary_predictor.0.weight, boundary_predictor.0.bias, ...
+                new_k = k.split(bp_anchor, 1)[1]
+                bp_sd[new_k] = v
+
+            if k.endswith(null_suffix):
+                null_tensor = v
+
+        print("🌊🌊🌊 [INFO] Loaded BP keys:")
+        for k in bp_sd.keys():
+            print(f"    {k}")
+
+        if len(bp_sd) == 0:
+            raise RuntimeError(
+                f"No boundary_predictor weights found in {drip_weight_path}. "
+                f"First keys: {list(sd.keys())[:10]}"
+            )
+
+        missing, unexpected = self.boundary_predictor.load_state_dict(bp_sd, strict=True)
+
+        if null_tensor is not None:
+            with torch.no_grad():
+                self.null_token.copy_(null_tensor)
+            print("🌊🌊🌊 [INFO] Loaded null_token")
+        else:
+            print("⚠️ [INFO] null_token not found in drip.bin")
+        if missing:
+            print(f"⚠️ [INFO] Missing BP keys: {missing}")
+        if unexpected:
+            print(f"⚠️ [INFO] Unexpected BP keys: {unexpected}")
+        return missing, unexpected
+
+    def load_perceiver_weights(self, perceiver_weight_path):
+        print(f"🌀🌀🌀 [INFO] Loading Perceiver weights from {perceiver_weight_path}")
+        sd = torch.load(perceiver_weight_path, map_location="cpu")
+        perceiver_anchor = "vision_tower.perceiver_resampler."
+
+        perceiver_sd = {}
+        for k, v in sd.items():
+            if perceiver_anchor in k:
+                new_k = k.split(perceiver_anchor, 1)[1]
+                perceiver_sd[new_k] = v
+
+        print("🌀🌀🌀 [INFO] Loaded Perceiver keys:")
+        for k in perceiver_sd.keys():
+            print(f"    {k}")
+        if len(perceiver_sd) == 0:
+            raise RuntimeError(
+                f"No perceiver_resampler weights found in {perceiver_weight_path}. "
+                f"First keys: {list(sd.keys())[:10]}"
+            )
+
+        missing, unexpected = self.perceiver_resampler.load_state_dict(perceiver_sd, strict=True)
+
+        if missing:
+            print(f"⚠️ [INFO] Missing Perceiver keys: {missing}")
+        if unexpected:
+            print(f"⚠️ [INFO] Unexpected Perceiver keys: {unexpected}")
+        return missing, unexpected
+
 
     def load_model(self, device_map=None):
         if self.is_loaded:
@@ -257,34 +150,300 @@ class CLIPVisionTower(nn.Module):
             return
 
         self.image_processor = CLIPImageProcessor.from_pretrained(self.vision_tower_name)
+        print(f"🍑🍑🍑🍑 [INFO] Loaded image processor for {self.vision_tower_name} with resolution: {self.image_processor.size}")
         self.vision_tower = CLIPVisionModel.from_pretrained(self.vision_tower_name, device_map=device_map)
         self.vision_tower.requires_grad_(False)
 
         self.is_loaded = True
 
+        if self.merge_strategy == "DRIP" or self.merge_strategy == "DRIP-H":
+            assert self.compression_rate is not None, "Compression rate must be provided for DRIP merge strategy."
+            width = self.vision_tower.config.hidden_size
+            mlp_ratio = self.vision_tower.config.intermediate_size / self.vision_tower.config.hidden_size
+            self.null_token = nn.Parameter(torch.zeros(1, 1, width))
+            
+            if self.merge_strategy == "DRIP-H":
+                self.boundary_predictor = H_Net(
+                    d_model=width,
+                    d_inner=int(width * mlp_ratio),
+                    activation_function="gelu",
+                    temp=self.temperature,
+                    prior=self.compression_rate,
+                    bp_type='gumbel',
+                    threshold=0.5,
+                    smart_init=False
+                )
+                print(f"🐶🐶🐶 [INFO] Using DRIP H-Net merge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens.")
+                print(f"🌪🌪🌪 [INFO] sampling temperature during training: {self.temperature}")
+            else:
+                self.boundary_predictor = BoundaryPredictor(
+                    d_model=width,
+                    d_inner=int(width * mlp_ratio),
+                    activation_function="gelu",
+                    temp=self.temperature,
+                    prior=self.compression_rate,
+                    bp_type='gumbel',
+                    threshold=0.5,
+                    smart_init=False
+                )
+                print(f"🐰🐰🐰 [INFO] Using DRIP merge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens.")
+                print(f"🌪🌪🌪 [INFO] sampling temperature during training: {self.temperature}")
+
+            if self.drip_weight_path is not None:
+                missing, unexpected = self.load_drip_weights(self.drip_weight_path)
+                assert len(missing) == 0, f"Missing keys when loading DRIP weights: {missing}"
+                assert len(unexpected) == 0, f"Unexpected keys when loading DRIP weights: {unexpected}"
+                print(f"🦄🦄🦄 [INFO] Loaded DRIP weights from {self.drip_weight_path}")
+            else:
+                print(f"🐴🐴🐴 [INFO] No DRIP weights provided, initializing DRIP modules from scratch.")            
+
+
+        elif self.merge_strategy == "Fixed":
+            assert self.compression_rate is not None, "compression_rate must be provided for Fixed merge strategy."
+            width = self.vision_tower.config.hidden_size
+            self.null_token = nn.Parameter(torch.zeros(1, 1, width))
+            print(f"🐰🐰🐰 [INFO] Using Fixed merge strategy with compression rate {self.compression_rate}. This will keep every {max(1, int(1/self.compression_rate))} tokens.")
+        
+        elif self.merge_strategy == "PruMerge":
+            assert self.compression_rate is not None, "compression_rate must be provided for PruMerge merge strategy."
+            print(f"🐰🐰🐰 [INFO] Using LLaVA-PruMerge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens")
+
+        elif self.merge_strategy == "PruneSID":
+            assert self.compression_rate is not None, "compression_rate must be provided for PruneSID merge strategy."
+            print(f"🐰🐰🐰 [INFO] Using PruneSID strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens")
+            print("🟢🟢🟢NOTE: PruneSID is implemented in src/LLaVA_wrapper/llava_local/model/builder.py (`load_pretrained_model` function)")
+
+        elif self.merge_strategy == "Perceiver":
+            assert self.compression_rate is not None, "compression_rate must be provided for Perceiver merge strategy."
+            
+            # compute the number of latents
+            width = self.vision_tower.config.hidden_size
+            num_latents = max(1, int(self.num_patches * self.compression_rate))
+            mlp_ratio = self.vision_tower.config.intermediate_size / self.vision_tower.config.hidden_size
+            
+            # create the PerceiverResampler module
+            self.perceiver_resampler = PerceiverResampler(dim=width, num_latents=num_latents, depth=1, ff_mult=int(mlp_ratio))
+            print(
+                f"🌀🌀🌀 [INFO] Using Perceiver resampler with compression rate {self.compression_rate}. "
+                f"This maps {self.num_patches} tokens -> {num_latents} learned latent tokens.")
+
+            if self.perceiver_weight_path is not None:
+                missing, unexpected = self.load_perceiver_weights(self.perceiver_weight_path)
+                assert len(missing) == 0, f"Missing keys when loading Perceiver weights: {missing}"
+                assert len(unexpected) == 0, f"Unexpected keys when loading Perceiver weights: {unexpected}"
+                print(f"🦄🦄🦄 [INFO] Loaded Perceiver weights from {self.perceiver_weight_path}")
+            else:
+                print("🐴🐴🐴 [INFO] No Perceiver weights provided, initializing Perceiver from scratch.")
+
+
+        else:
+            # no additional modules needed for plain ViT
+            print(f"🩵🩵🩵 [INFO] Using original ViT features without merging. This will keep all tokens ({self.num_patches} tokens).")
+
+    def _merge_patch_tokens(self, patch_tokens: torch.Tensor, inference=False):
+        B, L, D = patch_tokens.shape
+
+        if self.merge_strategy == "Fixed":
+            num_tokens_to_keep = max(1, int(L * self.compression_rate))
+            indices = torch.linspace(0, L - 1, steps=num_tokens_to_keep, device=patch_tokens.device).round().long()
+            hard_boundaries = torch.zeros(B, L, device=patch_tokens.device)
+            hard_boundaries[:, indices] = 1
+
+        elif self.merge_strategy  == "DRIP" or self.merge_strategy == "DRIP-H":
+            patch_transposed = patch_tokens.transpose(0, 1)  # [L, B, D]
+
+            if hasattr(self, "boundary_predictor"):
+                self.boundary_predictor.to(device=patch_tokens.device, dtype=patch_tokens.dtype)
+
+            if hasattr(self, "null_token"):
+                self.null_token.data = self.null_token.data.to(device=patch_tokens.device, dtype=patch_tokens.dtype)
+            
+            if inference:
+                _, hard_boundaries = self.boundary_predictor.inference(patch_transposed)
+            else:
+                _, hard_boundaries = self.boundary_predictor(patch_transposed)
+            
+
+            """
+                enforce the last token to be a boundary token
+            """
+            last = torch.ones_like(hard_boundaries[:, -1:])
+            hard_boundaries = torch.cat([hard_boundaries[:, :-1], last], dim=1)
+
+        else:
+            raise ValueError(f'Unknown merge strategy: {self.merge_strategy}')
+
+        hidden = patch_tokens.transpose(0, 1)              # [L, B, D]
+
+        shortened_hidden = downsample(
+            boundaries=hard_boundaries,
+            hidden=hidden,
+            null_group=self.null_token
+        )                                            # [S, B, D]
+
+        merged_tokens = shortened_hidden.transpose(0, 1)  # [B, S, D]
+
+        if not inference:
+            if self.merge_strategy == "Fixed":
+                boundary_loss = patch_tokens.new_zeros(())
+            elif self.merge_strategy == "DRIP":
+                boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
+            elif self.merge_strategy == "DRIP-H":
+                boundary_loss = self.boundary_predictor.calc_loss(hard_boundaries)
+            else:
+                raise ValueError(f'Unknown merge strategy: {self.merge_strategy}')
+            avg_boundaries_per_batch = hard_boundaries.sum(dim=1).float().mean().item()
+            boundary_ratio = avg_boundaries_per_batch / hard_boundaries.size(1)
+            return merged_tokens, boundary_loss, avg_boundaries_per_batch, boundary_ratio
+        else:
+            return merged_tokens
+
     def feature_select(self, image_forward_outs):
         image_features = image_forward_outs.hidden_states[self.select_layer]
-        if self.select_feature == 'patch':
-            image_features = image_features[:, 1:]
-        elif self.select_feature == 'cls_patch':
-            image_features = image_features
-        else:
-            raise ValueError(f'Unexpected select feature: {self.select_feature}')
+        image_features = image_features[:, 1:]
+        return image_features
+    
+    def token_prune_merge_advanced(self, images, reduction_ratio):
+        '''
+            LLaVA PruMerge
+            code adapted from: 
+            https://github.com/42Shawn/LLaVA-PruMerge/blob/main/llava/model/multimodal_encoder/clip_encoder.py#L85
+        '''
+        # token_indix_list = []
+        # token_indix_dict = {}
+
+        #set hooks for extracting desired layer's k and q
+        hook_handle_k = self.vision_tower.vision_model.encoder.layers[23].self_attn.k_proj.register_forward_hook(hook_k)
+        hook_handle_q = self.vision_tower.vision_model.encoder.layers[23].self_attn.q_proj.register_forward_hook(hook_q)
+
+        #forward pass
+        image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), output_hidden_states=True)
+        cls_token_last_layer = image_forward_outs.hidden_states[self.select_layer][:, 0:1]
+        image_features = self.feature_select(image_forward_outs).to(images.dtype)
+        B, N, C = image_features.shape # [B, N, C]
+
+        #extract desired layer's k and q and remove hooks; calculate attention
+        desired_layer_k = outputs["desired_k"] # [B, N+1, C]
+        desired_layer_q = outputs["desired_q"] # [B, N+1, C]
+
+        hook_handle_k.remove()
+        hook_handle_q.remove()
+
+        attn = (desired_layer_q @ desired_layer_k.transpose(-2, -1)) * C ** -0.5
+        attn = F.softmax(attn, dim=-1) # [B, N+1, N+1]
+
+        cls_attn = attn[:, 0, 1:] # [B, N]
+
+        _, idx = torch.topk(cls_attn, int(N*reduction_ratio), dim=1, largest=True)  # [B, left_tokens] , sorted=True
+        index = idx.unsqueeze(-1).expand(-1, -1, C)  # [B, left_tokens, C]
+
+        Key_wo_cls = desired_layer_k[:, 1:]  # [B, N-1, C]
+
+        x_others = torch.gather(image_features, dim=1, index=index)  # [B, left_tokens, C]
+        x_others_attn = torch.gather(cls_attn, dim=1, index=idx)  
+        Key_others = torch.gather(Key_wo_cls, dim=1, index=index)  # [B, left_tokens, C]
+        compl = complement_idx(idx, N)  # [B, N-1-left_tokens]
+        non_topk = torch.gather(image_features, dim=1, index=compl.unsqueeze(-1).expand(-1, -1, C))  # [B, N-1-left_tokens, C]
+        non_topk_Key = torch.gather(Key_wo_cls, dim=1, index=compl.unsqueeze(-1).expand(-1, -1, C))
+        non_topk_attn = torch.gather(cls_attn, dim=1, index=compl)  # [B, N-1-left_tokens]
+
+        Key_others_norm = F.normalize(Key_others, p=2, dim=-1)
+        non_topk_Key_norm = F.normalize(non_topk_Key, p=2, dim=-1)
+
+        # cos_sim = torch.bmm(Key_others_norm, non_topk_Key_norm.transpose(1, 2)) # [B, left_tokens, N-1-left_tokens]
+
+        # _, cluster_indices = torch.topk(cos_sim, k=4, dim=2, largest=True)
+
+        B, left_tokens, C = x_others.size()
+        updated_x_others = torch.zeros_like(x_others)
+
+        for b in range(B):
+            for i in range(left_tokens):
+                key_others_norm = Key_others_norm[b,i,:].unsqueeze(0).unsqueeze(0)
+
+                before_i_Key = Key_others_norm[b, :i, :].unsqueeze(0)  
+                after_i_Key = Key_others_norm[b, i+1:, :].unsqueeze(0) 
+
+                before_i_x_others = x_others[b, :i, :].unsqueeze(0)  
+                after_i_x_others = x_others[b, i+1:, :].unsqueeze(0)   
+                rest_x_others = torch.cat([before_i_x_others, after_i_x_others, non_topk[b,:,:].unsqueeze(0)], dim=1)   
+                before_i_x_others_attn = x_others_attn[b, :i].unsqueeze(0)  
+                after_i_x_others_attn = x_others_attn[b, i+1:].unsqueeze(0)  
+                rest_x_others_attn = torch.cat([before_i_x_others_attn, after_i_x_others_attn, non_topk_attn[b,:].unsqueeze(0)], dim=1)  
+
+                rest_Keys = torch.cat([before_i_Key, after_i_Key, non_topk_Key_norm[b,:,:].unsqueeze(0)], dim=1)
+                cos_sim_matrix = torch.bmm(key_others_norm, rest_Keys.transpose(1, 2))
+
+                _, cluster_indices = torch.topk(cos_sim_matrix, k=int(32), dim=2, largest=True)
+
+
+                cluster_tokens = rest_x_others[:,cluster_indices.squeeze(),:]
+                weights = rest_x_others_attn[:,cluster_indices.squeeze()].unsqueeze(-1)
+
+                # update cluster centers
+                weighted_avg = torch.sum(cluster_tokens * weights, dim=1) #/ torch.sum(weights)
+                updated_center = weighted_avg + x_others[b, i, :]  
+                updated_x_others[b, i, :] = updated_center 
+            
+
+        extra_one_token = torch.sum(non_topk * non_topk_attn.unsqueeze(-1), dim=1, keepdim=True)  # [B, 1, C]
+        updated_x_others = torch.cat([updated_x_others, extra_one_token],dim=1)
+
+
+        # NOTE: fix the type mismatch issue
+        image_features = updated_x_others.to(dtype=self.dtype)
         return image_features
 
-    @torch.no_grad()
-    def forward(self, images):
-        if type(images) is list:
+
+    def forward(self, images, inference=False):
+        if isinstance(images, list):
             image_features = []
+            boundary_losses = []
+
             for image in images:
                 image_forward_out = self.vision_tower(image.to(device=self.device, dtype=self.dtype).unsqueeze(0), output_hidden_states=True)
                 image_feature = self.feature_select(image_forward_out).to(image.dtype)
-                image_features.append(image_feature)
-        else:
-            image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), output_hidden_states=True)
-            image_features = self.feature_select(image_forward_outs).to(images.dtype)
 
-        return image_features
+                if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+                    if not inference:
+                        image_feature, boundary_loss, _, _ = self._merge_patch_tokens(image_feature, inference=False)
+                        boundary_losses.append(boundary_loss)
+                    else:
+                        image_feature = self._merge_patch_tokens(image_feature, inference=True)
+                
+                elif self.merge_strategy == "Perceiver":
+                    self.perceiver_resampler.to(device=image_features.device, dtype=image_features.dtype)
+                    image_features = self.perceiver_resampler(image_features)
+
+                image_features.append(image_feature)
+
+            if not inference and self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+                boundary_loss = torch.stack(boundary_losses).mean()
+                return image_features, boundary_loss
+
+            return image_features
+
+        else:
+            if self.merge_strategy == "PruMerge":
+                image_features = self.token_prune_merge_advanced(images, reduction_ratio=self.compression_rate)
+                # NOTE: we need to hardcode the precision/data type after PruMerge
+                image_features = image_features.to(dtype=torch.float16)
+            else:
+                image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), output_hidden_states=True)
+                image_features = self.feature_select(image_forward_outs).to(images.dtype)
+
+                if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+                    if not inference:
+                        image_features, boundary_loss, _, _ = self._merge_patch_tokens(image_features, inference=False)
+                        return image_features, boundary_loss
+                    else:
+                        image_features = self._merge_patch_tokens(image_features, inference=True)
+                
+                elif self.merge_strategy == "Perceiver":
+                    self.perceiver_resampler.to(device=image_features.device, dtype=image_features.dtype)
+                    image_features = self.perceiver_resampler(image_features)
+            
+            return image_features
 
     @property
     def dummy_feature(self):
@@ -318,490 +477,227 @@ class CLIPVisionTower(nn.Module):
         return (self.config.image_size // self.config.patch_size) ** 2
 
 
-class ViTVisionTower(nn.Module):
-    """
-    DTP ViT wrapper for CLIP-like vision tower.
-    This class is designed to load a DTP ViT model from a CLIP checkpoint and
-    provide a forward method that returns image features.
-    """
-    def __init__(self, 
-            checkpoint_path: str,
-            vision_tower: str,
-            args, 
-            image_size: int = 224,
-            patch_size: int = 16,
-            in_chans: int = 3,
-            hidden_size: int = 768,
-            depth: Tuple = (2, 10, 0),
-            num_heads: int = 12,
-            mlp_ratio: float = 4.0,
-            drop_rate: float = 0.1,
-            attn_drop_rate: float = 0.1, 
-            temp: float = 0.5, 
-            compression_rate: float = 0.1,
-            threshold: float = 0.5,
-            lower_bound: bool = False,
-            lambda_val: float = 1.0,
-            activation_function: str = 'gelu',
-            num_classes: int = 512,
-            flop_measure: bool = False,
-            delay_load=False,
-            finetuning_mode: bool = False
-            ):
-        super().__init__()
-
-        self.vision_tower_name = vision_tower
-        self.checkpoint_path = checkpoint_path
-        self.image_size = image_size
-        self.patch_size = patch_size
-        self.in_chans = in_chans
-        self.depth = depth
-        self.num_heads = num_heads
-        self.mlp_ratio = mlp_ratio
-        self.drop_rate = drop_rate
-        self._hidden_size = hidden_size
-        self.attn_drop_rate = attn_drop_rate
-        self.temp = temp
-        self.compression_rate = compression_rate
-        self.threshold = threshold
-        self.lower_bound = lower_bound
-        self.lambda_val = lambda_val
-        self.activation_function = activation_function
-        self.num_classes = num_classes
-        self.flop_measure = flop_measure
-        self.finetuning_mode = finetuning_mode
-
-        self.is_loaded = False
-        if not delay_load or getattr(args, 'unfreeze_mm_vision_tower', False):
-            self.load_model()
-
-    def load_model(self, device_map=None):
-        if self.is_loaded:
-            print(f"{self.checkpoint_path} is already loaded. Skipping.")
-            print(f"btw, device map is {device_map}")
-            return
-        
-        self.vision_tower: VisionTransformer = VisionTransformer(
-                image_size=self.image_size,
-                patch_size=self.patch_size,
-                width=self._hidden_size,
-                layers=12,
-                heads=self.num_heads,
-                mlp_ratio=self.mlp_ratio
-        )
-
-        # FIXME: load the model
-        # option 1: load from the original CLIP checkpoint
-        load_vit_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
-
-        # option 2: load from the finetuned checkpoint
-        #load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
-
-
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.vision_tower.to(device)
-
-        # if in finetuning mode, change precision into float16
-        if self.finetuning_mode:
-            self.vision_tower = self.vision_tower.half()
-        
-        self.vision_tower.requires_grad_(False)
-        self.image_processor = CLIPImageProcessor.from_pretrained(self.vision_tower_name)
-        self.image_processor.size = {'shortest_edge': 224}
-        self.image_processor.crop_size = {'height': 224, 'width': 224}
-        self.is_loaded = True
-        self.configurations = {
-            'image_size': self.image_size,
-            'patch_size': self.patch_size,
-            'in_chans': self.in_chans,
-            'hidden_size': self._hidden_size,
-            'depth': self.depth,
-            'num_heads': self.num_heads,
-            'mlp_ratio': self.mlp_ratio,
-            'drop_rate': self.drop_rate,
-            'attn_drop_rate': self.attn_drop_rate,
-            'temp': self.temp,
-            'compression_rate': self.compression_rate,
-            'threshold': self.threshold,
-            'lower_bound': self.lower_bound,
-            'lambda_val': self.lambda_val,
-            'activation_function': self.activation_function,
-            'num_classes': self.num_classes,
-            'flop_measure': self.flop_measure
-        }
-        
-    
-    def feature_select(self, image_forward_outs):
-        assert image_forward_outs is not None
-        raise NotImplementedError("DTPViT does not require feature selection like CLIP. Use the full output.")
-
-    @torch.no_grad() # FIXME: remove this if finetuning
-    def forward(self, images):
-        """
-        images: torch.Tensor of shape [B, C, H, W]
-        returns: torch.Tensor of shape [B, N_tokens, hidden_dim]
-        """
-        images = images.to("cuda", dtype=self.dtype)
-        features = self.vision_tower.encode(images)
-        features = features.to("cuda", dtype=self.dtype)        
-        return features
-
-    @property
-    def dummy_feature(self):
-        return torch.zeros(1, self.hidden_size, device=self.device, dtype=self.dtype)
-
-    @property
-    def dtype(self):
-        return next(self.vision_tower.parameters()).dtype
-
-    @property
-    def device(self):
-        return torch.device("cuda")
-
-    @property
-    def config(self):
-        return self.configurations
-
-    @property
-    def hidden_size(self):
-        return self.vision_tower.width
-
-    @property
-    def num_patches_per_side(self):
-        return self.vision_tower.image_size // self.vision_tower.patch_size
-
-    @property
-    def num_patches(self):
-        return self.num_patches_per_side ** 2
-    
-
-class DRIPVisionTower(nn.Module):
-    """
-    DTP ViT wrapper for CLIP-like vision tower.
-    This class is designed to load a DTP ViT model from a CLIP checkpoint and
-    provide a forward method that returns image features.
-    """
-    def __init__(self, 
-            backbone: str,
-            checkpoint_path: str,
-            vision_tower: str,
-            args, 
-            image_size: int = 224,
-            patch_size: int = 16,
-            in_chans: int = 3,
-            hidden_size: int = 768,
-            depth: Tuple = (2, 10, 0),
-            num_heads: int = 12,
-            mlp_ratio: float = 4.0,
-            drop_rate: float = 0.1,
-            attn_drop_rate: float = 0.1, 
-            temp: float = 0.5, 
-            compression_rate: float = 0.1,
-            threshold: float = 0.5,
-            lower_bound: bool = False,
-            lambda_val: float = 1.0,
-            activation_function: str = 'gelu',
-            num_classes: int = 512,
-            flop_measure: bool = False,
-            delay_load=False,
-            finetuning_mode: bool = False
-            ):
-        super().__init__()
-        self.backbone = backbone
-        self.vision_tower_name = vision_tower
-        self.checkpoint_path = checkpoint_path
-        self.image_size = image_size
-        self.patch_size = patch_size
-        self.in_chans = in_chans
-        self.depth = depth
-        self.num_heads = num_heads
-        self.mlp_ratio = mlp_ratio
-        self.drop_rate = drop_rate
-        self._hidden_size = hidden_size
-        self.attn_drop_rate = attn_drop_rate
-        self.temp = temp
-        self.compression_rate = compression_rate
-        self.threshold = threshold
-        self.lower_bound = lower_bound
-        self.lambda_val = lambda_val
-        self.activation_function = activation_function
-        self.num_classes = num_classes
-        self.flop_measure = flop_measure
-        self.finetuning_mode = finetuning_mode
-
-        self.is_loaded = False
-        if not delay_load or getattr(args, 'unfreeze_mm_vision_tower', False):
-            self.load_model()
-
-    def load_model(self, device_map=None):
-        if self.is_loaded:
-            print(f"{self.checkpoint_path} is already loaded. Skipping.")
-            print(f"btw, device map is {device_map}")
-            return
-
-        self.vision_tower: DTPViT = DTPViT(
-            image_size=self.image_size,
-            patch_size=self.patch_size,
-            in_chans=self.in_chans,
-            embed_dim=self._hidden_size,
-            depth=self.depth,
-            num_heads=self.num_heads,
-            mlp_ratio=self.mlp_ratio,
-            drop_rate=self.drop_rate,
-            attn_drop_rate=self.attn_drop_rate,
-            temp=self.temp,
-            compression_rate=self.compression_rate,
-            threshold=self.threshold,
-            #lower_bound=self.lower_bound,
-            #lambda_val=self.lambda_val,
-            activation_function=self.activation_function,
-            num_classes=self.num_classes,
-            flop_measure=self.flop_measure
-        ) 
-
-        if self.backbone == 'ViT':
-            self.vision_tower, _ = load_dtp_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
-        elif self.backbone == 'XL':
-            self.vision_tower, _ = load_dtpx_from_clip_checkpoint(self.vision_tower, self.checkpoint_path)
-        elif self.backbone == 'ViT-with-weights':
-            weight_transfer(self.vision_tower)
+class TimmImageProcessor:
+    def __init__(self, transform, data_config):
+        self.transform = transform
+        self.data_config = data_config
+        input_size = data_config.get("input_size", None)
+        if input_size is not None:
+            self.size = {"shortest_edge": input_size[-1]}
+            self.crop_size = {"height": input_size[-2], "width": input_size[-1]}
         else:
-            raise ValueError(f'Unsupported backbone: {self.backbone}')
-
-        # NOTE: option 2: load from the finetuned checkpoint
-        #load_finetuned_vision_tower(self.vision_tower, self.checkpoint_path)
-
-
-        # if in finetuning mode, change precision into float16
-        if self.finetuning_mode:
-            self.vision_tower = self.vision_tower.half()
-        
-        self.vision_tower.requires_grad_(False)
-        device = "cuda" if torch.cuda.is_available() else "cpu" 
-        self.vision_tower.to(device)
-        self.image_processor = CLIPImageProcessor.from_pretrained(self.vision_tower_name)
-        self.image_processor.size = {'shortest_edge': 224}
-        self.image_processor.crop_size = {'height': 224, 'width': 224}
-        self.is_loaded = True
-        self.configurations = {
-            'image_size': self.image_size,
-            'patch_size': self.patch_size,
-            'in_chans': self.in_chans,
-            'hidden_size': self._hidden_size,
-            'depth': self.depth,
-            'num_heads': self.num_heads,
-            'mlp_ratio': self.mlp_ratio,
-            'drop_rate': self.drop_rate,
-            'attn_drop_rate': self.attn_drop_rate,
-            'temp': self.temp,
-            'compression_rate': self.compression_rate,
-            'threshold': self.threshold,
-            'lower_bound': self.lower_bound,
-            'lambda_val': self.lambda_val,
-            'activation_function': self.activation_function,
-            'num_classes': self.num_classes,
-            'flop_measure': self.flop_measure
-        }
+            self.size = {}
+            self.crop_size = {}
+    def preprocess(self, image, return_tensors=None):
+        pixel_values = self.transform(image)
+        if return_tensors == "pt":
+            pixel_values = pixel_values.unsqueeze(0)
+        return {"pixel_values": pixel_values}
     
-    def feature_select(self, image_forward_outs):
-        assert image_forward_outs is not None
-        raise NotImplementedError("DTPViT does not require feature selection like CLIP. Use the full output.")
+    def __call__(self, images, return_tensors=None):
+        if isinstance(images, list):
+            pixel_values = [self.transform(image) for image in images]
+            pixel_values = torch.stack(pixel_values, dim=0)
+            return {"pixel_values": pixel_values}
+        return self.preprocess(images, return_tensors=return_tensors)
 
-    @torch.no_grad() # FIXME: remove this if finetuning
-    def forward(self, images):
-        """
-        images: torch.Tensor of shape [B, C, H, W]
-        returns: torch.Tensor of shape [B, N_tokens, hidden_dim]
-        """
-        # encode images
-        images = images.to("cuda", dtype=self.dtype)
-        features = self.vision_tower.encode(images, return_loss=False)
-        features = features.to("cuda", dtype=self.dtype)
-        return features
 
-    @property
-    def dummy_feature(self):
-        return torch.zeros(1, self.hidden_size, device=self.device, dtype=self.dtype)
-
-    @property
-    def dtype(self):
-        return next(self.vision_tower.parameters()).dtype
-
-    @property
-    def device(self):
-        return torch.device("cuda")
-
-    @property
-    def config(self):
-        return self.configurations
-
-    @property
-    def hidden_size(self):
-        return self.vision_tower.embed_dim
-
-    @property
-    def num_patches_per_side(self):
-        return self.vision_tower.image_size // self.vision_tower.patch_size
-
-    @property
-    def num_patches(self):
-        return self.num_patches_per_side ** 2
-    
-
-class BaselineVisionTower(nn.Module):
-    def __init__(self, 
-            baseline_type: str,
-            backbone: str,
-            checkpoint_path: str,
-            vision_tower: str,
-            args, 
-            image_size: int = 224,
-            patch_size: int = 16,
-            in_chans: int = 3,
-            hidden_size: int = 768,
-            depth: Tuple = (2, 10, 0),
-            num_heads: int = 12,
-            mlp_ratio: float = 4.0,
-            drop_rate: float = 0.1,
-            attn_drop_rate: float = 0.1, 
-            temp: float = 0.5, 
-            compression_rate: float = 0.1,
-            threshold: float = 0.5,
-            lower_bound: bool = False,
-            lambda_val: float = 1.0,
-            activation_function: str = 'gelu',
-            num_classes: int = 512,
-            flop_measure: bool = False,
-            delay_load=False,
-            finetuning_mode: bool = False
-            ):
-        super().__init__()
-        self.backbone_type = baseline_type
-        self.backbone = backbone
-        self.vision_tower_name = vision_tower
-        self.checkpoint_path = checkpoint_path
-        self.image_size = image_size
-        self.patch_size = patch_size
-        self.in_chans = in_chans
-        self.depth = depth
-        self.num_heads = num_heads
-        self.mlp_ratio = mlp_ratio
-        self.drop_rate = drop_rate
-        self._hidden_size = hidden_size
-        self.attn_drop_rate = attn_drop_rate
-        self.temp = temp
-        self.compression_rate = compression_rate
-        self.threshold = threshold
-        self.lower_bound = lower_bound
-        self.lambda_val = lambda_val
-        self.activation_function = activation_function
-        self.num_classes = num_classes
-        self.flop_measure = flop_measure
-        self.finetuning_mode = finetuning_mode
+class TimmVisionTower(CLIPVisionTower):
+    def __init__(self,
+            vision_tower,
+            args,
+            merge_strategy="ViT",
+            compression_rate=None,
+            drip_weight_path=None,
+            temperature=None,
+            delay_load=False):
+        nn.Module.__init__(self)
 
         self.is_loaded = False
-        if not delay_load or getattr(args, 'unfreeze_mm_vision_tower', False):
-            self.load_model()
+        self.vision_tower_name = vision_tower
+        self.merge_strategy = merge_strategy
+        self.compression_rate = compression_rate
+        self.drip_weight_path = drip_weight_path
+        self.temperature = temperature
+        self.select_layer = args.mm_vision_select_layer
+        self.select_feature = getattr(args, 'mm_vision_select_feature', 'patch')
 
-    def load_model(self, device_map=None):
-        if self.is_loaded:
-            print(f"{self.checkpoint_path} is already loaded. Skipping.")
-            print(f"btw, device map is {device_map}")
-            return
-        
-        if self.backbone_type == 'Fixed':
-            print("🍔🍔🍔🍔🍔 Using Fixed pooling 🍔🍔🍔🍔🍔")
-            self.vision_tower: SingleAdaptedFixed = SingleAdaptedFixed(
-                image_size=self.image_size,
-                patch_size=self.patch_size,
-                in_chans=self.in_chans,
-                embed_dim=self._hidden_size,
-                depth=self.depth,
-                num_heads=self.num_heads,
-                mlp_ratio=self.mlp_ratio,
-                drop_rate=self.drop_rate,
-                num_classes=self.num_classes,
-                activation_function=self.activation_function,
-                flop_measure=self.flop_measure
+        if not delay_load:
+            self.load_model()
+        elif getattr(args, 'unfreeze_mm_vision_tower', False):
+            self.load_model()
+        else:
+            raise NotImplementedError(
+                "delay_load=True for timm vision towers needs a cfg_only adapter. "
+                "For now use delay_load=False."
             )
 
-            if self.backbone == 'own':
-                self.vision_tower, _ = load_fixed_pooling(self.vision_tower, self.checkpoint_path)
-            elif self.backbone == 'pretrained':
-                print("🍌🍌🍌🍌🍌🍌🍌🍌using pretrained weights🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌")
-                weight_transfer_baseline(self.vision_tower)
-            else:
-                raise NotImplementedError(f"Unsupported backbone type: {self.backbone}")
+    def _make_timm_config(self):
+        model = self.vision_tower
+        hidden_size = model.num_features
 
-        elif self.backbone_type == 'Swin':
-            print("🚑🚑🚑🚑🚑 Using Swin pooling 🚑🚑🚑🚑🚑")
-            # self.vision_tower: SingleAdaptedSwin = SingleAdaptedSwin(
-            #     image_size=self.image_size,
-            #     patch_size=self.patch_size,
-            #     in_chans=self.in_chans,
-            #     embed_dim=self._hidden_size,
-            #     depth=self.depth,
-            #     num_heads=self.num_heads,
-            #     mlp_ratio=self.mlp_ratio,
-            #     drop_rate=self.drop_rate,
-            #     num_classes=self.num_classes,
-            #     activation_function=self.activation_function,
-            #     flop_measure=self.flop_measure
-            # )
-            # self.vision_tower, _ = load_fixed_pooling(self.vision_tower, self.checkpoint_path)
+        # ViT MLP hidden dimension, analogous to CLIP config.intermediate_size
+        if hasattr(model.blocks[0].mlp, "fc1"):
+            intermediate_size = model.blocks[0].mlp.fc1.out_features
+        elif hasattr(model.blocks[0].mlp, "w1"):
+            intermediate_size = model.blocks[0].mlp.w1.out_features
         else:
-            raise NotImplementedError(f"Unsupported baseline type: {self.backbone_type}")
+            intermediate_size = hidden_size * 4
 
-        # if in finetuning mode, change precision into float16
-        if self.finetuning_mode:
-            self.vision_tower = self.vision_tower.half()
-        
+        patch_size = model.patch_embed.patch_size
+        if isinstance(patch_size, tuple):
+            patch_size = patch_size[0]
+
+        image_size = model.patch_embed.img_size
+        if isinstance(image_size, tuple):
+            image_size = image_size[0]
+
+        grid_size = model.patch_embed.grid_size
+        if isinstance(grid_size, tuple):
+            grid_h, grid_w = grid_size
+        else:
+            grid_h = grid_w = grid_size
+
+        return SimpleNamespace(
+            hidden_size=hidden_size,
+            intermediate_size=intermediate_size,
+            image_size=image_size,
+            patch_size=patch_size,
+            grid_size=(grid_h, grid_w),
+        )
+
+    def load_model(self, device_map=None):
+        if self.is_loaded:
+            print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
+            return
+
+        timm_name = self.vision_tower_name
+        if timm_name.startswith("timm/"):
+            timm_name = timm_name[len("timm/"):]
+        self.vision_tower = timm.create_model(
+            timm_name,
+            pretrained=True,
+            num_classes=0
+        )
+
         self.vision_tower.requires_grad_(False)
-        device = "cuda" if torch.cuda.is_available() else "cpu" 
-        self.vision_tower.to(device)
-        self.image_processor = CLIPImageProcessor.from_pretrained(self.vision_tower_name)
-        self.image_processor.size = {'shortest_edge': 224}
-        self.image_processor.crop_size = {'height': 224, 'width': 224}
+        self.vision_tower.config = self._make_timm_config()
+
+        data_config = resolve_model_data_config(self.vision_tower)
+        transform = create_transform(**data_config, is_training=False)
+        self.image_processor = TimmImageProcessor(transform, data_config)        
+        
+        
+        print(f"🍑🍑🍑🍑 [INFO] Loaded timm image processor for {self.vision_tower_name} with resolution: {self.image_processor.size}")
+
         self.is_loaded = True
-        self.configurations = {
-            'image_size': self.image_size,
-            'patch_size': self.patch_size,
-            'in_chans': self.in_chans,
-            'hidden_size': self._hidden_size,
-            'depth': self.depth,
-            'num_heads': self.num_heads,
-            'mlp_ratio': self.mlp_ratio,
-            'drop_rate': self.drop_rate,
-            'attn_drop_rate': self.attn_drop_rate,
-            'temp': self.temp,
-            'compression_rate': self.compression_rate,
-            'threshold': self.threshold,
-            'lower_bound': self.lower_bound,
-            'lambda_val': self.lambda_val,
-            'activation_function': self.activation_function,
-            'num_classes': self.num_classes,
-            'flop_measure': self.flop_measure
-        }
-    
+        if self.merge_strategy == "DRIP" or self.merge_strategy == "DRIP-H":
+            assert self.compression_rate is not None, "Compression rate must be provided for DRIP merge strategy."
+            width = self.vision_tower.config.hidden_size
+            mlp_ratio = self.vision_tower.config.intermediate_size / self.vision_tower.config.hidden_size
+            self.null_token = nn.Parameter(torch.zeros(1, 1, width))
+            if self.merge_strategy == "DRIP-H":
+                self.boundary_predictor = H_Net(
+                    d_model=width,
+                    d_inner=int(width * mlp_ratio),
+                    activation_function="gelu",
+                    temp=self.temperature,
+                    prior=self.compression_rate,
+                    bp_type='gumbel',
+                    threshold=0.5,
+                    smart_init=False
+                )
+                print(f"🐶🐶🐶 [INFO] Using DRIP H-Net merge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens.")
+                print(f"🌪🌪🌪 [INFO] sampling temperature during training: {self.temperature}")
+            else:
+                self.boundary_predictor = BoundaryPredictor(
+                    d_model=width,
+                    d_inner=int(width * mlp_ratio),
+                    activation_function="gelu",
+                    temp=self.temperature,
+                    prior=self.compression_rate,
+                    bp_type='gumbel',
+                    threshold=0.5,
+                    smart_init=False
+                )
+                print(f"🐰🐰🐰 [INFO] Using DRIP merge strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens.")
+                print(f"🌪🌪🌪 [INFO] sampling temperature during training: {self.temperature}")
+
+            if self.drip_weight_path is not None:
+                missing, unexpected = self.load_drip_weights(self.drip_weight_path)
+                assert len(missing) == 0, f"Missing keys when loading DRIP weights: {missing}"
+                assert len(unexpected) == 0, f"Unexpected keys when loading DRIP weights: {unexpected}"
+                print(f"🦄🦄🦄 [INFO] Loaded DRIP weights from {self.drip_weight_path}")
+            else:
+                print(f"🐴🐴🐴 [INFO] No DRIP weights provided, initializing DRIP modules from scratch.")
+
+        elif self.merge_strategy == "Fixed":
+            assert self.compression_rate is not None, "compression_rate must be provided for Fixed merge strategy."
+            width = self.vision_tower.config.hidden_size
+            self.null_token = nn.Parameter(torch.zeros(1, 1, width))
+            print(f"🐰🐰🐰 [INFO] Using Fixed merge strategy with compression rate {self.compression_rate}. This will keep every {max(1, int(1/self.compression_rate))} tokens.")
+
+        elif self.merge_strategy == "PruMerge":
+            raise NotImplementedError(
+                "PruMerge is CLIP-specific in your implementation because it hooks "
+                "vision_model.encoder.layers[23].self_attn.k_proj/q_proj."
+            )
+
+        else:
+            print(f"🩵🩵🩵 [INFO] Using original timm ViT features without merging. This will keep all tokens ({self.num_patches} tokens).")
+
     def feature_select(self, image_forward_outs):
-        assert image_forward_outs is not None
-        raise NotImplementedError("DTPViT does not require feature selection like CLIP. Use the full output.")
+        image_features = image_forward_outs
+        if image_features.ndim != 3:
+            raise RuntimeError(f"Expected timm forward_features output [B, N, D], got {image_features.shape}")
 
-    @torch.no_grad() # FIXME: remove this if finetuning
-    def forward(self, images):
-        """
-        images: torch.Tensor of shape [B, C, H, W]
-        returns: torch.Tensor of shape [B, N_tokens, hidden_dim]
-        """
-        # encode images
-        images = images.to("cuda", dtype=self.dtype)
-        features = self.vision_tower.encode(images, return_loss=False)
-        features = features.to("cuda", dtype=self.dtype)
-        return features
+        num_prefix_tokens = getattr(self.vision_tower, "num_prefix_tokens", 0)
 
-    @property
-    def dummy_feature(self):
-        return torch.zeros(1, self.hidden_size, device=self.device, dtype=self.dtype)
+        # Most ViT/SigLIP models may return prefix/class tokens first.
+        if num_prefix_tokens > 0:
+            image_features = image_features[:, num_prefix_tokens:]
+
+        return image_features
+
+    def forward(self, images, inference=False):
+        if isinstance(images, list):
+            image_features = []
+            boundary_losses = []
+
+            for image in images:
+                image_forward_out = self.vision_tower.forward_features(
+                    image.to(device=self.device, dtype=self.dtype).unsqueeze(0)
+                )
+                image_feature = self.feature_select(image_forward_out).to(image.dtype)
+
+                if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+                    if not inference:
+                        image_feature, boundary_loss, _, _ = self._merge_patch_tokens(image_feature, inference=False)
+                        boundary_losses.append(boundary_loss)
+                    else:
+                        image_feature = self._merge_patch_tokens(image_feature, inference=True)
+
+                image_features.append(image_feature)
+
+            if not inference and self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+                boundary_loss = torch.stack(boundary_losses).mean()
+                return image_features, boundary_loss
+
+            return image_features
+
+        else:
+            image_forward_outs = self.vision_tower.forward_features(
+                images.to(device=self.device, dtype=self.dtype)
+            )
+            image_features = self.feature_select(image_forward_outs).to(images.dtype)
+
+            if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+                if not inference:
+                    image_features, boundary_loss, _, _ = self._merge_patch_tokens(image_features, inference=False)
+                    return image_features, boundary_loss
+                else:
+                    image_features = self._merge_patch_tokens(image_features, inference=True)
+            return image_features
 
     @property
     def dtype(self):
@@ -809,23 +705,30 @@ class BaselineVisionTower(nn.Module):
 
     @property
     def device(self):
-        return torch.device("cuda")
+        return next(self.vision_tower.parameters()).device
 
     @property
     def config(self):
-        return self.configurations
+        return self.vision_tower.config
 
     @property
     def hidden_size(self):
-        return self.vision_tower.embed_dim
+        return self.config.hidden_size
 
     @property
     def num_patches_per_side(self):
-        return self.vision_tower.image_size // self.vision_tower.patch_size
+        grid_h, grid_w = self.config.grid_size
+        assert grid_h == grid_w, f"Expected square grid, got {self.config.grid_size}"
+        return grid_h
 
     @property
     def num_patches(self):
-        return self.num_patches_per_side ** 2
+        grid_h, grid_w = self.config.grid_size
+        return grid_h * grid_w
+
+
+#######################################################################################
+################################# NOT USED ############################################
 
 class CLIPVisionTowerS2(CLIPVisionTower):
     def __init__(self, vision_tower, args, delay_load=False):
@@ -883,3 +786,153 @@ class CLIPVisionTowerS2(CLIPVisionTower):
     @property
     def hidden_size(self):
         return self.config.hidden_size * len(self.s2_scales)
+
+
+
+
+"""
+    Copy pasted from PruneSID:
+    https://github.com/ZhengyaoFang/PruneSID/blob/main/prunesid/prunesid_llava/clip_encoder.py
+"""
+
+
+def batch_similarity_nms(similarity_matrix, scores, threshold):
+    """
+    similarity_matrix: shape [batch_size, group, N, N]
+    scores: shape [batch_size, N, group]
+    threshold: [batch_size]
+    """
+    new_scores = scores.clone()
+    return_scores = new_scores.clone()
+    given_score = 1000
+    keep = []
+
+    batch_size, group, N, _ = similarity_matrix.shape
+    threshold = threshold.unsqueeze(1).unsqueeze(2).expand(batch_size, group, N)
+    batch_idx= torch.arange(batch_size, device=new_scores.device).view(-1, 1, 1).expand(-1, group, N)
+    group_idx = torch.arange(group, device=new_scores.device).view(1, -1, 1).expand(batch_size, -1, N)   # [5, 16, 576]
+    col_idx = torch.arange(N, device=new_scores.device).view(1, 1, -1).expand(batch_size, group, -1)     # [5, 16, 576]
+    while new_scores.sum() > 0:
+        max_values, max_idx = new_scores.max(dim=1) # [batch_size, group], [batch_size, group]
+
+        row_idx = max_idx.unsqueeze(-1).expand(-1, -1, N)
+        sim_row = similarity_matrix[batch_idx, group_idx, row_idx, col_idx] # [batch_size, group, N]
+        max_idx[max_values == 0] = -1
+        given_score_indices_0, given_score_indices_2 = torch.where(max_idx!=-1)
+        given_score_indices_1 = max_idx[given_score_indices_0, given_score_indices_2]
+        return_scores[given_score_indices_0, given_score_indices_1, given_score_indices_2] = given_score
+        new_scores[given_score_indices_0, given_score_indices_1, given_score_indices_2] = 0
+        given_score -= 1
+        keep.append(max_idx.unsqueeze(-1))
+
+        condition = sim_row > threshold # [batch_size, group, N]
+        new_scores[condition.transpose(1,2)] = 0
+        if new_scores.sum() == 0:
+            break
+    keep = torch.cat(keep, dim=-1) # [5, 16, ???]
+    return keep, return_scores
+    
+
+def batch_pca(features, min_components=32):
+    standard_features = torch.sigmoid(features.to(torch.float32)).transpose(2,1)[:,:,1:]
+    U, S, V = torch.pca_lowrank(standard_features, q=min_components)
+    V = torch.abs(V)
+    belong_components = torch.argmax(V, dim=-1)
+    return V, belong_components
+
+
+class CLIPVisionTower_PruneSID(nn.Module):
+
+
+    @torch.no_grad()
+    def forward(self, images):
+        # images: torch.Tensor [batch_size, 3, 336, 336]
+        if type(images) is list:
+            image_features = []
+            for image in images:
+                image_forward_out = self.vision_tower(image.to(device=self.device, dtype=self.dtype).unsqueeze(0), output_hidden_states=True, output_attentions=True)
+                image_feature = self.feature_select(image_forward_out).to(image.dtype)
+                image_features.append(image_feature)
+        else:
+            image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), output_hidden_states=True, output_attentions=True)
+            attn_weights  = image_forward_outs.attentions[-2]
+            hidden_states = image_forward_outs.hidden_states[-2] # [1, 577, 1024]
+
+            need_token_num = self.need_token_num if self.need_token_num else 192
+            projector_lengths, belong_components = batch_pca(hidden_states, min_components = int(need_token_num / 4)) # [batch_size, 576, group_num], [batch_size, 576]
+            cls_idx = 0
+            cls_attention = attn_weights[:, :, cls_idx, cls_idx + 1 :]
+            cls_attention_sum = cls_attention.sum(dim=1) # [batch_size, 576]
+            projector_scores = cls_attention_sum.unsqueeze(-1).repeat(1,1, projector_lengths.shape[-1]).to(projector_lengths.dtype) # [batch_size, 576, group_num]
+            projector_mask = belong_components.unsqueeze(-1).repeat(1,1, projector_lengths.shape[-1])
+            index_map = torch.arange(projector_lengths.shape[-1], device=projector_lengths.device).unsqueeze(0).unsqueeze(0).repeat(projector_lengths.shape[0],projector_lengths.shape[1],1)
+            weights_mask = torch.where(projector_mask != index_map)
+            projector_lengths[weights_mask] = 0
+            projector_scores[weights_mask] = 0
+           
+            normalized_states = F.normalize(hidden_states[:,1:,:], p=2,dim=-1)
+            similarity = torch.bmm(normalized_states, normalized_states.transpose(2,1)).to(torch.float32) # [batch_size， 576， 576]
+            triu_mask = torch.triu(torch.ones_like(similarity), diagonal=1).bool()
+            sim_mean = (similarity * (triu_mask)).sum(-1).sum(-1) / triu_mask.sum(-1).sum(-1)
+            ratio = need_token_num / 32
+
+            
+            group_similarity = similarity.clone().unsqueeze(1).repeat(1, projector_lengths.shape[-1], 1, 1) # [batch_size, group_num, 576, 576]
+            group_similarity_masks = torch.zeros_like(group_similarity) # [batch_size, group_num, 576, 576]
+            group_index = torch.arange(group_similarity.shape[1], device=group_similarity.device).unsqueeze(0).unsqueeze(-1).repeat(group_similarity.shape[0],1,group_similarity.shape[-2])
+            group_belong_components = belong_components.unsqueeze(1).repeat(1,group_similarity.shape[1],1)
+            group_similarity_masks[group_index==group_belong_components] = 1
+            group_similarity_masks[torch.where(group_similarity_masks.transpose(3,2) == 1)] = 1
+            group_similarity[group_similarity_masks!=1] = 0
+            group_ids, projector_scores = batch_similarity_nms(group_similarity, projector_scores, ratio * sim_mean)
+            group_ids_mask = (group_ids != -1) # [batch_size, group, ???]
+            keep_nms_counts = group_ids_mask.sum(dim=-1) # [batch_size, group]
+            group_counts = (projector_mask == index_map).sum(dim=1) # [batch_size, group]
+            group_lower_bound = torch.ones_like(group_counts, device=group_counts.device)
+            group_lower_bound = torch.min(torch.cat([group_lower_bound.unsqueeze(0), group_counts.unsqueeze(0)], dim=0), dim=0)[0]
+            group_upper_bound = torch.ones_like(group_counts, device=group_counts.device) * 5 * math.ceil(need_token_num / 64)
+            group_upper_bound = torch.min(torch.cat([group_upper_bound.unsqueeze(0), group_counts.unsqueeze(0)], dim=0), dim=0)[0]
+            group_upper_bound = torch.min(torch.cat([group_upper_bound.unsqueeze(0), keep_nms_counts.unsqueeze(0)], dim=0), dim=0)[0]
+            while torch.any(group_upper_bound.sum(-1) < need_token_num):
+                group_upper_bound[torch.where(group_upper_bound.sum(-1) < need_token_num)] += 1
+                group_upper_bound = torch.min(torch.cat([group_upper_bound.unsqueeze(0), group_counts.unsqueeze(0)], dim=0), dim=0)[0]
+
+            other_token_nums = need_token_num - group_lower_bound.sum(-1) - 1
+            other_token_nums[other_token_nums < 0] = 0
+            norm_group_counts = keep_nms_counts / keep_nms_counts.sum(-1, keepdim=True)
+            cumulative_sum = torch.cumsum(norm_group_counts, dim=-1)
+            other_token_d = (cumulative_sum * other_token_nums.unsqueeze(-1).expand(-1, group_counts.shape[1])).round().int()
+            other_token_d = other_token_d - torch.cat([torch.zeros((other_token_d.shape[0], 1), device=other_token_d.device), other_token_d[:, :-1]], dim=-1)
+            group_token_d = other_token_d + group_lower_bound
+            group_token_d = torch.min(torch.cat([group_token_d.unsqueeze(0), group_upper_bound.unsqueeze(0)], dim=0), dim=0)[0]
+            group_sort_index = torch.argsort(keep_nms_counts, dim=-1, descending=True) # [batch, group]
+            filling_group = torch.zeros(group_counts.shape[0], device=group_counts.device).int()
+            while torch.any(group_token_d.sum(-1) < other_token_nums+group_lower_bound.sum(-1)):
+                need_filling_batch = torch.where(group_token_d.sum(-1) < other_token_nums+group_lower_bound.sum(-1))[0]
+                filling_num = torch.min(torch.stack(
+                    [group_upper_bound[need_filling_batch,group_sort_index[need_filling_batch, filling_group[need_filling_batch]]] - group_token_d[need_filling_batch,group_sort_index[need_filling_batch, filling_group[need_filling_batch]]],
+                    other_token_nums[need_filling_batch]+group_lower_bound[need_filling_batch].sum(-1)-group_token_d[need_filling_batch].sum(-1)]
+                ),dim=0)[0]
+                
+                group_token_d[need_filling_batch, group_sort_index[need_filling_batch,filling_group[need_filling_batch]]] += filling_num
+                filling_group[need_filling_batch] += 1
+            projector_sort_index = torch.argsort(projector_scores, dim=1, descending=True) #[batch_size, 576, group]
+            projector_sort_index = projector_sort_index.transpose(1,2).reshape(-1, group_similarity.shape[-1]) #[batch_size*group, 576]
+            group_token_d = group_token_d.reshape(-1)
+            important_indices = []
+            for i in range(len(group_token_d)):
+                important_indices.append(projector_sort_index[i][:int(group_token_d[i])])
+
+            important_indices = [important_indices[i:i+group_similarity.shape[1]] for i in range(0, len(important_indices), group_similarity.shape[1])]
+            for i in range(len(important_indices)):
+                important_indices[i] = torch.cat([torch.tensor([0], device=group_similarity.device), torch.cat(important_indices[i])+1])
+            batch_indices = torch.stack(important_indices)
+            batch_indices_expanded = batch_indices.unsqueeze(-1).expand(-1, -1, hidden_states.size(-1)) 
+            batch_hidden_states = torch.gather(hidden_states, dim=1, index=batch_indices_expanded)
+
+
+        # NOTE: fix the type mismatch issue
+        image_features = batch_hidden_states.to(dtype=self.dtype)
+        indices = batch_indices.to(dtype=torch.int64)
+        return image_features, indices # torch.Tensor: [batch_size, token_num, hidden_dim] torch.Tensor: [batch_size, dominant_token_num]
+

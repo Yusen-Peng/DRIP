@@ -9,13 +9,11 @@ from numbers import Number
 from typing import Any, List
 import numpy as np
 from fvcore.nn import FlopCountAnalysis
-from open_clip_local.DTP_ViT import DTPViT
-# from open_clip_local.DTP_ViT_TransformerXL import DTPViT
-# from open_clip_local.DTP_ViT_entropy import DTPViT
+from open_clip_local.DTP_ViT import DTPViT, DTPViT_Causal, DTPViT_CosSim
 
 from open_clip_local.DTP_ViT import XL_Baseline
 from open_clip_local.transformer import VisionTransformer
-from open_clip_local.DTP_ViT import SingleAdaptedFixed
+from open_clip_local.DTP_ViT import DTPViT_Fixed
 
 
 from open_clip_local.Qwen2VL_ViT import Qwen2VLViT, Qwen2VLVisionConfig, Qwen2VLDRIP
@@ -72,11 +70,17 @@ def throughput(images, model):
 
 def main():
     patch_size = 16
-    MODE = "Qwen2VL_DRIP" # "DRIP" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
-    COMPRESSION_RATE = 0.1  # e.g., 0.25 means keeping 25% patches
-    # COMPRESSION_RATE = 0.10  # e.g., 0.10 means keeping 10% patches
 
+    import argparse
+    parser = argparse.ArgumentParser(description='Calculate GFLOPs for different ViT variants')
+    # "DRIP" or "DRIP_Causal" or "fixed_pooling" or "ViT" or "XL_baseline" or "Qwen2VL_ViT" or "Qwen2VL_DRIP"
+    parser.add_argument('--mode', type=str, default='DRIP', help='Model variant to calculate GFLOPs for')
+    parser.add_argument('--compression_rate', type=float, default=0.25, help='Compression rate for DRIP and fixed pooling variants')
+    args = parser.parse_args()
 
+    MODE = args.mode
+    print(f"Selected mode: {MODE}")
+    COMPRESSION_RATE = args.compression_rate
     img_size = 224
     width = 768
     mlp_ratio = 4.0
@@ -93,8 +97,12 @@ def main():
             heads=width // 64,
             mlp_ratio=mlp_ratio,
             temp=0.5,
+            output_dim=512,
+            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
+            pool_type='avg',
             flop_measure=True
         )
+
     elif MODE == "ViT":
         model = VisionTransformer(
             image_size=img_size,
@@ -105,61 +113,10 @@ def main():
             mlp_ratio=mlp_ratio,
             output_dim=512
         )
-    elif MODE == "Qwen2VL_ViT":
-        print("Calculating GFLOPs for Qwen2VL Vision Transformer...")
-        config = Qwen2VLVisionConfig(
-            depth=12,
-            embed_dim=width,
-            hidden_size=width * mlp_ratio,
-            mlp_ratio=mlp_ratio,
-            num_heads=width // 64,
-            in_channels=3,
-            patch_size=patch_size,
-            spatial_merge_size=1,
-            temporal_patch_size=1,
-        )
-        model = Qwen2VLViT(config)
-
-
-    elif MODE == "Qwen2VL_DRIP":
-        print(f"🥶🥶🥶🥶Calculating GFLOPs for Qwen2VL-DRIP with compression rate {COMPRESSION_RATE}...🥶🥶🥶🥶")
-        config = Qwen2VLVisionConfig(
-            depth=12,
-            embed_dim=width,
-            hidden_size=width * mlp_ratio,
-            mlp_ratio=mlp_ratio,
-            num_heads=width // 64,
-            in_channels=3,
-            patch_size=patch_size,
-            spatial_merge_size=1,
-            temporal_patch_size=1,
-        )
-        model = Qwen2VLDRIP(
-            config=config,
-            depth=(4, 8, 0),
-            temp=0.5,
-            compression_rate=COMPRESSION_RATE,
-            threshold=0.5,
-            flop_measure=True
-        )
-
-    elif MODE == "XL_baseline":
-        model = XL_Baseline(
-            image_size=img_size,
-            patch_size=patch_size,
-            width=width,
-            layers=12,
-            depth=12,
-            compression_rate=COMPRESSION_RATE,
-            heads=width // 64,
-            mlp_ratio=mlp_ratio,
-            temp=0.5,
-            pos_embed_type='transformer-xl', # 'learnable' or 'sin_cos_2d' or 'transformer-xl'
-        )
-        
+    
     elif MODE == "fixed_pooling":
         print("Calculating GFLOPs for Fixed Pooling...")
-        model = SingleAdaptedFixed(
+        model = DTPViT_Fixed(            
             image_size=img_size,
             patch_size=patch_size,
             width=width,
@@ -169,9 +126,11 @@ def main():
             heads=width // 64,
             mlp_ratio=mlp_ratio,
             temp=0.5,
+            output_dim=512,
+            pos_embed_type='sin_cos_2d', # 'learnable' or 'sin_cos_2d'
+            pool_type='avg',
             flop_measure=True
         )
-
     elif MODE == "EViT":
         from open_clip_local.EViT import EViT
         print("Calculating GFLOPs for EViT...")

@@ -1,124 +1,216 @@
 import os
-from transformers import CLIPVisionModel, CLIPImageProcessor, CLIPVisionConfig
-from .clip_encoder import CLIPVisionTowerS2, DRIPVisionTower, ViTVisionTower, CLIPVisionTower, BaselineVisionTower
+from .clip_encoder import CLIPVisionTowerS2, CLIPVisionTower, TimmVisionTower
+from .siglip_encoder import SiglipVisionTower
 
 def build_vision_tower(vision_tower_cfg, **kwargs):
 
-    # FIXME: all hardcoded. Need to be fixed later.
-    USE_DTP = False
-    USE_COMPRESSION_BASELINE = False
-    BASELINE_TYPE = 'Fixed'  # 'Fixed' or 'Swin'
-    BACKBONE_NAME = 'pretrained'
+    """
+        Instructions:
+            "ViT": original model checkpoint
+            "Fixed": fixed pooling
+            "PruMerge": LLaVA-PruMerge (ICCV 2025)
+            "DRIP": our BP with MLP
+            "DRIP-H": our BP with H-Net
+            "PruneSID": PruneSID (ICLR 2026)
+            "Perceiver": Perceiver (ICML 2021)
+    """
+    # NOTE: This is irrelevant for CLIP-based models,
+    # but important for evaluating timm models.
+    INFERENCE_MODE = True
 
 
-    FINETUNING_MODE = True
-    BACKBONE = 'ViT-with-weights'  # 'ViT' or 'XL' or "ViT-with-weights"
+    MERGE_STRATEGY = "DRIP"
+    # main result: 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
+    # limit test: 20x - 0.05, 100x - 0.01, 500x - 0.002
+    COMPRESSION_RATE = 0.1
 
-    ############ Original depth settings: ############
-    depth = (4, 8, 0)
-    ######### FIXME: ######
-    # depth = (12, 0, 0) # NOTE: put the boundary predictor at the end and load OpenAI pretrained weights
+    # FIXME: temperature tuning
+    TEMPERATURE = 0.1
+    # TEMPERATURE = 0.01
+
+    # TEMPERATURE = 0.3
+    # TEMPERATURE = 0.5
+    # TEMPERATURE = 0.8
+    # TEMPERATURE = 1.0
 
 
-
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/fixed_pooling_4x/checkpoints/epoch_15.pt"
-    checkpoint_path = "openai"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/ViT_B_16/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_5_7/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_4_8/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_ViT_2_10/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_4_8/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_ViT_5_7/checkpoints/epoch_15.pt"
     
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_5_7/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_10x_16_XL_4_8/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_XL_4_8/checkpoints/epoch_15.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/CLIP/DRIP_4x_16_XL_2_10/checkpoints/epoch_15.pt"
+    DRIP_WEIGHT_PATH = None
+    PERCEIVER_WEIGHT_PATH = None
+
+    """
+        4x paths.
+    """
+    # main experiments    
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_full/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_second_to_last_train_lora/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_second_to_last_train_full/drip.bin"
     
-    # trainable vision tower
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ViT-base-finetune-ALL/vision_tower.pt"
-    #checkpoint_path = "/fs/scratch/PAS2836/yusenpeng_checkpoint/ViTbased-DRIP-4x-16-4-8-finetune-ALL/vision_tower.pt"
+
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_train_full/drip.bin"
 
 
-    patch_size = 16
-    compression_rate = 0.25
-    lower_bound = False
-    lambda_val = 1.0
-    num_classes = 512
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_4x_pretrain/perceiver.bin"
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_4x_train_all/perceiver.bin"
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_4x_pretrain_second/perceiver.bin"
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_4x_train_all_second/perceiver.bin"
+
+
+    # ablations
+    # -- temperature
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_temp001/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_temp001_train_full/drip.bin"
+    # -- H-Net
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_Hnet_ablation_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_Hnet_ablation_train_full/drip.bin"
+    # -- loss ratio
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"    
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_ratio_ablation_train_full/checkpoint-1215/drip.bin"
+
+
+    # Qwen experiments
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full/drip.bin"
+
+
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_Perceiver_4x_pretrain/perceiver.bin"
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_Perceiver_4x_train_full/perceiver.bin"
+
+    """
+        8x paths.
+    """
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_finetune_train_lora/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_finetune_train_full/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_second_to_last_train_lora/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_second_to_last_train_full/drip.bin"
+
+
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_train_full/drip.bin"
+
+
+
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_8x_pretrain/perceiver.bin"
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_8x_train_all/perceiver.bin"
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_8x_pretrain_second/perceiver.bin"
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_8x_train_all_second/perceiver.bin"
+
+
+    # qwen experiments
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_8x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_8x_train_full/drip.bin"
+
+
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_Perceiver_8x_pretrain/perceiver.bin"
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_Perceiver_8x_train_full/perceiver.bin"
+
+
+    """
+        10x paths.
+    """
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_lora/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_full/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_full/drip.bin"
+
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full/drip.bin"
+
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp001/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp001/drip.bin"
+
+
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp05/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp08/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp10/drip.bin"
+
+
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp05/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp08/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp10/drip.bin"
+
+
+
+
+
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_pretrain/perceiver.bin"
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_train_all/perceiver.bin"
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_pretrain_second/perceiver.bin"
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_train_all_second/perceiver.bin"
+
+    # SigLIP 512 experiments
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_pretrain_512_DRIP_10x/drip.bin"
+    
+    
+    # Qwen experiments
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full/drip.bin"
+
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_pretrain/perceiver.bin"
+    # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_Perceiver_10x_train_full/perceiver.bin"
+
+
 
     vision_tower = getattr(vision_tower_cfg, 'mm_vision_tower', getattr(vision_tower_cfg, 'vision_tower', None))
-    is_absolute_path_exists = os.path.exists(vision_tower)
     use_s2 = getattr(vision_tower_cfg, 's2', False)
-    if is_absolute_path_exists or vision_tower.startswith("openai") or vision_tower.startswith("laion") or "ShareGPT4V" in vision_tower:
+    if  vision_tower.startswith("openai") or vision_tower.startswith("laion") or "ShareGPT4V" in vision_tower:
         if use_s2:
             return CLIPVisionTowerS2(vision_tower, args=vision_tower_cfg, **kwargs)
-        elif USE_DTP:
-            print("🍟" * 20)
-            print(f"Using DTP-ViT from the path {checkpoint_path}")
-            print("🍟" * 20)
-            return DRIPVisionTower(
-                backbone=BACKBONE,
-                checkpoint_path=checkpoint_path, 
-                vision_tower=vision_tower,
-                args=vision_tower_cfg,
-                patch_size=patch_size,
-                compression_rate=compression_rate,
-                lower_bound=lower_bound,
-                lambda_val=lambda_val,
-                depth=depth,
-                num_classes=num_classes,
-                finetuning_mode=FINETUNING_MODE,
-                **kwargs)
-        
-        elif not USE_DTP and USE_COMPRESSION_BASELINE:
-            print("🍟" * 20)
-            print(f"Using Compression Baseline ViT from the path {checkpoint_path}")
-            print("🍟" * 20)
-
-            vit_loaded: BaselineVisionTower = BaselineVisionTower(
-                baseline_type=BASELINE_TYPE,
-                backbone=BACKBONE_NAME,
-                checkpoint_path=checkpoint_path, 
-                vision_tower=vision_tower,
-                args=vision_tower_cfg,
-                patch_size=patch_size,
-                compression_rate=compression_rate,
-                lower_bound=lower_bound,
-                lambda_val=lambda_val,
-                depth=depth,
-                num_classes=num_classes,
-                finetuning_mode=FINETUNING_MODE,
-                **kwargs
-            )
-
-            return vit_loaded
-
         else:
-            print("🍟" * 20)
-            print(f"Using original ViT from the path {checkpoint_path}")
-            print("🍟" * 20)
-
-            if checkpoint_path.startswith("openai"):
-                # shortcut for using openai pretrained weights
-                print("🥶" * 20)
-                print(f"Using OpenAI pretrained ViT: {vision_tower}")
-                print("🥶" * 20)
-                return CLIPVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
-
-            vit_loaded: ViTVisionTower = ViTVisionTower(
-                checkpoint_path=checkpoint_path, 
+            return CLIPVisionTower(
+                vision_tower=vision_tower, 
+                args=vision_tower_cfg, 
+                merge_strategy=MERGE_STRATEGY,
+                compression_rate=COMPRESSION_RATE,
+                drip_weight_path=DRIP_WEIGHT_PATH,
+                perceiver_weight_path=PERCEIVER_WEIGHT_PATH,
+                temperature=TEMPERATURE,
+                **kwargs)
+    elif vision_tower.startswith("google/"):
+        if use_s2:
+            raise NotImplementedError("S2 is not implemented for GoogleVisionTower yet.")
+        else:
+            return SiglipVisionTower(
                 vision_tower=vision_tower,
                 args=vision_tower_cfg,
-                patch_size=patch_size,
-                compression_rate=compression_rate,
-                lower_bound=lower_bound,
-                lambda_val=lambda_val,
-                depth=depth,
-                num_classes=num_classes,
-                finetuning_mode=FINETUNING_MODE,
+                merge_strategy=MERGE_STRATEGY,
+                compression_rate=COMPRESSION_RATE,
+                drip_weight_path=DRIP_WEIGHT_PATH,
+                temperature=TEMPERATURE,
                 **kwargs
             )
-
-            return vit_loaded
+        
+    
+    elif vision_tower.startswith("timm/"):
+        if use_s2:
+            raise NotImplementedError("S2 is not implemented for TimmVisionTower yet.")
+        else:
+            if INFERENCE_MODE:
+                kwargs.pop("delay_load", None)  # remove duplicate
+                return TimmVisionTower(
+                    vision_tower=vision_tower,
+                    args=vision_tower_cfg,
+                    merge_strategy=MERGE_STRATEGY,
+                    compression_rate=COMPRESSION_RATE,
+                    drip_weight_path=DRIP_WEIGHT_PATH,
+                    temperature=TEMPERATURE,
+                    delay_load=False, # don't delay for Timm models for proper inference
+                    **kwargs
+                )
+            else:
+                return TimmVisionTower(
+                    vision_tower=vision_tower,
+                    args=vision_tower_cfg,
+                    merge_strategy=MERGE_STRATEGY,
+                    compression_rate=COMPRESSION_RATE,
+                    drip_weight_path=DRIP_WEIGHT_PATH,
+                    temperature=TEMPERATURE,
+                    **kwargs
+                )
     else:
         raise ValueError(f'Unknown vision tower: {vision_tower}')

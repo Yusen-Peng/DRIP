@@ -1,0 +1,37 @@
+#!/bin/bash
+#SBATCH --job-name=June3_MMMU_LLaVA_7B_DRIP_10x_second_to_last_train_lora
+#SBATCH --output=June3_MMMU_LLaVA_7B_DRIP_10x_second_to_last_train_lora.log
+#SBATCH --time=00:30:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --partition=nextgen
+#SBATCH --gpus-per-node=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=128G
+#SBATCH --account=PAS2836
+
+module load miniconda3/24.1.2-py310
+conda activate DRIP
+source activate DRIP
+
+export OMP_NUM_THREADS=16
+export MASTER_PORT=$((12000 + RANDOM % 20000))
+
+cd /users/PAS3184/tejasnaik/DRIP/
+
+VERSION="LLaVA_13B_ViT"
+
+# python src/model_vqa_mmmu.py \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_full_TRAIN_VIT \
+#     --output_path /fs/scratch/PAS2836/shared_LLaVA_eval/mmmu/answers/${VERSION}.json \
+#     --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
+
+python src/model_vqa_mmmu.py \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_second_to_last_train_lora \
+    --model_base lmsys/vicuna-7b-v1.5 \
+    --output_path /fs/scratch/PAS2836/shared_LLaVA_eval/mmmu/answers/${VERSION}.json \
+    --config_path src/LLaVA_wrapper/llava_local/mmmu_utils/llava.yaml
+
+python src/mmmu_main_eval_only.py \
+    --output_path /fs/scratch/PAS2836/shared_LLaVA_eval/mmmu/answers/${VERSION}.json \
+    --answer_path /fs/scratch/PAS2836/shared_LLaVA_eval/mmmu/answer_key/answer_dict_val.json

@@ -41,9 +41,18 @@ from src.LLaVA_wrapper.llava_local.model import *
 from src.LLaVA_wrapper.llava_local.mm_utils import tokenizer_image_token
 
 from PIL import Image
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 local_rank = None
+
+
+
+import os, json, traceback
+DEBUG_PATH = f"/fs/scratch/PAS2836/yusenpeng_dataset/llava_getitem_rank{os.environ.get('RANK', 'x')}.jsonl"
+
+
 
 
 def rank0_print(*args):
@@ -612,6 +621,83 @@ def preprocess_plain(
     return dict(input_ids=input_ids, labels=targets)
 
 
+
+def preprocess_qwen_2(
+    sources,
+    tokenizer: transformers.PreTrainedTokenizer,
+    has_image: bool = False
+) -> Dict:
+    conv = conversation_lib.conv_templates["qwen_v2"].copy()
+    roles = {"human": conv.roles[0], "gpt": conv.roles[1]}
+
+    # Apply prompt templates
+    conversations = []
+    for i, source in enumerate(sources):
+        if roles[source[0]["from"]] != conv.roles[0]:
+            # Skip the first one if it is not from human
+            source = source[1:]
+
+        conv.messages = []
+        for j, sentence in enumerate(source):
+            role = roles[sentence["from"]]
+            assert role == conv.roles[j % 2], f"{i}"
+            conv.append_message(role, sentence["value"])
+        conversations.append(conv.get_prompt())
+
+    if has_image:
+        input_ids = torch.stack([tokenizer_image_token(prompt, tokenizer, return_tensors='pt') for prompt in conversations], dim=0)
+    else:
+        input_ids = tokenizer(
+            conversations,
+            return_tensors="pt",
+            padding="longest",
+            max_length=tokenizer.model_max_length,
+            truncation=True,
+        ).input_ids
+
+    targets = input_ids.clone()
+
+    assert conv.sep_style == conversation_lib.SeparatorStyle.QWEN_2
+
+    assistant_start = conv.roles[1] + "\n"   # "<|im_start|>assistant\n"
+    assistant_end = "<|im_end|>"
+
+    for b, (conversation, target) in enumerate(zip(conversations, targets)):
+        target[:] = IGNORE_INDEX
+        cur_pos = 0
+        while True:
+            start_char = conversation.find(assistant_start, cur_pos)
+            if start_char == -1:
+                break
+            answer_start_char = start_char + len(assistant_start)
+            answer_end_char = conversation.find(assistant_end, answer_start_char)
+            if answer_end_char == -1:
+                break
+            # include <|im_end|> in the supervised target
+            supervise_end_char = answer_end_char + len(assistant_end)
+            prefix_text = conversation[:answer_start_char]
+            supervised_text = conversation[:supervise_end_char]
+            if has_image:
+                answer_start_tok = len(tokenizer_image_token(prefix_text, tokenizer))
+                answer_end_tok = len(tokenizer_image_token(supervised_text, tokenizer))
+            else:
+                answer_start_tok = len(tokenizer(prefix_text,add_special_tokens=False).input_ids)
+                answer_end_tok = len(tokenizer(supervised_text,add_special_tokens=False).input_ids)
+
+            seq_len = (input_ids[b] != tokenizer.pad_token_id).sum().item()
+            answer_start_tok = min(answer_start_tok, seq_len)
+            answer_end_tok = min(answer_end_tok, seq_len)
+            if answer_start_tok < answer_end_tok:
+                target[answer_start_tok:answer_end_tok] = input_ids[b, answer_start_tok:answer_end_tok]
+            cur_pos = supervise_end_char
+
+    return dict(
+        input_ids=input_ids,
+        labels=targets,
+    )
+
+
+
 def preprocess(
     sources: Sequence[str],
     tokenizer: transformers.PreTrainedTokenizer,
@@ -632,6 +718,9 @@ def preprocess(
         return preprocess_v1(sources, tokenizer, has_image=has_image)
     if conversation_lib.default_conversation.version == "mpt":
         return preprocess_mpt(sources, tokenizer, has_image=has_image)
+    if conversation_lib.default_conversation.version.startswith("qwen_v2"):
+        return preprocess_qwen_2(sources, tokenizer, has_image=has_image)
+
     # add end signal and concatenate together
     conversations = []
     for source in sources:
@@ -698,7 +787,7 @@ class LazySupervisedDataset(Dataset):
         sources = self.list_data_dict[i]
         if isinstance(i, int):
             sources = [sources]
-        assert len(sources) == 1, "Don't know why it is wrapped to a list"  # FIXME
+        assert len(sources) == 1, "Don't know why it is wrapped to a list"
         if 'image' in sources[0]:
             image_file = self.list_data_dict[i]['image']
             image_folder = self.data_args.image_folder
@@ -740,7 +829,7 @@ class LazySupervisedDataset(Dataset):
         elif self.data_args.is_multimodal:
             # image does not exist in the data, but the model is multimodal
             crop_size = self.data_args.image_processor.crop_size
-            data_dict['image'] = torch.zeros(3, crop_size['height'], crop_size['width'])
+            data_dict['image'] = torch.zeros(3, crop_size['height'], crop_size['width'])       
         return data_dict
 
 
@@ -873,8 +962,37 @@ def save_vision_tower(vt_core, out_path, local_rank=-1):
 
 
 
+def save_drip_state(model: LlavaLlamaForCausalLM, output_dir):
+    named_params = list(model.named_parameters())
+    drip_keys_to_match = ["boundary_predictor", "null_token"]
+    drip_weight_to_save = get_mm_adapter_state_maybe_zero_3(
+        named_params, drip_keys_to_match
+    )
+    if len(drip_weight_to_save) > 0:
+        torch.save(drip_weight_to_save, os.path.join(output_dir, "drip.bin"))
+        print(f"🌊 Saved DRIP weights to {os.path.join(output_dir, 'drip.bin')}", flush=True)
+    else:
+        print("🌊 No DRIP weights found to save.", flush=True)
+
+def save_perceiver_state(model: LlavaLlamaForCausalLM, output_dir):
+    named_params = list(model.named_parameters())
+    perceiver_keys_to_match = ["perceiver_resampler"]
+    perceiver_weight_to_save = get_mm_adapter_state_maybe_zero_3(
+        named_params, perceiver_keys_to_match
+    )
+
+    if len(perceiver_weight_to_save) > 0:
+        out_path = os.path.join(output_dir, "perceiver.bin")
+        torch.save(perceiver_weight_to_save, out_path)
+        print(f"🌀 Saved Perceiver weights to {out_path}", flush=True)
+    else:
+        print("🌀 No Perceiver weights found to save.", flush=True)
+
+
+
 def train(attn_implementation=None):
     global local_rank
+    print(f"🫁🫁🫁 {attn_implementation} 🫁🫁🫁", flush=True)
 
     parser = transformers.HfArgumentParser(
         (ModelArguments, DataArguments, TrainingArguments))
@@ -906,6 +1024,7 @@ def train(attn_implementation=None):
         print("We are using vision tower:", model_args.vision_tower)
 
         if 'mpt' in model_args.model_name_or_path:
+            print("We are using MPT model, loading with custom attention config.")
             config = transformers.AutoConfig.from_pretrained(model_args.model_name_or_path, trust_remote_code=True)
             config.attn_config['attn_impl'] = training_args.mpt_attn_impl
             model = LlavaMptForCausalLM.from_pretrained(
@@ -914,19 +1033,18 @@ def train(attn_implementation=None):
                 cache_dir=training_args.cache_dir,
                 **bnb_model_from_pretrained_args
             )
+        
+        if 'qwen' in model_args.model_name_or_path.lower():
+            print("🎃🎃🎃 We are using Qwen models.")
+            model = LlavaQwen2ForCausalLM.from_pretrained(
+                model_args.model_name_or_path,
+                cache_dir=training_args.cache_dir,
+                attn_implementation=attn_implementation,
+                torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
+                **bnb_model_from_pretrained_args
+            )
         else:
-            # # FIXME: this is a workaround for the HuggingFace logic
-            # config = transformers.AutoConfig.from_pretrained(
-            #     model_args.model_name_or_path,
-            #     trust_remote_code=True,
-            #     cache_dir=training_args.cache_dir
-            # )
-            # config.model_type = "llava_llama"  # patching for HuggingFace logic
-            # config.parallelization_style = "none"  # fix for post_init crash
-
-            # print("🔥"*20)
-            # print(config)
-            # print("🔥"*20)
+            print("🎲🎲🎲 We are using LLaMA models.")
             model = LlavaLlamaForCausalLM.from_pretrained(
                 model_args.model_name_or_path,
                 cache_dir=training_args.cache_dir,
@@ -937,13 +1055,16 @@ def train(attn_implementation=None):
     else:
         model = transformers.LlamaForCausalLM.from_pretrained(
             model_args.model_name_or_path,
-            config=config,  # FIXME: THIS IS MANDATORY!
+            config=config,
             cache_dir=training_args.cache_dir,
             attn_implementation=attn_implementation,
             torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
             **bnb_model_from_pretrained_args
         )
     model.config.use_cache = False
+
+    print("🔥 attn_implementation arg:", attn_implementation, flush=True)
+    print("🔥 model.config._attn_implementation:", getattr(model.config, "_attn_implementation", None), flush=True)
 
     if model_args.freeze_backbone:
         model.model.requires_grad_(False)
@@ -1004,7 +1125,21 @@ def train(attn_implementation=None):
             )
     elif model_args.version == "v0.5":
         tokenizer.pad_token = tokenizer.unk_token
+    
+    elif model_args.version == "qwen_v2":
+        conversation_lib.default_conversation = conversation_lib.conv_templates["qwen_v2"]
+        if tokenizer.pad_token_id is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        model.config.pad_token_id = tokenizer.pad_token_id
+    
     else:
+        ######################################################################
+        if tokenizer.unk_token:
+            tokenizer.pad_token = tokenizer.unk_token
+        else: # use qwen
+            tokenizer.legacy = False
+        ######################################################################
+
         tokenizer.pad_token = tokenizer.unk_token
         if model_args.version in conversation_lib.conv_templates:
             conversation_lib.default_conversation = conversation_lib.conv_templates[model_args.version]
@@ -1020,7 +1155,6 @@ def train(attn_implementation=None):
         
         vision_tower = model.get_vision_tower()
         #vision_tower.to(dtype=torch.bfloat16 if training_args.bf16 else torch.float16, device=training_args.device)
-        # FIXME: I am enforcing floa32 here
         if training_args.bf16:          # --bf16
             vision_tower.to(dtype=torch.bfloat16, device=training_args.device)
         elif training_args.fp16:        # --fp16
@@ -1041,6 +1175,38 @@ def train(attn_implementation=None):
             for p in model.get_model().mm_projector.parameters():
                 p.requires_grad = True
 
+            # make sure that BP is trainable during pretraining/alignment
+            vt = model.get_model().vision_tower
+            if hasattr(vt, 'boundary_predictor'):
+                for p in vt.boundary_predictor.parameters():
+                    p.requires_grad = True
+            if hasattr(vt, 'null_token'):
+                vt.null_token.requires_grad = True
+            if hasattr(vt, 'perceiver_resampler'):
+                for p in vt.perceiver_resampler.parameters():
+                    p.requires_grad = True
+        else:
+
+            vt = model.get_model().vision_tower
+            if hasattr(vt, 'boundary_predictor'):
+                for p in vt.boundary_predictor.parameters():
+                    p.requires_grad = True
+            if hasattr(vt, 'null_token'):
+                vt.null_token.requires_grad = True
+            if hasattr(vt, 'perceiver_resampler'):
+                for p in vt.perceiver_resampler.parameters():
+                    p.requires_grad = True
+        
+        vt = model.get_model().vision_tower
+        if hasattr(vt, 'boundary_predictor') and hasattr(vt, 'null_token'):
+            # check if trainable (boundary_predictor and null_token)
+            trainable = any(p.requires_grad for p in vt.boundary_predictor.parameters()) and vt.null_token.requires_grad
+            if trainable:
+                print("🔥🔥🔥 Boundary predictor is trainable.", flush=True)
+            else:
+                print("🥶🥶🥶 Boundary predictor is frozen.", flush=True)
+
+
         model.config.freeze_mm_mlp_adapter = training_args.freeze_mm_mlp_adapter
         if training_args.freeze_mm_mlp_adapter:
             for p in model.get_model().mm_projector.parameters():
@@ -1054,26 +1220,16 @@ def train(attn_implementation=None):
         training_args.use_im_start_end = model_args.mm_use_im_start_end
         model.config.mm_use_im_patch_token = model_args.mm_use_im_patch_token
         model.initialize_vision_tokenizer(model_args, tokenizer=tokenizer)
-    
 
-        ###################################################################################################
-        # FIXME: we have the option to also FINETUNE THE VISION TOWER
+
+        ################################################################################################
+        # ablation: make vision tower trainable or not
         # for p in model.get_model().vision_tower.parameters():
         #     p.requires_grad = True
-        
-        # for p in model.get_model().vision_tower.vision_tower.boundary_predictor.parameters():
-        #     p.requires_grad = True
-
-
-
-        
-        # FIXME: check if it's frozen or trainable
-        print(f"########## check ##########:", flush=True)
-        vision_trainable = any(p.requires_grad for p in model.get_model().vision_tower.parameters())
-        print(f"the vision tower is trainable: {vision_trainable}", flush=True)
-        print(f"########## check ##########:", flush=True)
-        ###################################################################################################
-
+        # print(f"🐣🐣🐣########## check ##########:", flush=True)
+        # vision_trainable = any(p.requires_grad for p in model.get_model().vision_tower.parameters())
+        # print(f"the vision tower is trainable: {vision_trainable}", flush=True)
+        ################################################################################################
 
     if training_args.bits in [4, 8]:
         from peft.tuners.lora import LoraLayer
@@ -1092,31 +1248,24 @@ def train(attn_implementation=None):
                                               data_args=data_args)
 
 
+    # fix invalid generation_config before Trainer sees/saves it
+    if hasattr(model, "generation_config") and model.generation_config is not None:
+        model.generation_config.do_sample = False
+        model.generation_config.temperature = None
+        model.generation_config.top_p = None
+        model.generation_config.top_k = None
+
+
     trainer = LLaVATrainer(model=model,
                     tokenizer=tokenizer,
                     args=training_args,
                     **data_module)
-    
 
-    # ensure ViT params are in the optimizer groups
-    try:
-        vt_wrapper = model.get_model().vision_tower
-        vt_core = getattr(vt_wrapper, "vision_tower", vt_wrapper)
-        vt_param_ids = {id(p) for p in vt_core.parameters()}
-        # Build optimizer now so we can inspect groups (HF Trainer will do it on first use;
-        # we'll force creation by calling the property)
-        _ = trainer.create_optimizer()
-        n_in_groups = 0
-        for i, g in enumerate(trainer.optimizer.param_groups):
-            ids = {id(p) for p in g["params"]}
-            hit = len(ids & vt_param_ids)
-            if hit:
-                print(f"[check] opt group {i} contains {hit} ViT tensors, wd={g.get('weight_decay')}, lr={g.get('lr')}", flush=True)
-                n_in_groups += hit
-        print(f"[check] total ViT tensors present in optimizer: {n_in_groups}", flush=True)
-    except Exception as e:
-        print("[check] ViT optimizer membership check failed:", e, flush=True)
-
+    # # fix invalid generation_config before checkpoint saving
+    # if hasattr(model, "generation_config") and model.generation_config is not None:
+    #     model.generation_config.do_sample = False
+    #     model.generation_config.temperature = None
+    #     model.generation_config.top_p = None
 
 
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
@@ -1138,9 +1287,17 @@ def train(attn_implementation=None):
             model.config.save_pretrained(training_args.output_dir)
             model.save_pretrained(training_args.output_dir, state_dict=state_dict)
             torch.save(non_lora_state_dict, os.path.join(training_args.output_dir, 'non_lora_trainables.bin'))
+            
+            save_drip_state(model, training_args.output_dir)
+            save_perceiver_state(model, training_args.output_dir)
+
     else:
         safe_save_model_for_hf_trainer(trainer=trainer,
                                        output_dir=training_args.output_dir)
+        if training_args.local_rank == 0 or training_args.local_rank == -1:
+            
+            save_drip_state(model, training_args.output_dir)
+            save_perceiver_state(model, training_args.output_dir)
 
 
     ddp_barrier()  # Barrier #1: everyone finished Trainer/HF/DS saving

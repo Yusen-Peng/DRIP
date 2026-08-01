@@ -437,16 +437,7 @@ class Transformer(nn.Module):
         self.grad_checkpointing = False # always NOT use gradient checkpointing
 
         self.resblocks = nn.ModuleList([
-            ResidualAttentionBlock(
-                width,
-                heads,
-                mlp_ratio,
-                ls_init_value=ls_init_value,
-                act_layer=act_layer,
-                norm_layer=norm_layer,
-                batch_first=batch_first,
-            )
-            # CustomResidualAttentionBlock(
+            # ResidualAttentionBlock(
             #     width,
             #     heads,
             #     mlp_ratio,
@@ -455,6 +446,15 @@ class Transformer(nn.Module):
             #     norm_layer=norm_layer,
             #     batch_first=batch_first,
             # )
+            CustomResidualAttentionBlock(
+                width,
+                heads,
+                mlp_ratio,
+                ls_init_value=ls_init_value,
+                act_layer=act_layer,
+                norm_layer=norm_layer,
+                batch_first=batch_first,
+            )
             for _ in range(layers)
         ])
 

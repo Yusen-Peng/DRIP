@@ -1,6 +1,8 @@
 import os
 import torch
 import torch.nn as nn
+import numpy as np
+import random
 
 from torch.utils.data import Sampler
 
@@ -12,7 +14,8 @@ from transformers.trainer import (
     ALL_LAYERNORM_LAYERS,
     logger,
 )
-from typing import List, Optional
+from typing import Dict, List, Optional
+from transformers.utils import is_torch_xla_available
 
 
 def maybe_zero_3(param, ignore_status=False, name=None):
@@ -228,6 +231,105 @@ class LLaVATrainer(Trainer):
     #     return self.optimizer
 
 
+    # def _load_rng_state(self, checkpoint):
+    #     # Load RNG states from `checkpoint`
+    #     if checkpoint is None:
+    #         return
+
+    #     if self.args.world_size > 1:
+    #         process_index = self.args.process_index
+    #         rng_file = os.path.join(checkpoint, f"rng_state_{process_index}.pth")
+    #         if not os.path.isfile(rng_file):
+    #             logger.info(
+    #                 f"Didn't find an RNG file for process {process_index}, if you are resuming a training that "
+    #                 "wasn't launched in a distributed fashion, reproducibility is not guaranteed."
+    #             )
+    #             return
+    #     else:
+    #         rng_file = os.path.join(checkpoint, "rng_state.pth")
+    #         if not os.path.isfile(rng_file):
+    #             logger.info(
+    #                 "Didn't find an RNG file, if you are resuming a training that was launched in a distributed "
+    #                 "fashion, reproducibility is not guaranteed."
+    #             )
+    #             return
+
+    #     checkpoint_rng_state = torch.load(rng_file)
+    #     random.setstate(checkpoint_rng_state["python"])
+    #     np.random.set_state(checkpoint_rng_state["numpy"])
+    #     torch.random.set_rng_state(checkpoint_rng_state["cpu"])
+    #     if torch.cuda.is_available():
+    #         if self.args.parallel_mode == ParallelMode.DISTRIBUTED:
+    #             torch.cuda.random.set_rng_state_all(checkpoint_rng_state["cuda"])
+    #         else:
+    #             try:
+    #                 torch.cuda.random.set_rng_state(checkpoint_rng_state["cuda"])
+    #             except Exception as e:
+    #                 logger.info(
+    #                     f"Didn't manage to set back the RNG states of the GPU because of the following error:\n {e}"
+    #                     "\nThis won't yield the same results as if the training had not been interrupted."
+    #                 )
+    #     if is_torch_xla_available():
+    #         xm.set_rng_state(checkpoint_rng_state["xla"])
+    #     if is_torch_npu_available():
+    #         if self.args.parallel_mode == ParallelMode.DISTRIBUTED:
+    #             torch.npu.random.set_rng_state_all(checkpoint_rng_state["npu"])
+    #         else:
+    #             try:
+    #                 torch.npu.random.set_rng_state(checkpoint_rng_state["npu"])
+    #             except Exception as e:
+    #                 logger.info(
+    #                     f"Didn't manage to set back the RNG states of the NPU because of the following error:\n {e}"
+    #                     "\nThis won't yield the same results as if the training had not been interrupted."
+    #                 )
+    #     if is_torch_mlu_available():
+    #         if self.args.parallel_mode == ParallelMode.DISTRIBUTED:
+    #             torch.mlu.random.set_rng_state_all(checkpoint_rng_state["mlu"])
+    #         else:
+    #             try:
+    #                 torch.mlu.random.set_rng_state(checkpoint_rng_state["mlu"])
+    #             except Exception as e:
+    #                 logger.info(
+    #                     f"Didn't manage to set back the RNG states of the MLU because of the following error:\n {e}"
+    #                     "\nThis won't yield the same results as if the training had not been interrupted."
+    #                 )
+
+
+    def _load_rng_state(self, checkpoint):
+        if checkpoint is None:
+            return
+
+        if self.args.world_size <= 1:
+            rng_file = os.path.join(checkpoint, "rng_state.pth")
+        else:
+            rng_file = os.path.join(checkpoint, f"rng_state_{self.args.process_index}.pth")
+
+        if not os.path.isfile(rng_file):
+            logger.info("Didn't find an RNG file, so skipping RNG state restore.")
+            return
+
+        
+        # TRUSTED LOCAL CHECKPOINT: force legacy unpickling for RNG state
+        checkpoint_rng_state = torch.load(rng_file, weights_only=False)
+        
+        random.setstate(checkpoint_rng_state["python"])
+        np.random.set_state(checkpoint_rng_state["numpy"])
+        torch.random.set_rng_state(checkpoint_rng_state["cpu"])
+
+        if torch.cuda.is_available():
+            if self.args.world_size <= 1:
+                torch.cuda.random.set_rng_state_all(checkpoint_rng_state["cuda"])
+            else:
+                # torch.cuda.random.set_rng_state(checkpoint_rng_state["cuda"])
+                ################################################
+                cuda_rng_state = checkpoint_rng_state["cuda"]
+                if isinstance(cuda_rng_state, list):
+                    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+                    torch.cuda.random.set_rng_state(cuda_rng_state[local_rank], device=local_rank)
+                else:
+                    torch.cuda.random.set_rng_state(cuda_rng_state)
+
+
     # NOTE: mutual exclusive optimizer setup
     def create_optimizer(self):
         """
@@ -336,30 +438,115 @@ class LLaVATrainer(Trainer):
                 logger.info(f"skipped: {skipped/2**20}M params")
 
         return self.optimizer
-
+    
     def _save_checkpoint(self, model, trial, metrics=None):
-        if getattr(self.args, 'tune_mm_mlp_adapter', False):
-            from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
-            checkpoint_folder = f"{PREFIX_CHECKPOINT_DIR}-{self.state.global_step}"
+        super()._save_checkpoint(model, trial, metrics)
 
-            run_dir = self._get_output_dir(trial=trial)
-            output_dir = os.path.join(run_dir, checkpoint_folder)
+        # if getattr(self.args, "tune_mm_mlp_adapter", False):
+        # bug fixed: always save the projector (and DRIP if applicable)
+        from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
 
-            # Only save Adapter
-            keys_to_match = ['mm_projector', 'vision_resampler']
-            if getattr(self.args, "use_im_start_end", False):
-                keys_to_match.extend(['embed_tokens', 'embed_in'])
+        checkpoint_folder = f"{PREFIX_CHECKPOINT_DIR}-{self.state.global_step}"
+        run_dir = self._get_output_dir(trial=trial)
+        output_dir = os.path.join(run_dir, checkpoint_folder)
 
-            weight_to_save = get_mm_adapter_state_maybe_zero_3(self.model.named_parameters(), keys_to_match)
+        keys_to_match = ["mm_projector", "vision_resampler"]
+        if getattr(self.args, "use_im_start_end", False):
+            keys_to_match.extend(["embed_tokens", "embed_in"])
 
-            if self.args.local_rank == 0 or self.args.local_rank == -1:
-                self.model.config.save_pretrained(output_dir)
-                torch.save(weight_to_save, os.path.join(output_dir, f'mm_projector.bin'))
-        else:
-            super(LLaVATrainer, self)._save_checkpoint(model, trial, metrics)
+        weight_to_save = get_mm_adapter_state_maybe_zero_3(
+            self.model.named_parameters(), keys_to_match
+        )
+
+        # save DRIP-specific weights separately
+        drip_keys_to_match = ["boundary_predictor", "null_token"]
+        drip_weight_to_save = get_mm_adapter_state_maybe_zero_3(
+            self.model.named_parameters(), drip_keys_to_match
+        )
+
+
+        
+        # save Perceiver-specific weights separately
+        perceiver_keys_to_match = ["perceiver_resampler"]
+        perceiver_weight_to_save = get_mm_adapter_state_maybe_zero_3(
+            self.model.named_parameters(), perceiver_keys_to_match
+        )
+        if self.args.local_rank in (0, -1):
+            torch.save(weight_to_save, os.path.join(output_dir, "mm_projector.bin"))
+            # only save if DRIP tensors exist
+            if len(drip_weight_to_save) > 0:
+                torch.save(drip_weight_to_save, os.path.join(output_dir, "drip.bin"))
+            # only save if Perceiver tensors exist
+            if len(perceiver_weight_to_save) > 0:
+                torch.save(perceiver_weight_to_save, os.path.join(output_dir, "perceiver.bin"))
+
 
     def _save(self, output_dir: Optional[str] = None, state_dict=None):
         if getattr(self.args, 'tune_mm_mlp_adapter', False):
             pass
         else:
             super(LLaVATrainer, self)._save(output_dir, state_dict)
+
+    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+        loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
+
+        # Store the latest boundary loss and LM loss for logging purposes
+        self._latest_boundary_loss = None
+        self._latest_lm_loss = None
+
+        if hasattr(outputs, "boundary_loss") and outputs.boundary_loss is not None:
+            self._latest_boundary_loss = outputs.boundary_loss.detach().float().item()
+
+        if hasattr(outputs, "lm_loss") and outputs.lm_loss is not None:
+            self._latest_lm_loss = outputs.lm_loss.detach().float().item()
+
+        return (loss, outputs) if return_outputs else loss
+
+
+    def _maybe_log_save_evaluate(self, tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval):
+        if self.control.should_log and self.state.global_step > self._globalstep_last_logged:
+            if is_torch_xla_available():
+                # import torch_xla.core.xla_model as xm
+                # xm.mark_step()
+                pass
+
+            logs: Dict[str, float] = {}
+
+            # all_gather + mean() to get average loss over all processes
+            tr_loss_scalar = self._nested_gather(tr_loss).mean().item()
+
+            # reset tr_loss to zero
+            tr_loss -= tr_loss
+
+            logs["loss"] = round(tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
+            if grad_norm is not None:
+                logs["grad_norm"] = grad_norm.detach().item() if isinstance(grad_norm, torch.Tensor) else grad_norm
+            logs["learning_rate"] = self._get_learning_rate()
+
+            if getattr(self, "_latest_boundary_loss", None) is not None:
+                logs["latest_boundary_loss"] = self._latest_boundary_loss
+            if getattr(self, "_latest_lm_loss", None) is not None:
+                logs["latest_lm_loss"] = self._latest_lm_loss
+
+            self._total_loss_scalar += tr_loss_scalar
+            self._globalstep_last_logged = self.state.global_step
+            self.store_flos()
+
+            self.log(logs)
+
+        metrics = None
+        if self.control.should_evaluate:
+            metrics = self.evaluate(ignore_keys=ignore_keys_for_eval)
+            self._report_to_hp_search(trial, self.state.global_step, metrics)
+
+            # Run delayed LR scheduler now that metrics are populated
+            if isinstance(self.lr_scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                metric_to_check = self.args.metric_for_best_model
+                if not metric_to_check.startswith("eval_"):
+                    metric_to_check = f"eval_{metric_to_check}"
+                self.lr_scheduler.step(metrics[metric_to_check])
+
+        if self.control.should_save:
+            self._save_checkpoint(model, trial, metrics=metrics)
+            self.control = self.callback_handler.on_save(self.args, self.state, self.control)
+
