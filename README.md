@@ -5,9 +5,14 @@
 <h1 align="center">DRIP</h1>
 <h2 align="center">Dynamic Image Tokenization for Efficient VLMs</h2>
 
-## TL;DR
+<!-- ## TL;DR
 
-![alt text](assets/teaser.png)
+![alt text](assets/teaser.png) -->
+
+## News/Updates
+
+- [July 24, 2026] the paper draft is acccepted to COLM 2026 Tokenization Workshop! I will be in-person presenting it in San Francisco 🌉!
+
 
 ## Environment setup
 
@@ -144,6 +149,10 @@ python src/GFLOP_measurement.py --model-path /fs/scratch/PAS2836/yusenpeng_check
 
 Important Note: for "DRIP", please go to [src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py](src/LLaVA_wrapper/llava_local/model/language_model/llava_llama.py) line #93 to temporarily toggle ``inference=False`` to ``inference=True`` to accurately evaluate the TFLOPs during prefill stage.
 
+## Significance Test
+
+We conduct McNemar's statistical significance test on all VQA benchmark results. Please refer to [Significance.md](/Significance.md) for details.
+
 
 ## Results
 
@@ -159,8 +168,27 @@ Full finetuning with image features from ViT's last layer:
 
 CSV results: [results/full_7B_last.csv](results/full_7B_last.csv)
 
+LoRA finetuning with image features from ViT's pre-final layer:
 
-## Significance Test
+![alt text](results/lora_7B_second_to_last_tradeoff_combined.png)
 
-Please refer to [Significance.md](/Significance.md) 
+CSV results: [results/lora_7B_second_to_last.csv](results/lora_7B_second_to_last.csv)
 
+Full finetuning with image features from ViT's pre-final layer:
+
+![alt text](results/full_7B_second_to_last_tradeoff_combined.png)
+
+CSV results: [results/full_7B_second_to_last.csv](results/full_7B_second_to_last.csv)
+
+Full finetuning with Qwen 2.5 14B instruct model:
+
+![alt text](results/qwen14B_full_last_tradeoff_combined.png)
+
+CSV results: [results/qwen14B_full_last.csv](results/qwen14B_full_last.csv)
+
+
+## Contact
+
+Yusen Peng (peng.1007@osu.edu)
+
+Sachin Kumar (kumar.1145@osu.edu)

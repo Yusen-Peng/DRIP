@@ -58,7 +58,7 @@ def segments_to_matrix_diff_detached_cumsum(boundaries: torch.Tensor):
 
 
 def new_downsample(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: torch.Tensor):
-    B, L = boundaries.shape
+    B, _ = boundaries.shape
     _, _, D = hidden.shape
     # Number of segments per example and across the batch
     seg_counts = boundaries.sum(dim=1)                    # [B]
