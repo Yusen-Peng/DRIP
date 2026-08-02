@@ -1,13 +1,10 @@
-<p align="center">
+<!-- <p align="center">
 <img src="assets/DRIP-pipeline.png" width="500" height="400"/>
-</p>
+</p> -->
 
 <h1 align="center">DRIP</h1>
 <h2 align="center">Dynamic Image Tokenization for Efficient VLMs</h2>
 
-<!-- ## TL;DR
-
-![alt text](assets/teaser.png) -->
 
 ## News/Updates
 

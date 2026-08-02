@@ -404,7 +404,8 @@ def main():
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp08_SiLU/drip.bin"
 
 
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp01_new_downsample/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp01_new_downsample/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp08_new_downsample/drip.bin"
 
 
     MERGE_STRATEGY = "DRIP" # "DRIP" or "DRIP-H"
