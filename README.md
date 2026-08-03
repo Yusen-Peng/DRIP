@@ -118,7 +118,7 @@ DRIP_WEIGHT_PATH = "/path/to/LLaVA_7B_DRIP_4x_finetune_train/checkpoint-1020/dri
 For LLaVA visualization, a GPU is definietely needed:
 
 ```bash
-salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-nextgen --time 00:05:00
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-nextgen --time 00:15:00
 module load miniconda3/24.1.2-py310
 conda activate DRIP_flash
 python src/boundary_visual_LLaVA.py
