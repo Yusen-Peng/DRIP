@@ -2,8 +2,8 @@
 <img src="assets/DRIP-pipeline.png" width="500" height="400"/>
 </p> -->
 
-<h1 align="center">DRIP</h1>
-<h2 align="center">Dynamic Image Tokenization for Efficient VLMs</h2>
+<h1 align="center">Dynamic Image Tokenization for Efficient VLMs</h1>
+<!-- <h2 align="center"></h2> -->
 
 
 ## News/Updates
