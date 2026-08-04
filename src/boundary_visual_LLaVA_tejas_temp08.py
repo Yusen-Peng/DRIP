@@ -400,7 +400,7 @@ def main():
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp10/drip.bin"
 
 
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp01_SiLU/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp08/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp08_SiLU/drip.bin"
 
 
@@ -435,7 +435,7 @@ def main():
 
 
 
-    image_dir = "/users/PAS3184/tejasnaik/DRIP/src/boundary_vis/LLaVA_examples/"
+    image_dir = "/users/PAS3184/tejasnaik/DRIP/src/boundary_vis/LLaVA_examples_tejas_text/"
     image_paths = [
         os.path.join(image_dir, f)
         for f in sorted(os.listdir(image_dir))
@@ -447,7 +447,7 @@ def main():
     visualize_original_10_images_2x5(
         model=model,
         image_paths=image_paths,
-        save_path="/users/PAS3184/tejasnaik/DRIP/src/boundary_vis/LLaVA_results/llava_originals_2x5.png",
+        save_path="/users/PAS3184/tejasnaik/DRIP/src/boundary_vis/LLaVA_results/llava_originals_2x5_tejas_text.png",
         titles=None,
         figsize=(20, 8),
         dpi=300,
@@ -456,7 +456,7 @@ def main():
 
 
     split = DRIP_WEIGHT_PATH.split("/")[5]
-    save_path = f"/users/PAS3184/tejasnaik/DRIP/src/boundary_vis/LLaVA_results/{split}.png"
+    save_path = f"/users/PAS3184/tejasnaik/DRIP/src/boundary_vis/LLaVA_results/{split}_tejas_text.png"
     visualize_10_images_2x5(
         model=model,
         image_paths=image_paths,
