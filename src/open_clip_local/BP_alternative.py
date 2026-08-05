@@ -32,7 +32,17 @@ def detached_cumsum(x, dim=-1):
     
     return C
 
-def segments_to_matrix_diff_detached_cumsum(boundaries: torch.Tensor):
+def segments_to_matrix_diff_detached_cumsum(boundaries: torch.Tensor, leading_one: bool = False):
+    if leading_one:
+        boundaries = boundaries.clone()
+        boundaries[:, 0] = 1
+        n_segments = boundaries.sum(dim=-1).max().item()
+        cs = detached_cumsum(boundaries, dim=-1)               # (B, L)
+        cs = cs.unsqueeze(-1)                          # (B, L, 1)
+        js = torch.zeros_like(boundaries).unsqueeze(2) + torch.arange(n_segments, device=boundaries.device)
+        mat = box(cs-js) - box(cs-js-1)
+        mat = mat / (mat.sum(dim=1, keepdim=True) + 1e-9).detach()
+        return mat
 
     boundaries = boundaries.clone()
     boundaries[:, -1] = 1
@@ -57,7 +67,7 @@ def segments_to_matrix_diff_detached_cumsum(boundaries: torch.Tensor):
     return mat
 
 
-def new_downsample(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: torch.Tensor):
+def new_downsample(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: torch.Tensor, leading_one: bool = False):
     B, _ = boundaries.shape
     _, _, D = hidden.shape
     # Number of segments per example and across the batch
@@ -69,7 +79,7 @@ def new_downsample(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: t
         return null_group.expand(1, B, D).to(hidden.dtype).to(hidden.device)
 
     # B x L x S
-    weights = segments_to_matrix_diff_detached_cumsum(boundaries)  # B x L x S
+    weights = segments_to_matrix_diff_detached_cumsum(boundaries, leading_one)  # B x L x S
     weights = weights.to(dtype=hidden.dtype)
     shortened_hidden = torch.einsum('lbd,bls->sbd', hidden, weights)  # S x B x D, we keep all groups
     return shortened_hidden

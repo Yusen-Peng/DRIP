@@ -262,7 +262,8 @@ class SiglipVisionTower(nn.Module):
             shortened_hidden = new_downsample(
                 boundaries=hard_boundaries,
                 hidden=hidden,
-                null_group=self.null_token
+                null_group=self.null_token,
+                leading_one=True
             )                                            # [S, B, D]
 
         else:
