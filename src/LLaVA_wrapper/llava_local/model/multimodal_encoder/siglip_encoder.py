@@ -263,7 +263,7 @@ class SiglipVisionTower(nn.Module):
                 boundaries=hard_boundaries,
                 hidden=hidden,
                 null_group=self.null_token,
-                leading_one=False
+                leading_one=True
             )                                            # [S, B, D]
 
         else:
