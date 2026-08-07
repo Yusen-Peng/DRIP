@@ -29,8 +29,8 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
     # TEMPERATURE = 0.01
     # TEMPERATURE = 0.3
-    # TEMPERATURE = 0.5
-    TEMPERATURE = 0.8
+    TEMPERATURE = 0.5
+    # TEMPERATURE = 0.8
     # TEMPERATURE = 1.0
 
 
@@ -80,6 +80,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_train_full/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp08_new_downsample/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp08_new_downsample_train_full/drip.bin"
 
 
     # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_Perceiver_4x_pretrain/perceiver.bin"
@@ -116,7 +117,11 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_train_full/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_pretrain_temp08_new_downsample/drip.bin"
 
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_temp08_new_downsample_train_full/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_temp08_new_downsample_train_full/drip.bin"
+
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_pretrain_temp05_new_downsample/drip.bin"
+
+
 
     # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_Perceiver_8x_pretrain/perceiver.bin"
     # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_Perceiver_8x_train_full/perceiver.bin"
@@ -173,6 +178,10 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_temp08_new_downsample_train_full/drip.bin"
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp08_new_downsample_LEADING_ONE/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_temp08_new_downsample_LEADING_ONE_train_full/drip.bin"
+
+
+
 
     # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_Perceiver_10x_pretrain/perceiver.bin"
     # PERCEIVER_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_Perceiver_10x_train_full/perceiver.bin"

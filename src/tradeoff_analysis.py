@@ -86,8 +86,12 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     ax.grid(True, which="major", alpha=0.18, linewidth=0.8)
     ax.set_axisbelow(True)
 
-    # Plot category lines
-    plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "DRIP", "Perceiver"]
+
+    if 'siglip' in CSV_ID.lower():
+        plot_order = ["LLaVA", "Fixed pooling", "Perceiver", "DRIP"]
+    else:
+        # Plot category lines
+        plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "DRIP", "Perceiver"]
 
     for category in plot_order:
         group = df[df["Category"] == category].sort_values("Speedup")
