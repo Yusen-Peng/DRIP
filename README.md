@@ -255,35 +255,47 @@ python src/mcnemar_test/POPE_test.py \
 
 ## Results
 
-LoRA finetuning with image features from ViT's last layer:
+<!-- LoRA finetuning with image features from ViT's last layer:
 
 ![alt text](results/lora_7B_last_tradeoff_combined.png)
 
-CSV results: [results/lora_7B_last.csv](results/lora_7B_last.csv)
+CSV results: [results/lora_7B_last.csv](results/lora_7B_last.csv) -->
 
 Full finetuning with image features from ViT's last layer:
 
 ![alt text](results/full_7B_last_tradeoff_combined.png)
 
-CSV results: [results/full_7B_last.csv](results/full_7B_last.csv)
+raw CSV results: [results/full_7B_last.csv](results/full_7B_last.csv)
 
-LoRA finetuning with image features from ViT's pre-final layer:
+<!-- LoRA finetuning with image features from ViT's pre-final layer:
 
 ![alt text](results/lora_7B_second_to_last_tradeoff_combined.png)
 
-CSV results: [results/lora_7B_second_to_last.csv](results/lora_7B_second_to_last.csv)
+CSV results: [results/lora_7B_second_to_last.csv](results/lora_7B_second_to_last.csv) -->
 
 Full finetuning with image features from ViT's pre-final layer:
 
 ![alt text](results/full_7B_second_to_last_tradeoff_combined.png)
 
-CSV results: [results/full_7B_second_to_last.csv](results/full_7B_second_to_last.csv)
+raw CSV results: [results/full_7B_second_to_last.csv](results/full_7B_second_to_last.csv)
 
 Full finetuning with Qwen 2.5 14B instruct model:
 
 ![alt text](results/qwen14B_full_last_tradeoff_combined.png)
 
-CSV results: [results/qwen14B_full_last.csv](results/qwen14B_full_last.csv)
+raw CSV results: [results/qwen14B_full_last.csv](results/qwen14B_full_last.csv)
+
+Full finetuning with Siglip2-large image encoder:
+
+![alt text](results/SigLIP2_7B_last_tradeoff_combined.png)
+
+Configuration note: 
+
+- 4x: temperature **0.1**, **old** downsample function
+- 8x: temperature **1.0**, **new** downsample function
+- 10x: temperature **0.8**, **new** downsample function
+
+raw CSV results: [results/SigLIP2_7B_last.csv](results/SigLIP2_7B_last.csv)
 
 
 ## Contact
