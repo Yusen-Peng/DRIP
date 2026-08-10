@@ -2,7 +2,7 @@
 
 ## News/Updates
 
-- [July 24, 2026] the paper draft is acccepted to COLM 2026 Tokenization Workshop! I will be in-person presenting it in San Francisco 🌉!
+- [July 24, 2026] the paper draft is acccepted to [COLM 2026 Tokenization Workshop](https://www.aclweb.org/portal/content/tokenization-workshop-colm-2026)! I will be in-person presenting it in San Francisco 🌉!
 
 
 ## Environment setup
