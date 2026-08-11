@@ -292,8 +292,7 @@ Full finetuning with Siglip2-large image encoder:
 Configuration note: 
 
 - 4x: temperature **0.1**, **old** downsample function
-- 8x: temperature **1.0**, **new** downsample function
-- 10x: temperature **0.8**, **new** downsample function
+- 8x and 10x: temperature **1.0**, **new** downsample function
 
 raw CSV results: [results/SigLIP2_7B_last.csv](results/SigLIP2_7B_last.csv)
 
