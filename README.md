@@ -297,6 +297,13 @@ Configuration note:
 raw CSV results: [results/SigLIP2_7B_last.csv](results/SigLIP2_7B_last.csv)
 
 
+## Analysis
+
+CD diagram for Full finetuning with image features from ViT's last layer:
+
+![alt text](results/full_7B_last_cd_combined.png)
+
+
 ## Contact
 
 Yusen Peng (peng.1007@osu.edu)
