@@ -4,6 +4,18 @@
 
 - [July 24, 2026] the paper draft is acccepted to [COLM 2026 Tokenization Workshop](https://www.aclweb.org/portal/content/tokenization-workshop-colm-2026)! I will be in-person presenting it in San Francisco 🌉!
 
+## To-do list
+
+Boundary analysis:
+- [ ] a trained model called CRAFT (from CVPR 2019, https://github.com/clovaai/CRAFT-pytorch) which can detect characters/text on images. We can probably leverage this and compute the boundary overlaps, for both fixed pooling and DRIP.
+- [ ] reconstructing the image in **feature-space** instead, where we can simply “upsample” (i.e., duplicate/repeat) compressed features and compute MSE with the original feature map.
+
+Experiments: 
+- [ ] Keep working on SigLIP2 experiments.
+- [ ] Compression generalization evaluations.
+- [ ] investigate the model’s performance in some early checkpoints (e.g., only exposed to 20%/40%/80% training data) to see how the models scale as we increase the data size.
+
+
 
 ## Environment setup
 

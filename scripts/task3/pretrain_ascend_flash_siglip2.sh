@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=Aug9_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp20_new_downsample
-#SBATCH --output=Aug9_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp20_new_downsample.txt
+#SBATCH --job-name=Aug11_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp03_new_downsample
+#SBATCH --output=Aug11_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp03_new_downsample.txt
 #SBATCH --time=15:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=quad
+#SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=256G
@@ -35,7 +35,7 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp20_new_downsample \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp03_new_downsample \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \
