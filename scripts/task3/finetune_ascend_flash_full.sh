@@ -49,8 +49,8 @@ torchrun --standalone --nproc_per_node=4 --master_port=$MASTER_PORT src/task3_ll
     --accelerator_config '{"gradient_accumulation_kwargs":{"sync_each_batch":true}}' \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 15 \
-    --save_total_limit 2 \
+    --save_steps 300 \
+    --save_total_limit 5 \
     --learning_rate 2e-5 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \

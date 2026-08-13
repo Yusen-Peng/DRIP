@@ -1,18 +1,18 @@
 #!/bin/bash
-#SBATCH --job-name=0722_OCRBenchV2_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp10_new_downsample_train_full
-#SBATCH --output=0722_OCRBenchV2_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp10_new_downsample_train_full.log
+#SBATCH --job-name=0812_OCRBenchV2_LLaVA_7B_DRIP_4x_to_10x
+#SBATCH --output=0812_OCRBenchV2_LLaVA_7B_DRIP_4x_to_10x.log
 #SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=quad
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
 
 module load miniconda3/24.1.2-py310
-conda activate DRIP
-source activate DRIP
+conda activate DRIP_flash
+source activate DRIP_flash
 
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 export OMP_NUM_THREADS=4
@@ -20,11 +20,11 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp10_new_downsample_train_full"
+VERSION="LLaVA_7B_DRIP_4x_to_10x"
 
 
 python src/model_vqa_ocrbenchv2.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp10_new_downsample_train_full \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_full \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
@@ -33,6 +33,17 @@ python src/model_vqa_ocrbenchv2.py \
     --num_workers 1 \
     --temperature 0 \
     --conv_mode vicuna_v1
+
+# python src/model_vqa_ocrbenchv2.py \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp10_new_downsample_train_full \
+#     --dataset_path lmms-lab/OCRBench-v2 \
+#     --dataset_split test \
+#     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
+#     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/results \
+#     --save_name ${VERSION} \
+#     --num_workers 1 \
+#     --temperature 0 \
+#     --conv_mode vicuna_v1
 
 # python src/model_vqa_ocrbenchv2_qwen.py \
 #     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full \

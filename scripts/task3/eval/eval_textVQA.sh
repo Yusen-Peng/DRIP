@@ -1,33 +1,41 @@
 #!/bin/bash
-#SBATCH --job-name=0722_textVQA_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp10_new_downsample_train_full
-#SBATCH --output=0722_textVQA_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp10_new_downsample_train_full.log
+#SBATCH --job-name=0812_textVQA_LLaVA_7B_DRIP_4x_to_10x
+#SBATCH --output=0812_textVQA_LLaVA_7B_DRIP_4x_to_10x.log
 #SBATCH --time=00:55:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=quad
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --account=PAS2836
 
 module load miniconda3/24.1.2-py310
-conda activate DRIP
-source activate DRIP
+conda activate DRIP_flash
+source activate DRIP_flash
 
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp10_new_downsample_train_full"
+VERSION="LLaVA_7B_DRIP_4x_to_10x"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp10_new_downsample_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
     --temperature 0 \
     --conv-mode vicuna_v1
+
+# python src/model_vqa_loader.py \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp10_new_downsample_train_full \
+#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
+#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
+#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
+#     --temperature 0 \
+#     --conv-mode vicuna_v1
 
 
 # python src/model_vqa_loader_qwen.py \
