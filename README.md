@@ -8,11 +8,10 @@
 
 Boundary analysis:
 - [ ] a trained model called CRAFT (from CVPR 2019, https://github.com/clovaai/CRAFT-pytorch) which can detect characters/text on images. We can probably leverage this and compute the boundary overlaps, for both fixed pooling and DRIP.
-- [ ] reconstructing the image in **feature-space** instead, where we can simply “upsample” (i.e., duplicate/repeat) compressed features and compute MSE with the original feature map.
+- [ ] reconstructing the image with a pretrained MAE by masking non-boundary image **raw** patches (i.e., pixel-level)
 
 Experiments: 
 - [ ] Keep working on SigLIP2 experiments.
-- [ ] Compression generalization evaluations.
 - [ ] investigate the model’s performance in some early checkpoints (e.g., only exposed to 20%/40%/80% training data) to see how the models scale as we increase the data size.
 
 
@@ -314,6 +313,11 @@ raw CSV results: [results/SigLIP2_7B_last.csv](results/SigLIP2_7B_last.csv)
 CD diagram for Full finetuning with image features from ViT's last layer:
 
 ![alt text](results/full_7B_last_cd_combined.png)
+
+
+The training v.s. inference compression budget generalization:
+
+![alt text](results/generalization_matrix.png)
 
 
 ## Contact
