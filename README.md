@@ -23,10 +23,12 @@ Create a new conda enviornment from scratch:
 ```bash
 module load miniconda3/24.1.2-py310 # for OSC
 module load conda # for Anvil
-conda create -n DRIP python=3.11 -y
-conda activate DRIP
+conda create -n DRIP_flash python=3.11 -y
+conda activate DRIP_flash
 python -m pip install -r requirements.txt
 ```
+
+Please, make sure flash attention is installed. Otherwise finetuning is a nightmare.
 
 ## LLaVA 1.5 Experiments
 
@@ -53,8 +55,6 @@ bash scripts/task3/eval/EVALUATE_ALL.sh
 ```
 
 ## LLaVA Finetuning
-
-Before anything, make sure flash attention is installed.
 
 ### pretraining (token alignment)
 

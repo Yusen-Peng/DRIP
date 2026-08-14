@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=July8_LLaVA_7B_Perceiver_10x_train_all_second
-#SBATCH --output=July8_LLaVA_7B_Perceiver_10x_train_all_second.txt
+#SBATCH --job-name=Aug13_LLaVA_7B_DRIP_10x_SCALE_train_full
+#SBATCH --output=Aug13_LLaVA_7B_DRIP_10x_SCALE_train_full.txt
 #SBATCH --time=40:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -37,11 +37,11 @@ torchrun --standalone --nproc_per_node=4 --master_port=$MASTER_PORT src/task3_ll
     --mm_projector_type mlp2x_gelu \
     --tf32 True \
     --bf16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_pretrain_second/mm_projector.bin \
-    --mm_vision_select_layer -2 \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_SCALE/mm_projector.bin \
+    --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Perceiver_10x_train_all_second \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_SCALE_train_full \
     --num_train_epochs 1 \
     --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 1 \
@@ -50,7 +50,7 @@ torchrun --standalone --nproc_per_node=4 --master_port=$MASTER_PORT src/task3_ll
     --evaluation_strategy "no" \
     --save_strategy "steps" \
     --save_steps 300 \
-    --save_total_limit 5 \
+    --save_total_limit 6 \
     --learning_rate 2e-5 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
