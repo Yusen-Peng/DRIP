@@ -25,14 +25,14 @@ python src/example_analysis/craft_analysis.py
 """
 
 
-# SAVE_VISUALIZATIONS = True
-# IMAGE_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/subset_images"
-# OUTPUT_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/text_boundary_overlap_subset"
+SAVE_VISUALIZATIONS = True
+IMAGE_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/subset_images"
+OUTPUT_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/text_boundary_overlap_subset"
 
 
-SAVE_VISUALIZATIONS = False
-IMAGE_DIR = "/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images"
-OUTPUT_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/text_boundary_overlap_TextVQA"
+# SAVE_VISUALIZATIONS = False
+# IMAGE_DIR = "/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images"
+# OUTPUT_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/text_boundary_overlap_TextVQA"
 
 
 
@@ -290,7 +290,7 @@ def make_overlap_visualization(
                 x2,
                 y2,
             ],
-            outline=(0, 0, 255),
+            outline=(255, 255, 0),
             width=2,
         )
 
