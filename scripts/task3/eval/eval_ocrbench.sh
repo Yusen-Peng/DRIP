@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0812_OCRBench_LLaVA_7B_Fixed_4x_SCALE_train_full-checkpoint-600
-#SBATCH --output=0812_OCRBench_LLaVA_7B_Fixed_4x_SCALE_train_full-checkpoint-600.log
+#SBATCH --job-name=0812_OCRBench_LLaVA_7B_DRIP_10x_SCALE_train_full-checkpoint-900
+#SBATCH --output=0812_OCRBench_LLaVA_7B_DRIP_10x_SCALE_train_full-checkpoint-900.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,10 +19,10 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_Fixed_4x_SCALE_train_full-checkpoint-600"
+VERSION="LLaVA_7B_DRIP_10x_SCALE_train_full-checkpoint-900"
 
 python src/model_vqa_ocrbench.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_4x_SCALE_train_full/checkpoint-600 \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_SCALE_train_full/checkpoint-900 \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
     --save_name ${VERSION} \

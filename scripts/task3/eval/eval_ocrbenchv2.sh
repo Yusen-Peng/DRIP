@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0812_OCRBenchV2_LLaVA_7B_Fixed_4x_SCALE_train_full-checkpoint-600
-#SBATCH --output=0812_OCRBenchV2_LLaVA_7B_Fixed_4x_SCALE_train_full-checkpoint-600.log
+#SBATCH --job-name=0812_OCRBenchV2_LLaVA_7B_DRIP_10x_SCALE_train_full-checkpoint-900
+#SBATCH --output=0812_OCRBenchV2_LLaVA_7B_DRIP_10x_SCALE_train_full-checkpoint-900.log
 #SBATCH --time=3:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,11 +20,11 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_Fixed_4x_SCALE_train_full-checkpoint-600"
+VERSION="LLaVA_7B_DRIP_10x_SCALE_train_full-checkpoint-900"
 
 
 python src/model_vqa_ocrbenchv2.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_4x_SCALE_train_full/checkpoint-600 \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_SCALE_train_full/checkpoint-900 \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
