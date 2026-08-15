@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0812_MMVet_LLaVA_7B_Fixed_4x_SCALE_train_full-checkpoint-300
-#SBATCH --output=0812_MMVet_LLaVA_7B_Fixed_4x_SCALE_train_full-checkpoint-300.log
+#SBATCH --job-name=0812_MMVet_LLaVA_7B_Fixed_4x_SCALE_train_full-checkpoint-600
+#SBATCH --output=0812_MMVet_LLaVA_7B_Fixed_4x_SCALE_train_full-checkpoint-600.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,12 +17,12 @@ source activate DRIP_flash
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_7B_Fixed_4x_SCALE_train_full-checkpoint-300"
+VERSION="LLaVA_7B_Fixed_4x_SCALE_train_full-checkpoint-600"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_4x_SCALE_train_full/checkpoint-300 \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_4x_SCALE_train_full/checkpoint-600 \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/llava-mm-vet.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/images \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/mm-vet/answers/${VERSION}.jsonl \

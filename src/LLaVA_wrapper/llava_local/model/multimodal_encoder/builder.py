@@ -22,7 +22,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     MERGE_STRATEGY = "Fixed"
     # main result: 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
     # limit test: 20x - 0.05, 100x - 0.01, 500x - 0.002
-    COMPRESSION_RATE = 0.25
+    COMPRESSION_RATE = 0.125
 
     # NOTE: temperature tuning
     TEMPERATURE = 0.1
@@ -40,9 +40,10 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
 
 
     # scaling experiments.
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_SCALE/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain_SCALE/drip.bin"
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_SCALE/drip.bin"
+
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_SCALE_train_full/checkpoint-300/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_SCALE_train_full/checkpoint-600/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_SCALE_train_full/checkpoint-900/drip.bin"
 
 
     """
