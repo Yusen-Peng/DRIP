@@ -11,6 +11,10 @@ sys.path.insert(0, PROJECT_ROOT)
 from src.LLaVA_wrapper.llava_local.model.multimodal_encoder.clip_encoder import CLIPVisionTower
 from src.boundary_visual_LLaVA import load_img_with_processor, overlay_llava_drip_boundaries, build_llava_drip_vision_tower, overlay_llava_fixed_boundaries
 
+from src.LLaVA_wrapper.llava_local.model.multimodal_encoder.siglip_encoder import SiglipVisionTower
+from src.boundary_visual_LLaVA import build_llava_siglip_vision_tower
+
+
 
 def visualize_single_image(
     model: CLIPVisionTower,
@@ -63,30 +67,54 @@ def visualize_single_image(
 
 
 if __name__ == "__main__":
-    IMAGE_ID = "082f5ae635a90152"
+    # IMAGE_ID = "082f5ae635a90152"
 
+    IMAGE_ID = "0a9e38ebdc5bbbf4"
 
     MERGE_STRATEGY = "DRIP" # "DRIP" or "DRIP-H"
-    COMPRESSION_RATE = 0.1
+    COMPRESSION_RATE = 0.25
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_finetune_train_lora/drip.bin"
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_lora/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_lora/drip.bin"
 
+    
+    
+
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_train_full/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp01_new_downsample_train_full/drip.bin"
 
 
 
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = build_llava_drip_vision_tower(
-        vision_tower_name="openai/clip-vit-large-patch14-336",
-        mm_vision_select_layer=-1,
-        mm_vision_select_feature="patch",
-        compression_rate=COMPRESSION_RATE,
-        drip_weight_path=DRIP_WEIGHT_PATH,
-        merge_strategy=MERGE_STRATEGY,
-        device=device,
-    )
+
+
+    if "clip" in DRIP_WEIGHT_PATH.lower():
+        model = build_llava_drip_vision_tower(
+            vision_tower_name="openai/clip-vit-large-patch14-336",
+            mm_vision_select_layer=-1,
+            mm_vision_select_feature="patch",
+            compression_rate=COMPRESSION_RATE,
+            drip_weight_path=DRIP_WEIGHT_PATH,
+            merge_strategy=MERGE_STRATEGY,
+            device=device,
+        )
+    elif "siglip" in DRIP_WEIGHT_PATH.lower():
+        model = build_llava_siglip_vision_tower(
+            vision_tower_name="google/siglip2-large-patch16-384",
+            mm_vision_select_layer=-1,
+            mm_vision_select_feature="patch",
+            compression_rate=COMPRESSION_RATE,
+            drip_weight_path=DRIP_WEIGHT_PATH,
+            merge_strategy=MERGE_STRATEGY,
+            device=device,
+        )
+    else:
+        raise ValueError(f"Unknown DRIP_WEIGHT_PATH: {DRIP_WEIGHT_PATH}")
+
+
+    ################ ORIGINAL CLIP analysis ################
     # image_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/original_images/{IMAGE_ID}.jpg"
     # save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/boundary_maps/{IMAGE_ID}_DRIP_overlay.png"
     # visualize_single_image(model, drip=True, image_path=image_path, save_path=save_path, alpha=0.4, verbose=True)
@@ -94,9 +122,20 @@ if __name__ == "__main__":
     # visualize_single_image(model, drip=False, image_path=image_path, save_path=save_path, alpha=0.4, verbose=True)
 
 
+    ################ Teaser Image generation ################
+    # image_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/MME_results/original_images/MME_example.jpg"
+    # save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/MME_results/boundary_maps/MME_example_DRIP_overlay.png"
+    # visualize_single_image(model, drip=True, image_path=image_path, save_path=save_path, alpha=0.4, verbose=True)
+    # save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/MME_results/boundary_maps/MME_example_FIXED_overlay.png"
+    # visualize_single_image(model, drip=False, image_path=image_path, save_path=save_path, alpha=0.4, verbose=True)
 
-    image_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/MME_results/original_images/MME_example.jpg"
-    save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/MME_results/boundary_maps/MME_example_DRIP_overlay.png"
+
+
+    image_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/siglip_diagnose_cases/{IMAGE_ID}.jpg"
+    if "new_downsample" in DRIP_WEIGHT_PATH.lower():
+        save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/siglip_boundary_maps/{IMAGE_ID}_NEW_overlay.png"
+    else:
+        save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/siglip_boundary_maps/{IMAGE_ID}_OLD_overlay.png"
     visualize_single_image(model, drip=True, image_path=image_path, save_path=save_path, alpha=0.4, verbose=True)
-    save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/MME_results/boundary_maps/MME_example_FIXED_overlay.png"
-    visualize_single_image(model, drip=False, image_path=image_path, save_path=save_path, alpha=0.4, verbose=True)
+
+

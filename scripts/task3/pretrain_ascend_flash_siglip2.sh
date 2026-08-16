@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Aug11_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp001_new_downsample
-#SBATCH --output=Aug11_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp001_new_downsample.txt
+#SBATCH --job-name=Aug15_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp001_new_downsample
+#SBATCH --output=Aug15_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp001_new_downsample.txt
 #SBATCH --time=15:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
