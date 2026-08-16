@@ -7,13 +7,10 @@
 ## To-do list
 
 Boundary analysis:
-- [ ] a trained model called CRAFT (from CVPR 2019, https://github.com/clovaai/CRAFT-pytorch) which can detect characters/text on images. We can probably leverage this and compute the boundary overlaps, for both fixed pooling and DRIP.
 - [ ] reconstructing the image with a pretrained MAE by masking non-boundary image **raw** patches (i.e., pixel-level)
 
 Experiments: 
 - [ ] Keep working on SigLIP2 experiments.
-- [ ] investigate the model’s performance in some early checkpoints (e.g., only exposed to 20%/40%/80% training data) to see how the models scale as we increase the data size.
-
 
 
 ## Environment setup
@@ -319,6 +316,10 @@ The training v.s. inference compression budget generalization:
 
 ![alt text](results/generalization_matrix.png)
 
+
+Scaling behavior:
+
+![alt text](results/scaling_sft_scaling_combined.png)
 
 ## Contact
 
