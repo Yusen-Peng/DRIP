@@ -70,6 +70,10 @@ if __name__ == "__main__":
     # IMAGE_ID = "082f5ae635a90152"
 
     IMAGE_ID = "0a9e38ebdc5bbbf4"
+    IMAGE_ID = "00ad17e05c1a1bf5"
+    IMAGE_ID = "00e9ff4c6baa2ab6"
+    IMAGE_ID = "0ef6658f6d52d8f9"
+
 
     MERGE_STRATEGY = "DRIP" # "DRIP" or "DRIP-H"
     COMPRESSION_RATE = 0.25

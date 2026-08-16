@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Aug12_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp20_new_downsample_train_full
-#SBATCH --output=Aug12_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp20_new_downsample_train_full.txt
+#SBATCH --job-name=Aug16_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full
+#SBATCH --output=Aug16_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full.txt
 #SBATCH --time=35:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -38,11 +38,11 @@ torchrun --standalone --nproc_per_node=4 --master_port=$MASTER_PORT src/task3_ll
     --mm_projector_type mlp2x_gelu \
     --tf32 True \
     --bf16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp20_new_downsample/mm_projector.bin \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp001_new_downsample/mm_projector.bin \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp20_new_downsample_train_full \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full \
     --num_train_epochs 1 \
     --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 1 \

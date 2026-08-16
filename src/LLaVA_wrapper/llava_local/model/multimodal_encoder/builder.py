@@ -38,6 +38,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     DRIP_WEIGHT_PATH = None
     PERCEIVER_WEIGHT_PATH = None
 
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp001_new_downsample/drip.bin"
 
     # scaling experiments.
 
