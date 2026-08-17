@@ -25,24 +25,43 @@ python src/example_analysis/craft_analysis.py
 """
 
 
-SAVE_VISUALIZATIONS = True
-IMAGE_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/subset_images"
-OUTPUT_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/text_boundary_overlap_subset"
+"""
+    showing a few examples for the paper.
+"""
+# SAVE_VISUALIZATIONS = True
+# IMAGE_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/subset_images"
+# OUTPUT_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/text_boundary_overlap_subset"
 
 
-# SAVE_VISUALIZATIONS = False
-# IMAGE_DIR = "/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images"
-# OUTPUT_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/text_boundary_overlap_TextVQA"
+BENCHMARK = "TextVQA" # TextVQA
 
 
+
+"""
+    performing evaluation on the whole OCR benchmarks
+"""
+SAVE_VISUALIZATIONS = False
+IMAGE_DIR = "/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images"
+OUTPUT_DIR = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/text_boundary_overlap_{BENCHMARK}"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_full/drip.bin"
 COMPRESSION_RATE = 0.25
-MERGE_STRATEGY = "DRIP"
 
-OUTPUT_CSV = os.path.join(OUTPUT_DIR, "craft_boundary_overlap.csv")
-SUMMARY_CSV = os.path.join(OUTPUT_DIR, "craft_boundary_overlap_summary.csv")
+
+# DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_finetune_train_full/drip.bin"
+# COMPRESSION_RATE = 0.125
+
+
+# DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_full/drip.bin"
+# COMPRESSION_RATE = 0.1
+
+
+
+MERGE_STRATEGY = "DRIP"
+OUTPUT_CSV = os.path.join(OUTPUT_DIR, f"craft_boundary_overlap_{COMPRESSION_RATE}.csv")
+SUMMARY_CSV = os.path.join(OUTPUT_DIR, f"craft_boundary_overlap_summary_{COMPRESSION_RATE}.csv")
 
 VISION_TOWER_NAME = "openai/clip-vit-large-patch14-336"
 
@@ -125,20 +144,14 @@ def craft_boxes_to_pixel_mask(boxes, image_h, image_w):
 
     for box in boxes:
         x, y, w, h = map(float, box)
-        # Skip malformed boxes
+        # we need to skip malformed boxes
         if w <= 0 or h <= 0:
-            print(f"[WARNING] Invalid CRAFT box: {box}")
             continue
 
         x1 = max(0, x)
         y1 = max(0, y)
         x2 = min(image_w, x + w)
         y2 = min(image_h, y + h)
-
-        # Box might be completely outside the image
-        if x2 <= x1 or y2 <= y1:
-            print(f"[WARNING] Out-of-frame CRAFT box: {box}")
-            continue
 
         draw.rectangle(
             [x1, y1, x2, y2],
@@ -266,7 +279,7 @@ def make_overlap_visualization(
 
         x, y, w, h = map(float, box)
 
-        # Skip malformed boxes
+        # again, skip malformed boxes
         if w <= 0 or h <= 0:
             continue
 
