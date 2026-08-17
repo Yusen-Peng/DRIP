@@ -319,7 +319,7 @@ The training v.s. inference compression budget generalization:
 
 Scaling behavior:
 
-![alt text](results/scaling_sft_scaling_combined.png)
+![alt text](results/scaling_sft_scaling_grid.png)
 
 ## Contact
 

@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from matplotlib.lines import Line2D
 
 
 # ============================================================
@@ -13,8 +14,8 @@ import matplotlib as mpl
 CSV_ID = "scaling"
 INPUT_CSV = f"results/{CSV_ID}.csv"
 
-OUTPUT_PDF = f"results/{CSV_ID}_sft_scaling_combined.pdf"
-OUTPUT_PNG = f"results/{CSV_ID}_sft_scaling_combined.png"
+OUTPUT_PDF = f"results/{CSV_ID}_sft_scaling_grid.pdf"
+OUTPUT_PNG = f"results/{CSV_ID}_sft_scaling_grid.png"
 
 FULL_SFT_SIZE_K = 665.0
 
@@ -57,15 +58,99 @@ def setup_plot_style():
     mpl.rcParams.update({
         "font.family": "serif",
         "font.size": 12,
+
         "axes.titlesize": 15,
         "axes.labelsize": 13,
+
         "legend.fontsize": 11,
-        "xtick.labelsize": 11,
-        "ytick.labelsize": 11,
-        "axes.linewidth": 1.1,
+
+        "xtick.labelsize": 10,
+        "ytick.labelsize": 10,
+
+        "axes.linewidth": 1.0,
+
         "pdf.fonttype": 42,
         "ps.fonttype": 42,
     })
+
+
+def add_data_efficiency_annotation(
+    ax,
+    df,
+    compression,
+    score_col,
+    drip_scale,
+    fixed_scale=1.0,
+):
+    """
+    Add a horizontal data-efficiency annotation comparing:
+
+        DRIP @ drip_scale
+        vs.
+        Fixed Pooling @ fixed_scale
+
+    The horizontal arrow is drawn at the Fixed Pooling performance level.
+    """
+
+    drip_name = f"DRIP-{compression}"
+    fixed_name = f"fixed pooling-{compression}"
+
+    # --------------------------------------------------------
+    # Get the two points
+    # --------------------------------------------------------
+
+    drip_row = df[
+        (df["Model"] == drip_name)
+        & np.isclose(df["data_scale"], drip_scale)
+    ].iloc[0]
+
+    fixed_row = df[
+        (df["Model"] == fixed_name)
+        & np.isclose(df["data_scale"], fixed_scale)
+    ].iloc[0]
+
+    drip_x = drip_row["SFT_Data_K"]
+    drip_y = drip_row[score_col]
+
+    fixed_x = fixed_row["SFT_Data_K"]
+    fixed_y = fixed_row[score_col]
+
+    # We want to visually show that DRIP @ less data ≈ Fixed @ full data
+    y = fixed_y
+    # Horizontal double-headed arrow
+    ax.annotate(
+        "",
+        xy=(drip_x, y),
+        xytext=(fixed_x, y),
+        arrowprops=dict(
+            arrowstyle="<->",
+            color="#0BE5B6",
+            linewidth=1.0,
+            linestyle="--",   # dashed
+        ),
+        zorder=5,
+    )
+
+    # --------------------------------------------------------
+    # Text annotation
+    # --------------------------------------------------------
+
+    midpoint = (drip_x + fixed_x) / 2
+
+    drip_k = drip_x
+    fixed_k = fixed_x
+
+    ax.annotate(
+        f"DRIP @ {drip_k:.1f}K >= Fixed @ {fixed_k:.0f}K",
+        xy=(midpoint, y),
+        xytext=(-15, -15),
+        textcoords="offset points",
+        ha="center",
+        va="bottom",
+        fontsize=7,
+        fontweight="bold",
+        color="#333333",
+    )
 
 
 # ============================================================
@@ -75,53 +160,22 @@ def setup_plot_style():
 def normalize_model_name(name):
     name = str(name).strip()
 
-    name = name.replace("fixed-pooling", "fixed pooling")
-    name = name.replace("Fixed pooling", "fixed pooling")
-    name = name.replace("Fixed-pooling", "fixed pooling")
+    name = name.replace(
+        "fixed-pooling",
+        "fixed pooling",
+    )
+
+    name = name.replace(
+        "Fixed pooling",
+        "fixed pooling",
+    )
+
+    name = name.replace(
+        "Fixed-pooling",
+        "fixed pooling",
+    )
 
     return name
-
-
-def get_category(model_name):
-    name = model_name.lower()
-
-    if name.startswith("llava"):
-        return "LLaVA"
-    elif name.startswith("fixed pooling"):
-        return "Fixed pooling"
-    elif name.startswith("drip"):
-        return "DRIP"
-
-    return "Other"
-
-
-def get_compression(model_name):
-    name = model_name.lower()
-
-    if name.startswith("llava"):
-        return "LLaVA"
-
-    for ratio in ["4x", "8x", "10x"]:
-        if ratio in name:
-            return ratio
-
-    return ""
-
-
-def pretty_model_name(model_name):
-    category = get_category(model_name)
-    compression = get_compression(model_name)
-
-    if category == "LLaVA":
-        return "LLaVA"
-
-    if category == "DRIP":
-        return f"DRIP-{compression}"
-
-    if category == "Fixed pooling":
-        return f"Fixed-{compression}"
-
-    return model_name
 
 
 # ============================================================
@@ -129,9 +183,20 @@ def pretty_model_name(model_name):
 # ============================================================
 
 def prepare_data(df):
+
     df = df.copy()
 
-    df["Model"] = df["Model"].apply(normalize_model_name)
+    # --------------------------------------------------------
+    # Normalize names
+    # --------------------------------------------------------
+
+    df["Model"] = df["Model"].apply(
+        normalize_model_name
+    )
+
+    # --------------------------------------------------------
+    # Numeric conversion
+    # --------------------------------------------------------
 
     df["data_scale"] = pd.to_numeric(
         df["data_scale"],
@@ -139,61 +204,76 @@ def prepare_data(df):
     )
 
     for col in ALL_BENCHMARKS:
+
         df[col] = pd.to_numeric(
             df[col],
             errors="coerce",
         )
 
     # --------------------------------------------------------
-    # Baseline:
-    # fully trained, uncompressed LLaVA
+    # Fully trained uncompressed LLaVA baseline
     # --------------------------------------------------------
 
     baseline_mask = (
         (df["Model"] == "LLaVA-1.5-7B")
         &
-        np.isclose(df["data_scale"], 1.0)
+        np.isclose(
+            df["data_scale"],
+            1.0,
+        )
     )
 
-    baseline_rows = df.loc[baseline_mask]
+    baseline_rows = df.loc[
+        baseline_mask
+    ]
 
     if len(baseline_rows) != 1:
+
         raise ValueError(
-            "Expected exactly one fully-trained "
-            "LLaVA-1.5-7B row."
+            "Expected exactly one "
+            "fully-trained LLaVA-1.5-7B row."
         )
 
     baseline_row = baseline_rows.iloc[0]
 
     # --------------------------------------------------------
-    # Normalize every benchmark by full-data LLaVA
+    # Normalize benchmark performance
     # --------------------------------------------------------
 
-    relative = df[ALL_BENCHMARKS].div(
-        baseline_row[ALL_BENCHMARKS],
-        axis=1,
+    relative = (
+        df[ALL_BENCHMARKS]
+        .div(
+            baseline_row[ALL_BENCHMARKS],
+            axis=1,
+        )
     )
 
     # --------------------------------------------------------
-    # Aggregate scores
+    # Overall
     # --------------------------------------------------------
 
-    df["OverallScore"] = relative[
-        ALL_BENCHMARKS
-    ].mean(
-        axis=1,
-        skipna=True,
-    )
-
-    df["OCRScore"] = relative[
-        OCR_BENCHMARKS
-    ].mean(
-        axis=1,
-        skipna=True,
+    df["OverallScore"] = (
+        relative[ALL_BENCHMARKS]
+        .mean(
+            axis=1,
+            skipna=True,
+        )
     )
 
     # --------------------------------------------------------
-    # Actual SFT dataset size
+    # OCR
+    # --------------------------------------------------------
+
+    df["OCRScore"] = (
+        relative[OCR_BENCHMARKS]
+        .mean(
+            axis=1,
+            skipna=True,
+        )
+    )
+
+    # --------------------------------------------------------
+    # Real dataset size
     # --------------------------------------------------------
 
     df["SFT_Data_K"] = (
@@ -201,59 +281,130 @@ def prepare_data(df):
         * FULL_SFT_SIZE_K
     )
 
-    df["Category"] = df["Model"].apply(
-        get_category
-    )
-
-    df["Compression"] = df["Model"].apply(
-        get_compression
-    )
-
     return df
 
 
 # ============================================================
-# Single panel
+# Plot one panel
 # ============================================================
 
-def plot_scaling_panel(
+def plot_single_panel(
     ax,
     df,
+    compression,
     score_col,
-    title,
-    ylabel,
 ):
+
+    # --------------------------------------------------------
+    # Colors
+    # --------------------------------------------------------
+
     colors = {
         "LLaVA": "#6E6E6E",
-        "Fixed pooling": "#F28E2B",
+        "Fixed": "#F28E2B",
         "DRIP": "#E15759",
     }
 
-    markers = {
-        "LLaVA": "o",
-        "4x": "s",
-        "8x": "^",
-        "10x": "D",
-    }
+    # --------------------------------------------------------
+    # Models for this compression ratio
+    # --------------------------------------------------------
 
-    linestyles = {
-        "LLaVA": "-",
-        "4x": "-",
-        "8x": "--",
-        "10x": ":",
-    }
+    llava_name = "LLaVA-1.5-7B"
+    fixed_name = f"fixed pooling-{compression}"
+    drip_name = f"DRIP-{compression}"
 
-    model_order = [
-        "LLaVA-1.5-7B",
-
-        "fixed pooling-4x",
-        "fixed pooling-8x",
-        "fixed pooling-10x",
-
-        "DRIP-4x",
-        "DRIP-8x",
-        "DRIP-10x",
+    plot_models = [
+        (
+            llava_name,
+            "LLaVA",
+        ),
+        (
+            fixed_name,
+            "Fixed",
+        ),
+        (
+            drip_name,
+            "DRIP",
+        ),
     ]
+
+    # --------------------------------------------------------
+    # Plot
+    # --------------------------------------------------------
+
+    for model_name, label in plot_models:
+
+        group = (
+            df[
+                df["Model"]
+                == model_name
+            ]
+            .sort_values(
+                "SFT_Data_K"
+            )
+        )
+
+        if len(group) == 0:
+
+            print(
+                f"Warning: missing {model_name}"
+            )
+
+            continue
+
+        if label == "LLaVA":
+
+            linewidth = 2.0
+            markersize = 6.5
+            alpha = 0.85
+
+        elif label == "DRIP":
+
+            linewidth = 2.4
+            markersize = 7.0
+            alpha = 0.95
+
+        else:
+
+            linewidth = 1.9
+            markersize = 6.5
+            alpha = 0.80
+
+        ax.plot(
+            group["SFT_Data_K"],
+            group[score_col],
+
+            color=colors[label],
+
+            marker="o",
+
+            linewidth=linewidth,
+            markersize=markersize,
+
+            markeredgecolor="white",
+            markeredgewidth=0.9,
+
+            alpha=alpha,
+
+            label=label,
+
+            zorder=3
+            if label == "DRIP"
+            else 2,
+        )
+
+    # --------------------------------------------------------
+    # Reference line
+    # --------------------------------------------------------
+
+    ax.axhline(
+        1.0,
+        color="black",
+        linewidth=1.0,
+        linestyle="--",
+        alpha=0.30,
+        zorder=1,
+    )
 
     # --------------------------------------------------------
     # Grid
@@ -262,79 +413,14 @@ def plot_scaling_panel(
     ax.grid(
         True,
         which="major",
-        alpha=0.18,
-        linewidth=0.8,
+        alpha=0.16,
+        linewidth=0.75,
     )
 
     ax.set_axisbelow(True)
 
     # --------------------------------------------------------
-    # Plot curves
-    # --------------------------------------------------------
-
-    for model_name in model_order:
-
-        group = (
-            df[df["Model"] == model_name]
-            .sort_values("SFT_Data_K")
-        )
-
-        if len(group) == 0:
-            continue
-
-        category = get_category(model_name)
-        compression = get_compression(model_name)
-
-        if category == "LLaVA":
-            marker = markers["LLaVA"]
-            linestyle = linestyles["LLaVA"]
-            linewidth = 2.2
-            markersize = 7.5
-            alpha = 0.90
-
-        else:
-            marker = markers[compression]
-            linestyle = linestyles[compression]
-
-            if category == "DRIP":
-                linewidth = 2.5
-                markersize = 7.5
-                alpha = 0.95
-            else:
-                linewidth = 1.9
-                markersize = 7.0
-                alpha = 0.78
-
-        ax.plot(
-            group["SFT_Data_K"],
-            group[score_col],
-            color=colors[category],
-            marker=marker,
-            linestyle=linestyle,
-            linewidth=linewidth,
-            markersize=markersize,
-            markeredgecolor="white",
-            markeredgewidth=1.0,
-            alpha=alpha,
-            label=pretty_model_name(model_name),
-            zorder=3 if category == "DRIP" else 2,
-        )
-
-    # --------------------------------------------------------
-    # Full LLaVA reference
-    # --------------------------------------------------------
-
-    ax.axhline(
-        1.0,
-        color="black",
-        linestyle="--",
-        linewidth=1.0,
-        alpha=0.35,
-        zorder=1,
-    )
-
-    # --------------------------------------------------------
-    # X-axis
+    # X ticks
     # --------------------------------------------------------
 
     data_scales = np.array([
@@ -349,7 +435,9 @@ def plot_scaling_panel(
         * FULL_SFT_SIZE_K
     )
 
-    ax.set_xticks(x_ticks)
+    ax.set_xticks(
+        x_ticks
+    )
 
     ax.set_xticklabels([
         f"{x:.0f}K"
@@ -364,119 +452,271 @@ def plot_scaling_panel(
     )
 
     # --------------------------------------------------------
-    # Labels
-    # --------------------------------------------------------
-
-    ax.set_title(
-        title,
-        pad=12,
-        fontweight="bold",
-    )
-
-    ax.set_ylabel(ylabel)
-
-    # --------------------------------------------------------
     # Clean spines
     # --------------------------------------------------------
 
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
+    ax.spines[
+        "top"
+    ].set_visible(False)
+
+    ax.spines[
+        "right"
+    ].set_visible(False)
 
 
 # ============================================================
-# Combined figure
+# 2 x 3 combined figure
 # ============================================================
 
-def plot_combined_scaling(df):
+def plot_scaling_grid(df):
+
     setup_plot_style()
 
+    compression_ratios = [
+        "4x",
+        "8x",
+        "10x",
+    ]
+
     fig, axes = plt.subplots(
-        1,
         2,
-        figsize=(13.8, 5.2),
+        3,
+        figsize=(14.5, 8.2),
         sharex=True,
-        sharey=True,
+        sharey="row",
     )
 
-    # --------------------------------------------------------
-    # Overall
-    # --------------------------------------------------------
+    # ========================================================
+    # Top row: Overall
+    # ========================================================
 
-    plot_scaling_panel(
-        ax=axes[0],
-        df=df,
-        score_col="OverallScore",
-        title="Overall Performance",
-        ylabel="Average Relative Performance",
+    for col_idx, compression in enumerate(
+        compression_ratios
+    ):
+
+        ax = axes[
+            0,
+            col_idx,
+        ]
+
+        plot_single_panel(
+            ax=ax,
+            df=df,
+            compression=compression,
+            score_col="OverallScore",
+        )
+
+        ax.set_title(
+            f"{compression} Compression",
+            fontweight="bold",
+            pad=10,
+        )
+
+    # ========================================================
+    # Bottom row: OCR
+    # ========================================================
+
+    for col_idx, compression in enumerate(
+        compression_ratios
+    ):
+
+        ax = axes[
+            1,
+            col_idx,
+        ]
+
+        plot_single_panel(
+            ax=ax,
+            df=df,
+            compression=compression,
+            score_col="OCRScore",
+        )
+
+    # ========================================================
+    # Y-axis ranges
+    # ========================================================
+
+    for ax in axes[0]:
+
+        ax.set_ylim(
+            0.84,
+            1.015,
+        )
+
+    for ax in axes[1]:
+
+        ax.set_ylim(
+            0.74,
+            1.015,
+        )
+
+    # ========================================================
+    # Row labels
+    # ========================================================
+
+    axes[
+        0,
+        0,
+    ].set_ylabel(
+        "Overall Relative Performance"
     )
 
-    # --------------------------------------------------------
-    # OCR
-    # --------------------------------------------------------
-
-    plot_scaling_panel(
-        ax=axes[1],
-        df=df,
-        score_col="OCRScore",
-        title="OCR Performance",
-        ylabel="",
+    axes[
+        1,
+        0,
+    ].set_ylabel(
+        "OCR Relative Performance"
     )
 
-    # --------------------------------------------------------
-    # Optional custom y limits
-    # --------------------------------------------------------
+    # ========================================================
+    # X labels
+    # ========================================================
 
-    axes[0].set_ylim(
-        0.835,
-        1.015,
+    for ax in axes[1]:
+
+        ax.set_xlabel(
+            "SFT Data Size"
+        )
+
+    # ========================================================
+    # Row titles on left side
+    # Optional but nice for paper figure
+    # ========================================================
+
+    fig.text(
+        0.012,
+        0.72,
+        "Overall",
+        rotation=90,
+        va="center",
+        ha="center",
+        fontsize=15,
+        fontweight="bold",
     )
 
-    axes[1].set_ylim(
-        0.70,
-        1.015,
+    fig.text(
+        0.012,
+        0.30,
+        "OCR",
+        rotation=90,
+        va="center",
+        ha="center",
+        fontsize=15,
+        fontweight="bold",
     )
 
-    # --------------------------------------------------------
-    # Shared x label
-    # --------------------------------------------------------
 
-    fig.supxlabel(
-        "SFT Data Size",
-        y=0.06,
-        fontsize=13,
-    )
+    # ========================================================
+    # Data-efficiency annotations
+    # ========================================================
 
-    # --------------------------------------------------------
+    for col_idx, compression in enumerate(compression_ratios):
+
+        # ----------------------------------------------------
+        # Overall:
+        # DRIP @ 50% data (~332.5K)
+        # vs Fixed @ 100% data (665K)
+        # ----------------------------------------------------
+
+        add_data_efficiency_annotation(
+            ax=axes[0, col_idx],
+            df=df,
+            compression=compression,
+            score_col="OverallScore",
+            drip_scale=0.50,
+            fixed_scale=1.00,
+        )
+
+        # ----------------------------------------------------
+        # OCR:
+        # DRIP @ 25% data (~166.2K)
+        # vs Fixed @ 100% data (665K)
+        # ----------------------------------------------------
+
+        add_data_efficiency_annotation(
+            ax=axes[1, col_idx],
+            df=df,
+            compression=compression,
+            score_col="OCRScore",
+            drip_scale=0.25,
+            fixed_scale=1.00,
+        )
+
+
+    # ========================================================
     # Shared legend
-    #
-    # Pull handles from first subplot.
-    # --------------------------------------------------------
+    # ========================================================
 
-    handles, labels = axes[0].get_legend_handles_labels()
+    legend_handles = [
+        Line2D(
+            [0],
+            [0],
+            color="#6E6E6E",
+            marker="o",
+            linewidth=2.0,
+            markersize=7,
+            markeredgecolor="white",
+            label="Uncompressed LLaVA",
+        ),
+
+        Line2D(
+            [0],
+            [0],
+            color="#F28E2B",
+            marker="o",
+            linewidth=2.0,
+            markersize=7,
+            markeredgecolor="white",
+            label="Fixed Pooling",
+        ),
+
+        Line2D(
+            [0],
+            [0],
+            color="#E15759",
+            marker="o",
+            linewidth=2.4,
+            markersize=7,
+            markeredgecolor="white",
+            label="DRIP",
+        ),
+    ]
 
     fig.legend(
-        handles=handles,
-        labels=labels,
+        handles=legend_handles,
+
         loc="lower center",
-        ncol=7,
+
+        ncol=3,
+
         frameon=True,
+
         fancybox=True,
+
         framealpha=0.95,
+
         edgecolor="#DDDDDD",
-        bbox_to_anchor=(0.5, -0.02),
+
+        bbox_to_anchor=(
+            0.5,
+            -0.005,
+        ),
     )
 
-    # --------------------------------------------------------
-    # Layout
-    # --------------------------------------------------------
+    # ========================================================
+    # Spacing
+    # ========================================================
 
     plt.tight_layout(
         rect=[
-            0,
-            0.10,
-            1,
-            1,
-        ]
+            0.035,
+            0.07,
+            1.0,
+            1.0,
+        ],
+
+        w_pad=2.0,
+        h_pad=2.2,
     )
 
     return fig, axes
@@ -488,18 +728,38 @@ def plot_combined_scaling(df):
 
 if __name__ == "__main__":
 
-    df = pd.read_csv(INPUT_CSV)
+    # --------------------------------------------------------
+    # Load
+    # --------------------------------------------------------
 
-    df = prepare_data(df)
+    df = pd.read_csv(
+        INPUT_CSV
+    )
 
     # --------------------------------------------------------
-    # Print useful values
+    # Prepare
+    # --------------------------------------------------------
+
+    df = prepare_data(
+        df
+    )
+
+    # --------------------------------------------------------
+    # Print scores
     # --------------------------------------------------------
 
     print()
-    print("=" * 80)
-    print("SFT scaling scores")
-    print("=" * 80)
+    print(
+        "=" * 80
+    )
+
+    print(
+        "SFT scaling scores"
+    )
+
+    print(
+        "=" * 80
+    )
 
     print(
         df[
@@ -527,14 +787,18 @@ if __name__ == "__main__":
     # Plot
     # --------------------------------------------------------
 
-    fig, axes = plot_combined_scaling(df)
+    fig, axes = plot_scaling_grid(
+        df
+    )
 
     # --------------------------------------------------------
     # Save
     # --------------------------------------------------------
 
     os.makedirs(
-        os.path.dirname(OUTPUT_PDF),
+        os.path.dirname(
+            OUTPUT_PDF
+        ),
         exist_ok=True,
     )
 
@@ -550,7 +814,12 @@ if __name__ == "__main__":
     )
 
     print()
-    print(f"Saved PDF -> {OUTPUT_PDF}")
-    print(f"Saved PNG -> {OUTPUT_PNG}")
+    print(
+        f"Saved PDF -> {OUTPUT_PDF}"
+    )
+
+    print(
+        f"Saved PNG -> {OUTPUT_PNG}"
+    )
 
     plt.show()
