@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import torch
 from PIL import Image, ImageDraw
+from datasets import load_dataset
 from tqdm import tqdm
 from hezar.models import Model as CRAFTModel
 from hezar.utils import load_image
@@ -33,7 +34,7 @@ python src/example_analysis/craft_analysis.py
 # OUTPUT_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/text_boundary_overlap_subset"
 
 
-BENCHMARK = "TextVQA" # TextVQA
+BENCHMARK = "OCRBenchv2" # TextVQA, OCRBench, OCRBenchv2, DocVQA, ChartQAPro
 
 
 
@@ -41,21 +42,35 @@ BENCHMARK = "TextVQA" # TextVQA
     performing evaluation on the whole OCR benchmarks
 """
 SAVE_VISUALIZATIONS = False
-IMAGE_DIR = "/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images"
+
+if BENCHMARK == "TextVQA":
+    IMAGE_DIR = Path("/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images")
+elif BENCHMARK == "OCRBench":
+    IMAGE_DIR = Path("/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images")
+elif BENCHMARK == "DocVQA":
+    IMAGE_DIR = Path("/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images")
+elif BENCHMARK == "OCRBenchv2":
+    IMAGE_DIR = None
+elif BENCHMARK == "ChartQAPro":
+    IMAGE_DIR = Path("/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/images")
+else:
+    raise ValueError(f"Unknown benchmark: {BENCHMARK}")
+
+
 OUTPUT_DIR = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/text_boundary_overlap_{BENCHMARK}"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
-DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_full/drip.bin"
-COMPRESSION_RATE = 0.25
+# DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_full/drip.bin"
+# COMPRESSION_RATE = 0.25
 
 
 # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_finetune_train_full/drip.bin"
 # COMPRESSION_RATE = 0.125
 
 
-# DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_full/drip.bin"
-# COMPRESSION_RATE = 0.1
+DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_full/drip.bin"
+COMPRESSION_RATE = 0.1
 
 
 
@@ -71,6 +86,13 @@ VISION_TOWER_NAME = "openai/clip-vit-large-patch14-336"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".bmp", ".webp")
 
+
+
+def load_pil_with_processor(pil_image, image_processor):
+    """Same idea as load_img_with_processor(), but accepts a PIL image instead of a filesystem path."""
+    pil_image = pil_image.convert("RGB")
+    processed = image_processor(images=pil_image, return_tensors="pt")
+    return processed["pixel_values"][0]
 
 def processor_tensor_to_pil(img_3chw: torch.Tensor, image_processor):
     """Convert the normalized images tensor produced by the LLaVA image processor back into an RGB PIL image."""
@@ -316,8 +338,11 @@ def make_overlap_visualization(
 
 
 @torch.no_grad()
-def process_image(image_path, vision_model, craft_model):
-    img_tensor = load_img_with_processor(image_path, vision_model.image_processor)
+def process_image(image_path, vision_model, craft_model, image_is_pil=False):
+    if image_is_pil:
+        img_tensor = load_pil_with_processor(image_path, vision_model.image_processor)
+    else:
+        img_tensor = load_img_with_processor(image_path, vision_model.image_processor)
 
     processed_pil = processor_tensor_to_pil(img_tensor, vision_model.image_processor)
 
@@ -387,6 +412,29 @@ def build_summary(df):
 
     return pd.DataFrame(summary_rows)
 
+
+def find_images_recursive(root_dir):
+    """
+    Recursively find all images under root_dir.
+
+    Example:
+        OCRBench_Images/docVQA/val/documents/foo.png
+        OCRBench_Images/ctw/bar.jpg
+        ...
+    """
+
+    root_dir = Path(root_dir)
+
+    image_paths = sorted(
+        p
+        for p in root_dir.rglob("*")
+        if p.is_file()
+        and p.suffix.lower() in IMAGE_EXTENSIONS
+    )
+    return image_paths
+
+
+
 def main():
 
     os.makedirs(
@@ -432,80 +480,127 @@ def main():
         device=DEVICE,
     )
 
-    image_paths = [
-        os.path.join(
-            IMAGE_DIR,
-            f,
-        )
-        for f in sorted(
-            os.listdir(IMAGE_DIR)
-        )
-        if f.lower().endswith(
-            IMAGE_EXTENSIONS
-        )
-    ]
-
-    print(f"🥶🥶🥶🥶 Found {len(image_paths)} images.🥶🥶🥶🥶")
-
     rows = []
 
-    for image_path in tqdm(
-        image_paths,
-        desc="CRAFT vs boundaries",
-    ):
 
-        result = process_image(image_path=image_path, vision_model=vision_model, craft_model=craft_model)
+    if BENCHMARK != "OCRBenchv2":
+        image_paths = find_images_recursive(IMAGE_DIR)
+        print(f"🥶🥶🥶🥶 Found {len(image_paths)} images recursively. 🥶🥶🥶🥶")
 
-        filename = os.path.basename(image_path)
 
-        num_boxes = len(result["craft_boxes"])
+        for image_path in tqdm(
+            image_paths,
+            desc="CRAFT vs boundaries",
+        ):
 
-        drip_row = {
-            "image": filename,
-            "method": "DRIP",
-            "image_width": result["processed_pil"].width,
-            "image_height": result["processed_pil"].height,
-            "num_craft_boxes": num_boxes,
-            "num_boundary_patches":result["drip_num_boundaries"],
-        }
+            result = process_image(image_path=str(image_path), vision_model=vision_model, craft_model=craft_model)
 
-        drip_row.update(result["drip_metrics"])
+            # filename = os.path.basename(image_path)
+            relative_path = image_path.relative_to(IMAGE_DIR)
+            filename = str(relative_path)
 
-        rows.append(drip_row)
+            num_boxes = len(result["craft_boxes"])
 
-        fixed_row = {
-            "image": filename,
-            "method": "Fixed",
-            "image_width": result["processed_pil"].width,
-            "image_height": result["processed_pil"].height,
-            "num_craft_boxes": num_boxes,
-            "num_boundary_patches": result["fixed_num_boundaries"]
-        }
+            drip_row = {
+                "image": filename,
+                "method": "DRIP",
+                "image_width": result["processed_pil"].width,
+                "image_height": result["processed_pil"].height,
+                "num_craft_boxes": num_boxes,
+                "num_boundary_patches":result["drip_num_boundaries"],
+            }
 
-        fixed_row.update(result["fixed_metrics"])
-        rows.append(fixed_row)
+            drip_row.update(result["drip_metrics"])
 
-        if SAVE_VISUALIZATIONS:
+            rows.append(drip_row)
 
-            stem = Path(filename).stem
+            fixed_row = {
+                "image": filename,
+                "method": "Fixed",
+                "image_width": result["processed_pil"].width,
+                "image_height": result["processed_pil"].height,
+                "num_craft_boxes": num_boxes,
+                "num_boundary_patches": result["fixed_num_boundaries"]
+            }
 
-            drip_save = os.path.join(OUTPUT_DIR,"visualizations","drip",f"{stem}.png")
+            fixed_row.update(result["fixed_metrics"])
+            rows.append(fixed_row)
 
-            fixed_save = os.path.join(OUTPUT_DIR,"visualizations","fixed",f"{stem}.png")
+            if SAVE_VISUALIZATIONS:
 
-            make_overlap_visualization(
-                processed_pil=result["processed_pil"],
-                boundary_mask=result["drip_pixel_mask"],
-                boxes=result["craft_boxes"],
-                save_path=drip_save
+                stem = Path(filename).stem
+
+                drip_save = os.path.join(OUTPUT_DIR,"visualizations","drip",f"{stem}.png")
+
+                fixed_save = os.path.join(OUTPUT_DIR,"visualizations","fixed",f"{stem}.png")
+
+                make_overlap_visualization(
+                    processed_pil=result["processed_pil"],
+                    boundary_mask=result["drip_pixel_mask"],
+                    boxes=result["craft_boxes"],
+                    save_path=drip_save
+                )
+
+                make_overlap_visualization(
+                    processed_pil=result["processed_pil"],
+                    boundary_mask=result["fixed_pixel_mask"],
+                    boxes=result["craft_boxes"],
+                    save_path=fixed_save
+                )
+
+    else:
+        dataset = load_dataset("lmms-lab/OCRBench-v2", split="test")
+        print(f"🥶🥶🥶🥶 Found {len(dataset)} OCRBench-v2 samples. 🥶🥶🥶🥶")
+
+        for sample in tqdm(
+            dataset,
+            desc="OCRBench-v2 CRAFT vs boundaries",
+        ):
+
+            pil_image = sample["image"]
+
+            result = process_image(
+                image_path=pil_image,
+                vision_model=vision_model,
+                craft_model=craft_model,
+                image_is_pil=True,
             )
 
-            make_overlap_visualization(
-                processed_pil=result["processed_pil"],
-                boundary_mask=result["fixed_pixel_mask"],
-                boxes=result["craft_boxes"],
-                save_path=fixed_save
-            )
+            sample_id = sample["id"]
+            dataset_name = sample["dataset_name"]
+            question_type = sample["type"]
+
+            num_boxes = len(result["craft_boxes"])
+
+            drip_row = {
+                "image": sample_id,
+                "dataset_name": dataset_name,
+                "question_type": question_type,
+                "method": "DRIP",
+                "image_width": result["processed_pil"].width,
+                "image_height": result["processed_pil"].height,
+                "num_craft_boxes": num_boxes,
+                "num_boundary_patches": result["drip_num_boundaries"],
+            }
+
+            drip_row.update(result["drip_metrics"])
+            rows.append(drip_row)
+
+            fixed_row = {
+                "image": sample_id,
+                "dataset_name": dataset_name,
+                "question_type": question_type,
+                "method": "Fixed",
+                "image_width": result["processed_pil"].width,
+                "image_height": result["processed_pil"].height,
+                "num_craft_boxes": num_boxes,
+                "num_boundary_patches": result["fixed_num_boundaries"],
+            }
+
+            fixed_row.update(result["fixed_metrics"])
+            rows.append(fixed_row)
+
+
 
     df = pd.DataFrame(
         rows
