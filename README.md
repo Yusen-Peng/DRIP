@@ -9,9 +9,6 @@
 Boundary analysis:
 - [ ] reconstructing the image with a pretrained MAE by masking non-boundary image **raw** patches (i.e., pixel-level)
 
-Experiments: 
-- [ ] Keep working on SigLIP2 experiments.
-
 
 ## Environment setup
 
@@ -297,10 +294,10 @@ Full finetuning with Siglip2-large image encoder:
 
 ![alt text](results/SigLIP2_7B_last_tradeoff_combined.png)
 
-Configuration note: 
+Configuration note (both with new downsample function): 
 
-- 4x: temperature **0.1**, **old** downsample function
-- 8x and 10x: temperature **1.0**, **new** downsample function
+- 4x: temperature **0.01**
+- 8x and 10x: temperature **1.0**
 
 raw CSV results: [results/SigLIP2_7B_last.csv](results/SigLIP2_7B_last.csv)
 
