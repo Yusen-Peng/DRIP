@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=0812_MMBench_LLaVA_7B_DRIP_10x_SCALE_train_full-checkpoint-900
-#SBATCH --output=0812_MMBench_LLaVA_7B_DRIP_10x_SCALE_train_full-checkpoint-900.log
+#SBATCH --job-name=0812_MMBench_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full
+#SBATCH --output=0812_MMBench_LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full.log
 #SBATCH --time=00:50:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=quad
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -19,27 +19,27 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_DRIP_10x_SCALE_train_full-checkpoint-900"
+VERSION="LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl
 
-python src/model_vqa_mmbench.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_SCALE_train_full/checkpoint-900 \
-    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/mmbench_dev_20230712.tsv \
-    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl \
-    --single-pred-prompt \
-    --temperature 0 \
-    --conv-mode vicuna_v1
-
 # python src/model_vqa_mmbench.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp15_new_downsample_train_full \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_SCALE_train_full/checkpoint-900 \
 #     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/mmbench_dev_20230712.tsv \
 #     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl \
 #     --single-pred-prompt \
 #     --temperature 0 \
 #     --conv-mode vicuna_v1
+
+python src/model_vqa_mmbench.py \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full \
+    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/mmbench_dev_20230712.tsv \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl \
+    --single-pred-prompt \
+    --temperature 0 \
+    --conv-mode vicuna_v1
 
 # python src/model_vqa_mmbench_qwen.py \
 #     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full \

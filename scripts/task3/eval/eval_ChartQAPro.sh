@@ -4,7 +4,7 @@
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=quad
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -18,7 +18,6 @@ export OMP_NUM_THREADS=8
 export TOKENIZERS_PARALLELISM=false
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP
-
 
 VERSION="LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full"
 echo "Running LLaVA inference..."

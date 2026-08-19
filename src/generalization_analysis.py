@@ -261,6 +261,13 @@ def plot_matrix(performance, gap):
         aspect="equal",
     )
 
+    # One text color per inference-budget column
+    column_text_colors = [
+        "#1f77b4",  # 4×
+        "#2ca02c",  # 8×
+        "#9467bd",  # 10×
+    ]
+
     for i in range(len(BUDGETS)):
         for j in range(len(BUDGETS)):
 
@@ -272,7 +279,6 @@ def plot_matrix(performance, gap):
                 else "normal"
             )
 
-            # Explicit + sign for improvements
             ax.text(
                 j,
                 i,
@@ -281,6 +287,49 @@ def plot_matrix(performance, gap):
                 va="center",
                 fontsize=13,
                 fontweight=weight,
+                color=column_text_colors[j],
+                zorder=5,
+            )
+
+    for j in range(len(BUDGETS)):
+
+        reference_row = j
+
+        # Slight horizontal offset from text
+        x_arrow = j + 0.30
+
+        # Upward comparison
+        if reference_row > 0:
+            ax.annotate(
+                "",
+                xy=(x_arrow, -0.35),
+                xytext=(x_arrow, reference_row - 0.35),
+                arrowprops=dict(
+                    arrowstyle="-|>",
+                    color=column_text_colors[j],
+                    linewidth=1.4,
+                    linestyle="--",
+                    alpha=0.75,
+                    mutation_scale=10,
+                ),
+                zorder=4,
+            )
+
+        # Downward comparison
+        if reference_row < len(BUDGETS) - 1:
+            ax.annotate(
+                "",
+                xy=(x_arrow, len(BUDGETS) - 1 + 0.35),
+                xytext=(x_arrow, reference_row + 0.35),
+                arrowprops=dict(
+                    arrowstyle="-|>",
+                    color=column_text_colors[j],
+                    linewidth=1.4,
+                    linestyle="--",
+                    alpha=0.75,
+                    mutation_scale=10,
+                ),
+                zorder=4,
             )
 
     ax.set_xticks(range(len(BUDGETS)))
