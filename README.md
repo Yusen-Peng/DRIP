@@ -57,8 +57,6 @@ bash scripts/task3/eval/EVALUATE_ALL.sh
 sbatch scripts/task3/pretrain_ascend_flash.sh
 # LLaVA 1.5 with Qwen 2.5 14B instruct
 sbatch scripts/task3/pretrain_ascend_flash_qwen.sh
-# LLaVA 1.5 with google/siglip-large-patch16-384
-sbatch scripts/task3/pretrain_ascend_flash_siglip.sh
 # LLaVA 1.5 with google/siglip2-large-patch16-384
 sbatch scripts/task3/pretrain_ascend_flash_siglip2.sh
 ```
@@ -81,8 +79,6 @@ sbatch scripts/task3/finetune_ascend_flash.sh
 sbatch scripts/task3/finetune_ascend_flash_full.sh
 # Qwen 2.5 14B
 sbatch scripts/task3/finetune_ascend_flash_full_qwen.sh
-# SIGLIP encoder
-sbatch scripts/task3/finetune_ascend_flash_full_siglip.sh
 # SIGLIP v2
 sbatch scripts/task3/finetune_ascend_flash_full_siglip2.sh
 ```

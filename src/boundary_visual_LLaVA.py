@@ -360,6 +360,8 @@ def main():
     """
         main results.
     """
+
+
     
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora/drip.bin"
@@ -374,9 +376,9 @@ def main():
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_train_full/drip.bin"
     
 
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp001_new_downsample/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp001_new_downsample/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full/checkpoint-780/drip.bin"
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full/drip.bin"
 
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp01_new_downsample/drip.bin"
@@ -411,6 +413,8 @@ def main():
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_temp08_new_downsample_train_full/drip.bin"
 
 
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_pretrain_temp001_new_downsample/drip.bin" 
+
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_pretrain_temp05_new_downsample/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_temp05_new_downsample_train_full/drip.bin"
@@ -423,6 +427,10 @@ def main():
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full/drip.bin"
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp001/drip.bin"
+
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp001_new_downsample/drip.bin" 
+
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_20x_pretrain/drip.bin"
 
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp03/drip.bin"
@@ -456,22 +464,12 @@ def main():
 
 
     MERGE_STRATEGY = "DRIP" # "DRIP" or "DRIP-H"
-    COMPRESSION_RATE = 0.25
+    COMPRESSION_RATE = 0.05
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     
     
-    if "clip" in DRIP_WEIGHT_PATH.lower():
-        model = build_llava_drip_vision_tower(
-            vision_tower_name="openai/clip-vit-large-patch14-336",
-            mm_vision_select_layer=-1,
-            mm_vision_select_feature="patch",
-            compression_rate=COMPRESSION_RATE,
-            drip_weight_path=DRIP_WEIGHT_PATH,
-            merge_strategy=MERGE_STRATEGY,
-            device=device,
-        )
-    elif "siglip" in DRIP_WEIGHT_PATH.lower():
+    if "siglip" in DRIP_WEIGHT_PATH.lower():
         model = build_llava_siglip_vision_tower(
             vision_tower_name="google/siglip2-large-patch16-384",
             mm_vision_select_layer=-1,
@@ -482,7 +480,17 @@ def main():
             device=device,
         )
     else:
-        raise ValueError(f"Unknown DRIP_WEIGHT_PATH: {DRIP_WEIGHT_PATH}")
+        model = build_llava_drip_vision_tower(
+            vision_tower_name="openai/clip-vit-large-patch14-336",
+            mm_vision_select_layer=-1,
+            mm_vision_select_feature="patch",
+            compression_rate=COMPRESSION_RATE,
+            drip_weight_path=DRIP_WEIGHT_PATH,
+            merge_strategy=MERGE_STRATEGY,
+            device=device,
+        )
+
+
 
 
 

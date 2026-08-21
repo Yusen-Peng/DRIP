@@ -792,6 +792,17 @@ class LazySupervisedDataset(Dataset):
             image_file = self.list_data_dict[i]['image']
             image_folder = self.data_args.image_folder
             processor = self.data_args.image_processor
+
+
+            # =============================================================================
+            # NOTE: safety
+            # we are okay to skip a few missing images if they are wiped out by the cluster.
+            image_path = os.path.join(image_folder, image_file)
+            if not os.path.exists(image_path):
+                # print(f"[WARNING] Missing image, skipping: {image_path}")
+                return self.__getitem__((i + 1) % len(self.list_data_dict))
+
+            # proceed if the image is okay
             image = Image.open(os.path.join(image_folder, image_file)).convert('RGB')
             if self.data_args.image_aspect_ratio == 'pad':
                 def expand2square(pil_img, background_color):
