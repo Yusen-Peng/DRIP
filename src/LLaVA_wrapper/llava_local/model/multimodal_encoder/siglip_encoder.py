@@ -35,6 +35,9 @@ class SiglipVisionTower(nn.Module):
         self.compression_rate = compression_rate
         self.drip_weight_path = drip_weight_path
         self.perceiver_weight_path = perceiver_weight_path
+        # NOTE: here are the optimal temperatures for different compression rates:
+        # for 4x: 0.01 (a small temperature helps stabilize the training and mitigate noise)
+        # for 8x and 10x: 1.0 (a larger temperature helps explore more boundaries meaningfully)
         self.temperature = temperature
         self.select_layer = args.mm_vision_select_layer
 
@@ -253,12 +256,7 @@ class SiglipVisionTower(nn.Module):
         hidden = patch_tokens.transpose(0, 1)              # [L, B, D]
 
         if self.merge_strategy  == "DRIP":
-            
-            # shortened_hidden = downsample(
-            #     boundaries=hard_boundaries,
-            #     hidden=hidden,
-            #     null_group=self.null_token
-            # )                                            # [S, B, D]
+            # NOTE: we apply a modified downsample function that helps stabilize the gradients           
             shortened_hidden = new_downsample(
                 boundaries=hard_boundaries,
                 hidden=hidden,
