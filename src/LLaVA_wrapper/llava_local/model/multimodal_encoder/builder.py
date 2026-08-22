@@ -19,27 +19,26 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     INFERENCE_MODE = True
 
 
-    MERGE_STRATEGY = "Fixed"
+    MERGE_STRATEGY = "DRIP"
     # main result: 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
     # limit test: 20x - 0.05, 100x - 0.01, 500x - 0.002
-    COMPRESSION_RATE = 0.25
+    COMPRESSION_RATE = 0.1
 
     # NOTE: temperature tuning
-    TEMPERATURE = 0.1
+    # TEMPERATURE = 0.1
 
     # TEMPERATURE = 0.01
-    # TEMPERATURE = 0.3
-    # TEMPERATURE = 0.5
-    # TEMPERATURE = 0.8
-    # TEMPERATURE = 1.0
-    # TEMPERATURE = 1.5
-    # TEMPERATURE = 2.0
+
+    TEMPERATURE = 1.0
 
     DRIP_WEIGHT_PATH = None
     PERCEIVER_WEIGHT_PATH = None
 
+    # try finetuning with the new downsample function 
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain_NEW_DOWN_temp10/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10/drip.bin"
 
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_SCALE_train_full_2epochs/checkpoint-1200/drip.bin"
 
     # scaling experiments.
 

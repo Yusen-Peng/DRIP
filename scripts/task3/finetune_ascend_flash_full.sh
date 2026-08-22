@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Aug18_LLaVA_7B_DRIP_4x_SCALE_train_full_2epochs_continue
-#SBATCH --output=Aug18_LLaVA_7B_DRIP_4x_SCALE_train_full_2epochs_continue.txt
+#SBATCH --job-name=Aug22_LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full
+#SBATCH --output=Aug22_LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full.txt
 #SBATCH --time=35:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -37,20 +37,20 @@ torchrun --standalone --nproc_per_node=4 --master_port=$MASTER_PORT src/task3_ll
     --mm_projector_type mlp2x_gelu \
     --tf32 True \
     --bf16 True \
-    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_SCALE_train_full_2epochs/checkpoint-1200/mm_projector.bin \
+    --pretrain_mm_mlp_adapter /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10/mm_projector.bin \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_SCALE_train_full_2epochs \
-    --num_train_epochs 2 \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full \
+    --num_train_epochs 1 \
     --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 1 \
     --gradient_accumulation_steps 128 \
     --accelerator_config '{"gradient_accumulation_kwargs":{"sync_each_batch":true}}' \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 300 \
-    --save_total_limit 6 \
+    --save_steps 15 \
+    --save_total_limit 3 \
     --learning_rate 2e-5 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \

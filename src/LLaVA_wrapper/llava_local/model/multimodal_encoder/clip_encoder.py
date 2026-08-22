@@ -18,6 +18,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../../"))
 sys.path.insert(0, PROJECT_ROOT)
 
 from src.open_clip_local.BP import BoundaryPredictor, downsample, H_Net
+from src.open_clip_local.BP_alternative import new_downsample
 
 def complement_idx(idx, dim):
     a = torch.arange(dim, device=idx.device)
@@ -275,11 +276,30 @@ class CLIPVisionTower(nn.Module):
 
         hidden = patch_tokens.transpose(0, 1)              # [L, B, D]
 
-        shortened_hidden = downsample(
-            boundaries=hard_boundaries,
-            hidden=hidden,
-            null_group=self.null_token
-        )                                            # [S, B, D]
+        if self.merge_strategy  == "DRIP":
+            # shortened_hidden = downsample(
+            #     boundaries=hard_boundaries,
+            #     hidden=hidden,
+            #     null_group=self.null_token
+            # )                                            # [S, B, D]
+
+            # FIXME: let's try this!           
+            shortened_hidden = new_downsample(
+                boundaries=hard_boundaries,
+                hidden=hidden,
+                null_group=self.null_token,
+                leading_one=False
+            )                                            # [S, B, D]
+
+        else:
+            shortened_hidden = downsample(
+                boundaries=hard_boundaries,
+                hidden=hidden,
+                null_group=self.null_token
+            )                                            # [S, B, D]
+
+
+
 
         merged_tokens = shortened_hidden.transpose(0, 1)  # [B, S, D]
 
