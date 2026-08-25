@@ -360,9 +360,6 @@ def main():
     """
         main results.
     """
-
-
-    
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora/drip.bin"
 
@@ -430,7 +427,7 @@ def main():
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp001_new_downsample/drip.bin" 
 
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_20x_pretrain/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_20x_pretrain/drip.bin"
 
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp03/drip.bin"
@@ -473,7 +470,11 @@ def main():
 
 
     DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp01/drip.bin" 
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10/drip.bin" 
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10/drip.bin" 
+
+
+
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_pretrain_NEW_DOWN_temp10/drip.bin"
 
 
     MERGE_STRATEGY = "DRIP" # "DRIP" or "DRIP-H"

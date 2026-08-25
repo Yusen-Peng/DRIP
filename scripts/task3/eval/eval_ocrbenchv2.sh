@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0821_OCRBenchV2_LLaVA_7B_DRIP_4x_SCALE_train_full_2epochs_1500steps
-#SBATCH --output=0821_OCRBenchV2_LLaVA_7B_DRIP_4x_SCALE_train_full_2epochs_1500steps.log
+#SBATCH --job-name=0821_OCRBenchV2_LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full
+#SBATCH --output=0821_OCRBenchV2_LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full.log
 #SBATCH --time=4:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,11 +20,11 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_DRIP_4x_SCALE_train_full_2epochs_1500steps"
+VERSION="LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full"
 
 
 python src/model_vqa_ocrbenchv2.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_SCALE_train_full_2epochs/checkpoint-1500 \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
@@ -35,7 +35,7 @@ python src/model_vqa_ocrbenchv2.py \
     --conv_mode vicuna_v1
 
 # python src/model_vqa_ocrbenchv2.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_temp10_new_downsample_train_full \
 #     --dataset_path lmms-lab/OCRBench-v2 \
 #     --dataset_split test \
 #     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
@@ -46,7 +46,7 @@ python src/model_vqa_ocrbenchv2.py \
 #     --conv_mode vicuna_v1
 
 # python src/model_vqa_ocrbenchv2_qwen.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_train_full \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full \
 #     --dataset_path lmms-lab/OCRBench-v2 \
 #     --dataset_split test \
 #     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \

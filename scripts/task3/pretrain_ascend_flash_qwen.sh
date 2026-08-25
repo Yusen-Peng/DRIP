@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=Jun18_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain
-#SBATCH --output=Jun18_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain.txt
-#SBATCH --time=25:00:00
+#SBATCH --job-name=Aug24_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain_NEW_DOWN_temp001
+#SBATCH --output=Aug24_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain_NEW_DOWN_temp001.txt
+#SBATCH --time=40:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=quad
@@ -9,6 +9,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=512G
 #SBATCH --account=PAS2836
+#SBATCH --exclude=a0016,a0021
 
 module load miniconda3/24.1.2-py310
 conda deactivate
@@ -34,13 +35,13 @@ deepspeed --num_gpus=1 src/task3_llava.py \
     --mm_vision_select_layer -1 \
     --mm_use_im_start_end False \
     --mm_use_im_patch_token False \
-    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain \
+    --output_dir /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain_NEW_DOWN_temp001 \
     --num_train_epochs 1 \
     --per_device_train_batch_size 8 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 32 \
     --save_strategy "steps" \
-    --save_steps 10 \
+    --save_steps 200 \
     --save_total_limit 2 \
     --learning_rate 1e-3 \
     --weight_decay 0. \

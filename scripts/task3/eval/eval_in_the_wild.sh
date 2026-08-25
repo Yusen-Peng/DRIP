@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0821_wild_LLaVA_7B_DRIP_4x_SCALE_train_full_2epochs_1500steps
-#SBATCH --output=0821_wild_LLaVA_7B_DRIP_4x_SCALE_train_full_2epochs_1500steps.log
+#SBATCH --job-name=0821_wild_LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full
+#SBATCH --output=0821_wild_LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,13 +24,13 @@ set -a
 source /users/PAS2912/yusenpeng/DRIP/.env
 set +a
 
-VERSION="LLaVA_7B_DRIP_4x_SCALE_train_full_2epochs_1500steps"
+VERSION="LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl
 
 python src/model_vqa.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_SCALE_train_full_2epochs/checkpoint-1500 \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/images \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl \
@@ -39,7 +39,7 @@ python src/model_vqa.py \
 
 
 # python src/model_vqa.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_temp10_new_downsample_train_full \
 #     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
 #     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/images \
 #     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl \
@@ -48,7 +48,7 @@ python src/model_vqa.py \
 
 
 # python src/model_vqa_qwen.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_DRIP_4x_train_full_temp001 \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B_DRIP_10x_train_full_temp10 \
 #     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/questions.jsonl \
 #     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/images \
 #     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl \
