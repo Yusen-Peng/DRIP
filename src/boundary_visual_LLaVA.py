@@ -475,10 +475,12 @@ def main():
 
 
     DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_pretrain_NEW_DOWN_temp10/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_8x_pretrain_NEW_DOWN_temp10/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain_NEW_DOWN_temp001/drip.bin"
 
 
     MERGE_STRATEGY = "DRIP" # "DRIP" or "DRIP-H"
-    COMPRESSION_RATE = 0.1
+    COMPRESSION_RATE = 0.25
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     

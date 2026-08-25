@@ -124,7 +124,7 @@ def main():
     parser.add_argument("--min-drip-score", type=float, default=1e-9)
     parser.add_argument("--max-fixed-score", type=float, default=0.0)
     parser.add_argument("--image-dir", default="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images")
-    parser.add_argument("--copy-dir", default="/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/original_images")
+    parser.add_argument("--copy-dir", default="/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/original_images_new_downsample")
     args = parser.parse_args()
 
     processor = EvalAIAnswerProcessor()

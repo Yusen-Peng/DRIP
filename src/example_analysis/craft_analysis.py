@@ -34,7 +34,7 @@ python src/example_analysis/craft_analysis.py
 # OUTPUT_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/text_boundary_overlap_subset"
 
 
-BENCHMARK = "OCRBenchv2" # TextVQA, OCRBench, OCRBenchv2, DocVQA, ChartQAPro
+BENCHMARK = "ChartQAPro" # TextVQA, OCRBench, OCRBenchv2, DocVQA, ChartQAPro
 
 
 
@@ -62,14 +62,20 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_full/drip.bin"
+# NOTE: new downsample function version
+# DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full/drip.bin"
 # COMPRESSION_RATE = 0.25
 
 
 # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_finetune_train_full/drip.bin"
+# NOTE: new downsample function version
+# DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain_NEW_DOWN_temp10_train_full/drip.bin"
 # COMPRESSION_RATE = 0.125
 
 
-DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_full/drip.bin"
+# DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_full/drip.bin"
+# NOTE: new downsample function version
+DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full/drip.bin"
 COMPRESSION_RATE = 0.1
 
 
