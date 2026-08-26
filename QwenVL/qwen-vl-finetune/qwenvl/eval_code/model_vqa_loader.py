@@ -8,7 +8,7 @@ import shortuuid
 import math
 from PIL import Image
 
-
+from peft import PeftModel
 from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
 
 
@@ -131,33 +131,68 @@ def create_data_loader(
     return data_loader
 
 
-def eval_model(args):
-    # ---------------------------------------------------------
-    # Model
-    # ---------------------------------------------------------
 
+def load_model(args):
     model_path = os.path.expanduser(args.model_path)
+    if args.model_base is not None:
+        # LoRA checkpoint
+        model_base = os.path.expanduser(args.model_base)
 
-    model = Qwen3VLForConditionalGeneration.from_pretrained(
-        model_path,
-        dtype=torch.bfloat16,
-        attn_implementation="flash_attention_2",
-        device_map="auto",
-    )
+        print(f"Loading base model from {model_base}")
 
-    processor = AutoProcessor.from_pretrained(
-        model_path,
-    )
+        model = Qwen3VLForConditionalGeneration.from_pretrained(
+            model_base,
+            dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
+            device_map="auto",
+        )
 
+        print(f"Loading LoRA adapter from {model_path}")
+
+        model = PeftModel.from_pretrained(
+            model,
+            model_path,
+        )
+
+        # Merge LoRA into the base weights for inference.
+        model = model.merge_and_unload()
+
+        processor = AutoProcessor.from_pretrained(
+            model_base,
+        )
+
+        model_name = os.path.basename(
+            os.path.normpath(model_path)
+        )
+
+    else:
+        # Normal full checkpoint
+        print(f"Loading model from {model_path}")
+
+        model = Qwen3VLForConditionalGeneration.from_pretrained(
+            model_path,
+            dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
+            device_map="auto",
+        )
+
+        processor = AutoProcessor.from_pretrained(
+            model_path,
+        )
+
+        model_name = os.path.basename(
+            os.path.normpath(model_path)
+        )
     model.eval()
+    return model, processor, model_name
+
+
+def eval_model(args):
+    model, processor, model_name = load_model(args)
 
     # Keep names similar to LLaVA.
     tokenizer = processor.tokenizer
     image_processor = processor
-
-    model_name = os.path.basename(
-        os.path.normpath(model_path)
-    )
 
     questions = [
         json.loads(q)

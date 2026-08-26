@@ -14,3 +14,13 @@ conda activate DRIP_qwenvl_flash
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune
 sbatch SFT_job.sh
 ```
+
+
+## Eval
+
+
+```bash
+cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune
+sbatch sbatch scripts/eval/TextVQA.sh
+sbatch scripts/eval/DocVQA.sh
+```

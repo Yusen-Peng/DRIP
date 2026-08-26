@@ -1,0 +1,51 @@
+#!/bin/bash
+#SBATCH --job-name=0826_DocVQA_Qwen3VL_4B
+#SBATCH --output=0826_DocVQA_Qwen3VL_4B.log
+#SBATCH --time=03:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --partition=nextgen
+#SBATCH --gpus-per-node=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=128G
+#SBATCH --account=PAS2836
+
+module load miniconda3/24.1.2-py310
+module load cuda/12.6.2
+conda activate DRIP_qwenvl_flash
+
+export OMP_NUM_THREADS=8
+export TOKENIZERS_PARALLELISM=false
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
+
+VERSION="0826_DocVQA_Qwen3VL_4B"
+echo "Running LLaVA inference..."
+
+
+python eval_code/model_vqa_loader.py \
+  --model-path Qwen/Qwen3-VL-4B-Instruct \
+  --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
+  --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \
+  --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
+  --temperature 0
+
+
+cd /users/PAS2912/yusenpeng/DRIP
+
+echo "Evaluating ANLS..."
+python src/DocVQA_eval/eval_docvqa_anls.py \
+  --gt-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_gt.json \
+  --pred-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
+  --out-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}_eval.json
+
+echo "Aggregated score:"
+python - <<EOF
+import json
+path = "/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}_eval.json"
+with open(path) as f:
+    data = json.load(f)
+print(json.dumps(data["summary"], indent=2))
+EOF
+
+conda deactivate

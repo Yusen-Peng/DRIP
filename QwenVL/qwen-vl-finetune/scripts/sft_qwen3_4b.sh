@@ -24,7 +24,7 @@ datasets=llava_665k%100
 
 # Output configuration
 run_name="qwen3vl"
-output_dir=/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL
+output_dir=/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_10
 
 # Training arguments
 args="
@@ -49,8 +49,8 @@ args="
     --min_pixels 784 \
     --eval_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 3 \
-    --save_total_limit 5 \
+    --save_steps 50 \
+    --save_total_limit 8 \
     --learning_rate ${lr} \
     --weight_decay 0 \
     --warmup_ratio 0.03 \
