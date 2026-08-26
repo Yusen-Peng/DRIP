@@ -34,7 +34,7 @@ python src/example_analysis/craft_analysis.py
 # OUTPUT_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/text_boundary_overlap_subset"
 
 
-BENCHMARK = "ChartQAPro" # TextVQA, OCRBench, OCRBenchv2, DocVQA, ChartQAPro
+BENCHMARK = "OCRBenchv2" # TextVQA, OCRBench, OCRBenchv2, DocVQA, ChartQAPro
 
 
 

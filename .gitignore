@@ -1,8 +1,5 @@
 val2014/
 train2014/
-annotations/
-dataset/
-data/
 LM-TFM/*.pt
 logs/
 *.zip
