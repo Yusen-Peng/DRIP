@@ -5,8 +5,8 @@ import re
 
 
 LLAVA_665K = {
-    "annotation_path": "/users/PAS2912/yusenpeng/yusenpeng_dataset/LLaVA_finetuning/cleaned.json",
-    "data_path": "/users/PAS2912/yusenpeng/yusenpeng_dataset/LLaVA_finetuning",
+    "annotation_path": "/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning/cleaned.json",
+    "data_path": "/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_finetuning",
 }
 
 

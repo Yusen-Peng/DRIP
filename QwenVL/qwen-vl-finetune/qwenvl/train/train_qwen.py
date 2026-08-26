@@ -64,29 +64,107 @@ def safe_save_model_for_hf_trainer(trainer: transformers.Trainer, output_dir: st
         trainer._save(output_dir, state_dict=cpu_state_dict)  # noqa
 
 
+# def set_model(model_args, model):
+#     visual = getattr(model, "visual", None)
+#     if visual is None:
+#         visual = model.model.visual
+
+#     if model_args.tune_mm_vision:
+#         for n, p in visual.named_parameters():
+#             p.requires_grad = True
+#     else:
+#         for n, p in visual.named_parameters():
+#             p.requires_grad = False
+
+#     if model_args.tune_mm_mlp:
+#         for n, p in visual.merger.named_parameters():
+#             p.requires_grad = True
+#     else:
+#         for n, p in visual.merger.named_parameters():
+#             p.requires_grad = False
+
+#     if model_args.tune_mm_llm:
+#         for n, p in model.language_model.named_parameters():
+#             p.requires_grad = True
+#         model.lm_head.requires_grad = True
+#     else:
+#         for n, p in model.language_model.named_parameters():
+#             p.requires_grad = False
+#         model.lm_head.requires_grad = False
+
+
+
 def set_model(model_args, model):
-    if model_args.tune_mm_vision:
-        for n, p in model.visual.named_parameters():
-            p.requires_grad = True
-    else:
-        for n, p in model.visual.named_parameters():
-            p.requires_grad = False
+    """
+    Configure which Qwen-VL components are trainable.
 
-    if model_args.tune_mm_mlp:
-        for n, p in model.visual.merger.named_parameters():
-            p.requires_grad = True
-    else:
-        for n, p in model.visual.merger.named_parameters():
-            p.requires_grad = False
+    Supports both:
+        Qwen2/2.5-style:
+            model.visual
+            model.language_model
 
-    if model_args.tune_mm_llm:
-        for n, p in model.language_model.named_parameters():
-            p.requires_grad = True
-        model.lm_head.requires_grad = True
+        Qwen3-VL-style:
+            model.model.visual
+            model.model.language_model
+    """
+    # Vision tower
+    if hasattr(model, "visual"):
+        visual = model.visual
+    elif hasattr(model, "model") and hasattr(model.model, "visual"):
+        visual = model.model.visual
     else:
-        for n, p in model.language_model.named_parameters():
-            p.requires_grad = False
-        model.lm_head.requires_grad = False
+        raise AttributeError(
+            f"Cannot find visual module in {model.__class__.__name__}"
+        )
+
+    # Language model
+    if hasattr(model, "language_model"):
+        language_model = model.language_model
+    elif hasattr(model, "model") and hasattr(model.model, "language_model"):
+        language_model = model.model.language_model
+    else:
+        raise AttributeError(
+            f"Cannot find language_model module in {model.__class__.__name__}"
+        )
+
+    for _, p in visual.named_parameters():
+        p.requires_grad = model_args.tune_mm_vision
+
+    if not hasattr(visual, "merger"):
+        raise AttributeError(
+            f"Cannot find visual.merger in {visual.__class__.__name__}"
+        )
+
+    for _, p in visual.merger.named_parameters():
+        p.requires_grad = model_args.tune_mm_mlp
+
+    for _, p in language_model.named_parameters():
+        p.requires_grad = model_args.tune_mm_llm
+
+    if hasattr(model, "lm_head"):
+        for p in model.lm_head.parameters():
+            p.requires_grad = model_args.tune_mm_llm
+    else:
+        raise AttributeError(
+            f"Cannot find lm_head in {model.__class__.__name__}"
+        )
+
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(
+        p.numel() for p in model.parameters() if p.requires_grad
+    )
+
+    # print(
+    #     f"[set_model] Model: {model.__class__.__name__}\n"
+    #     f"[set_model] Vision module: {visual.__class__.__name__}\n"
+    #     f"[set_model] Language module: {language_model.__class__.__name__}\n"
+    #     f"[set_model] tune_mm_vision = {model_args.tune_mm_vision}\n"
+    #     f"[set_model] tune_mm_mlp    = {model_args.tune_mm_mlp}\n"
+    #     f"[set_model] tune_mm_llm    = {model_args.tune_mm_llm}\n"
+    #     f"[set_model] Trainable params: "
+    #     f"{trainable_params:,} / {total_params:,} "
+    #     f"({100 * trainable_params / total_params:.2f}%)"
+    # )
 
 
 def train(attn_implementation="flash_attention_2"):
@@ -180,8 +258,41 @@ def train(attn_implementation="flash_attention_2"):
         set_model(model_args, model)
 
         if torch.distributed.get_rank() == 0:
-            model.visual.print_trainable_parameters()
-            model.model.print_trainable_parameters()
+            # model.visual.print_trainable_parameters()
+            # model.model.print_trainable_parameters()
+
+            visual = (
+                model.visual
+                if hasattr(model, "visual")
+                else model.model.visual
+            )
+
+            language_model = (
+                model.language_model
+                if hasattr(model, "language_model")
+                else model.model.language_model
+            )
+
+            def print_trainable(module, name):
+                total = 0
+                trainable = 0
+                for p in module.parameters():
+                    # DeepSpeed ZeRO-3 keeps the original size here
+                    numel = getattr(p, "ds_numel", p.numel())
+                    total += numel
+                    if p.requires_grad:
+                        trainable += numel
+                percentage = 100 * trainable / total if total > 0 else 0.0
+                print(
+                    f"🥶🥶🥶 [{name}] trainable params: "
+                    f"{trainable:,} / {total:,} "
+                    f"({percentage:.2f}%) 🥶🥶🥶"
+                )
+            
+            print_trainable(visual, "Vision")
+            print_trainable(language_model, "LLM")
+            if hasattr(model, "lm_head"):
+                print_trainable(model.lm_head, "LM Head")
     
     data_module = make_supervised_data_module(processor, data_args=data_args)
     trainer = Trainer(
