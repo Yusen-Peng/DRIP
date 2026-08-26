@@ -38,10 +38,6 @@ class CustomDataset(Dataset):
     ):
         self.questions = questions
         self.image_folder = image_folder
-
-        # Keep LLaVA-style interface names for compatibility.
-        # For Qwen3-VL, tokenizer + image_processor are both handled
-        # internally by AutoProcessor.
         self.tokenizer = tokenizer
         self.image_processor = image_processor
         self.model_config = model_config
@@ -163,10 +159,6 @@ def eval_model(args):
         os.path.normpath(model_path)
     )
 
-    # ---------------------------------------------------------
-    # Questions
-    # ---------------------------------------------------------
-
     questions = [
         json.loads(q)
         for q in open(
@@ -181,13 +173,7 @@ def eval_model(args):
         args.chunk_idx,
     )
 
-    # ---------------------------------------------------------
-    # Output
-    # ---------------------------------------------------------
-
-    answers_file = os.path.expanduser(
-        args.answers_file
-    )
+    answers_file = os.path.expanduser(args.answers_file)
 
     answer_dir = os.path.dirname(answers_file)
 
@@ -202,10 +188,6 @@ def eval_model(args):
         "w",
     )
 
-    # ---------------------------------------------------------
-    # DataLoader
-    # ---------------------------------------------------------
-
     data_loader = create_data_loader(
         questions,
         args.image_folder,
@@ -214,19 +196,12 @@ def eval_model(args):
         model.config,
     )
 
-    # ---------------------------------------------------------
-    # Inference
-    # ---------------------------------------------------------
-
     for (inputs, image_sizes), line in tqdm(
         zip(data_loader, questions),
         total=len(questions),
     ):
         idx = line["question_id"]
         cur_prompt = line["text"]
-
-        # BatchFeature.to() recursively moves all tensors
-        # produced by the processor.
         inputs = inputs.to(model.device)
 
         generation_kwargs = {
@@ -256,9 +231,7 @@ def eval_model(args):
             )
 
         # model.generate() returns:
-        #
         # [prompt tokens | newly generated tokens]
-        #
         # Remove the prompt portion before decoding.
         generated_ids_trimmed = [
             out_ids[len(in_ids):]
@@ -289,10 +262,7 @@ def eval_model(args):
             )
             + "\n"
         )
-
-        # Useful during long benchmark runs.
         ans_file.flush()
-
     ans_file.close()
 
 
@@ -330,8 +300,6 @@ if __name__ == "__main__":
         default="answer.jsonl",
     )
 
-    # Qwen does not use LLaVA conv_templates, but keeping this
-    # argument means existing shell scripts don't immediately break.
     parser.add_argument(
         "--conv-mode",
         type=str,
@@ -377,5 +345,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     eval_model(args)
-
 

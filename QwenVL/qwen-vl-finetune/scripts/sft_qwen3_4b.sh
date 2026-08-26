@@ -14,7 +14,7 @@ llm=Qwen/Qwen3-VL-4B-Instruct  # Using HuggingFace model ID
 # Training hyperparameters
 lr=1e-5
 batch_size=1
-grad_accum_steps=16
+grad_accum_steps=128
 
 # Training entry point
 entry_file=qwenvl/train/train_qwen.py
@@ -24,7 +24,7 @@ datasets=llava_665k%100
 
 # Output configuration
 run_name="qwen3vl"
-output_dir=./output
+output_dir=/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL
 
 # Training arguments
 args="
@@ -34,10 +34,14 @@ args="
     --data_flatten True \
     --tune_mm_vision False \
     --tune_mm_mlp True \
-    --tune_mm_llm True \
+    --tune_mm_llm False \
+    --lora_enable True \
+    --lora_r 64 \
+    --lora_alpha 128 \
+    --lora_dropout 0.05 \
     --bf16 \
     --output_dir ${output_dir} \
-    --num_train_epochs 0.5 \
+    --num_train_epochs 0.1 \
     --per_device_train_batch_size ${batch_size} \
     --per_device_eval_batch_size $((batch_size*2)) \
     --gradient_accumulation_steps ${grad_accum_steps} \
@@ -45,8 +49,8 @@ args="
     --min_pixels 784 \
     --eval_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 1000 \
-    --save_total_limit 1 \
+    --save_steps 3 \
+    --save_total_limit 5 \
     --learning_rate ${lr} \
     --weight_decay 0 \
     --warmup_ratio 0.03 \

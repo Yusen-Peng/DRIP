@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=qwen3vl-sft
-#SBATCH --output=logs/qwen3vl-%j.out
+#SBATCH --output=logs/qwen3vl-sft.out
 #SBATCH --account=PAS2836
 #SBATCH --partition=debug-nextgen
 #SBATCH --nodes=1
@@ -8,7 +8,7 @@
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
-#SBATCH --time=00:20:00
+#SBATCH --time=00:50:00
 
 module load miniconda3/24.1.2-py310
 conda deactivate
