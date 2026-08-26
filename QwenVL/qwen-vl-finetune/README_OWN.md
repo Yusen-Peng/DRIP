@@ -23,4 +23,7 @@ sbatch SFT_job.sh
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune
 sbatch sbatch scripts/eval/TextVQA.sh
 sbatch scripts/eval/DocVQA.sh
+sbatch scripts/eval/OCRBench.sh
+sbatch scripts/eval/OCRBenchv2.sh
+sbatch scripts/eval/ChartQAPro.sh
 ```
