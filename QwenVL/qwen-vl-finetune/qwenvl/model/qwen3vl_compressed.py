@@ -12,13 +12,39 @@ from transformers.models.qwen3_vl.modeling_qwen3_vl import (
     Qwen3VLCausalLMOutputWithPast
 )
 
-
+from transformers import Trainer
 from dataclasses import dataclass
 
 
 from .compression import TokenCompressor
 
 
+class CompressedTrainer(Trainer):
+    def compute_loss(
+        self,
+        model,
+        inputs,
+        return_outputs=False,
+        num_items_in_batch=None,
+    ):
+        outputs = model(**inputs)
+
+        loss = outputs.loss
+
+        # Handle PEFT / DeepSpeed wrappers
+        base_model = model
+        boundary_loss = None
+        # easiest: temporarily stash boundary_loss on output if available
+        if hasattr(outputs, "boundary_loss"):
+            boundary_loss: torch.Tensor = outputs.boundary_loss
+        if boundary_loss is not None:
+            self._last_boundary_loss = boundary_loss.detach().float().item()
+        return (loss, outputs) if return_outputs else loss
+
+    def log(self, logs, *args, **kwargs):
+        if hasattr(self, "_last_boundary_loss"):
+            logs["boundary_loss"] = self._last_boundary_loss
+        return super().log(logs, *args, **kwargs)
 
 @dataclass
 class CompressedQwen3VLModelOutput(Qwen3VLModelOutputWithPast):
@@ -260,7 +286,35 @@ class CompressedQwen3VLModel(Qwen3VLModel):
             inputs_embeds = inputs_embeds[:, keep, :]
             position_ids = position_ids[:, :, keep]
             if attention_mask is not None:
-                attention_mask = attention_mask[:, keep]
+                if attention_mask.ndim == 2:
+                    # Standard token-level attention mask: [B, L]
+                    attention_mask = attention_mask[:, keep]
+
+                elif attention_mask.ndim == 1:
+                    # Flattened / FlashAttention varlen representation (cu_seqlens).
+                    # MVP supports exactly one sequence, so [0, old_L] -> [0, new_L].
+                    if attention_mask.numel() != 2:
+                        raise NotImplementedError(
+                            f"Expected single-sequence cu_seqlens with 2 entries, "
+                            f"got shape {attention_mask.shape}: {attention_mask}"
+                        )
+
+                    new_seq_len = int(keep.sum().item())
+
+                    attention_mask = torch.tensor(
+                        [0, new_seq_len],
+                        device=attention_mask.device,
+                        dtype=attention_mask.dtype,
+                    )
+
+                else:
+                    raise RuntimeError(
+                        f"Unexpected attention_mask shape: {attention_mask.shape}"
+                    )
+
+
+
+
             visual_pos_masks = image_mask[:, keep]
             compressed_image_embeds = compressed_image_embeds.to(device=inputs_embeds.device, dtype=inputs_embeds.dtype)
             # visual_pos_masks is [B, L']
@@ -278,8 +332,8 @@ class CompressedQwen3VLModel(Qwen3VLModel):
                     f"{num_visual_tokens}"
                 )
             assert (inputs_embeds.shape[1] == position_ids.shape[-1])
-            if attention_mask is not None:
-                assert (inputs_embeds.shape[1] == attention_mask.shape[-1])
+            # if attention_mask is not None:
+            #     assert (inputs_embeds.shape[1] == attention_mask.shape[-1])
 
         outputs = self.language_model(
             input_ids=None,
@@ -301,6 +355,13 @@ class CompressedQwen3VLModel(Qwen3VLModel):
             keep_mask=keep_mask,
             boundary_loss=boundary_loss,
         )
+
+
+@dataclass
+
+class CompressedQwen3VLCausalLMOutput(Qwen3VLCausalLMOutputWithPast):
+    boundary_loss: Optional[torch.Tensor] = None
+
 
 class CompressedQwen3VLForConditionalGeneration(Qwen3VLForConditionalGeneration):
     def __init__(self, config):
@@ -370,9 +431,10 @@ class CompressedQwen3VLForConditionalGeneration(Qwen3VLForConditionalGeneration)
             if outputs.boundary_loss is not None:
                 loss = loss + self.boundary_loss_weight * outputs.boundary_loss
 
-        return Qwen3VLCausalLMOutputWithPast(
+        return CompressedQwen3VLCausalLMOutput(
             loss=loss,
             logits=logits,
             past_key_values=outputs.past_key_values,
             rope_deltas=outputs.rope_deltas,
+            boundary_loss=outputs.boundary_loss,
         )
