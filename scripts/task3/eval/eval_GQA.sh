@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0821_GQA_LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full
-#SBATCH --output=0821_GQA_LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full.log
+#SBATCH --job-name=0821_GQA_LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full
+#SBATCH --output=0821_GQA_LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full.log
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,19 +24,19 @@ GQADIR="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data"
 OUTPUT_DIR=/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/answers/llava_gqa_testdev_balanced
 mkdir -p $OUTPUT_DIR
 
-OUTPUT_FILE=$OUTPUT_DIR/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full.jsonl
+OUTPUT_FILE=$OUTPUT_DIR/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full.jsonl
 
 
 
-python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full \
-    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/llava_gqa_testdev_balanced.jsonl \
-    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data/images \
-    --answers-file $OUTPUT_FILE \
-    --num-chunks 1 \
-    --chunk-idx 0 \
-    --temperature 0 \
-    --conv-mode vicuna_v1
+# python src/model_vqa_loader.py \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full \
+#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/llava_gqa_testdev_balanced.jsonl \
+#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data/images \
+#     --answers-file $OUTPUT_FILE \
+#     --num-chunks 1 \
+#     --chunk-idx 0 \
+#     --temperature 0 \
+#     --conv-mode vicuna_v1
 
 
 
@@ -51,15 +51,15 @@ python src/model_vqa_loader.py \
 #     --conv-mode vicuna_v1
 
 
-# python src/model_vqa_loader_qwen.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_train_full \
-#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/llava_gqa_testdev_balanced.jsonl \
-#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data/images \
-#     --answers-file $OUTPUT_FILE \
-#     --num-chunks 1 \
-#     --chunk-idx 0 \
-#     --temperature 0 \
-#     --conv-mode qwen_v2
+python src/model_vqa_loader_qwen.py \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full \
+    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/llava_gqa_testdev_balanced.jsonl \
+    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data/images \
+    --answers-file $OUTPUT_FILE \
+    --num-chunks 1 \
+    --chunk-idx 0 \
+    --temperature 0 \
+    --conv-mode qwen_v2
 
 # python src/model_vqa_loader.py \
 #     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_second_to_last_finetune_lora \

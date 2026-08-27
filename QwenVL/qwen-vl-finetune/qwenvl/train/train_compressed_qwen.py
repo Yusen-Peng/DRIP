@@ -44,7 +44,7 @@ from transformers import AutoProcessor, Trainer
 
 
 
-MERGE_STRATEGY = "Fixed"
+MERGE_STRATEGY = "DRIP"
 COMPRESSION_RATE = 0.25
 TEMPERATURE = 0.1
 

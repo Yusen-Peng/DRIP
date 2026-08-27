@@ -24,7 +24,7 @@ datasets=llava_665k%100
 
 # Output configuration
 run_name="qwen3vl"
-output_dir=/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_DEBUG
+output_dir=/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_DEBUG
 
 # Training arguments
 args="

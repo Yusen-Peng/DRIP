@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0826_textVQA_Qwen3VL_4B_checkpoint_18
-#SBATCH --output=0826_textVQA_Qwen3VL_4B_checkpoint_18.log
+#SBATCH --job-name=0826_textVQA_Qwen3VL_4B_Fixed_4x_checkpoint_12
+#SBATCH --output=0826_textVQA_Qwen3VL_4B_Fixed_4x_checkpoint_12.log
 #SBATCH --time=00:55:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -16,7 +16,7 @@ conda activate DRIP_qwenvl_flash
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="0826_textVQA_Qwen3VL_4B_checkpoint_18"
+VERSION="0826_textVQA_Qwen3VL_4B_Fixed_4x_checkpoint_12"
 
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
@@ -27,13 +27,23 @@ cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 #     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
 #     --temperature 0
 
+# python eval_code/model_vqa_loader.py \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL/checkpoint-18 \
+#     --model-base Qwen/Qwen3-VL-4B-Instruct \
+#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
+#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
+#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
+#     --temperature 0
+
 python eval_code/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL/checkpoint-18 \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_DEBUG/checkpoint-12 \
     --model-base Qwen/Qwen3-VL-4B-Instruct \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
-    --temperature 0
+    --temperature 0 \
+    --merge-strategy Fixed \
+    --compression-rate 0.25
 
 
 cd /users/PAS2912/yusenpeng/DRIP

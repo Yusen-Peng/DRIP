@@ -7,9 +7,17 @@ from PIL import Image
 import multiprocessing
 from multiprocessing import Pool, Manager
 import traceback
-
+import sys, os
 from peft import PeftModel
 from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
+
+
+
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../"))
+sys.path.insert(0, PROJECT_ROOT)
+
+from model.qwen3vl_compressed import CompressedQwen3VLForConditionalGeneration
 
 
 # ============================================================
@@ -129,6 +137,25 @@ def _get_args():
         default=128,
     )
 
+    parser.add_argument(
+        "--merge-strategy",
+        type=str,
+        default="none",
+    )
+
+    parser.add_argument(
+        "--compression-rate",
+        type=float,
+        default=1.0,
+    )
+
+    parser.add_argument(
+        "--sampling-temperature",
+        type=float,
+        default=0.1,
+    )
+
+
     args = parser.parse_args()
 
     return args
@@ -243,15 +270,24 @@ def load_model(args, device):
             f"{model_base}"
         )
 
-        model = Qwen3VLForConditionalGeneration.from_pretrained(
-            model_base,
-            dtype=torch.bfloat16,
-            attn_implementation="flash_attention_2",
 
-            # IMPORTANT:
-            # Each OCRBench worker owns exactly one GPU.
-            device_map={"": device},
-        )
+        if args.merge_strategy == "Fixed":
+            print(f"🌊 Loading compressed Qwen3VL: Fixed, rate={args.compression_rate}")
+            model = CompressedQwen3VLForConditionalGeneration.from_pretrained(
+                    model_base,
+                    attn_implementation="flash_attention_2",
+                    dtype=torch.bfloat16,
+                    device_map={"": device},
+            )
+            model.model.set_compressor(merge_strategy=args.merge_strategy, compression_rate=args.compression_rate, temperature=args.sampling_temperature)
+
+        else:
+            model = Qwen3VLForConditionalGeneration.from_pretrained(
+                model_base,
+                dtype=torch.bfloat16,
+                attn_implementation="flash_attention_2",
+                device_map={"": device},
+            )
 
         print(
             f"[{device}] Loading LoRA adapter from "
