@@ -1,9 +1,7 @@
 # compression.py
-
 import torch
 import torch.nn as nn
 import os, sys
-
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../"))
@@ -46,25 +44,10 @@ class TokenCompressor(nn.Module):
                 smart_init=False,
             )
 
-        elif merge_strategy == "DRIP-H":
-            self.boundary_predictor = H_Net(
-                d_model=hidden_size,
-                d_inner=int(hidden_size * mlp_ratio),
-                activation_function="gelu",
-                temp=temperature,
-                prior=compression_rate,
-                bp_type="gumbel",
-                threshold=0.5,
-                smart_init=False,
-            )
-
         elif merge_strategy == "Fixed":
             pass
-
         else:
-            raise ValueError(
-                f"Unknown strategy: {merge_strategy}"
-            )
+            raise ValueError(f"Unknown strategy: {merge_strategy}")
 
     def get_boundaries(self, x, inference=False):
         """
@@ -96,13 +79,9 @@ class TokenCompressor(nn.Module):
             x_t = x.transpose(0, 1)
 
             if inference:
-                _, boundaries = (
-                    self.boundary_predictor.inference(x_t)
-                )
+                _, boundaries = (self.boundary_predictor.inference(x_t))
             else:
-                _, boundaries = (
-                    self.boundary_predictor(x_t)
-                )
+                _, boundaries = (self.boundary_predictor(x_t))
 
         # Every sequence must terminate.
         boundaries = torch.cat(
@@ -133,7 +112,6 @@ class TokenCompressor(nn.Module):
                 null_group=self.null_token,
                 leading_one=False,
             )
-
         else:
             shortened = downsample(
                 boundaries=boundaries,
@@ -155,11 +133,8 @@ class TokenCompressor(nn.Module):
         )
 
         if self.training and self.merge_strategy.startswith("DRIP"):
-            boundary_loss = (
-                self.boundary_predictor.calc_loss(boundaries)
-            )
+            boundary_loss = self.boundary_predictor.calc_loss(boundaries)
         else:
             boundary_loss = x.new_zeros(())
-
         return compressed, boundaries, boundary_loss
 

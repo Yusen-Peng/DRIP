@@ -17,7 +17,6 @@ class CompressedQwen3VLModel(Qwen3VLModel):
 
     def __init__(self, config):
         super().__init__(config)
-
         self.compressor = None
 
     def set_compressor(
@@ -27,7 +26,7 @@ class CompressedQwen3VLModel(Qwen3VLModel):
         temperature=0.1,
     ):
         """
-        Attach Fixed / DRIP compressor after loading pretrained Qwen.
+        attach Fixed / DRIP compressor after loading pretrained Qwen.
         """
 
         # We'll verify this dimension on the first forward.
@@ -43,16 +42,8 @@ class CompressedQwen3VLModel(Qwen3VLModel):
 
         # Put newly-created module on same device/dtype as vision output.
         param = next(self.parameters())
-
-        self.compressor.to(
-            device=param.device,
-            dtype=param.dtype,
-        )
-
-        print(
-            f"🌊 Qwen3VL compressor: {merge_strategy}, "
-            f"rate={compression_rate}"
-        )
+        self.compressor.to(device=param.device, dtype=param.dtype)
+        print(f"🌊 Qwen3VL compressor: {merge_strategy}, rate={compression_rate}")
 
 
     def compress_image_features(
@@ -61,11 +52,7 @@ class CompressedQwen3VLModel(Qwen3VLModel):
         deepstack_image_embeds,
         inference=False,
     ):
-        """
-        MVP:
-            - batch size = 1
-            - exactly one image
-        """
+        """MVP: batch size = 1 with exactly one image"""
 
         if self.compressor is None:
             raise RuntimeError(
@@ -78,47 +65,30 @@ class CompressedQwen3VLModel(Qwen3VLModel):
                 "Initial implementation supports exactly one image."
             )
 
-        # Qwen gives this image as [L, D].
+        """compress the features from the final layer"""
+        # Qwen gives this image as [L, D]
         x = image_embeds[0].unsqueeze(0)  # [1, L, D]
-
-        compressed, boundaries, boundary_loss = (
-            self.compressor(
-                x,
-                inference=inference,
-            )
-        )
-
-        # [1, S, D] -> [S, D]
+        compressed, boundaries, boundary_loss = self.compressor(x, inference=inference)
         compressed = compressed.squeeze(0)
 
+
+        """compress the features from the deepstack layers"""
         compressed_deepstack = []
-
         for deep in deepstack_image_embeds:
-
             # Expected: [L, D]
             if deep.ndim != 2:
-                raise RuntimeError(
-                    f"Unexpected DeepStack shape: {deep.shape}"
-                )
+                raise RuntimeError(f"Unexpected DeepStack shape: {deep.shape}")
 
             deep = deep.unsqueeze(0)
+            compressed_deep = self.compressor.apply_boundaries(deep, boundaries)
 
-            compressed_deep = (
-                self.compressor.apply_boundaries(
-                    deep,
-                    boundaries,
-                )
-            )
-
-            compressed_deepstack.append(
-                compressed_deep.squeeze(0)
-            )
+            compressed_deepstack.append(compressed_deep.squeeze(0))
 
         return (
             compressed,
             compressed_deepstack,
             boundaries,
-            boundary_loss,
+            boundary_loss
         )
 
 
