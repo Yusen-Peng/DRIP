@@ -19,6 +19,7 @@ class TokenCompressor(nn.Module):
         merge_strategy="DRIP",
         compression_rate=0.25,
         temperature=0.1,
+        drip_path=None,
     ):
         super().__init__()
 

@@ -1,6 +1,6 @@
 import torch
 from typing import Optional, Union
-
+import os
 from transformers.cache_utils import Cache
 from transformers.processing_utils import Unpack
 from transformers.models.qwen3_vl.modeling_qwen3_vl import (
@@ -15,8 +15,27 @@ from transformers.models.qwen3_vl.modeling_qwen3_vl import (
 from transformers import Trainer
 from dataclasses import dataclass
 
-
 from .compression import TokenCompressor
+
+
+def maybe_zero_3(param, ignore_status=False, name=None):
+    from deepspeed import zero
+    from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
+    if hasattr(param, "ds_id"):
+        if param.ds_status == ZeroParamStatus.NOT_AVAILABLE:
+            if not ignore_status:
+                print(name, 'no ignore status')
+        with zero.GatheredParameters([param]):
+            param = param.data.detach().cpu().clone()
+    else:
+        param = param.detach().cpu().clone()
+    return param
+
+def get_mm_adapter_state_maybe_zero_3(named_params, keys_to_match):
+    to_return = {k: t for k, t in named_params if any(key_match in k for key_match in keys_to_match)}
+    to_return = {k: maybe_zero_3(v, ignore_status=True, name=k).cpu() for k, v in to_return.items()}
+    return to_return
+
 
 
 class CompressedTrainer(Trainer):
@@ -45,6 +64,28 @@ class CompressedTrainer(Trainer):
         if hasattr(self, "_last_boundary_loss"):
             logs["boundary_loss"] = self._last_boundary_loss
         return super().log(logs, *args, **kwargs)
+
+    def _save_checkpoint(self, model, trial):
+        # First let HF / DeepSpeed / PEFT save everything normally
+        super()._save_checkpoint(model, trial)
+
+        from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
+        checkpoint_folder = (
+            f"{PREFIX_CHECKPOINT_DIR}-{self.state.global_step}"
+        )
+        run_dir = self._get_output_dir(trial=trial)
+        output_dir = os.path.join(run_dir, checkpoint_folder)
+
+        # Save DRIP-specific parameters separately
+        drip_keys_to_match = ["boundary_predictor", "null_token"]
+        drip_weight_to_save = get_mm_adapter_state_maybe_zero_3(
+            self.model.named_parameters(),
+            drip_keys_to_match,
+        )
+        if self.args.local_rank in (0, -1):
+            if len(drip_weight_to_save) > 0:
+                torch.save(drip_weight_to_save, os.path.join(output_dir, "drip.bin"))
+                print(f"🌊 Saved DRIP weights to {os.path.join(output_dir, 'drip.bin')}")
 
 @dataclass
 class CompressedQwen3VLModelOutput(Qwen3VLModelOutputWithPast):
