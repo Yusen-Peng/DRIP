@@ -157,6 +157,16 @@ def load_model(args):
                     device_map="auto"
             )
             model.model.set_compressor(merge_strategy=args.merge_strategy, compression_rate=args.compression_rate, temperature=args.sampling_temperature)
+        elif args.merge_strategy == "DRIP":
+            print(f"🌊 Loading compressed Qwen3VL: DRIP, rate={args.compression_rate}, temperature={args.sampling_temperature}")
+            model = CompressedQwen3VLForConditionalGeneration.from_pretrained(
+                    model_base,
+                    attn_implementation="flash_attention_2",
+                    dtype=torch.bfloat16,
+                    device_map="auto"
+            )
+            model.model.set_compressor(merge_strategy=args.merge_strategy, compression_rate=args.compression_rate, temperature=args.sampling_temperature, drip_path=args.drip_path)
+
         else:
             model = Qwen3VLForConditionalGeneration.from_pretrained(
                 model_base,
@@ -411,6 +421,12 @@ if __name__ == "__main__":
         "--sampling-temperature",
         type=float,
         default=0.1,
+    )
+
+    parser.add_argument(
+        "--drip-path",
+        type=str,
+        default=None,
     )
 
     args = parser.parse_args()

@@ -103,6 +103,7 @@ class CompressedQwen3VLModel(Qwen3VLModel):
         merge_strategy="Fixed",
         compression_rate=0.25,
         temperature=0.1,
+        drip_path=None,
     ):
         """
         attach Fixed / DRIP compressor after loading pretrained Qwen.
@@ -117,6 +118,7 @@ class CompressedQwen3VLModel(Qwen3VLModel):
             merge_strategy=merge_strategy,
             compression_rate=compression_rate,
             temperature=temperature,
+            drip_path=drip_path
         )
 
         # Put newly-created module on same device/dtype as vision output.
@@ -240,6 +242,17 @@ class CompressedQwen3VLModel(Qwen3VLModel):
             image_mask, _ = self.get_placeholder_mask(
                 input_ids, inputs_embeds=inputs_embeds,image_features=original_image_embeds
             )
+            # num_placeholder_elements = int(image_mask.sum().item())
+            # num_feature_elements = int(original_image_embeds.numel())
+            # if num_placeholder_elements != num_feature_elements:
+            #     raise RuntimeError(
+            #         f"🤬 PRE-COMPRESSION scatter mismatch:\n"
+            #         f"image_mask shape={image_mask.shape}\n"
+            #         f"image_mask true={num_placeholder_elements}\n"
+            #         f"original_image_embeds shape={original_image_embeds.shape}\n"
+            #         f"source elements={num_feature_elements}\n"
+            #         f"image_grid_thw={image_grid_thw}"
+            #     )
 
             inputs_embeds = inputs_embeds.masked_scatter(image_mask, original_image_embeds)
 
@@ -353,10 +366,27 @@ class CompressedQwen3VLModel(Qwen3VLModel):
                         f"Unexpected attention_mask shape: {attention_mask.shape}"
                     )
 
-
-
-
             visual_pos_masks = image_mask[:, keep]
+
+
+            num_visual_tokens = int(visual_pos_masks.sum().item())
+            num_boundary_tokens = int((boundaries[0] > 0.5).sum().item())
+            num_compressed_tokens = int(compressed_image_embeds.shape[0])
+            if not (
+                num_visual_tokens
+                == num_boundary_tokens
+                == num_compressed_tokens
+            ):
+                raise RuntimeError(
+                    f"🤬 POST-COMPRESSION mismatch:\n"
+                    f"visual slots={num_visual_tokens}\n"
+                    f"boundaries={num_boundary_tokens}\n"
+                    f"compressed={num_compressed_tokens}\n"
+                    f"boundary sum={boundaries.sum().item()}\n"
+                    f"boundary shape={boundaries.shape}\n"
+                    f"compressed shape={compressed_image_embeds.shape}"
+                )
+
             compressed_image_embeds = compressed_image_embeds.to(device=inputs_embeds.device, dtype=inputs_embeds.dtype)
             # visual_pos_masks is [B, L']
             # masked_scatter expects mask compatible with [B, L', D]

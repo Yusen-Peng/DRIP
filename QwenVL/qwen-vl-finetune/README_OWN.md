@@ -23,7 +23,7 @@ sbatch SFT_job_compressed.sh
 
 ```bash
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune
-sbatch sbatch scripts/eval/TextVQA.sh
+sbatch scripts/eval/TextVQA.sh
 sbatch scripts/eval/DocVQA.sh
 sbatch scripts/eval/OCRBench.sh
 sbatch scripts/eval/OCRBenchv2.sh

@@ -1,14 +1,9 @@
 # compression.py
 import torch
 import torch.nn as nn
-import os, sys
 
-FILE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../../"))
-sys.path.insert(0, PROJECT_ROOT)
-
-from src.open_clip_local.BP import BoundaryPredictor, downsample, H_Net
-from src.open_clip_local.BP_alternative import new_downsample
+from .BP import BoundaryPredictor, downsample
+from .BP_alternative import new_downsample
 
 
 class TokenCompressor(nn.Module):
@@ -44,11 +39,29 @@ class TokenCompressor(nn.Module):
                 threshold=0.5,
                 smart_init=False,
             )
+            if drip_path is not None:
+                self.load_drip_weights(drip_path)
 
         elif merge_strategy == "Fixed":
             pass
         else:
             raise ValueError(f"Unknown strategy: {merge_strategy}")
+
+
+    def load_drip_weights(self, drip_path):
+        state_dict = torch.load(drip_path, map_location="cpu")
+        compressor_state = {}
+        for key, value in state_dict.items():
+            # Saved from full model.named_parameters()
+            if "compressor." in key:
+                key = key.split("compressor.", 1)[1]
+            compressor_state[key] = value
+        missing, unexpected = self.load_state_dict(compressor_state, strict=False)
+        print(f"🌊 Loaded DRIP weights from {drip_path}")
+        if missing:
+            print(f"⚠️ Missing DRIP keys: {missing}")
+        if unexpected:
+            print(f"⚠️ Unexpected DRIP keys: {unexpected}")
 
     def get_boundaries(self, x, inference=False):
         """

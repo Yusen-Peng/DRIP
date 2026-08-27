@@ -174,7 +174,14 @@ def train(attn_implementation="flash_attention_2"):
         attn_implementation=attn_implementation,
         dtype=torch.bfloat16,
     )
-    model.model.set_compressor(merge_strategy=MERGE_STRATEGY, compression_rate=COMPRESSION_RATE, temperature=TEMPERATURE)
+
+    model.model.set_compressor(
+        merge_strategy=MERGE_STRATEGY, 
+        compression_rate=COMPRESSION_RATE, 
+        temperature=TEMPERATURE,
+        drip_path=None # explicitly set to None; when training it starts uninitialized
+    )
+
     data_args.model_type = "qwen3vl"
 
     print(f'the initlized model is {model_args.model_name_or_path} the class is {model.__class__.__name__}')
