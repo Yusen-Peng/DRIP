@@ -6,9 +6,16 @@ from argparse import ArgumentParser
 import torch
 from tqdm import tqdm
 from datasets import load_dataset
-
+import sys
 from peft import PeftModel
 from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
+
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../"))
+sys.path.insert(0, PROJECT_ROOT)
+
+from model.qwen3vl_compressed import CompressedQwen3VLForConditionalGeneration
+
 
 
 def split_list(lst, n):
@@ -127,6 +134,31 @@ def _get_args():
         action="store_true",
     )
 
+
+    parser.add_argument(
+        "--merge-strategy",
+        type=str,
+        default="none",
+    )
+
+    parser.add_argument(
+        "--compression-rate",
+        type=float,
+        default=1.0,
+    )
+
+    parser.add_argument(
+        "--sampling-temperature",
+        type=float,
+        default=0.1,
+    )
+
+    parser.add_argument(
+        "--drip-path",
+        type=str,
+        default=None,
+    )
+
     return parser.parse_args()
 
 
@@ -176,12 +208,33 @@ def load_model(args, device):
             f"Loading base model from {model_base}"
         )
 
-        model = Qwen3VLForConditionalGeneration.from_pretrained(
-            model_base,
-            dtype=torch.bfloat16,
-            attn_implementation="flash_attention_2",
-            device_map={"": device},
-        )
+        if args.merge_strategy == "Fixed":
+            print(f"🌊 Loading compressed Qwen3VL: Fixed, rate={args.compression_rate}")
+            model = CompressedQwen3VLForConditionalGeneration.from_pretrained(
+                    model_base,
+                    attn_implementation="flash_attention_2",
+                    dtype=torch.bfloat16,
+                    device_map={"": device},
+            )
+            model.model.set_compressor(merge_strategy=args.merge_strategy, compression_rate=args.compression_rate, temperature=args.sampling_temperature)
+
+        elif args.merge_strategy == "DRIP":
+            print(f"🌊 Loading compressed Qwen3VL: DRIP, rate={args.compression_rate}, temperature={args.sampling_temperature}")
+            model = CompressedQwen3VLForConditionalGeneration.from_pretrained(
+                    model_base,
+                    attn_implementation="flash_attention_2",
+                    dtype=torch.bfloat16,
+                    device_map="auto"
+            )
+            model.model.set_compressor(merge_strategy=args.merge_strategy, compression_rate=args.compression_rate, temperature=args.sampling_temperature, drip_path=args.drip_path)
+
+        else:
+            model = Qwen3VLForConditionalGeneration.from_pretrained(
+                model_base,
+                dtype=torch.bfloat16,
+                attn_implementation="flash_attention_2",
+                device_map={"": device},
+            )
 
         print(
             f"Loading LoRA adapter from {model_path}"

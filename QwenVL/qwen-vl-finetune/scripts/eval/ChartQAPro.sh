@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0826_ChartQAPro_Qwen3VL_4B_checkpoint_18
-#SBATCH --output=0826_ChartQAPro_Qwen3VL_4B_checkpoint_18.log
+#SBATCH --job-name=0826_ChartQAPro_Qwen3VL_Fixed_4x_checkpoint_12
+#SBATCH --output=0826_ChartQAPro_Qwen3VL_Fixed_4x_checkpoint_12.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export TOKENIZERS_PARALLELISM=false
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
-VERSION="0826_ChartQAPro_Qwen3VL_4B_checkpoint_18"
+VERSION="0826_ChartQAPro_Qwen3VL_Fixed_4x_checkpoint_12"
 echo "Running LLaVA inference..."
 
 
@@ -32,14 +32,27 @@ echo "Running LLaVA inference..."
 #   --conv-mode llava_v1
 
 
+# python eval_code/model_vqa_chartqapro.py \
+#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_10 \
+#   --model-base Qwen/Qwen3-VL-4B-Instruct \
+#   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/images \
+#   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/chartqapro_test_llava.jsonl \
+#   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/results/${VERSION}.jsonl \
+#   --temperature 0 \
+#   --conv-mode llava_v1
+
+
 python eval_code/model_vqa_chartqapro.py \
-  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL/checkpoint-18 \
+  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_DEBUG/checkpoint-12 \
   --model-base Qwen/Qwen3-VL-4B-Instruct \
   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/images \
   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/chartqapro_test_llava.jsonl \
   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/results/${VERSION}.jsonl \
   --temperature 0 \
-  --conv-mode llava_v1
+  --conv-mode llava_v1 \
+  --merge-strategy Fixed \
+  --compression-rate 0.25
+
 
 
 

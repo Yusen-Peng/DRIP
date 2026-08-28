@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=0826_OCRBenchv2_Qwen3VL_4B_checkpoint_18
-#SBATCH --output=0826_OCRBenchv2_Qwen3VL_4B_checkpoint_18.log
-#SBATCH --time=6:00:00
+#SBATCH --job-name=0826_OCRBenchv2_Qwen3VL_Fixed_4x_checkpoint_12
+#SBATCH --output=0826_OCRBenchv2_Qwen3VL_Fixed_4x_checkpoint_12.log
+#SBATCH --time=10:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=nextgen
@@ -20,7 +20,7 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
-VERSION="0826_OCRBenchv2_Qwen3VL_4B_checkpoint_18"
+VERSION="0826_OCRBenchv2_Qwen3VL_Fixed_4x_checkpoint_12"
 
 # python eval_code/model_vqa_ocrbenchv2.py \
 #     --model_path Qwen/Qwen3-VL-4B-Instruct \
@@ -33,8 +33,20 @@ VERSION="0826_OCRBenchv2_Qwen3VL_4B_checkpoint_18"
 #     --temperature 0
 
 
+# python eval_code/model_vqa_ocrbenchv2.py \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL/checkpoint-18 \
+#     --model_base Qwen/Qwen3-VL-4B-Instruct \
+#     --dataset_path lmms-lab/OCRBench-v2 \
+#     --dataset_split test \
+#     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \
+#     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/results \
+#     --save_name ${VERSION} \
+#     --num_workers 1 \
+#     --temperature 0
+
+
 python eval_code/model_vqa_ocrbenchv2.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL/checkpoint-18 \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_DEBUG/checkpoint-12 \
     --model_base Qwen/Qwen3-VL-4B-Instruct \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
@@ -42,7 +54,9 @@ python eval_code/model_vqa_ocrbenchv2.py \
     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2/results \
     --save_name ${VERSION} \
     --num_workers 1 \
-    --temperature 0
+    --temperature 0 \
+    --merge-strategy Fixed \
+    --compression-rate 0.25
 
 
 conda deactivate
