@@ -43,11 +43,12 @@ from qwenvl.model.qwen3vl_compressed import CompressedQwen3VLForConditionalGener
 from transformers import AutoProcessor, Trainer
 
 
-MERGE_STRATEGY = "Fixed"
+MERGE_STRATEGY = "DRIP"
 COMPRESSION_RATE = 0.25
 # TEMPERATURE = 0.1
 # TEMPERATURE = 0.01
-TEMPERATURE = 1.0
+# TEMPERATURE = 1.0
+TEMPERATURE = 0.001
 
 
 local_rank = None

@@ -109,7 +109,6 @@ class CompressedQwen3VLModel(Qwen3VLModel):
         attach Fixed / DRIP compressor after loading pretrained Qwen.
         """
 
-        # We'll verify this dimension on the first forward.
         hidden_size = self.config.vision_config.out_hidden_size
 
         self.compressor = TokenCompressor(
@@ -125,6 +124,8 @@ class CompressedQwen3VLModel(Qwen3VLModel):
         param = next(self.parameters())
         self.compressor.to(device=param.device, dtype=param.dtype)
         print(f"🌊 Qwen3VL compressor: {merge_strategy}, rate={compression_rate}")
+        if merge_strategy == "DRIP":
+            print(f"🤡🤡🤡 sampling temperature: {temperature}")
 
 
     def compress_image_features(
