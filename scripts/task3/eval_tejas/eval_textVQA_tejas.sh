@@ -1,0 +1,34 @@
+#!/bin/bash
+#SBATCH --job-name=Apr20_textVQA_fixed_8x
+#SBATCH --output=Apr20_textVQA_fixed_8x.txt
+#SBATCH --time=00:30:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --partition=debug-nextgen
+#SBATCH --gpus-per-node=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=128G
+#SBATCH --account=PAS2836
+
+module load miniconda3/24.1.2-py310
+conda activate DRIP
+source activate DRIP
+
+export OMP_NUM_THREADS=16
+export MASTER_PORT=$((12000 + RANDOM % 20000))
+
+VERSION="Apr20_textVQA_fixed_8x"
+
+cd /users/PAS3184/tejasnaik/DRIP/
+
+python src/model_vqa_loader.py \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/llava-v1.5-13b-local \
+    --question-file /fs/scratch/PAS2836/shared_LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
+    --image-folder /fs/scratch/PAS2836/shared_LLaVA_eval/textVQA/train_images \
+    --answers-file /fs/scratch/PAS2836/shared_LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
+    --temperature 0 \
+    --conv-mode vicuna_v1
+
+python src/eval_textvqa.py \
+    --annotation-file /fs/scratch/PAS2836/shared_LLaVA_eval/textVQA/TextVQA_0.5.1_val.json \
+    --result-file /fs/scratch/PAS2836/shared_LLaVA_eval/textVQA/answers/${VERSION}.jsonl

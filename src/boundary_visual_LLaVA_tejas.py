@@ -356,13 +356,21 @@ def visualize_original_10_images_2x5(
     plt.close(fig)
 
 
-def main():    
+def main():
+
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_last_force/drip.bin" 
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_temp02/checkpoint-530/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_temp05/checkpoint-540/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_hnet/checkpoint-180/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_temp001/drip.bin"
+    
     """
         main results.
     """
+    
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora/drip.bin"
-
+    
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_finetune_train_lora/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain/drip.bin"
@@ -373,61 +381,11 @@ def main():
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_train_full/drip.bin"
     
 
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp001_new_downsample/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full/checkpoint-780/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full/drip.bin"
-
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp01_new_downsample/drip.bin"
-
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp03_new_downsample/drip.bin"
-    
-
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp01_new_downsample_train_full/drip.bin"
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp15_new_downsample_train_full/drip.bin"
-
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp05_new_downsample/drip.bin"
-
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp08_new_downsample/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp08_new_downsample_train_full/drip.bin"
-
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp10_new_downsample/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp10_new_downsample_train_full/drip.bin"
-
-
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp15_new_downsample/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_pretrain_temp20_new_downsample/drip.bin"
-
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_pretrain_temp08_new_downsample/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_temp08_new_downsample_train_full/drip.bin"
-
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_pretrain_temp001_new_downsample/drip.bin" 
-
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_pretrain_temp05_new_downsample/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_temp05_new_downsample_train_full/drip.bin"
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_pretrain_temp10_new_downsample/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_temp10_new_downsample_train_full/drip.bin"
-
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full/drip.bin"
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp001/drip.bin"
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp001_new_downsample/drip.bin" 
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_20x_pretrain/drip.bin"
 
 
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp03/drip.bin"
@@ -442,50 +400,27 @@ def main():
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_train_full_temp10/drip.bin"
 
 
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp01_SiLU/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp01_SiLU/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp08_SiLU/drip.bin"
 
 
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp01_new_downsample/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_temp01_new_downsample_train_full/drip.bin"
-    
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp08_new_downsample/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_temp08_new_downsample_train_full/drip.bin"
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp10_new_downsample/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_temp10_new_downsample_train_full/drip.bin"
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_pretrain_temp08_new_downsample_LEADING_ONE/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_10x_temp08_new_downsample_LEADING_ONE_train_full/drip.bin"
-
-
-
-    # FIXME: experiment with the new downsample function
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp01/drip.bin" 
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001/drip.bin" 
-
-
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain_NEW_DOWN_temp01/drip.bin" 
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain_NEW_DOWN_temp10/drip.bin" 
-
-
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp01/drip.bin" 
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10/drip.bin" 
-
-
-
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_10x_pretrain_NEW_DOWN_temp10/drip.bin"
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_8x_pretrain_NEW_DOWN_temp10/drip.bin"
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain_NEW_DOWN_temp001/drip.bin"
-
-
     MERGE_STRATEGY = "DRIP" # "DRIP" or "DRIP-H"
-    COMPRESSION_RATE = 0.25
+    COMPRESSION_RATE = 0.1
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     
     
-    if "siglip" in DRIP_WEIGHT_PATH.lower():
+    if "clip" in DRIP_WEIGHT_PATH.lower():
+        model = build_llava_drip_vision_tower(
+            vision_tower_name="openai/clip-vit-large-patch14-336",
+            mm_vision_select_layer=-1,
+            mm_vision_select_feature="patch",
+            compression_rate=COMPRESSION_RATE,
+            drip_weight_path=DRIP_WEIGHT_PATH,
+            merge_strategy=MERGE_STRATEGY,
+            device=device,
+        )
+    elif "siglip" in DRIP_WEIGHT_PATH.lower():
         model = build_llava_siglip_vision_tower(
             vision_tower_name="google/siglip2-large-patch16-384",
             mm_vision_select_layer=-1,
@@ -496,21 +431,11 @@ def main():
             device=device,
         )
     else:
-        model = build_llava_drip_vision_tower(
-            vision_tower_name="openai/clip-vit-large-patch14-336",
-            mm_vision_select_layer=-1,
-            mm_vision_select_feature="patch",
-            compression_rate=COMPRESSION_RATE,
-            drip_weight_path=DRIP_WEIGHT_PATH,
-            merge_strategy=MERGE_STRATEGY,
-            device=device,
-        )
+        raise ValueError(f"Unknown DRIP_WEIGHT_PATH: {DRIP_WEIGHT_PATH}")
 
 
 
-
-
-    image_dir = "/users/PAS3184/tejasnaik/DRIP/src/boundary_vis/LLaVA_examples/"
+    image_dir = "/users/PAS3184/tejasnaik/DRIP/src/boundary_vis/LLaVA_examples_tejas_text/"
     image_paths = [
         os.path.join(image_dir, f)
         for f in sorted(os.listdir(image_dir))
@@ -522,7 +447,7 @@ def main():
     visualize_original_10_images_2x5(
         model=model,
         image_paths=image_paths,
-        save_path="/users/PAS3184/tejasnaik/DRIP/src/boundary_vis/LLaVA_results/llava_originals_2x5.png",
+        save_path="/users/PAS3184/tejasnaik/DRIP/src/boundary_vis/LLaVA_results/llava_originals_2x5_tejas_text.png",
         titles=None,
         figsize=(20, 8),
         dpi=300,
@@ -531,7 +456,7 @@ def main():
 
 
     split = DRIP_WEIGHT_PATH.split("/")[5]
-    save_path = f"/users/PAS3184/tejasnaik/DRIP/src/boundary_vis/LLaVA_results/{split}.png"
+    save_path = f"/users/PAS3184/tejasnaik/DRIP/src/boundary_vis/LLaVA_results/{split}_tejas_text.png"
     visualize_10_images_2x5(
         model=model,
         image_paths=image_paths,
