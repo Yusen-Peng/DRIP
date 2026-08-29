@@ -43,10 +43,11 @@ from qwenvl.model.qwen3vl_compressed import CompressedQwen3VLForConditionalGener
 from transformers import AutoProcessor, Trainer
 
 
-
-MERGE_STRATEGY = "DRIP"
+MERGE_STRATEGY = "Fixed"
 COMPRESSION_RATE = 0.25
-TEMPERATURE = 0.1
+# TEMPERATURE = 0.1
+# TEMPERATURE = 0.01
+TEMPERATURE = 1.0
 
 
 local_rank = None
@@ -233,8 +234,8 @@ def train(attn_implementation="flash_attention_2"):
             for name, p in model.named_parameters():
                 if "compressor" in name:
                     p.requires_grad = True
-        else:
-            set_model(model_args, model)
+        elif MERGE_STRATEGY == "Fixed":
+            pass
 
         if torch.distributed.get_rank() == 0:
             # model.visual.print_trainable_parameters()

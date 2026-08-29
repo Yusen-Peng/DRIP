@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0826_textVQA_Qwen3VL_SFT_10
-#SBATCH --output=0826_textVQA_Qwen3VL_SFT_10.log
+#SBATCH --job-name=0826_textVQA_Qwen3VL_SFT_DRIP_4x_10data_temp001
+#SBATCH --output=0826_textVQA_Qwen3VL_SFT_DRIP_4x_10data_temp001.log
 #SBATCH --time=00:55:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,7 +17,7 @@ export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 export CUDA_LAUNCH_BLOCKING=1
 
-VERSION="Qwen3VL_SFT_10"
+VERSION="Qwen3VL_SFT_DRIP_4x_10data_temp001"
 
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
@@ -28,16 +28,17 @@ cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 #     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
 #     --temperature 0
 
-python eval_code/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_10 \
-    --model-base Qwen/Qwen3-VL-4B-Instruct \
-    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
-    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
-    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
-    --temperature 0
+# python eval_code/model_vqa_loader.py \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_10 \
+#     --model-base Qwen/Qwen3-VL-4B-Instruct \
+#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
+#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
+#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
+#     --temperature 0
+
 
 # python eval_code/model_vqa_loader.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_DEBUG/checkpoint-12 \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_4x_10data \
 #     --model-base Qwen/Qwen3-VL-4B-Instruct \
 #     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
 #     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
@@ -46,16 +47,16 @@ python eval_code/model_vqa_loader.py \
 #     --merge-strategy Fixed \
 #     --compression-rate 0.25
 
-# python eval_code/model_vqa_loader.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_DEBUG/checkpoint-9 \
-#     --model-base Qwen/Qwen3-VL-4B-Instruct \
-#     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
-#     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
-#     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
-#     --temperature 0 \
-#     --merge-strategy DRIP \
-#     --compression-rate 0.25 \
-#     --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_DEBUG/checkpoint-9/drip.bin
+python eval_code/model_vqa_loader.py \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001 \
+    --model-base Qwen/Qwen3-VL-4B-Instruct \
+    --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
+    --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
+    --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
+    --temperature 0 \
+    --merge-strategy DRIP \
+    --compression-rate 0.25 \
+    --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001/drip.bin
 
 cd /users/PAS2912/yusenpeng/DRIP
 

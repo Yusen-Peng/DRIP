@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0826_OCRBench_Qwen3VL_DRIP_4x_checkpoint_9
-#SBATCH --output=0826_OCRBench_Qwen3VL_DRIP_4x_checkpoint_9.log
+#SBATCH --job-name=0826_OCRBench_Qwen3VL_SFT_DRIP_4x_10data_temp10
+#SBATCH --output=0826_OCRBench_Qwen3VL_SFT_DRIP_4x_10data_temp10.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,7 +18,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
-VERSION="0826_OCRBench_Qwen3VL_DRIP_4x_checkpoint_9"
+VERSION="Qwen3VL_SFT_DRIP_4x_10data_temp10"
 
 # python eval_code/model_vqa_ocrbench.py \
 #     --model_path Qwen/Qwen3-VL-4B-Instruct \
@@ -42,7 +42,7 @@ VERSION="0826_OCRBench_Qwen3VL_DRIP_4x_checkpoint_9"
 
 
 # python eval_code/model_vqa_ocrbench.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_DEBUG/checkpoint-12 \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_4x_10data \
 #     --model_base Qwen/Qwen3-VL-4B-Instruct \
 #     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
 #     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
@@ -55,7 +55,7 @@ VERSION="0826_OCRBench_Qwen3VL_DRIP_4x_checkpoint_9"
 
 
 python eval_code/model_vqa_ocrbench.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_DEBUG/checkpoint-9 \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp10 \
     --model_base Qwen/Qwen3-VL-4B-Instruct \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
@@ -65,7 +65,7 @@ python eval_code/model_vqa_ocrbench.py \
     --num_workers 1 \
     --merge-strategy DRIP \
     --compression-rate 0.25 \
-    --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_DEBUG/checkpoint-9/drip.bin
+    --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp10/drip.bin
 
 
 conda deactivate

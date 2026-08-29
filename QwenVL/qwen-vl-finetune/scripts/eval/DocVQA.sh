@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0826_DocVQA_Qwen3VL_SFT_10
-#SBATCH --output=0826_DocVQA_Qwen3VL_SFT_10.log
+#SBATCH --job-name=0826_DocVQA_Qwen3VL_SFT_Fixed_4x_10data
+#SBATCH --output=0826_DocVQA_Qwen3VL_SFT_Fixed_4x_10data.log
 #SBATCH --time=01:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export TOKENIZERS_PARALLELISM=false
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
-VERSION="0826_DocVQA_Qwen3VL_SFT_10"
+VERSION="0826_DocVQA_Qwen3VL_SFT_Fixed_4x_10data"
 echo "Running LLaVA inference..."
 
 # python eval_code/model_vqa_loader.py \
@@ -29,23 +29,23 @@ echo "Running LLaVA inference..."
 #   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
 #   --temperature 0
 
-python eval_code/model_vqa_loader.py \
-  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_10 \
-  --model-base Qwen/Qwen3-VL-4B-Instruct \
-  --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
-  --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \
-  --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
-  --temperature 0
-
 # python eval_code/model_vqa_loader.py \
-#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_DEBUG/checkpoint-12 \
+#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_10 \
 #   --model-base Qwen/Qwen3-VL-4B-Instruct \
 #   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
 #   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \
 #   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
-#   --temperature 0 \
-#   --merge-strategy Fixed \
-#   --compression-rate 0.25
+#   --temperature 0
+
+python eval_code/model_vqa_loader.py \
+  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_4x_10data \
+  --model-base Qwen/Qwen3-VL-4B-Instruct \
+  --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
+  --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \
+  --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
+  --temperature 0 \
+  --merge-strategy Fixed \
+  --compression-rate 0.25
 
 
 
