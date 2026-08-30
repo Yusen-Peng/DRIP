@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0826_OCRBench_Qwen3VL_SFT_Fixed_4x_10data_RERUN_checkpoint_111
-#SBATCH --output=0826_OCRBench_Qwen3VL_SFT_Fixed_4x_10data_RERUN_checkpoint_111.log
+#SBATCH --job-name=0826_OCRBench_Qwen3VL_SFT_Fixed_4x_10data_NEW
+#SBATCH --output=0826_OCRBench_Qwen3VL_SFT_Fixed_4x_10data_NEW.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,7 +18,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
-VERSION="Qwen3VL_SFT_Fixed_4x_10data_RERUN_checkpoint_111"
+VERSION="Qwen3VL_SFT_Fixed_4x_10data_NEW"
 
 # python eval_code/model_vqa_ocrbench.py \
 #     --model_path Qwen/Qwen3-VL-4B-Instruct \
@@ -42,7 +42,7 @@ VERSION="Qwen3VL_SFT_Fixed_4x_10data_RERUN_checkpoint_111"
 
 
 python eval_code/model_vqa_ocrbench.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_4x_10data_RERUN/checkpoint-111 \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_4x_10data \
     --model_base Qwen/Qwen3-VL-4B-Instruct \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \

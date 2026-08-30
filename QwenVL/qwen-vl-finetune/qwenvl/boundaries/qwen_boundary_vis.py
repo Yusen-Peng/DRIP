@@ -355,10 +355,10 @@ def visualize_qwen_10_images_2x5(
             f"L={total_tokens}, "
             f"boundaries={num_boundaries}, "
             f"rate={num_boundaries / total_tokens:.3f}, "
-            f"soft_mean={soft_mask.mean():.4f}, "
-            f"soft_std={soft_mask.std():.4f}, "
-            f"soft_min={soft_mask.min():.4f}, "
-            f"soft_max={soft_mask.max():.4f}, "
+            # f"soft_mean={soft_mask.mean():.4f}, "
+            # f"soft_std={soft_mask.std():.4f}, "
+            # f"soft_min={soft_mask.min():.4f}, "
+            # f"soft_max={soft_mask.max():.4f}, "
             f"image_grid_thw={image_grid_thw.tolist()}"
         )
 
@@ -520,9 +520,14 @@ def visualize_qwen_soft_probs(
 def main():
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp10/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp01/drip.bin"
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001/drip.bin"
+    # DRIP_WEIGHT_PATH = None
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full/drip.bin"
     COMPRESSION_RATE = 0.25
-    TEMPERATURE = 0.01
+    TEMPERATURE = 0.1
+    # save_path = f"/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/qwen3vl_drip_{COMPRESSION_RATE}_temp{TEMPERATURE}.png"
+    # save_path = f"/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/qwen3vl_drip_{COMPRESSION_RATE}_unintialized.png"
+    save_path = f"/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/qwen3vl_drip_{COMPRESSION_RATE}_EXTERNAL.png"
 
 
     MODEL_BASE = "Qwen/Qwen3-VL-4B-Instruct"
@@ -555,7 +560,6 @@ def main():
     ]
 
     assert len(image_paths) == 10
-    save_path = f"/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/qwen3vl_drip_{COMPRESSION_RATE}_temp{TEMPERATURE}.png"
 
     visualize_qwen_10_images_2x5(
         model=model,

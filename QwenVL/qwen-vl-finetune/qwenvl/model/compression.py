@@ -47,21 +47,105 @@ class TokenCompressor(nn.Module):
         else:
             raise ValueError(f"Unknown strategy: {merge_strategy}")
 
+    # def load_drip_weights(self, drip_path):
+    #     state_dict = torch.load(drip_path, map_location="cpu")
+    #     compressor_state = {}
+    #     for key, value in state_dict.items():
+    #         # Saved from full model.named_parameters()
+    #         if "compressor." in key:
+    #             key = key.split("compressor.", 1)[1]
+    #         compressor_state[key] = value
+    #     missing, unexpected = self.load_state_dict(compressor_state, strict=False)
+    #     print(f"🌊 Loaded DRIP weights from {drip_path}")
+    #     if missing:
+    #         print(f"⚠️ Missing DRIP keys: {missing}")
+    #     if unexpected:
+    #         print(f"⚠️ Unexpected DRIP keys: {unexpected}")
 
     def load_drip_weights(self, drip_path):
-        state_dict = torch.load(drip_path, map_location="cpu")
-        compressor_state = {}
-        for key, value in state_dict.items():
-            # Saved from full model.named_parameters()
-            if "compressor." in key:
-                key = key.split("compressor.", 1)[1]
-            compressor_state[key] = value
-        missing, unexpected = self.load_state_dict(compressor_state, strict=False)
-        print(f"🌊 Loaded DRIP weights from {drip_path}")
+        """
+            Load DRIP weights from either:
+
+            1. Qwen-style checkpoints
+            ...compressor.boundary_predictor.0.weight
+            ...compressor.boundary_predictor.0.bias
+            ...compressor.null_token
+
+            2. Legacy SigLIP2-LLaVA checkpoints
+            ...vision_tower.boundary_predictor.0.weight
+            ...vision_tower.boundary_predictor.0.bias
+            ...vision_tower.null_token
+        """
+        print(f"🌊🌊🌊 [INFO] Loading DRIP weights from {drip_path}")
+        sd = torch.load(drip_path, map_location="cpu")
+        if isinstance(sd, dict) and "state_dict" in sd:
+            sd = sd["state_dict"]
+        bp_sd = {}
+        null_tensor = None
+
+        for k, v in sd.items():
+            # 1. Legacy SigLIP2-LLaVA format
+            siglip_bp_anchor = "vision_tower.boundary_predictor."
+
+            if siglip_bp_anchor in k:
+                new_k = k.split(siglip_bp_anchor, 1)[1]
+                bp_sd[new_k] = v
+                continue
+
+            if k.endswith("vision_tower.null_token"):
+                null_tensor = v
+                continue
+
+            # 2. Qwen compressor format
+            qwen_bp_anchor = "compressor.boundary_predictor."
+
+            if qwen_bp_anchor in k:
+                new_k = k.split(qwen_bp_anchor, 1)[1]
+                bp_sd[new_k] = v
+                continue
+
+            if k.endswith("compressor.null_token"):
+                null_tensor = v
+                continue
+
+            # 3. Already-local compressor/BP checkpoint
+            if k.startswith("boundary_predictor."):
+                new_k = k.split("boundary_predictor.", 1)[1]
+                bp_sd[new_k] = v
+                continue
+            if k == "null_token":
+                null_tensor = v
+                continue
+
+        if len(bp_sd) == 0:
+            raise RuntimeError(
+                f"No boundary_predictor weights found in {drip_path}.\n"
+                f"First checkpoint keys:\n"
+                + "\n".join(f"  {k}" for k in list(sd.keys())[:20])
+            )
+        print("🌊🌊🌊 [INFO] Extracted boundary predictor keys:")
+        for k, v in bp_sd.items():
+            print(f"    {k}: {tuple(v.shape)}")
+        missing, unexpected = self.boundary_predictor.load_state_dict(bp_sd, strict=True)
+        print("✅ [INFO] Loaded boundary_predictor")
+        if null_tensor is not None:
+            if self.null_token.shape != null_tensor.shape:
+                raise RuntimeError(
+                    "null_token shape mismatch:\n"
+                    f"    checkpoint: {tuple(null_tensor.shape)}\n"
+                    f"    current:    {tuple(self.null_token.shape)}"
+                )
+            with torch.no_grad():
+                self.null_token.copy_(null_tensor.to(device=self.null_token.device, dtype=self.null_token.dtype))
+            print(f"✅ [INFO] Loaded null_token: {tuple(null_tensor.shape)}")
+        else:
+            print("⚠️ [INFO] null_token not found in checkpoint")
         if missing:
-            print(f"⚠️ Missing DRIP keys: {missing}")
+            print(f"⚠️ [INFO] Missing BP keys: {missing}")
         if unexpected:
-            print(f"⚠️ Unexpected DRIP keys: {unexpected}")
+            print(f"⚠️ [INFO] Unexpected BP keys: {unexpected}")
+        return missing, unexpected
+
 
     def get_boundaries(self, x, inference=False):
         """
