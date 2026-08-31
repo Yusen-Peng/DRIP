@@ -216,9 +216,9 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
 
 
 if __name__ == "__main__":
-    CSV_ID = "full_7B_last"
+    # CSV_ID = "full_7B_last"
     # CSV_ID = "full_7B_second_to_last"
-    # CSV_ID = "qwen14B_full_last"
+    CSV_ID = "qwen14B_full_last"
     # CSV_ID = "lora_7B_last"
     # CSV_ID = "lora_7B_second_to_last"
     # CSV_ID = "SigLIP2_7B_last"
