@@ -21,18 +21,12 @@ import torch
 import transformers
 import sys
 from pathlib import Path
+from transformers import AutoProcessor
 
 project_root = Path(__file__).parent.parent.parent
 sys.path.append(str(project_root))
 
 from trainer import replace_qwen2_vl_attention_class
-
-from transformers import (
-    Qwen2VLForConditionalGeneration,
-    Qwen2_5_VLForConditionalGeneration,
-    Qwen3VLForConditionalGeneration,
-    Qwen3VLMoeForConditionalGeneration
-)
 from qwenvl.data.data_processor import make_supervised_data_module
 from qwenvl.train.argument import (
     ModelArguments,
@@ -40,15 +34,10 @@ from qwenvl.train.argument import (
     TrainingArguments,
 )
 from qwenvl.model.qwen3vl_compressed import CompressedQwen3VLForConditionalGeneration, CompressedTrainer
-from transformers import AutoProcessor, Trainer
-
 
 MERGE_STRATEGY = "DRIP"
 COMPRESSION_RATE = 0.25
-# TEMPERATURE = 0.1
-# TEMPERATURE = 0.01
-# TEMPERATURE = 1.0
-TEMPERATURE = 0.001
+TEMPERATURE = 0.01
 
 
 local_rank = None

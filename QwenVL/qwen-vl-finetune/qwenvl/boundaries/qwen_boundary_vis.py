@@ -522,12 +522,11 @@ def main():
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp01/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001/drip.bin"
     # DRIP_WEIGHT_PATH = None
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp0001/drip.bin"
     COMPRESSION_RATE = 0.25
-    TEMPERATURE = 0.1
-    # save_path = f"/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/qwen3vl_drip_{COMPRESSION_RATE}_temp{TEMPERATURE}.png"
+    TEMPERATURE = 0.0001
+    save_path = f"/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/qwen3vl_drip_{COMPRESSION_RATE}_temp{TEMPERATURE}.png"
     # save_path = f"/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/qwen3vl_drip_{COMPRESSION_RATE}_unintialized.png"
-    save_path = f"/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/qwen3vl_drip_{COMPRESSION_RATE}_EXTERNAL.png"
 
 
     MODEL_BASE = "Qwen/Qwen3-VL-4B-Instruct"

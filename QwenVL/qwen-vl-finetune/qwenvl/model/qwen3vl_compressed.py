@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from typing import Optional, Union
 import os
 from transformers.cache_utils import Cache
@@ -13,10 +14,12 @@ from transformers.models.qwen3_vl.modeling_qwen3_vl import (
 )
 
 from transformers import Trainer
+from transformers.utils import is_sagemaker_mp_enabled, logging
 from dataclasses import dataclass
 
 from .compression import TokenCompressor
 
+logger = logging.get_logger(__name__)
 
 def maybe_zero_3(param, ignore_status=False, name=None):
     from deepspeed import zero
@@ -86,6 +89,235 @@ class CompressedTrainer(Trainer):
             if len(drip_weight_to_save) > 0:
                 torch.save(drip_weight_to_save, os.path.join(output_dir, "drip.bin"))
                 print(f"🌊 Saved DRIP weights to {os.path.join(output_dir, 'drip.bin')}")
+
+
+    def create_optimizer(self):
+        """
+            Hugging Face Trainer optimizer setup with one modification:
+            DRIP boundary predictor parameters use self.args.boundary_lr.
+        """
+        opt_model = (
+            self.model_wrapped
+            if is_sagemaker_mp_enabled()
+            else self.model
+        )
+        if self.optimizer is None:
+            decay_parameters = self.get_decay_parameter_names(opt_model)
+            boundary_lr = getattr(self.args, "boundary_lr", None)
+            if boundary_lr is None:
+                boundary_lr = self.args.learning_rate
+            def is_boundary_param(name):
+                return "compressor.boundary_predictor" in name
+
+            # Build four groups:
+            #   normal + decay
+            #   normal + no decay
+            #   boundary + decay
+            #   boundary + no decay
+            optimizer_grouped_parameters = [
+                {
+                    "params": [
+                        p
+                        for n, p in opt_model.named_parameters()
+                        if (
+                            n in decay_parameters
+                            and p.requires_grad
+                            and not is_boundary_param(n)
+                        )
+                    ],
+                    "weight_decay": self.args.weight_decay,
+                },
+                {
+                    "params": [
+                        p
+                        for n, p in opt_model.named_parameters()
+                        if (
+                            n not in decay_parameters
+                            and p.requires_grad
+                            and not is_boundary_param(n)
+                        )
+                    ],
+                    "weight_decay": 0.0,
+                },
+                {
+                    "params": [
+                        p
+                        for n, p in opt_model.named_parameters()
+                        if (
+                            n in decay_parameters
+                            and p.requires_grad
+                            and is_boundary_param(n)
+                        )
+                    ],
+                    "weight_decay": self.args.weight_decay,
+                    "lr": boundary_lr,
+                },
+                {
+                    "params": [
+                        p
+                        for n, p in opt_model.named_parameters()
+                        if (
+                            n not in decay_parameters
+                            and p.requires_grad
+                            and is_boundary_param(n)
+                        )
+                    ],
+                    "weight_decay": 0.0,
+                    "lr": boundary_lr,
+                },
+            ]
+
+            # Remove empty groups
+            optimizer_grouped_parameters = [
+                group
+                for group in optimizer_grouped_parameters
+                if len(group["params"]) > 0
+            ]
+
+            # ---------------------------------------------------------
+            # Everything below is copied from HF Trainer.
+            # ---------------------------------------------------------
+            if self.optimizer_cls_and_kwargs is not None:
+                optimizer_cls, optimizer_kwargs = (
+                    self.optimizer_cls_and_kwargs
+                )
+            else:
+                optimizer_cls, optimizer_kwargs = (
+                    self.get_optimizer_cls_and_kwargs(
+                        self.args,
+                        opt_model,
+                    )
+                )
+
+            # e.g. GaLore
+            if "params" in optimizer_kwargs:
+                optimizer_grouped_parameters = optimizer_kwargs.pop(
+                    "params"
+                )
+
+            # e.g. LOMO
+            if "model" in optimizer_kwargs:
+                optimizer_grouped_parameters = optimizer_kwargs.pop(
+                    "model"
+                )
+
+            # layer-wise dummy optimizers
+            if "optimizer_dict" in optimizer_kwargs:
+                optimizer_grouped_parameters = optimizer_kwargs.pop(
+                    "optimizer_dict"
+                )
+
+            self.optimizer = optimizer_cls(
+                optimizer_grouped_parameters,
+                **optimizer_kwargs,
+            )
+
+            # ---------------------------------------------------------
+            # HF bitsandbytes handling, unchanged.
+            # ---------------------------------------------------------
+            # if (
+            #     "bitsandbytes" in str(optimizer_cls)
+            #     and optimizer_kwargs.get("optim_bits", None) == 8
+            # ):
+            #     import bitsandbytes
+
+            #     manager = (
+            #         bitsandbytes.optim.GlobalOptimManager.get_instance()
+            #     )
+
+            #     skipped = 0
+
+            #     for module in opt_model.modules():
+            #         if isinstance(module, nn.Embedding):
+            #             skipped += sum(
+            #                 {
+            #                     p.data_ptr(): p.numel()
+            #                     for p in module.parameters()
+            #                 }.values()
+            #             )
+
+            #             logger.info(
+            #                 f"skipped {module}: "
+            #                 f"{skipped / 2**20}M params"
+            #             )
+
+            #             manager.register_module_override(
+            #                 module,
+            #                 "weight",
+            #                 {"optim_bits": 32},
+            #             )
+
+            #             logger.debug(
+            #                 f"bitsandbytes: "
+            #                 f"will optimize {module} in fp32"
+            #             )
+
+            #     logger.info(
+            #         f"skipped: {skipped / 2**20}M params"
+            #     )
+
+            # ---------------------------------------------------------
+            # Sanity check.
+            # ---------------------------------------------------------
+            if self.args.local_rank in (-1, 0):
+                boundary_param_ids = {
+                    id(p)
+                    for n, p in opt_model.named_parameters()
+                    if (
+                        p.requires_grad
+                        and is_boundary_param(n)
+                    )
+                }
+
+                print(
+                    "\n🌊🌊🌊 Optimizer parameter groups"
+                )
+
+                for i, group in enumerate(
+                    self.optimizer.param_groups
+                ):
+                    num_params = sum(
+                        p.numel()
+                        for p in group["params"]
+                    )
+
+                    num_boundary = sum(
+                        p.numel()
+                        for p in group["params"]
+                        if id(p) in boundary_param_ids
+                    )
+                    group_type = (
+                        "🌊 BOUNDARY"
+                        if num_boundary > 0
+                        else "Normal"
+                    )
+                    print(
+                        f"  Group {i}: "
+                        f"{group_type:12s} | "
+                        f"lr={group['lr']:.2e} | "
+                        f"wd={group.get('weight_decay', 0.0)} | "
+                        f"params={num_params:,}"
+                    )
+
+                print(
+                    f"\n🌊 Global LR:   "
+                    f"{self.args.learning_rate:.2e}"
+                )
+
+                print(
+                    f"🌊 Boundary LR: "
+                    f"{boundary_lr:.2e}\n"
+                )
+
+        # if is_sagemaker_mp_enabled():
+        #     self.optimizer = smp.DistributedOptimizer(
+        #         self.optimizer
+        #     )
+
+        return self.optimizer
+
+
+
 
 @dataclass
 class CompressedQwen3VLModelOutput(Qwen3VLModelOutputWithPast):

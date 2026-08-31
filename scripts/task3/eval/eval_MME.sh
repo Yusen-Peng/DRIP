@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0821_MME_LLaVA_Qwen2.5-14B-Instruct_DRIP_8x_pretrain_NEW_DOWN_temp10_train_full
-#SBATCH --output=0821_MME_LLaVA_Qwen2.5-14B-Instruct_DRIP_8x_pretrain_NEW_DOWN_temp10_train_full.log
+#SBATCH --job-name=0821_MME_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full
+#SBATCH --output=0821_MME_LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full.log
 #SBATCH --time=00:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,10 +19,10 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_Qwen2.5-14B-Instruct_DRIP_8x_pretrain_NEW_DOWN_temp10_train_full"
+VERSION="LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full"
 
 # python src/model_vqa_loader.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain_NEW_DOWN_temp10_train_full \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full \
 #     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/llava_mme.jsonl \
 #     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/MME_Benchmark_release_version \
 #     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/answers/${VERSION}.jsonl \
@@ -30,7 +30,7 @@ VERSION="LLaVA_Qwen2.5-14B-Instruct_DRIP_8x_pretrain_NEW_DOWN_temp10_train_full"
 #     --conv-mode vicuna_v1
 
 # python src/model_vqa_loader.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_8x_temp10_new_downsample_train_full \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full \
 #     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/llava_mme.jsonl \
 #     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/MME_Benchmark_release_version \
 #     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/answers/${VERSION}.jsonl \
@@ -38,7 +38,7 @@ VERSION="LLaVA_Qwen2.5-14B-Instruct_DRIP_8x_pretrain_NEW_DOWN_temp10_train_full"
 #     --conv-mode vicuna_v1
 
 python src/model_vqa_loader_qwen.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_8x_pretrain_NEW_DOWN_temp10_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/llava_mme.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/MME_Benchmark_release_version \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MME/answers/${VERSION}.jsonl \

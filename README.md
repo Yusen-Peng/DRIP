@@ -4,11 +4,6 @@
 
 - [July 24, 2026] the paper draft is acccepted to [COLM 2026 Tokenization Workshop](https://www.aclweb.org/portal/content/tokenization-workshop-colm-2026)! I will be in-person presenting it in San Francisco 🌉!
 
-## To-do list
-
-Boundary analysis:
-- [ ] reconstructing the image with a pretrained MAE by masking non-boundary image **raw** patches (i.e., pixel-level)
-
 
 ## Environment setup
 

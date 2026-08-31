@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Qwen3VL_SFT_DRIP_4x_10data_temp0001
-#SBATCH --output=logs/Qwen3VL_SFT_DRIP_4x_10data_temp0001.out
+#SBATCH --job-name=Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e4
+#SBATCH --output=logs/Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e4.out
 #SBATCH --account=PAS2836
 #SBATCH --partition=nextgen
 #SBATCH --nodes=1
@@ -48,8 +48,8 @@ entry_file=qwenvl/train/train_compressed_qwen.py
 datasets=llava_665k%100
 
 # Output configuration
-run_name="qwen3vl_DRIP_4x_10data_temp0001"
-output_dir=/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp0001
+run_name="qwen3vl_DRIP_4x_10data_temp001_BP1e4"
+output_dir=/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e4
 
 # Training arguments
 args="
