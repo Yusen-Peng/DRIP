@@ -343,9 +343,16 @@ class CompressedQwen3VLModel(Qwen3VLModel):
 
         hidden_size = self.config.vision_config.out_hidden_size
 
+
+        # mlp_ratio = 4
+        # NOTE: tune the embedding width!
+        # mlp_ratio = 1
+        mlp_ratio = 2
+        print(f"🎾🎾🎾 the width multiplier: {mlp_ratio}")
+
         self.compressor = TokenCompressor(
             hidden_size=hidden_size,
-            intermediate_size=4 * hidden_size,
+            intermediate_size=mlp_ratio * hidden_size, 
             merge_strategy=merge_strategy,
             compression_rate=compression_rate,
             temperature=temperature,
@@ -655,9 +662,8 @@ class CompressedQwen3VLModel(Qwen3VLModel):
             last_hidden_state=outputs.last_hidden_state,
             past_key_values=outputs.past_key_values,
             rope_deltas=self.rope_deltas,
-            # NOTE: our additions
             keep_mask=keep_mask,
-            boundary_loss=boundary_loss,
+            boundary_loss=boundary_loss
         )
 
 
@@ -671,7 +677,13 @@ class CompressedQwen3VLForConditionalGeneration(Qwen3VLForConditionalGeneration)
     def __init__(self, config):
         super().__init__(config)
         self.model = CompressedQwen3VLModel(config)
+
         self.boundary_loss_weight = 1.0
+        # tune the loss ratio
+        # self.boundary_loss_weight = 0.1
+        print(f"🏄🏽‍♂️🏄🏽‍♂️🏄🏽‍♂️ DRIP boundary loss weight: {self.boundary_loss_weight}")
+
+
         self.post_init()
 
     def forward(
