@@ -46,5 +46,4 @@ class TrainingArguments(transformers.TrainingArguments):
 
     warmup_ratio: float = field(default=0.0)
 
-    # boundary_lr: Optional[float] = field(default=1e-3, metadata={"help": "Learning rate for the DRIP boundary predictor/null token. "})
-    boundary_lr: Optional[float] = field(default=1e-4, metadata={"help": "Learning rate for the DRIP boundary predictor/null token. "})
+    boundary_lr: Optional[float] = field(default=1e-3, metadata={"help": "Learning rate for the DRIP boundary predictor/null token. "})

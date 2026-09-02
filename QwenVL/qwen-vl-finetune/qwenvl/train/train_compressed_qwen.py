@@ -37,7 +37,7 @@ from qwenvl.model.qwen3vl_compressed import CompressedQwen3VLForConditionalGener
 
 MERGE_STRATEGY = "DRIP"
 COMPRESSION_RATE = 0.25
-TEMPERATURE = 0.01
+TEMPERATURE = 1.0
 
 
 local_rank = None
@@ -224,6 +224,13 @@ def train(attn_implementation="flash_attention_2"):
             for name, p in model.named_parameters():
                 if "compressor" in name:
                     p.requires_grad = True
+            print("🥹🥹🥹 DRIP compressor is trainable. This is the default setting.")
+            #         # NOTE: interesting ablation
+            #         p.requires_grad = False
+            # print("🔮🔮🔮 LoRA enabled, but DRIP compressor is frozen. This is an ablation study.")
+
+
+
         elif MERGE_STRATEGY == "Fixed":
             pass
 
