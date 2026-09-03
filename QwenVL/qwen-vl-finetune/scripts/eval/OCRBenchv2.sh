@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0826_OCRBenchv2_Qwen3VL_SFT_DRIP_4x_10data_temp10_BP1e3
-#SBATCH --output=0826_OCRBenchv2_Qwen3VL_SFT_DRIP_4x_10data_temp10_BP1e3.log
+#SBATCH --job-name=0826_OCRBenchv2_Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth
+#SBATCH --output=0826_OCRBenchv2_Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth.log
 #SBATCH --time=07:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,7 +20,7 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
-VERSION="Qwen3VL_SFT_DRIP_4x_10data_temp10_BP1e3"
+VERSION="Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth"
 
 # python eval_code/model_vqa_ocrbenchv2.py \
 #     --model_path Qwen/Qwen3-VL-4B-Instruct \
@@ -60,7 +60,7 @@ VERSION="Qwen3VL_SFT_DRIP_4x_10data_temp10_BP1e3"
 
 
 python eval_code/model_vqa_ocrbenchv2.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp10_BP1e3 \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth \
     --model_base Qwen/Qwen3-VL-4B-Instruct \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
@@ -71,7 +71,7 @@ python eval_code/model_vqa_ocrbenchv2.py \
     --temperature 0 \
     --merge-strategy DRIP \
     --compression-rate 0.25 \
-    --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp10_BP1e3/drip.bin
+    --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth/drip.bin
 
 
 

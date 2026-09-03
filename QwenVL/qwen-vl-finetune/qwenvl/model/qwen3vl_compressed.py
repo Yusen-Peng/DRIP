@@ -348,6 +348,7 @@ class CompressedQwen3VLModel(Qwen3VLModel):
         # NOTE: tune the embedding width!
         # mlp_ratio = 1
         mlp_ratio = 2
+        
         print(f"🎾🎾🎾 the width multiplier: {mlp_ratio}")
 
         self.compressor = TokenCompressor(

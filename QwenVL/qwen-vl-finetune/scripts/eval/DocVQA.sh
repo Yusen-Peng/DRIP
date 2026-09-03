@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0826_DocVQA_Qwen3VL_SFT_DRIP_4x_10data_temp10_BP1e3
-#SBATCH --output=0826_DocVQA_Qwen3VL_SFT_DRIP_4x_10data_temp10_BP1e3.log
+#SBATCH --job-name=0826_DocVQA_Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth
+#SBATCH --output=0826_DocVQA_Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth.log
 #SBATCH --time=01:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export TOKENIZERS_PARALLELISM=false
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
-VERSION="Qwen3VL_SFT_DRIP_4x_10data_temp10_BP1e3"
+VERSION="Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth"
 echo "Running LLaVA inference..."
 
 # python eval_code/model_vqa_loader.py \
@@ -49,7 +49,7 @@ echo "Running LLaVA inference..."
 
 
 python eval_code/model_vqa_loader.py \
-  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp10_BP1e3 \
+  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth \
   --model-base Qwen/Qwen3-VL-4B-Instruct \
   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \
@@ -57,7 +57,7 @@ python eval_code/model_vqa_loader.py \
   --temperature 0 \
   --merge-strategy DRIP \
   --compression-rate 0.25 \
-  --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp10_BP1e3/drip.bin
+  --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth/drip.bin
 
 
 cd /users/PAS2912/yusenpeng/DRIP
