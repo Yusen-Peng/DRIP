@@ -35,9 +35,13 @@ from qwenvl.train.argument import (
 )
 from qwenvl.model.qwen3vl_compressed import CompressedQwen3VLForConditionalGeneration, CompressedTrainer
 
-MERGE_STRATEGY = "DRIP"
+"""
+    top-level Control for experiments here.
+"""
+MERGE_STRATEGY = "Fixed"
 COMPRESSION_RATE = 0.25
 TEMPERATURE = 0.01
+MLP_RATIO = 0.5
 
 
 local_rank = None
@@ -170,7 +174,8 @@ def train(attn_implementation="flash_attention_2"):
         merge_strategy=MERGE_STRATEGY, 
         compression_rate=COMPRESSION_RATE, 
         temperature=TEMPERATURE,
-        drip_path=None # explicitly set to None; when training it starts uninitialized
+        drip_path=None, # explicitly set to None; when training it starts uninitialized,
+        mlp_ratio=MLP_RATIO
     )
 
     data_args.model_type = "qwen3vl"

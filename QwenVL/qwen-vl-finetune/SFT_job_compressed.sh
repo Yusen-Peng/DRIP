@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth
-#SBATCH --output=logs/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth.out
+#SBATCH --job-name=Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE
+#SBATCH --output=logs/Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE.out
 #SBATCH --account=PAS2836
 #SBATCH --partition=quad
 #SBATCH --nodes=1
@@ -9,6 +9,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --time=24:00:00
+#SBATCH --exclude=a0002,a0005
 
 module load miniconda3/24.1.2-py310
 conda deactivate
@@ -48,8 +49,8 @@ entry_file=qwenvl/train/train_compressed_qwen.py
 datasets=llava_665k%100
 
 # Output configuration
-run_name="Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth"
-output_dir=/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth
+run_name="Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE"
+output_dir=/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE
 
 # Training arguments
 args="

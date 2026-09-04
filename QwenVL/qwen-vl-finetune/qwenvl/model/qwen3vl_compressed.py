@@ -49,7 +49,6 @@ class CompressedQwen3VLVisionPatchMerger(Qwen3VLVisionPatchMerger):
 
     def set_compressor(self, merge_strategy="Fixed", compression_rate=0.25, temperature=0.1, drip_path=None, mlp_ratio=4):
         compressor_hidden_size = self.hidden_size
-        print(f"🎾 Width multiplier: {mlp_ratio}")
         self.compressor = TokenCompressor(
             hidden_size=compressor_hidden_size,
             intermediate_size=mlp_ratio * compressor_hidden_size,
@@ -161,6 +160,14 @@ class CompressedQwen3VLModel(Qwen3VLModel):
         self.visual = CompressedQwen3VLVisionModel._from_config(config.vision_config)
 
     def set_compressor(self, merge_strategy="Fixed", compression_rate=0.25, temperature=0.1, drip_path=None, mlp_ratio=4):
+        """This is the top-level function to set the compressor for the visual model. It will propagate the settings down to the merger."""
+        print(f"🔋🔋 merge strategy: {merge_strategy}")
+        print(f"⏰⏰ compression rate: {compression_rate}\n")
+        
+        if merge_strategy == "DRIP":
+            print(f"🎈🎈 sampling temperature: {temperature}")
+            print(f"✂️✂️ MLP ratio: {mlp_ratio}")
+
         self.visual.set_compressor(
             merge_strategy=merge_strategy,
             compression_rate=compression_rate,
