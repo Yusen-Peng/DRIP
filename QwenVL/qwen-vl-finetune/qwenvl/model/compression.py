@@ -47,21 +47,8 @@ class TokenCompressor(nn.Module):
         else:
             raise ValueError(f"Unknown strategy: {merge_strategy}")
 
-    # def load_drip_weights(self, drip_path):
-    #     state_dict = torch.load(drip_path, map_location="cpu")
-    #     compressor_state = {}
-    #     for key, value in state_dict.items():
-    #         # Saved from full model.named_parameters()
-    #         if "compressor." in key:
-    #             key = key.split("compressor.", 1)[1]
-    #         compressor_state[key] = value
-    #     missing, unexpected = self.load_state_dict(compressor_state, strict=False)
-    #     print(f"🌊 Loaded DRIP weights from {drip_path}")
-    #     if missing:
-    #         print(f"⚠️ Missing DRIP keys: {missing}")
-    #     if unexpected:
-    #         print(f"⚠️ Unexpected DRIP keys: {unexpected}")
-
+        self.last_soft_boundaries = None
+        
     def load_drip_weights(self, drip_path):
         """
             Load DRIP weights from either:
@@ -177,7 +164,8 @@ class TokenCompressor(nn.Module):
             x_t = x.transpose(0, 1)
 
             if inference:
-                _, boundaries = (self.boundary_predictor.inference(x_t))
+                soft, boundaries = (self.boundary_predictor.inference(x_t))
+                self.last_soft_boundaries = soft.detach()
             else:
                 _, boundaries = (self.boundary_predictor(x_t))
 

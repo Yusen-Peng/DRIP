@@ -17,12 +17,42 @@ from model.qwen3vl_compressed import (
 )
 
 
+def get_qwen_processed_image(
+    original_img,
+    model,
+    image_grid_thw,
+):
+    """
+    Resize the original image to the spatial resolution represented
+    by Qwen's pre-spatial-merge vision grid.
+    """
+    grid = image_grid_thw[0]
+
+    h = int(grid[1].item())
+    w = int(grid[2].item())
+
+    patch_size = int(
+        model.config.vision_config.patch_size
+    )
+
+    processed_h = h * patch_size
+    processed_w = w * patch_size
+
+    processed_img = original_img.resize(
+        (processed_w, processed_h),
+        resample=Image.BICUBIC,
+    )
+
+    return processed_img
+
+
 def build_qwen3vl_drip(
     model_base="Qwen/Qwen3-VL-4B-Instruct",
     drip_weight_path=None,
     merge_strategy="DRIP",
     compression_rate=0.25,
     temperature=0.1,
+    mlp_ratio=1.0,
     device="cuda",
 ):
     processor = AutoProcessor.from_pretrained(model_base)
@@ -36,6 +66,7 @@ def build_qwen3vl_drip(
         compression_rate=compression_rate,
         temperature=temperature,
         drip_path=drip_weight_path,
+        mlp_ratio=mlp_ratio,
     )
     model = model.to(device).eval()
     return model, processor
@@ -66,25 +97,6 @@ def prepare_qwen_image(
     image_grid_thw = inputs["image_grid_thw"].to(device)
 
     return img, pixel_values, image_grid_thw
-
-
-@torch.no_grad()
-def get_qwen_image_features(
-    model,
-    pixel_values,
-    image_grid_thw,
-):
-    qwen_model = model.model
-    image_embeds, deepstack_image_embeds = (
-        qwen_model.get_image_features(
-            pixel_values,
-            image_grid_thw,
-        )
-    )
-    assert len(image_embeds) == 1
-    # [L, D]
-    image_features = image_embeds[0]
-    return image_features
 
 
 def get_qwen_llm_grid(
@@ -132,81 +144,46 @@ def get_qwen_llm_grid(
 
 @torch.no_grad()
 def get_qwen_drip_boundaries(
-    model,
+    model: CompressedQwen3VLForConditionalGeneration,
     pixel_values,
     image_grid_thw,
 ):
     qwen_model = model.model
-    compressor = qwen_model.compressor
+    compressor = qwen_model.visual.merger.compressor
 
-    image_features = get_qwen_image_features(
-        model,
+    (
+        _,
+        _,
+        boundaries,
+        _,
+    ) = qwen_model.get_image_features(
         pixel_values,
         image_grid_thw,
     )
 
-    # [L, D] -> [1, L, D]
-    x = image_features.unsqueeze(0)
+    # boundaries are defined over the ORIGINAL post-2x2-merge
+    # visual-token sequence [1, N]
+    hard = boundaries[0].detach().float().cpu()
 
-    B, L, D = x.shape
 
-    assert B == 1
+    # Soft probabilities cached during the same inference pass
+    if compressor.last_soft_boundaries is None:
+        raise RuntimeError("last_soft_boundaries was not populated. Make sure the model is in eval mode and inference=True.")
+    soft = compressor.last_soft_boundaries[0].detach().float().cpu()
 
+    num_visual_tokens = hard.numel()
     grid_h, grid_w = get_qwen_llm_grid(
         model,
         image_grid_thw,
-        num_visual_tokens=L,
+        num_visual_tokens=num_visual_tokens,
     )
-
-    x_t = x.transpose(0, 1)  # [L, 1, D]
-
-    soft_boundaries, hard_boundaries = (
-        compressor.boundary_predictor.inference(x_t)
-    )
-
-    # Same thing your compressor does:
-    # force the final visual token to terminate a group.
-    hard_boundaries = torch.cat(
-        [
-            hard_boundaries[:, :-1],
-            torch.ones_like(hard_boundaries[:, -1:]),
-        ],
-        dim=1,
-    )
-    hard = hard_boundaries[0].detach().float().cpu()
-    soft = soft_boundaries[0].detach().float().cpu()
     assert hard.numel() == grid_h * grid_w
-    assert soft.numel() == grid_h * grid_w
     return (
         hard,
         soft,
         grid_h,
         grid_w,
     )
-
-def get_qwen_processed_image(
-    original_img,
-    model,
-    image_grid_thw,
-):
-    grid = image_grid_thw[0]
-
-    h = int(grid[1].item())
-    w = int(grid[2].item())
-
-    patch_size = int(
-        model.config.vision_config.patch_size
-    )
-
-    processed_h = h * patch_size
-    processed_w = w * patch_size
-
-    processed_img = original_img.resize(
-        (processed_w, processed_h),
-        resample=Image.BICUBIC,
-    )
-    return processed_img
-
 
 @torch.no_grad()
 def overlay_qwen_drip_boundaries(
@@ -518,38 +495,13 @@ def visualize_qwen_soft_probs(
 
 
 def main():
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp10/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp01/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001/drip.bin"
-    
-    # DRIP_WEIGHT_PATH ="/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3/drip.bin"
-
-    # DRIP_WEIGHT_PATH = None
-    
-    
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_FROZEN/drip.bin"
-
-
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp01_BP1e3/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp10_BP1e3/drip.bin"
-
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_ratio01/drip.bin"
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_1xwidth/drip.bin"
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth/drip.bin"
-
-
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_2x_10data_FROZEN/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_05xwidth/checkpoint-246/drip.bin"
 
 
     COMPRESSION_RATE = 0.25
     TEMPERATURE = 0.01
-    save_path = "/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth.png"
-
-    # save_path = f"/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/qwen3vl_drip_{COMPRESSION_RATE}_temp{TEMPERATURE}.png"
-    # save_path = f"/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/qwen3vl_drip_{COMPRESSION_RATE}_randomly_initialized.png"   
-    # save_path = f"/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/qwen3vl_drip_{COMPRESSION_RATE}_temp{TEMPERATURE}_BP1e3.png"
+    MLP_RATIO = 0.5
+    save_path = "/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_05xwidth/checkpoint-246.png"
 
 
 
@@ -565,6 +517,7 @@ def main():
         merge_strategy="DRIP",
         compression_rate=COMPRESSION_RATE,
         temperature=TEMPERATURE,
+        mlp_ratio=MLP_RATIO,
         device=device,
     )
     image_dir = "/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/image_examples"
