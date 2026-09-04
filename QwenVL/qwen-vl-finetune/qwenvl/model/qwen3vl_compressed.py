@@ -4,8 +4,10 @@ from typing import Optional, Union
 import os
 from transformers.cache_utils import Cache
 from transformers.processing_utils import Unpack
+from torch.nn import functional as F
 from transformers.models.qwen3_vl.modeling_qwen3_vl import (
     Qwen3VLModel,
+    Qwen3VLVisionModel,
     Qwen3VLModelOutputWithPast,
     TransformersKwargs,
     is_torchdynamo_compiling,
@@ -78,12 +80,74 @@ class CompressedQwen3VLVisionPatchMerger(Qwen3VLVisionPatchMerger):
         return x, boundaries, boundary_loss
 
 
+class CompressedQwen3VLVisionModel(Qwen3VLVisionModel):
+    def __init__(self, config, *inputs, **kwargs):
+        super().__init__(config, *inputs, **kwargs)
+        # we need our own merger here to support compression
+        self.merger = CompressedQwen3VLVisionPatchMerger(config=config, use_postshuffle_norm=False)
+
+    def set_compressor(self, merge_strategy="Fixed", compression_rate=0.25, temperature=0.1, drip_path=None, mlp_ratio=4):
+        self.merger.set_compressor(
+            merge_strategy=merge_strategy,
+            compression_rate=compression_rate,
+            temperature=temperature,
+            drip_path=drip_path,
+            mlp_ratio=mlp_ratio
+        )
+
+    def forward(self, hidden_states: torch.Tensor, grid_thw: torch.Tensor, **kwargs) -> torch.Tensor:
+        """
+        Args:
+            hidden_states (`torch.Tensor` of shape `(seq_len, hidden_size)`):
+                The final hidden states of the model.
+            grid_thw (`torch.Tensor` of shape `(num_images_or_videos, 3)`):
+                The temporal, height and width of feature shape of each image in LLM.
+
+        Returns:
+            `torch.Tensor`: hidden_states.
+        """
+        hidden_states = self.patch_embed(hidden_states)
+
+        pos_embeds = self.fast_pos_embed_interpolate(grid_thw)
+        hidden_states = hidden_states + pos_embeds
+
+        rotary_pos_emb = self.rot_pos_emb(grid_thw)
+
+        seq_len, _ = hidden_states.size()
+        hidden_states = hidden_states.reshape(seq_len, -1)
+        rotary_pos_emb = rotary_pos_emb.reshape(seq_len, -1)
+        emb = torch.cat((rotary_pos_emb, rotary_pos_emb), dim=-1)
+        position_embeddings = (emb.cos(), emb.sin())
+
+        cu_seqlens = torch.repeat_interleave(grid_thw[:, 1] * grid_thw[:, 2], grid_thw[:, 0]).cumsum(
+            dim=0,
+            # Select dtype based on the following factors:
+            #  - FA2 requires that cu_seqlens_q must have dtype int32
+            #  - torch.onnx.export requires that cu_seqlens_q must have same dtype as grid_thw
+            # See https://github.com/huggingface/transformers/pull/34852 for more information
+            dtype=grid_thw.dtype if torch.jit.is_tracing() else torch.int32,
+        )
+        cu_seqlens = F.pad(cu_seqlens, (1, 0), value=0)
+
+        deepstack_feature_lists = []
+        for layer_num, blk in enumerate(self.blocks):
+            hidden_states = blk(
+                hidden_states,
+                cu_seqlens=cu_seqlens,
+                position_embeddings=position_embeddings,
+                **kwargs,
+            )
+            if layer_num in self.deepstack_visual_indexes:
+                deepstack_feature = self.deepstack_merger_list[self.deepstack_visual_indexes.index(layer_num)](
+                    hidden_states
+                )
+                deepstack_feature_lists.append(deepstack_feature)
 
 
-
-
-
-
+        # hidden_states = self.merger(hidden_states)
+        # return hidden_states, deepstack_feature_lists
+        hidden_states, boundaries, boundary_loss = self.merger(hidden_states, inference=not self.training)
+        return hidden_states, deepstack_feature_lists, boundaries, boundary_loss
 
 
 
