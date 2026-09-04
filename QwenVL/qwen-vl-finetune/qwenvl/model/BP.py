@@ -358,7 +358,14 @@ def downsample_with_indices(boundaries: torch.Tensor, hidden: torch.Tensor, null
     # FIXME: there is a bug here
     if S == 0:
         # shape [1, B, D]
-        return null_group.expand(1, B, D).to(hidden.dtype).to(hidden.device)
+        # return null_group.expand(1, B, D).to(hidden.dtype).to(hidden.device)
+        return torch.zeros(
+            1,
+            B,
+            D,
+            device=hidden.device,
+            dtype=hidden.dtype,
+        )
 
     # Build [B, L, S] template of segment indices 0..S-1
     seg_ids = torch.arange(S, device=boundaries.device).view(1, 1, S)        # [1,1,S]

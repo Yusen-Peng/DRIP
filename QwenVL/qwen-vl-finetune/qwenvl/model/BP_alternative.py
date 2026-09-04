@@ -117,7 +117,16 @@ def new_downsample(boundaries: torch.Tensor, hidden: torch.Tensor, null_group: t
     # If no segments at all in the batch, return a single null segment
     if S == 0:
         # shape [1, B, D]
-        return null_group.expand(1, B, D).to(hidden.dtype).to(hidden.device)
+        # return null_group.expand(1, B, D).to(hidden.dtype).to(hidden.device)
+        return torch.zeros(
+            1,
+            B,
+            D,
+            device=hidden.device,
+            dtype=hidden.dtype,
+        )
+
+
 
     # B x L x S
     weights = segments_to_matrix_diff_detached_cumsum(boundaries, leading_one)  # B x L x S
