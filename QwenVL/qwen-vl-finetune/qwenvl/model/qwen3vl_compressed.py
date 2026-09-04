@@ -15,6 +15,7 @@ from transformers.models.qwen3_vl.modeling_qwen3_vl import (
 
 from transformers import Trainer
 from transformers.utils import is_sagemaker_mp_enabled, logging
+from transformers.models.qwen3_vl.modeling_qwen3_vl import Qwen3VLVisionPatchMerger, Qwen3VLVisionConfig
 from dataclasses import dataclass
 
 from .compression import TokenCompressor
@@ -38,6 +39,52 @@ def get_mm_adapter_state_maybe_zero_3(named_params, keys_to_match):
     to_return = {k: t for k, t in named_params if any(key_match in k for key_match in keys_to_match)}
     to_return = {k: maybe_zero_3(v, ignore_status=True, name=k).cpu() for k, v in to_return.items()}
     return to_return
+
+class CompressedQwen3VLVisionPatchMerger(Qwen3VLVisionPatchMerger):
+    def __init__(self, config: Qwen3VLVisionConfig, use_postshuffle_norm: bool = False,):
+        super().__init__(config=config, use_postshuffle_norm=use_postshuffle_norm)
+        self.compressor = None
+
+    def set_compressor(self, merge_strategy="Fixed", compression_rate=0.25, temperature=0.1, drip_path=None, mlp_ratio=4):
+        compressor_hidden_size = self.hidden_size
+        print(f"🎾 Width multiplier: {mlp_ratio}")
+        self.compressor = TokenCompressor(
+            hidden_size=compressor_hidden_size,
+            intermediate_size=mlp_ratio * compressor_hidden_size,
+            merge_strategy=merge_strategy,
+            compression_rate=compression_rate,
+            temperature=temperature,
+            drip_path=drip_path,
+        )
+        param = next(self.parameters())
+        self.compressor.to(device=param.device,dtype=param.dtype)
+        print(f"🌊 Qwen3VL merger compressor: {merge_strategy}, rate={compression_rate}")
+        if merge_strategy == "DRIP":
+            print(f"🤡 Sampling temperature: {temperature}")
+
+    def forward(self, x: torch.Tensor, inference: bool = False):
+        if self.use_postshuffle_norm:
+            x = self.norm(x.view(-1, self.hidden_size))
+        else:
+            x = self.norm(x).view(-1, self.hidden_size)
+        boundaries = None
+        boundary_loss = None
+        if self.compressor is not None:
+            x = x.unsqueeze(0)
+            x, boundaries, boundary_loss = self.compressor(x, inference=inference)
+            x = x.squeeze(0)
+        # MLP projector
+        x = self.linear_fc2(self.act_fn(self.linear_fc1(x)))
+        return x, boundaries, boundary_loss
+
+
+
+
+
+
+
+
+
 
 
 
@@ -666,6 +713,15 @@ class CompressedQwen3VLModel(Qwen3VLModel):
             keep_mask=keep_mask,
             boundary_loss=boundary_loss
         )
+
+
+
+
+
+
+
+
+
 
 
 @dataclass
