@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0826_OCRBench_Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth
-#SBATCH --output=0826_OCRBench_Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth.log
+#SBATCH --job-name=0826_OCRBench_Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE
+#SBATCH --output=0826_OCRBench_Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,7 +18,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
-VERSION="Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth"
+VERSION="Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE"
 
 # python eval_code/model_vqa_ocrbench.py \
 #     --model_path Qwen/Qwen3-VL-4B-Instruct \
@@ -41,21 +41,8 @@ VERSION="Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth"
 #     --num_workers 1
 
 
-# python eval_code/model_vqa_ocrbench.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_2x_10data \
-#     --model_base Qwen/Qwen3-VL-4B-Instruct \
-#     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
-#     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
-#     --save_name ${VERSION} \
-#     --OCRBench_file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench.json \
-#     --temperature 0 \
-#     --num_workers 1 \
-#     --merge-strategy Fixed \
-#     --compression-rate 0.5
-
-
 python eval_code/model_vqa_ocrbench.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE \
     --model_base Qwen/Qwen3-VL-4B-Instruct \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
@@ -63,9 +50,24 @@ python eval_code/model_vqa_ocrbench.py \
     --OCRBench_file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench.json \
     --temperature 0 \
     --num_workers 1 \
-    --merge-strategy DRIP \
-    --compression-rate 0.25 \
-    --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_10data_temp001_BP1e3_2xwidth/drip.bin
+    --merge-strategy Fixed \
+    --compression-rate 0.25
+
+
+# python eval_code/model_vqa_ocrbench.py \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_05xwidth \
+#     --model_base Qwen/Qwen3-VL-4B-Instruct \
+#     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
+#     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
+#     --save_name ${VERSION} \
+#     --OCRBench_file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench.json \
+#     --temperature 0 \
+#     --num_workers 1 \
+#     --merge-strategy DRIP \
+#     --compression-rate 0.25 \
+#     --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_05xwidth/drip.bin \
+#     --mlp-ratio 0.5
+
 
 
 conda deactivate

@@ -495,13 +495,13 @@ def visualize_qwen_soft_probs(
 
 
 def main():
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_05xwidth/checkpoint-246/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth/drip.bin"
 
 
     COMPRESSION_RATE = 0.25
     TEMPERATURE = 0.01
     MLP_RATIO = 0.5
-    save_path = "/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_05xwidth/checkpoint-246.png"
+    save_path = "/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth.png"
 
 
 

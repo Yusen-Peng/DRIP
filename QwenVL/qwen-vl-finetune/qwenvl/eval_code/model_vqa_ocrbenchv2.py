@@ -159,6 +159,12 @@ def _get_args():
         default=None,
     )
 
+    parser.add_argument(
+        "--mlp-ratio",
+        type=float,
+        default=1.0,
+    )
+
     return parser.parse_args()
 
 
@@ -226,7 +232,7 @@ def load_model(args, device):
                     dtype=torch.bfloat16,
                     device_map="auto"
             )
-            model.model.set_compressor(merge_strategy=args.merge_strategy, compression_rate=args.compression_rate, temperature=args.sampling_temperature, drip_path=args.drip_path)
+            model.model.set_compressor(merge_strategy=args.merge_strategy, compression_rate=args.compression_rate, temperature=args.sampling_temperature, drip_path=args.drip_path, mlp_ratio=args.mlp_ratio)
 
         else:
             model = Qwen3VLForConditionalGeneration.from_pretrained(
