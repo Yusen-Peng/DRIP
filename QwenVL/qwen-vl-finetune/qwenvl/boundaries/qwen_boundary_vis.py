@@ -495,14 +495,20 @@ def visualize_qwen_soft_probs(
 
 
 def main():
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_DRIP_4x_NEW_PIPELINE_1xwidth_BP_WARMUP/checkpoint-24/drip.bin"
+
+
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_2xwidth/drip.bin"
+
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_temp10/drip.bin"
 
 
     COMPRESSION_RATE = 0.25
-    TEMPERATURE = 0.01
-    MLP_RATIO = 0.5
-    save_path = "/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth.png"
-
+    TEMPERATURE = 1.0
+    MLP_RATIO = 1.0
+    # save_path = "/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/Qwen3VL_DRIP_4x_NEW_PIPELINE_1xwidth_BP_WARMUP/checkpoint-24.png"
+    save_path = "/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_temp10.png"
 
 
     MODEL_BASE = "Qwen/Qwen3-VL-4B-Instruct"
