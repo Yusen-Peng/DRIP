@@ -41,7 +41,7 @@ from qwenvl.model.qwen3vl_compressed import CompressedQwen3VLForConditionalGener
 MERGE_STRATEGY = "DRIP"
 COMPRESSION_RATE = 0.25
 TEMPERATURE = 0.01 # 0.01, 0.1, 1.0
-MLP_RATIO = 4.0
+MLP_RATIO = 1.0
 DRIP_PATH = None
 
 

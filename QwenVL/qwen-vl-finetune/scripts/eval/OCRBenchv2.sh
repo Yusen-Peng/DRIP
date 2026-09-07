@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0826_OCRBenchv2_Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_2xwidth
-#SBATCH --output=0826_OCRBenchv2_Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_2xwidth.log
+#SBATCH --job-name=0826_OCRBenchv2_Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_4xwidth
+#SBATCH --output=0826_OCRBenchv2_Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_4xwidth.log
 #SBATCH --time=07:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,7 +20,7 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
-VERSION="Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_2xwidth"
+VERSION="Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_4xwidth"
 
 # python eval_code/model_vqa_ocrbenchv2.py \
 #     --model_path Qwen/Qwen3-VL-4B-Instruct \
@@ -60,7 +60,7 @@ VERSION="Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_2xwidth"
 
 
 python eval_code/model_vqa_ocrbenchv2.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_2xwidth \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_4xwidth \
     --model_base Qwen/Qwen3-VL-4B-Instruct \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
@@ -71,8 +71,8 @@ python eval_code/model_vqa_ocrbenchv2.py \
     --temperature 0 \
     --merge-strategy DRIP \
     --compression-rate 0.25 \
-    --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_2xwidth/drip.bin \
-    --mlp-ratio 2.0
+    --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_4xwidth/drip.bin \
+    --mlp-ratio 4.0
 
 
 
