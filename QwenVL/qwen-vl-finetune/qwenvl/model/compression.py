@@ -43,7 +43,8 @@ class TokenCompressor(nn.Module):
         else:
             raise ValueError(f"Unknown strategy: {merge_strategy}")
 
-        self.last_soft_boundaries = None
+        self.last_soft_boundaries = None # keep track of the patch-level soft boundaries for debugging and analysis
+        self.last_pooled_scores = None # keep track of the pooled scores for debugging and analysis
         
     def load_drip_weights(self, drip_path):
         """
@@ -171,6 +172,7 @@ class TokenCompressor(nn.Module):
         else:
             raise ValueError(f"Unknown DRIP boundary pooling type: {pool_type}")
 
+        self.last_pooled_scores = pooled_scores.detach()
         # Number of actual Qwen mega tokens
         pooled_L = pooled_scores.shape[1]
         # Exact mega-token budget

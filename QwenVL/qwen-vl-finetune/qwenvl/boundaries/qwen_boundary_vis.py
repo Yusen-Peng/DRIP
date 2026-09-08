@@ -164,12 +164,12 @@ def get_qwen_drip_boundaries(
     # boundaries are defined over the ORIGINAL post-2x2-merge
     # visual-token sequence [1, N]
     hard = boundaries[0].detach().float().cpu()
+    
+    # Pooled soft scores used to select the final mega-token boundaries
+    if compressor.last_pooled_scores is None:
+        raise RuntimeError("last_pooled_scores was not populated.")
+    soft = compressor.last_pooled_scores[0].detach().float().cpu()
 
-
-    # Soft probabilities cached during the same inference pass
-    if compressor.last_soft_boundaries is None:
-        raise RuntimeError("last_soft_boundaries was not populated. Make sure the model is in eval mode and inference=True.")
-    soft = compressor.last_soft_boundaries[0].detach().float().cpu()
 
     num_visual_tokens = hard.numel()
     grid_h, grid_w = get_qwen_llm_grid(
@@ -495,22 +495,11 @@ def visualize_qwen_soft_probs(
 
 
 def main():
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_DRIP_4x_NEW_PIPELINE_1xwidth_BP_WARMUP/checkpoint-24/drip.bin"
-
-
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_2xwidth/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_4xwidth/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_temp10/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_2xwidth_3layers/drip.bin"
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_3layers/drip.bin"
-
-
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full/drip.bin" 
     COMPRESSION_RATE = 0.25
     TEMPERATURE = 0.01
-    MLP_RATIO = 1.0
-    # save_path = "/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/Qwen3VL_DRIP_4x_NEW_PIPELINE_1xwidth_BP_WARMUP/checkpoint-24.png"
-    save_path = "/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_3layers.png"
+    MLP_RATIO = 4.0
+    save_path = "/users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl/boundaries/Qwen3VL_results/Qwen3VL_DRIP_4x_pretrained_on_SigLIP2_mean.png"
 
 
     MODEL_BASE = "Qwen/Qwen3-VL-4B-Instruct"

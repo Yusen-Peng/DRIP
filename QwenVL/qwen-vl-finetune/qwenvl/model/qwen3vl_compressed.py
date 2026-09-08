@@ -90,7 +90,7 @@ class CompressedQwen3VLVisionPatchMerger(Qwen3VLVisionPatchMerger):
         self.compressor = TokenCompressor(
             hidden_size=self.hidden_size,  # mega-token dim, e.g. 4096
             bp_hidden_size=self.bp_hidden_size,             # BP works on native patch features, e.g. 1024
-            bp_intermediate_size=mlp_ratio * self.bp_hidden_size,
+            bp_intermediate_size=int(mlp_ratio * self.bp_hidden_size), # has to be int
             merge_strategy=merge_strategy,
             compression_rate=compression_rate,
             temperature=temperature,
@@ -118,7 +118,7 @@ class CompressedQwen3VLVisionPatchMerger(Qwen3VLVisionPatchMerger):
                 boundaries = (
                     self.compressor.get_drip_pooled_boundaries(
                         patch_features,
-                        pool_type="max",
+                        pool_type="mean",
                         inference=inference,
                     )
                 )
