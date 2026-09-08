@@ -42,6 +42,7 @@ MERGE_STRATEGY = "DRIP"
 COMPRESSION_RATE = 0.25
 TEMPERATURE = 0.01 # 0.01, 0.1, 1.0
 MLP_RATIO = 4.0
+
 # leverage the BP checkpoint from SigLIP2 experiment to transfer
 DRIP_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full/drip.bin" 
 

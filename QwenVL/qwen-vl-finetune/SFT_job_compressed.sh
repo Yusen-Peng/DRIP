@@ -1,14 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_transfer_DEBUG
-#SBATCH --output=logs/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_transfer_DEBUG.out
+#SBATCH --job-name=Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_transfer
+#SBATCH --output=logs/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_transfer.out
 #SBATCH --account=PAS2836
-#SBATCH --partition=debug-nextgen
+#SBATCH --partition=quad
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
-#SBATCH --time=00:20:00
+#SBATCH --time=24:00:00
 
 module load miniconda3/24.1.2-py310
 conda deactivate
@@ -48,8 +48,8 @@ entry_file=qwenvl/train/train_compressed_qwen.py
 datasets=llava_665k%100
 
 # Output configuration
-run_name="Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_transfer_DEBUG"
-output_dir=/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_transfer_DEBUG
+run_name="Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_transfer"
+output_dir=/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_transfer
 
 # Training arguments
 args="
@@ -68,7 +68,7 @@ args="
     --output_dir ${output_dir} \
     --num_train_epochs 0.1 \
     --per_device_train_batch_size ${batch_size} \
-    --per_device_eval_batch_size $((batch_size*2)) \
+    --per_device_eval_batch_size ${batch_size} \
     --gradient_accumulation_steps ${grad_accum_steps} \
     --max_pixels 50176 \
     --min_pixels 784 \

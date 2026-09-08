@@ -503,7 +503,7 @@ class CompressedQwen3VLForConditionalGeneration(Qwen3VLForConditionalGeneration)
         super().__init__(config)
         self.model = CompressedQwen3VLModel(config)
 
-        self.boundary_loss_weight = 1.0
+        self.boundary_loss_weight = 0.0
         # tune the loss ratio
         # self.boundary_loss_weight = 0.1
         print(f"🏄🏽‍♂️🏄🏽‍♂️🏄🏽‍♂️ DRIP boundary loss weight: {self.boundary_loss_weight}")
