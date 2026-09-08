@@ -70,8 +70,8 @@ class BoundaryPredictor(nn.Module):
         self.boundary_predictor = nn.Sequential(
             nn.Linear(d_model, d_inner),
             activation_fn,
-            nn.Linear(d_inner, d_inner),
-            activation_fn,
+            # nn.Linear(d_inner, d_inner),
+            # activation_fn,
             nn.Linear(d_inner, 1),
         )
         print(f"👔👔👔 # of linear layers: {sum(1 for m in self.boundary_predictor if isinstance(m, nn.Linear))}")

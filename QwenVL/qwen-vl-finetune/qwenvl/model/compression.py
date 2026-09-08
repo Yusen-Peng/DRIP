@@ -9,8 +9,9 @@ from .BP_alternative import new_downsample
 class TokenCompressor(nn.Module):
     def __init__(
         self,
-        hidden_size,
-        intermediate_size,
+        hidden_size, # mega-token dim, e.g. 4096
+        bp_hidden_size=None, # native patch dim, e.g. 1024
+        bp_intermediate_size=None, # e.g. 4096
         merge_strategy="DRIP",
         compression_rate=0.25,
         temperature=0.1,
@@ -21,17 +22,12 @@ class TokenCompressor(nn.Module):
         self.merge_strategy = merge_strategy
         self.compression_rate = compression_rate
         self.temperature = temperature
-
-        mlp_ratio = intermediate_size / hidden_size
-
-        self.null_token = nn.Parameter(
-            torch.zeros(1, 1, hidden_size)
-        )
+        self.null_token = nn.Parameter(torch.zeros(1, 1, hidden_size))
 
         if merge_strategy == "DRIP":
             self.boundary_predictor = BoundaryPredictor(
-                d_model=hidden_size,
-                d_inner=int(hidden_size * mlp_ratio),
+                d_model=bp_hidden_size,
+                d_inner=bp_intermediate_size,
                 activation_function="gelu",
                 temp=temperature,
                 prior=compression_rate,
@@ -43,7 +39,7 @@ class TokenCompressor(nn.Module):
                 self.load_drip_weights(drip_path)
 
         elif merge_strategy == "Fixed":
-            pass
+            self.boundary_predictor = None
         else:
             raise ValueError(f"Unknown strategy: {merge_strategy}")
 
@@ -58,7 +54,7 @@ class TokenCompressor(nn.Module):
             ...compressor.boundary_predictor.0.bias
             ...compressor.null_token
 
-            2. Legacy SigLIP2-LLaVA checkpoints
+            2. pretrained SigLIP2-LLaVA checkpoints
             ...vision_tower.boundary_predictor.0.weight
             ...vision_tower.boundary_predictor.0.bias
             ...vision_tower.null_token
@@ -116,15 +112,21 @@ class TokenCompressor(nn.Module):
         missing, unexpected = self.boundary_predictor.load_state_dict(bp_sd, strict=True)
         print("✅ [INFO] Loaded boundary_predictor")
         if null_tensor is not None:
-            if self.null_token.shape != null_tensor.shape:
-                raise RuntimeError(
-                    "null_token shape mismatch:\n"
-                    f"    checkpoint: {tuple(null_tensor.shape)}\n"
-                    f"    current:    {tuple(self.null_token.shape)}"
+            if self.null_token.shape == null_tensor.shape:
+                with torch.no_grad():
+                    self.null_token.copy_(
+                        null_tensor.to(
+                            device=self.null_token.device,
+                            dtype=self.null_token.dtype,
+                        )
+                    )
+                print(f"✅ [INFO] Loaded null_token: {tuple(null_tensor.shape)}")
+            else:
+                print(
+                    "⚠️ [INFO] Skipping null_token due to shape mismatch: "
+                    f"checkpoint={tuple(null_tensor.shape)}, "
+                    f"current={tuple(self.null_token.shape)}"
                 )
-            with torch.no_grad():
-                self.null_token.copy_(null_tensor.to(device=self.null_token.device, dtype=self.null_token.dtype))
-            print(f"✅ [INFO] Loaded null_token: {tuple(null_tensor.shape)}")
         else:
             print("⚠️ [INFO] null_token not found in checkpoint")
         if missing:
@@ -134,93 +136,68 @@ class TokenCompressor(nn.Module):
         return missing, unexpected
 
 
-    def get_boundaries(self, x, inference=False):
-        """
-        x: [B, L, D]
+    def get_fixed_pooled_boundaries(self, patch_features: torch.Tensor):
+        B, L, D = patch_features.shape
+        if L % 4 != 0:
+            raise ValueError(f"Patch sequence length must be divisible by 4, got {L}")
+        pooled_L = L // 4
+        num_tokens = max(1, int(pooled_L * self.compression_rate))
+        indices = torch.linspace(0, pooled_L - 1, steps=num_tokens, device=patch_features.device).round().long()
+        pooled_boundaries = patch_features.new_zeros(B, pooled_L)
+        pooled_boundaries[:, indices] = 1
+        # Every mega-token sequence must terminate.
+        pooled_boundaries[:, -1] = 1
+        return pooled_boundaries
 
-        returns:
-            boundaries: [B, L]
-        """
-        B, L, D = x.shape
-
-        if self.merge_strategy == "Fixed":
-            num_tokens = max(
-                1,
-                int(L * self.compression_rate),
-            )
-
-            indices = torch.linspace(
-                0,
-                L - 1,
-                steps=num_tokens,
-                device=x.device,
-            ).round().long()
-
-            boundaries = x.new_zeros(B, L)
-
-            boundaries[:, indices] = 1
-
+    def get_drip_pooled_boundaries(self, patch_features: torch.Tensor, pool_type: str = "max", inference: bool = False):
+        B, L, D = patch_features.shape
+        x_t = patch_features.transpose(0, 1)
+        if inference:
+            patch_soft_boundaries, _ = (self.boundary_predictor.inference(x_t))
         else:
-            x_t = x.transpose(0, 1)
+            patch_soft_boundaries, _ = (self.boundary_predictor(x_t))
 
-            if inference:
-                soft, boundaries = (self.boundary_predictor.inference(x_t))
-                self.last_soft_boundaries = soft.detach()
-            else:
-                _, boundaries = (self.boundary_predictor(x_t))
+        self.last_soft_boundaries = patch_soft_boundaries.detach()
+        B, L = patch_soft_boundaries.shape
+        if L % 4 != 0:
+            raise ValueError(f"Patch sequence length must be divisible by 4, got {L}")
 
-        # Every sequence must terminate.
-        boundaries = torch.cat(
-            [
-                boundaries[:, :-1],
-                torch.ones_like(boundaries[:, -1:]),
-            ],
-            dim=1,
-        )
+        grouped = patch_soft_boundaries.view(B, L // 4, 4)
 
-        return boundaries
+        if pool_type == "max":
+            pooled_scores = grouped.amax(dim=-1)
+        elif pool_type == "mean":
+            pooled_scores = grouped.mean(dim=-1)
+        else:
+            raise ValueError(f"Unknown DRIP boundary pooling type: {pool_type}")
 
-    def apply_boundaries(
-        self,
-        x,
-        boundaries,
-    ):
-        """
-        x:          [B, L, D]
-        boundaries:[B, L]
-        """
+        # Number of actual Qwen mega tokens
+        pooled_L = pooled_scores.shape[1]
+        # Exact mega-token budget
+        num_tokens = max(1, int(pooled_L * self.compression_rate))
+
+        # Select mega-token boundaries according to BP score
+        topk_idx = pooled_scores.topk(k=num_tokens, dim=-1).indices
+        pooled_boundaries = pooled_scores.new_zeros(B, pooled_L)
+        pooled_boundaries.scatter_(dim=1, index=topk_idx, value=1.0)
+        # Every mega-token sequence must terminate.
+        pooled_boundaries[:, -1] = 1
+        return pooled_boundaries
+
+    def apply_boundaries(self, x, pooled_boundaries):
         hidden = x.transpose(0, 1)
-
         if self.merge_strategy == "DRIP":
-            shortened = new_downsample(
-                boundaries=boundaries,
-                hidden=hidden,
-                null_group=self.null_token,
-                leading_one=False,
-            )
+            shortened = new_downsample(boundaries=pooled_boundaries, hidden=hidden, null_group=self.null_token, leading_one=False)
         else:
-            shortened = downsample(
-                boundaries=boundaries,
-                hidden=hidden,
-                null_group=self.null_token,
-            )
-
+            shortened = downsample(boundaries=pooled_boundaries, hidden=hidden, null_group=self.null_token)
         return shortened.transpose(0, 1)
 
-    def forward(self, x: torch.Tensor, inference: bool = False):
-        boundaries = self.get_boundaries(
-            x,
-            inference=inference,
-        )
-
-        compressed = self.apply_boundaries(
-            x,
-            boundaries,
-        )
+    def forward(self, x: torch.Tensor, pooled_boundaries: torch.Tensor):
+        compressed = self.apply_boundaries(x, pooled_boundaries)
 
         if self.training and self.merge_strategy.startswith("DRIP"):
-            boundary_loss = self.boundary_predictor.calc_loss(boundaries)
+            boundary_loss = self.boundary_predictor.calc_loss(pooled_boundaries)
         else:
             boundary_loss = x.new_zeros(())
-        return compressed, boundaries, boundary_loss
 
+        return compressed, pooled_boundaries, boundary_loss

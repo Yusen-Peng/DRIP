@@ -38,15 +38,12 @@ from qwenvl.model.qwen3vl_compressed import CompressedQwen3VLForConditionalGener
 """
     top-level Control for experiments here.
 """
-MERGE_STRATEGY = "DRIP"
+MERGE_STRATEGY = "Fixed"
 COMPRESSION_RATE = 0.25
 TEMPERATURE = 0.01 # 0.01, 0.1, 1.0
-MLP_RATIO = 1.0
-DRIP_PATH = None
-
-
-STAGE = "joint"   # "bp_warmup" or "joint"
-
+MLP_RATIO = 4.0
+# leverage the BP checkpoint from SigLIP2 experiment to transfer
+DRIP_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full/drip.bin" 
 
 local_rank = None
 
@@ -230,24 +227,11 @@ def train(attn_implementation="flash_attention_2"):
 
         # Make sure the boundary predictor is trainable when using LoRA!
         if MERGE_STRATEGY == "DRIP":
-            # for name, p in model.named_parameters():
-            #     if "compressor" in name:
-            #         p.requires_grad = True
-            # print("🥹🥹🥹 DRIP compressor is trainable. This is the default setting.")
-            
-            if STAGE == "bp_warmup": # Only BP/compressor learns
-                for p in model.parameters():
+            for name, p in model.named_parameters():
+                # disable BP training
+                if "compressor.boundary_predictor" in name:
                     p.requires_grad = False
-                for name, p in model.named_parameters():
-                    if "compressor.boundary_predictor" in name:
-                        p.requires_grad = True
-                print("🌱 Stage 1: BP-only warmup")
-
-            elif STAGE == "joint":
-                for name, p in model.named_parameters():
-                    if "compressor.boundary_predictor" in name:
-                        p.requires_grad = True
-                print("🌊 Stage 2: LoRA + BP joint training")
+            print("🌊🌊🌊 LoRA training - BP won't be further trained!")
 
         elif MERGE_STRATEGY == "Fixed":
             pass
