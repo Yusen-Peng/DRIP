@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0826_ChartQAPro_Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_4xwidth
-#SBATCH --output=0826_ChartQAPro_Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_4xwidth.log
+#SBATCH --job-name=0826_ChartQAPro_Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_3layers
+#SBATCH --output=0826_ChartQAPro_Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_3layers.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export TOKENIZERS_PARALLELISM=false
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
-VERSION="Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_4xwidth"
+VERSION="Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_3layers"
 echo "Running LLaVA inference..."
 
 
@@ -55,7 +55,7 @@ echo "Running LLaVA inference..."
 
 
 python eval_code/model_vqa_chartqapro.py \
-  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_4xwidth \
+  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_3layers \
   --model-base Qwen/Qwen3-VL-4B-Instruct \
   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/images \
   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/chartqapro_test_llava.jsonl \
@@ -64,8 +64,8 @@ python eval_code/model_vqa_chartqapro.py \
   --conv-mode llava_v1 \
   --merge-strategy DRIP \
   --compression-rate 0.25 \
-  --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_4xwidth/drip.bin \
-  --mlp-ratio 4.0
+  --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_3layers/drip.bin \
+  --mlp-ratio 1.0
 
 
 
