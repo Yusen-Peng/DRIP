@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_transfer
-#SBATCH --output=logs/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_transfer.out
+#SBATCH --job-name=Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE_transfer
+#SBATCH --output=logs/Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE_transfer.out
 #SBATCH --account=PAS2836
 #SBATCH --partition=quad
 #SBATCH --nodes=1
@@ -48,8 +48,8 @@ entry_file=qwenvl/train/train_compressed_qwen.py
 datasets=llava_665k%100
 
 # Output configuration
-run_name="Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_transfer"
-output_dir=/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_transfer
+run_name="Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE_transfer"
+output_dir=/fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE_transfer
 
 # Training arguments
 args="

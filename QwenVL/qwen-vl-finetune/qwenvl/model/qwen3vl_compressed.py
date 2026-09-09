@@ -118,7 +118,7 @@ class CompressedQwen3VLVisionPatchMerger(Qwen3VLVisionPatchMerger):
                 boundaries = (
                     self.compressor.get_drip_pooled_boundaries(
                         patch_features,
-                        pool_type="mean",
+                        pool_type="mean", # meaning pooling better than max pooling
                         inference=inference,
                     )
                 )

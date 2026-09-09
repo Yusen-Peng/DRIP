@@ -38,7 +38,7 @@ from qwenvl.model.qwen3vl_compressed import CompressedQwen3VLForConditionalGener
 """
     top-level Control for experiments here.
 """
-MERGE_STRATEGY = "DRIP"
+MERGE_STRATEGY = "Fixed"
 COMPRESSION_RATE = 0.25
 TEMPERATURE = 0.01 # 0.01, 0.1, 1.0
 MLP_RATIO = 4.0
