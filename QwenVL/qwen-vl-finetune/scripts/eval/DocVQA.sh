@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0826_DocVQA_Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_3layers
-#SBATCH --output=0826_DocVQA_Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_3layers.log
+#SBATCH --job-name=0826_DocVQA_Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE_transfer
+#SBATCH --output=0826_DocVQA_Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE_transfer.log
 #SBATCH --time=01:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export TOKENIZERS_PARALLELISM=false
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
-VERSION="Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_3layers"
+VERSION="Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE_transfer"
 echo "Running LLaVA inference..."
 
 # python eval_code/model_vqa_loader.py \
@@ -37,28 +37,28 @@ echo "Running LLaVA inference..."
 #   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
 #   --temperature 0
 
-# python eval_code/model_vqa_loader.py \
-#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE \
-#   --model-base Qwen/Qwen3-VL-4B-Instruct \
-#   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
-#   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \
-#   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
-#   --temperature 0 \
-#   --merge-strategy Fixed \
-#   --compression-rate 0.25
-
-
 python eval_code/model_vqa_loader.py \
-  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_3layers \
+  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE_transfer \
   --model-base Qwen/Qwen3-VL-4B-Instruct \
   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \
   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
   --temperature 0 \
-  --merge-strategy DRIP \
-  --compression-rate 0.25 \
-  --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_1xwidth_3layers/drip.bin \
-  --mlp-ratio 1.0
+  --merge-strategy Fixed \
+  --compression-rate 0.25
+
+
+# python eval_code/model_vqa_loader.py \
+#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_transfer \
+#   --model-base Qwen/Qwen3-VL-4B-Instruct \
+#   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
+#   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \
+#   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/results/${VERSION}.jsonl \
+#   --temperature 0 \
+#   --merge-strategy DRIP \
+#   --compression-rate 0.25 \
+#   --drip-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_DRIP_4x_NEW_PIPELINE_transfer/drip.bin \
+#   --mlp-ratio 4.0
 
 
 cd /users/PAS2912/yusenpeng/DRIP
