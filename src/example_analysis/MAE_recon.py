@@ -18,11 +18,50 @@ PROJECT_ROOT = "/users/PAS2912/yusenpeng/DRIP"
 sys.path.insert(0, PROJECT_ROOT)
 
 import src.example_analysis.mae_utils.models_mae as models_mae
-DEVICE = "cuda"
+from src.boundary_visual_LLaVA import load_img_with_processor, overlay_llava_drip_boundaries, build_llava_drip_vision_tower
 
+
+MASKING_TYPE = "Fixed"  # "random" or "Fixed" or "DRIP"
+MASK_RATIO = 0.75
+DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full/drip.bin"
+
+
+COMPRESSION_RATE = 1 - MASK_RATIO
+DEVICE = "cuda"
 CHECKPOINT_PATH = "/users/PAS2912/yusenpeng/mae_pretrain_vit_huge_full.pth"
-IMAGE_PATH = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/subset_images/05fab8d9991ca41c.jpg"
-OUTPUT_PATH = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/random_mae_reconstruction.png"
+# IMAGE_PATH = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/subset_images/05fab8d9991ca41c.jpg"
+IMAGE_PATH = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/subset_images/0c0a22bfd0da315a.jpg"
+OUTPUT_PATH = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/{MASKING_TYPE.lower()}_mae_reconstruction.png"
+VISION_TOWER_NAME = "openai/clip-vit-large-patch14-336"
+
+if MASKING_TYPE == "DRIP":
+    vision_model = build_llava_drip_vision_tower(
+        vision_tower_name=VISION_TOWER_NAME,
+        mm_vision_select_layer=-1,
+        mm_vision_select_feature="patch",
+        compression_rate=COMPRESSION_RATE,
+        drip_weight_path=DRIP_WEIGHT_PATH,
+        merge_strategy="DRIP",
+        device=DEVICE,
+    )
+    clip_img_tensor = load_img_with_processor(IMAGE_PATH, vision_model.image_processor)
+    with torch.no_grad():
+        (
+            _,
+            drip_hard_mask,
+            _,
+            drip_num_boundaries,
+        ) = overlay_llava_drip_boundaries(
+            vision_model,
+            clip_img_tensor,
+            alpha=0.4,
+        )
+    print(drip_hard_mask.shape)
+    drip_boundary_mask = torch.tensor(drip_hard_mask, dtype=torch.float32, device=DEVICE).flatten().unsqueeze(0)
+    print(drip_boundary_mask.shape)
+    boundary_mask = drip_boundary_mask
+else:
+    boundary_mask = None
 
 
 # load the model
@@ -36,8 +75,6 @@ state_dict = checkpoint["model"]
 state_dict.pop("pos_embed", None)
 state_dict.pop("decoder_pos_embed", None)
 msg = model.load_state_dict(state_dict, strict=False)
-print(msg)
-
 model = model.to(DEVICE)
 model.eval()
 
@@ -60,9 +97,8 @@ x: torch.Tensor = transform(image)
 x = x.unsqueeze(0).to(DEVICE)
 
 # MAE reconstruction
-MASK_RATIO = 0.75
 with torch.no_grad():
-    loss, pred, mask = model(x, mask_ratio=MASK_RATIO)
+    loss, pred, mask = model(x, mask_ratio=MASK_RATIO, masking_type=MASKING_TYPE, boundary_mask=boundary_mask)
 print("Reconstruction loss:", loss.item())
 print("Pred:", pred.shape)
 print("Mask:", mask.shape)

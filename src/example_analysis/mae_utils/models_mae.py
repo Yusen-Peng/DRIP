@@ -242,7 +242,39 @@ class MaskedAutoencoderViT(nn.Module):
 
         return x_masked, mask, ids_restore
 
-    def forward_encoder(self, x, mask_ratio):
+    def boundary_masking(self, x, boundary_mask):
+        N, L, D = x.shape
+        assert boundary_mask.shape == (N, L)
+        boundary_mask = boundary_mask.bool()
+        num_keep = boundary_mask.sum(dim=1)
+        assert torch.all(num_keep == num_keep[0]), ("All samples must keep the same number of patches.")
+        ids_all = torch.arange(L, device=x.device).unsqueeze(0).expand(N, -1)
+        ids_keep = torch.stack([ids_all[n][boundary_mask[n]] for n in range(N)])
+        ids_remove = torch.stack([ids_all[n][~boundary_mask[n]] for n in range(N)])
+        ids_shuffle = torch.cat([ids_keep, ids_remove], dim=1)
+        ids_restore = torch.argsort(ids_shuffle, dim=1)
+        x_masked = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).expand(-1, -1, D))
+        # MAE convention: 0 = visible, 1 = masked
+        mask = (~boundary_mask).float()
+        return x_masked, mask, ids_restore
+
+    def fixed_masking(self, x, mask_ratio):
+        compression_rate = 1 - mask_ratio
+
+        N, L, D = x.shape
+        num_keep = int(round(L * compression_rate))
+
+        indices = torch.linspace(0, L - 1, steps=num_keep, device=x.device).round().long()
+
+        boundary_mask = torch.zeros(N, L, device=x.device)
+
+        boundary_mask[:, indices] = 1.0
+        boundary_mask[:, -1] = 1.0
+
+        return self.boundary_masking(x, boundary_mask)
+
+
+    def forward_encoder(self, x, mask_ratio, masking_type="random", boundary_mask=None):
         # embed patches
         x = self.patch_embed(x)
 
@@ -250,7 +282,15 @@ class MaskedAutoencoderViT(nn.Module):
         x = x + self.pos_embed[:, 1:, :]
 
         # masking: length -> length * mask_ratio
-        x, mask, ids_restore = self.random_masking(x, mask_ratio)
+        if masking_type == "random":
+            x, mask, ids_restore = self.random_masking(x, mask_ratio)
+        elif masking_type == "Fixed":
+            x, mask, ids_restore = self.fixed_masking(x, mask_ratio)
+        elif masking_type == "DRIP":
+            assert boundary_mask is not None, ("DRIP masking requires boundary_mask.")
+            x, mask, ids_restore = self.boundary_masking(x, boundary_mask)
+        else:
+            raise ValueError(f"Unknown masking type: {masking_type}")
 
         # append cls token
         cls_token = self.cls_token + self.pos_embed[:, :1, :]
@@ -308,8 +348,8 @@ class MaskedAutoencoderViT(nn.Module):
         loss = (loss * mask).sum() / mask.sum()  # mean loss on removed patches
         return loss
 
-    def forward(self, imgs, mask_ratio=0.75):
-        latent, mask, ids_restore = self.forward_encoder(imgs, mask_ratio)
+    def forward(self, imgs, mask_ratio=0.75, masking_type="random", boundary_mask=None):
+        latent, mask, ids_restore = self.forward_encoder(imgs, mask_ratio, masking_type=masking_type, boundary_mask=boundary_mask)
         pred = self.forward_decoder(latent, ids_restore)  # [N, L, p*p*3]
         loss = self.forward_loss(imgs, pred, mask)
         return loss, pred, mask
