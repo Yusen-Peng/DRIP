@@ -8,7 +8,7 @@ from torchvision import transforms
 """
 How to run this script:
 
-salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-nextgen --time 00:30:00
+salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition debug-quad --time 00:30:00
 module load miniconda3/24.1.2-py310
 conda activate DRIP_flash
 python src/example_analysis/MAE_recon.py
@@ -20,17 +20,24 @@ sys.path.insert(0, PROJECT_ROOT)
 import src.example_analysis.mae_utils.models_mae as models_mae
 DEVICE = "cuda"
 
-CHECKPOINT_PATH = "/users/PAS2912/yusenpeng/mae_pretrain_vit_large_full.pth"
-
-IMAGE_PATH = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/stop_sign.png"
-
-OUTPUT_PATH = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/mae_reconstruction.png"
+CHECKPOINT_PATH = "/users/PAS2912/yusenpeng/mae_pretrain_vit_huge_full.pth"
+IMAGE_PATH = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/subset_images/05fab8d9991ca41c.jpg"
+OUTPUT_PATH = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/random_mae_reconstruction.png"
 
 
 # load the model
-model = models_mae.mae_vit_large_patch16()
+RESOLUTION = 336
+model = models_mae.mae_vit_huge_patch14(img_size=RESOLUTION)
 checkpoint = torch.load(CHECKPOINT_PATH, map_location="cpu")
-model.load_state_dict(checkpoint["model"], strict=True)
+state_dict = checkpoint["model"]
+
+# The pretrained checkpoint contains 16x16 positional embeddings for 224x224 images; 
+# Our model has already initialized fresh 24x24 sine-cosine embeddings for 336x336 images
+state_dict.pop("pos_embed", None)
+state_dict.pop("decoder_pos_embed", None)
+msg = model.load_state_dict(state_dict, strict=False)
+print(msg)
+
 model = model.to(DEVICE)
 model.eval()
 
@@ -40,7 +47,7 @@ IMAGENET_STD = np.array([0.229, 0.224, 0.225])
 image = Image.open(IMAGE_PATH).convert("RGB")
 transform = transforms.Compose([
     transforms.Resize(
-        (224, 224),
+        (RESOLUTION, RESOLUTION),
         interpolation=transforms.InterpolationMode.BICUBIC,
     ),
     transforms.ToTensor(),
@@ -51,7 +58,6 @@ transform = transforms.Compose([
 ])
 x: torch.Tensor = transform(image)
 x = x.unsqueeze(0).to(DEVICE)
-
 
 # MAE reconstruction
 MASK_RATIO = 0.75
