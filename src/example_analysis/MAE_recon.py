@@ -21,8 +21,8 @@ import src.example_analysis.mae_utils.models_mae as models_mae
 from src.boundary_visual_LLaVA import load_img_with_processor, overlay_llava_drip_boundaries, build_llava_drip_vision_tower
 
 
-MASKING_TYPE = "Fixed"  # "random" or "Fixed" or "DRIP"
-MASK_RATIO = 0.75
+MASKING_TYPE = "random"  # "random" or "Fixed" or "DRIP"
+MASK_RATIO = 0.0
 DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full/drip.bin"
 
 
@@ -149,29 +149,35 @@ reconstruction = np.clip(reconstruction[0], 0, 1)
 # Plot
 # ============================================================
 
-fig, axes = plt.subplots(
-    1,
-    4,
-    figsize=(16, 4),
-)
+# fig, axes = plt.subplots(
+#     1,
+#     4,
+#     figsize=(16, 4),
+# )
 
-axes[0].imshow(original)
-axes[0].set_title("Original")
+# axes[0].imshow(original)
+# axes[0].set_title("Original")
 
-axes[1].imshow(masked_image)
-axes[1].set_title(
-    f"Masked ({MASK_RATIO:.0%})"
-)
+# axes[1].imshow(masked_image)
+# axes[1].set_title(
+#     f"Masked ({MASK_RATIO:.0%})"
+# )
 
-axes[2].imshow(pred_img)
-axes[2].set_title("MAE Prediction")
+# axes[2].imshow(pred_img)
+# axes[2].set_title("MAE Prediction")
 
-axes[3].imshow(reconstruction)
-axes[3].set_title(f"Reconstruction with loss {loss.item():.4f}")
+# axes[3].imshow(reconstruction)
+# axes[3].set_title(f"Reconstruction with loss {loss.item():.4f}")
 
-for ax in axes:
-    ax.axis("off")
+# for ax in axes:
+#     ax.axis("off")
 
+# plt.tight_layout()
+
+fig, ax = plt.subplots(figsize=(4, 4))
+ax.imshow(pred_img)
+# ax.set_title("MAE Prediction")
+ax.axis("off")
 plt.tight_layout()
 
 plt.savefig(
@@ -181,7 +187,3 @@ plt.savefig(
 )
 
 plt.close()
-
-print(
-    f"Saved reconstruction to: {OUTPUT_PATH}"
-)
