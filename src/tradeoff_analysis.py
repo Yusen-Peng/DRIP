@@ -460,7 +460,7 @@ if __name__ == "__main__":
         loc="lower center",
         ncol=len(handles),
         frameon=False,
-        bbox_to_anchor=(0.5, 0.055),
+        bbox_to_anchor=(0.5, 0.125),
         columnspacing=1.5,
         handletextpad=0.5,
     )
@@ -472,9 +472,10 @@ if __name__ == "__main__":
     else:
 
         xlabel = "TFLOP Speedup over LLaVA-1.5-7B"
+
     fig.supxlabel(
         xlabel,
-        y=-0.005,
+        y=0.07,
         fontsize=12,
     )
     plt.tight_layout(rect=[0, 0.12, 1, 1])
