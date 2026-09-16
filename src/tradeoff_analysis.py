@@ -30,32 +30,67 @@ def pretty_model_name(name):
 
 
 
+# def setup_plot_style():
+#     mpl.rcParams.update({
+#         "font.family": "serif",
+#         "font.size": 12,
+#         "axes.titlesize": 15,
+#         "axes.labelsize": 13,
+#         "legend.fontsize": 11,
+#         "xtick.labelsize": 11,
+#         "ytick.labelsize": 11,
+#         "axes.linewidth": 1.1,
+#         "pdf.fonttype": 42,
+#         "ps.fonttype": 42,
+#     })
+
 def setup_plot_style():
     mpl.rcParams.update({
         "font.family": "serif",
-        "font.size": 12,
-        "axes.titlesize": 15,
-        "axes.labelsize": 13,
-        "legend.fontsize": 11,
-        "xtick.labelsize": 11,
-        "ytick.labelsize": 11,
-        "axes.linewidth": 1.1,
+        "font.size": 11,
+        "axes.titlesize": 14,
+        "axes.labelsize": 12,
+        "legend.fontsize": 10,
+        "xtick.labelsize": 10,
+        "ytick.labelsize": 10,
+
+        # cleaner conference-style axes
+        "axes.linewidth": 0.8,
+        "axes.edgecolor": "#444444",
+
+        "xtick.major.width": 0.8,
+        "ytick.major.width": 0.8,
+        "xtick.major.size": 3.5,
+        "ytick.major.size": 3.5,
+
         "pdf.fonttype": 42,
         "ps.fonttype": 42,
     })
 
 
+
+
 def plot_tradeoff(ax, df, score_col, ylabel, title):
     setup_plot_style()
 
+    # colors = {
+    #     "LLaVA": "#6E6E6E",
+    #     "Fixed pooling": "#F28E2B",
+    #     "PruMerge": "#59A14F",
+    #     "PruneSID": "#4E79A7",
+    #     "DRIP": "#E15759",
+    #     "Perceiver": "#B07AA1",
+    # }
+
     colors = {
-        "LLaVA": "#6E6E6E",
-        "Fixed pooling": "#F28E2B",
-        "PruMerge": "#59A14F",
-        "PruneSID": "#4E79A7",
-        "DRIP": "#E15759",
-        "Perceiver": "#B07AA1",
+        "LLaVA": "#777777",
+        "Fixed pooling": "#E69F00",
+        "PruMerge": "#7A9E65",
+        "PruneSID": "#6C8EBF",
+        "DRIP": "#D94A4A",
+        "Perceiver": "#9B7E9B",
     }
+
 
     markers = {
         "LLaVA": "o",
@@ -83,8 +118,18 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
 
 
     # Light background grid
-    ax.grid(True, which="major", alpha=0.18, linewidth=0.8)
+    # ax.grid(True, which="major", alpha=0.18, linewidth=0.8)
+    # ax.set_axisbelow(True)
+    ax.grid(
+        True,
+        axis="both",
+        which="major",
+        color="#D0D0D0",
+        linewidth=0.6,
+        alpha=0.28,
+    )
     ax.set_axisbelow(True)
+
 
 
     if 'siglip' in CSV_ID.lower():
@@ -93,92 +138,183 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         # Plot category lines
         plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "DRIP", "Perceiver"]
 
+    # for category in plot_order:
+    #     group = df[df["Category"] == category].sort_values("Speedup")
+    #     if len(group) == 0:
+    #         continue
+
+    #     ax.plot(
+    #         group["Speedup"],
+    #         group[score_col],
+    #         color=colors[category],
+    #         linewidth=2.4 if category == "DRIP" else 1.8,
+    #         alpha=0.95 if category == "DRIP" else 0.75,
+    #         zorder=2,
+    #     )
+
+    #     ax.scatter(
+    #         group["Speedup"],
+    #         group[score_col],
+    #         s=80,
+    #         color=colors[category],
+    #         marker=markers[category],
+    #         edgecolor="white",
+    #         linewidth=1.2,
+    #         alpha=0.85,   # <-- add this
+    #         zorder=3,
+    #     )
     for category in plot_order:
         group = df[df["Category"] == category].sort_values("Speedup")
         if len(group) == 0:
             continue
 
+        is_drip = category == "DRIP"
+        is_llava = category == "LLaVA"
+
         ax.plot(
             group["Speedup"],
             group[score_col],
             color=colors[category],
-            linewidth=2.4 if category == "DRIP" else 1.8,
-            alpha=0.95 if category == "DRIP" else 0.75,
-            zorder=2,
+            linewidth=2.6 if is_drip else 1.5,
+            alpha=1.0 if is_drip else 0.65,
+            zorder=4 if is_drip else 2,
         )
 
         ax.scatter(
             group["Speedup"],
             group[score_col],
-            s=80,
+            s=72 if is_drip else 55,
             color=colors[category],
             marker=markers[category],
             edgecolor="white",
-            linewidth=1.2,
-            alpha=0.85,   # <-- add this
-            zorder=3,
+            linewidth=0.8,
+            alpha=1.0 if is_drip else 0.75,
+            zorder=5 if is_drip else 3,
         )
 
     # Baseline horizontal reference
+    # ax.axhline(
+    #     1.0,
+    #     color="black",
+    #     linewidth=1.0,
+    #     linestyle="--",
+    #     alpha=0.35,
+    #     zorder=1,
+    # )
     ax.axhline(
         1.0,
-        color="black",
-        linewidth=1.0,
-        linestyle="--",
-        alpha=0.35,
+        color="#777777",
+        linewidth=0.9,
+        linestyle=(0, (4, 3)),
+        alpha=0.55,
         zorder=1,
     )
 
+
     # Annotate only points, but cleaner
+    # label_offsets = {
+    #     "LLaVA-1.5-7B": (8, -8),
+    #     "LLaVA-Qwen2.5-14B": (8, -8),
+    #     "DRIP-4x": (-16, 10),
+    #     "DRIP-8x": (-16, 10),
+    #     "DRIP-10x": (-16, 10),
+    #     "fixed pooling-4x": (-30, -14),
+    #     "fixed pooling-8x": (8, -12),
+    #     "fixed pooling-10x": (8, -12),
+    #     "PruMerge-4x": (-28, -16),
+    #     "PruMerge-8x": (8, -12),
+    #     "PruMerge-10x": (8, -12),
+    #     "PruneSID-4x": (-28, -16),
+    #     "PruneSID-8x": (8, -12),
+    #     "PruneSID-10x": (8, -12),
+    #     "Perceiver-4x": (-28, -16),
+    #     "Perceiver-8x": (8, -12),
+    #     "Perceiver-10x": (8, -12),
+    # }
+
+    # for _, row in df.iterrows():
+    #     name = row["Model"]
+    #     dx, dy = label_offsets.get(name, (6, 6))
+
+    #     ax.annotate(
+    #         pretty_model_name(name),
+    #         xy=(row["Speedup"], row[score_col]),
+    #         xytext=(dx, dy),
+    #         textcoords="offset points",
+    #         fontsize=9,
+    #         color="#222222",
+    #         ha="left",
+    #         va="center",
+    #     )
+
     label_offsets = {
-        "LLaVA-1.5-7B": (8, -8),
-        "LLaVA-Qwen2.5-14B": (8, -8),
-        "DRIP-4x": (-16, 10),
-        "DRIP-8x": (-16, 10),
-        "DRIP-10x": (-16, 10),
-        "fixed pooling-4x": (-30, -14),
-        "fixed pooling-8x": (8, -12),
-        "fixed pooling-10x": (8, -12),
-        "PruMerge-4x": (-28, -16),
-        "PruMerge-8x": (8, -12),
-        "PruMerge-10x": (8, -12),
-        "PruneSID-4x": (-28, -16),
-        "PruneSID-8x": (8, -12),
-        "PruneSID-10x": (8, -12),
-        "Perceiver-4x": (-28, -16),
-        "Perceiver-8x": (8, -12),
-        "Perceiver-10x": (8, -12),
+        "LLaVA-1.5-7B": (7, -8),
+        "LLaVA-Qwen2.5-14B": (7, -8),
+
+        "DRIP-4x": (-15, 11),
+        "DRIP-8x": (-14, 11),
+        "DRIP-10x": (-12, 11),
     }
 
     for _, row in df.iterrows():
         name = row["Model"]
+
+        if row["Category"] not in ["DRIP", "LLaVA"]:
+            continue
+
         dx, dy = label_offsets.get(name, (6, 6))
 
+        if row["Category"] == "DRIP":
+            label = name.split("-")[-1]
+            weight = "semibold"
+        else:
+            label = "LLaVA"
+            weight = "normal"
+
         ax.annotate(
-            pretty_model_name(name),
+            label,
             xy=(row["Speedup"], row[score_col]),
             xytext=(dx, dy),
             textcoords="offset points",
             fontsize=9,
-            color="#222222",
+            fontweight=weight,
+            color="#333333",
             ha="left",
             va="center",
+            zorder=6,
         )
 
-    drip = df[df["Category"] == "DRIP"].sort_values("Speedup")
-    x = drip["Speedup"].astype(float).to_numpy()
-    y = drip[score_col].astype(float).to_numpy()
-
-    lower_bound = 0.50 if 'qwen' in CSV_ID else 0.72
-
-    ax.fill_between(
-        x,
-        y,
-        lower_bound,
-        color=colors["DRIP"],
-        alpha=0.045,
-        zorder=0,
+    ax.text(
+        0.99,
+        1.002,
+        "uncompressed",
+        transform=ax.get_yaxis_transform(),
+        fontsize=8.5,
+        color="#777777",
+        ha="right",
+        va="bottom",
     )
+
+    from matplotlib.ticker import PercentFormatter
+    ax.yaxis.set_major_formatter(
+        PercentFormatter(xmax=1.0, decimals=0)
+    )
+
+
+    # drip = df[df["Category"] == "DRIP"].sort_values("Speedup")
+    # x = drip["Speedup"].astype(float).to_numpy()
+    # y = drip[score_col].astype(float).to_numpy()
+
+    # lower_bound = 0.50 if 'qwen' in CSV_ID else 0.72
+
+    # ax.fill_between(
+    #     x,
+    #     y,
+    #     lower_bound,
+    #     color=colors["DRIP"],
+    #     alpha=0.045,
+    #     zorder=0,
+    # )
 
     ax.set_title(title, pad=12, fontweight="bold")
     ax.set_ylabel(ylabel)
@@ -216,9 +352,9 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
 
 
 if __name__ == "__main__":
-    # CSV_ID = "full_7B_last"
+    CSV_ID = "full_7B_last"
     # CSV_ID = "full_7B_second_to_last"
-    CSV_ID = "qwen14B_full_last"
+    # CSV_ID = "qwen14B_full_last"
     # CSV_ID = "lora_7B_last"
     # CSV_ID = "lora_7B_second_to_last"
     # CSV_ID = "SigLIP2_7B_last"
@@ -264,15 +400,10 @@ if __name__ == "__main__":
     setup_plot_style()
 
     fig, axes = plt.subplots(
-
         1,
-
         2,
-
-        figsize=(13.8, 5.2),
-
+        figsize=(10.5, 5.2),
         sharey=True,
-
     )
 
     handles = plot_tradeoff(
@@ -303,31 +434,50 @@ if __name__ == "__main__":
 
     )
 
+    # fig.legend(
+
+    #     handles=handles,
+
+    #     loc="lower center",
+
+    #     ncol=len(handles),
+
+    #     frameon=True,
+
+    #     fancybox=True,
+
+    #     framealpha=0.95,
+
+    #     edgecolor="#DDDDDD",
+
+    #     bbox_to_anchor=(0.5, -0.02),
+
+    # )
+
+
     fig.legend(
-
         handles=handles,
-
         loc="lower center",
-
         ncol=len(handles),
-
-        frameon=True,
-
-        fancybox=True,
-
-        framealpha=0.95,
-
-        edgecolor="#DDDDDD",
-
-        bbox_to_anchor=(0.5, -0.02),
-
+        frameon=False,
+        bbox_to_anchor=(0.5, 0.055),
+        columnspacing=1.5,
+        handletextpad=0.5,
     )
-    if 'qwen' in CSV_ID:
-        fig.supxlabel("TFLOP Speedup over LLaVA-Qwen2.5-14B", y=0.05)
-    else:
-        fig.supxlabel("TFLOP Speedup over LLaVA-1.5-7B", y=0.05)
 
-    plt.tight_layout(rect=[0, 0.08, 1, 1])
+    if "qwen" in CSV_ID:
+
+        xlabel = "TFLOP Speedup over LLaVA-Qwen2.5-14B"
+
+    else:
+
+        xlabel = "TFLOP Speedup over LLaVA-1.5-7B"
+    fig.supxlabel(
+        xlabel,
+        y=-0.005,
+        fontsize=12,
+    )
+    plt.tight_layout(rect=[0, 0.12, 1, 1])
 
     fig.savefig(
 
