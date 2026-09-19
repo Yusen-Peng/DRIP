@@ -117,14 +117,14 @@ def build_result_map(result_file):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--annotation-file", required=True)
-    parser.add_argument("--fixed-file", required=True)
-    parser.add_argument("--drip-file", required=True)
+    parser.add_argument("--annotation-file", default="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/TextVQA_0.5.1_val.json")
+    parser.add_argument("--fixed-file", default="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/LLaVA_7B_Fixed_4x_SCALE_train_full-checkpoint-900.jsonl")
+    parser.add_argument("--drip-file", default="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full.jsonl")
     parser.add_argument("--output-file", default=None)
     parser.add_argument("--min-drip-score", type=float, default=1e-9)
     parser.add_argument("--max-fixed-score", type=float, default=0.0)
     parser.add_argument("--image-dir", default="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images")
-    parser.add_argument("--copy-dir", default="/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/original_images_new_downsample")
+    parser.add_argument("--copy-dir", default="/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/good_case")
     args = parser.parse_args()
 
     processor = EvalAIAnswerProcessor()
