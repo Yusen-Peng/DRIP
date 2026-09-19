@@ -42,13 +42,13 @@ heatmap_df = retention.set_index(model_col)[sorted_benchmarks].T
 rename_cols = {
     "fixed pooling-4x": "Fixed-4×",
     "PruMerge-4x": "PruMerge-4×",
-    "DRIP-4x": "DRIP-4×",
+    "DITTO-4x": "DITTO-4×",
     "fixed pooling-8x": "Fixed-8×",
     "PruMerge-8x": "PruMerge-8×",
-    "DRIP-8x": "DRIP-8×",
+    "DITTO-8x": "DITTO-8×",
     "fixed pooling-10x": "Fixed-10×",
     "PruMerge-10x": "PruMerge-10×",
-    "DRIP-10x": "DRIP-10×",
+    "DITTO-10x": "DITTO-10×",
 }
 heatmap_df = heatmap_df.rename(columns=rename_cols)
 

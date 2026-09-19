@@ -12,9 +12,14 @@ NO_TRAIN = "fixed pooling(no train)"
 TRAINED = "fixed pooling(trained)"
 PRUMERGE = "PruMerge"
 
+# benchmarks = [
+#    "VQAv2","MME","MM-Bench","GQA","MMMU","TextVQA","OCRBench","OCRBenchv2","ChartQAPro","POPE"
+# ]
+
 benchmarks = [
-   "VQAv2","MME","MM-Bench","GQA","MMMU","TextVQA","OCRBench","OCRBenchv2","ChartQAPro","POPE"
+   "TextVQA","OCRBench","OCRBenchv2","ChartQAPro"
 ]
+
 
 # =========================
 # Load + clean
@@ -83,14 +88,14 @@ if len(bad) > 0:
 
 plt.rcParams.update({
     "font.family": "DejaVu Sans",
-    "font.size": 11,
+    "font.size": 8,
     "axes.labelsize": 12,
     "xtick.labelsize": 10,
     "ytick.labelsize": 10,
     "legend.fontsize": 10,
 })
 
-fig, ax = plt.subplots(figsize=(11.5, 4.2))
+fig, ax = plt.subplots(figsize=(6.0, 4.2))
 
 x = np.arange(len(benchmarks))
 
@@ -129,7 +134,7 @@ ax.bar(
     color=colors["trained"],
     edgecolor="black",
     linewidth=0.9,
-    label="Fixed pooling + training",
+    label="Fixed pooling w/ training",
     zorder=2,
 )
 
@@ -141,7 +146,7 @@ ax.bar(
     color=colors["no_train"],
     edgecolor="black",
     linewidth=0.8,
-    label="Fixed pooling, no training",
+    label="Fixed pooling w/o training",
     zorder=4,
 )
 
@@ -181,7 +186,7 @@ ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
 ax.legend(
-    ncol=4,
+    ncol=2,
     frameon=False,
     loc="upper center",
     bbox_to_anchor=(0.5, 1.22),
@@ -195,7 +200,7 @@ ax.text(
     0.94,
     f"Avg. gain from training: +{avg_gain:.1f} pts",
     transform=ax.transAxes,
-    fontsize=10.5,
+    fontsize=8.5,
     fontweight="bold"
 )
 

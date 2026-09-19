@@ -85,14 +85,14 @@ def add_data_efficiency_annotation(
     """
     Add a horizontal data-efficiency annotation comparing:
 
-        DRIP @ drip_scale
+        DITTO @ drip_scale
         vs.
         Fixed Pooling @ fixed_scale
 
     The horizontal arrow is drawn at the Fixed Pooling performance level.
     """
 
-    drip_name = f"DRIP-{compression}"
+    drip_name = f"DITTO-{compression}"
     fixed_name = f"fixed pooling-{compression}"
 
     # --------------------------------------------------------
@@ -115,7 +115,7 @@ def add_data_efficiency_annotation(
     fixed_x = fixed_row["SFT_Data_K"]
     fixed_y = fixed_row[score_col]
 
-    # We want to visually show that DRIP @ less data ≈ Fixed @ full data
+    # We want to visually show that DITTO @ less data ≈ Fixed @ full data
     y = fixed_y
     # Horizontal double-headed arrow
     ax.annotate(
@@ -141,7 +141,7 @@ def add_data_efficiency_annotation(
     fixed_k = fixed_x
 
     ax.annotate(
-        f"DRIP @ {drip_k:.1f}K >= Fixed @ {fixed_k:.0f}K",
+        f"DITTO @ {drip_k:.1f}K >= Fixed @ {fixed_k:.0f}K",
         xy=(midpoint, y),
         xytext=(-15, -15),
         textcoords="offset points",
@@ -302,7 +302,7 @@ def plot_single_panel(
     colors = {
         "LLaVA": "#6E6E6E",
         "Fixed": "#F28E2B",
-        "DRIP": "#E15759",
+        "DITTO": "#E15759",
     }
 
     # --------------------------------------------------------
@@ -311,7 +311,7 @@ def plot_single_panel(
 
     llava_name = "LLaVA-1.5-7B"
     fixed_name = f"fixed pooling-{compression}"
-    drip_name = f"DRIP-{compression}"
+    drip_name = f"DITTO-{compression}"
 
     plot_models = [
         (
@@ -324,7 +324,7 @@ def plot_single_panel(
         ),
         (
             drip_name,
-            "DRIP",
+            "DITTO",
         ),
     ]
 
@@ -358,7 +358,7 @@ def plot_single_panel(
             markersize = 6.5
             alpha = 0.85
 
-        elif label == "DRIP":
+        elif label == "DITTO":
 
             linewidth = 2.4
             markersize = 7.0
@@ -389,7 +389,7 @@ def plot_single_panel(
             label=label,
 
             zorder=3
-            if label == "DRIP"
+            if label == "DITTO"
             else 2,
         )
 
@@ -614,7 +614,7 @@ def plot_scaling_grid(df):
 
         # ----------------------------------------------------
         # Overall:
-        # DRIP @ 50% data (~332.5K)
+        # DITTO @ 50% data (~332.5K)
         # vs Fixed @ 100% data (665K)
         # ----------------------------------------------------
 
@@ -629,7 +629,7 @@ def plot_scaling_grid(df):
 
         # ----------------------------------------------------
         # OCR:
-        # DRIP @ 25% data (~166.2K)
+        # DITTO @ 25% data (~166.2K)
         # vs Fixed @ 100% data (665K)
         # ----------------------------------------------------
 
@@ -678,7 +678,7 @@ def plot_scaling_grid(df):
             linewidth=2.4,
             markersize=7,
             markeredgecolor="white",
-            label="DRIP",
+            label="DITTO",
         ),
     ]
 
