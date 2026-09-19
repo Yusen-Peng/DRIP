@@ -66,6 +66,41 @@ def visualize_single_image(
         print(f"Saved visualization to {save_path}")
 
 
+
+
+"""
+  {
+    "question_id": "0e3431ee46f0b6c4",
+    "image_id": "0e3431ee46f0b6c4",
+    "question": "what are those giant red letters saying?",
+    "drip_prediction": "Air-y",
+    "drip_score": 0.0,
+    "fixed_prediction": "Airy",
+    "fixed_score": 1.0
+  },
+  {
+    "question_id": "01b54ac75f9e41e9",
+    "image_id": "01b54ac75f9e41e9",
+    "question": "whats the title of the pink book furthest to the left?",
+    "drip_prediction": "Saved by grace",
+    "drip_score": 0.0,
+    "fixed_prediction": "Cake days",
+    "fixed_score": 1.0
+  },
+  {
+    "question_id": "096c5a920933f198",
+    "image_id": "096c5a920933f198",
+    "question": "what kind of beer is this?",
+    "drip_prediction": "Asahi",
+    "drip_score": 0.0,
+    "fixed_prediction": "All malt",
+    "fixed_score": 0.9
+  },
+
+
+"""
+
+
 if __name__ == "__main__":
     IMAGE_ID = "0021804a9f9d5db6" # license plate (4x)
     IMAGE_ID = "05fab8d9991ca41c" # store (4x)
@@ -76,6 +111,9 @@ if __name__ == "__main__":
     IMAGE_ID = "0031bff54b02c9c1" # visa (10x)
     IMAGE_ID = "09a49bc5cf58b847" # theater (10x)
 
+    IMAGE_ID = "0e3431ee46f0b6c4" # giant red letters (4x) - fails, sensitive to noise
+    IMAGE_ID = "01b54ac75f9e41e9" # pink book furthest to the left (4x) - fails, sensitive to vertical orientation
+    IMAGE_ID = "096c5a920933f198" # beer (4x) - fails, sensitive to ambiguious question
 
     MERGE_STRATEGY = "DRIP" # "DRIP" or "DRIP-H"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora/drip.bin"
@@ -84,10 +122,10 @@ if __name__ == "__main__":
 
     
     
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain_NEW_DOWN_temp10_train_full/drip.bin"
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full/drip.bin"
-    COMPRESSION_RATE = 0.1
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full/drip.bin"
+    COMPRESSION_RATE = 0.25
 
 
 
@@ -117,7 +155,10 @@ if __name__ == "__main__":
 
 
     ############### ORIGINAL CLIP analysis ################
-    image_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/original_images_new_downsample/{IMAGE_ID}.jpg"
+    # image_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/original_images_new_downsample/{IMAGE_ID}.jpg"
+    
+    image_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/failure_case/{IMAGE_ID}.jpg"
+
     save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/boundary_maps/{IMAGE_ID}_DRIP_overlay.png"
     visualize_single_image(model, drip=True, image_path=image_path, save_path=save_path, alpha=0.4, verbose=True)
     save_path = f"/users/PAS2912/yusenpeng/DRIP/src/example_analysis/TextVQA_results/boundary_maps/{IMAGE_ID}_FIXED_overlay.png"
