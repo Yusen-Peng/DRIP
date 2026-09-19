@@ -10,8 +10,8 @@ def get_category(model_name):
         return "Fixed pooling"
     elif model_name.startswith("PruMerge"):
         return "PruMerge"
-    elif model_name.startswith("DRIP"):
-        return "DRIP"
+    elif model_name.startswith("DITTO"):
+        return "DITTO"
     elif model_name.startswith("LLaVA"):
         return "LLaVA"
     elif model_name.startswith("PruneSID"):
@@ -24,7 +24,7 @@ def get_category(model_name):
 def pretty_model_name(name):
     if name == "LLaVA-1.5-7B" or name == "LLaVA-Qwen2.5-14B":
         return "LLaVA"
-    if "-" in name and "DRIP" in name:
+    if "-" in name and "DITTO" in name:
         return name.split("-")[-1]   # "4x", "8x", "10x"
     return ""
 
@@ -78,7 +78,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     #     "Fixed pooling": "#F28E2B",
     #     "PruMerge": "#59A14F",
     #     "PruneSID": "#4E79A7",
-    #     "DRIP": "#E15759",
+    #     "DITTO": "#E15759",
     #     "Perceiver": "#B07AA1",
     # }
 
@@ -87,7 +87,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         "Fixed pooling": "#E69F00",
         "PruMerge": "#7A9E65",
         "PruneSID": "#6C8EBF",
-        "DRIP": "#D94A4A",
+        "DITTO": "#D94A4A",
         "Perceiver": "#9B7E9B",
     }
 
@@ -97,7 +97,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         "Fixed pooling": "s",
         "PruMerge": "^",
         "PruneSID": "P",
-        "DRIP": "D",
+        "DITTO": "D",
         "Perceiver": "X",
     }
 
@@ -113,13 +113,9 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     
     # safety
     df["TFLOPs"] = pd.to_numeric(df["TFLOPs"], errors="coerce")
-    df["OverallScore"] = pd.to_numeric(df["OverallScore"], errors="coerce")
-    df["OCRScore"] = pd.to_numeric(df["OCRScore"], errors="coerce")
+    df["Coarse-grained QA Score"] = pd.to_numeric(df["Coarse-grained QA Score"], errors="coerce")
+    df["Fine-grained OCR Score"] = pd.to_numeric(df["Fine-grained OCR Score"], errors="coerce")
 
-
-    # Light background grid
-    # ax.grid(True, which="major", alpha=0.18, linewidth=0.8)
-    # ax.set_axisbelow(True)
     ax.grid(
         True,
         axis="both",
@@ -133,10 +129,12 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
 
 
     if 'siglip' in CSV_ID.lower():
-        plot_order = ["LLaVA", "Fixed pooling", "Perceiver", "DRIP"]
+        plot_order = ["LLaVA", "Fixed pooling", "Perceiver", "DITTO"]
+        present_plot_order = ["LLaVA", "Fixed pooling", "Perceiver", "DITTO(Ours)"]
     else:
         # Plot category lines
-        plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "DRIP", "Perceiver"]
+        plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "Perceiver", "DITTO"]
+        present_plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "Perceiver", "DITTO(Ours)"]
 
     # for category in plot_order:
     #     group = df[df["Category"] == category].sort_values("Speedup")
@@ -147,8 +145,8 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     #         group["Speedup"],
     #         group[score_col],
     #         color=colors[category],
-    #         linewidth=2.4 if category == "DRIP" else 1.8,
-    #         alpha=0.95 if category == "DRIP" else 0.75,
+    #         linewidth=2.4 if category == "DITTO" else 1.8,
+    #         alpha=0.95 if category == "DITTO" else 0.75,
     #         zorder=2,
     #     )
 
@@ -168,7 +166,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         if len(group) == 0:
             continue
 
-        is_drip = category == "DRIP"
+        is_drip = category == "DITTO"
         is_llava = category == "LLaVA"
 
         ax.plot(
@@ -215,9 +213,9 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     # label_offsets = {
     #     "LLaVA-1.5-7B": (8, -8),
     #     "LLaVA-Qwen2.5-14B": (8, -8),
-    #     "DRIP-4x": (-16, 10),
-    #     "DRIP-8x": (-16, 10),
-    #     "DRIP-10x": (-16, 10),
+    #     "DITTO-4x": (-16, 10),
+    #     "DITTO-8x": (-16, 10),
+    #     "DITTO-10x": (-16, 10),
     #     "fixed pooling-4x": (-30, -14),
     #     "fixed pooling-8x": (8, -12),
     #     "fixed pooling-10x": (8, -12),
@@ -251,20 +249,20 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         "LLaVA-1.5-7B": (7, -8),
         "LLaVA-Qwen2.5-14B": (7, -8),
 
-        "DRIP-4x": (-15, 11),
-        "DRIP-8x": (-14, 11),
-        "DRIP-10x": (-12, 11),
+        "DITTO-4x": (-15, 11),
+        "DITTO-8x": (-14, 11),
+        "DITTO-10x": (-12, 11),
     }
 
     for _, row in df.iterrows():
         name = row["Model"]
 
-        if row["Category"] not in ["DRIP", "LLaVA"]:
+        if row["Category"] not in ["DITTO", "LLaVA"]:
             continue
 
         dx, dy = label_offsets.get(name, (6, 6))
 
-        if row["Category"] == "DRIP":
+        if row["Category"] == "DITTO":
             label = name.split("-")[-1]
             weight = "semibold"
         else:
@@ -301,7 +299,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     )
 
 
-    # drip = df[df["Category"] == "DRIP"].sort_values("Speedup")
+    # drip = df[df["Category"] == "DITTO"].sort_values("Speedup")
     # x = drip["Speedup"].astype(float).to_numpy()
     # y = drip[score_col].astype(float).to_numpy()
 
@@ -311,7 +309,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     #     x,
     #     y,
     #     lower_bound,
-    #     color=colors["DRIP"],
+    #     color=colors["DITTO"],
     #     alpha=0.045,
     #     zorder=0,
     # )
@@ -370,18 +368,13 @@ if __name__ == "__main__":
         "ChartQAPro",
     ]
 
-    all_metric_cols = [
+    general_metric_cols = [
         "VQAv2",
         "SQA",
         "MME",
         "MM-Bench",
         "GQA",
         "MMMU",
-        "TextVQA",
-        "OCRBench",
-        "OCRBenchv2",
-        "DocVQA",
-        "ChartQAPro",
         "POPE",
         "LLaVA-Wild",
         "MM-Vet",
@@ -392,10 +385,18 @@ if __name__ == "__main__":
     else:
         baseline_row = df[df["Model"] == "LLaVA-1.5-7B"].iloc[0]
 
-    relative = df[all_metric_cols].div(baseline_row[all_metric_cols], axis=1)
-
-    df["OverallScore"] = relative[all_metric_cols].mean(axis=1)
-    df["OCRScore"] = relative[ocr_cols].mean(axis=1)
+    relative = df[general_metric_cols + ocr_cols].div(baseline_row[general_metric_cols + ocr_cols], axis=1)
+    df["Coarse-grained QA Score"] = relative[general_metric_cols].mean(axis=1)
+    print("Coarse-grained QA Score:")
+    print("=" * 40)
+    # print model + score
+    for model, score in zip(df["Model"], df["Coarse-grained QA Score"]):
+        print(f"{model}: {score}")
+    df["Fine-grained OCR Score"] = relative[ocr_cols].mean(axis=1)
+    print("=" * 40)
+    print("Fine-grained OCR Score:")
+    for model, score in zip(df["Model"], df["Fine-grained OCR Score"]):
+        print(f"{model}: {score}")
 
     setup_plot_style()
 
@@ -407,54 +408,20 @@ if __name__ == "__main__":
     )
 
     handles = plot_tradeoff(
-
         ax=axes[0],
-
         df=df,
-
-        score_col="OverallScore",
-
+        score_col="Coarse-grained QA Score",
         ylabel="Average Relative Performance",
-
-        title="Overall Performance",
-
+        title="Coarse-grained QA Performance",
     )
 
     plot_tradeoff(
-
         ax=axes[1],
-
         df=df,
-
-        score_col="OCRScore",
-
+        score_col="Fine-grained OCR Score",
         ylabel="",
-
-        title="OCR Performance",
-
+        title="Fine-grained OCR Performance",
     )
-
-    # fig.legend(
-
-    #     handles=handles,
-
-    #     loc="lower center",
-
-    #     ncol=len(handles),
-
-    #     frameon=True,
-
-    #     fancybox=True,
-
-    #     framealpha=0.95,
-
-    #     edgecolor="#DDDDDD",
-
-    #     bbox_to_anchor=(0.5, -0.02),
-
-    # )
-
-
     fig.legend(
         handles=handles,
         loc="lower center",
@@ -466,7 +433,6 @@ if __name__ == "__main__":
     )
 
     if "qwen" in CSV_ID:
-
         xlabel = "TFLOP Speedup over LLaVA-Qwen2.5-14B"
 
     else:
