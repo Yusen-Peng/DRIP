@@ -57,7 +57,7 @@ def find_row(df, method, compression=None):
 
 def compute_drip_gain(df):
     """
-    Compute DITTO - Fixed Pooling for each compression level.
+    Compute VLVLM - Fixed Pooling for each compression level.
 
     Each benchmark is first normalized relative to the
     corresponding uncompressed model:
@@ -80,7 +80,7 @@ def compute_drip_gain(df):
     for level in COMPRESSION_LEVELS:
 
         fixed = find_row(df, "fixed pooling", level)
-        drip = find_row(df, "DITTO", level)
+        drip = find_row(df, "VLVLM", level)
 
         baseline_values = baseline[OCR_BENCHMARKS].astype(float).values
         fixed_values = fixed[OCR_BENCHMARKS].astype(float).values
@@ -118,7 +118,7 @@ for level, f, d, g in zip(
 ):
     print(
         f"{level:>3}: Fixed={f:.2f}, "
-        f"DITTO={d:.2f}, Δ={g:+.2f}"
+        f"VLVLM={d:.2f}, Δ={g:+.2f}"
     )
 
 print("\nQwen2.5-14B")
@@ -127,7 +127,7 @@ for level, f, d, g in zip(
 ):
     print(
         f"{level:>3}: Fixed={f:.2f}, "
-        f"DITTO={d:.2f}, Δ={g:+.2f}"
+        f"VLVLM={d:.2f}, Δ={g:+.2f}"
     )
 
 
@@ -175,7 +175,7 @@ ax.plot(
     label="Qwen2.5-14B",
 )
 
-# Zero = DITTO and Fixed are equivalent
+# Zero = VLVLM and Fixed are equivalent
 ax.axhline(
     0,
     linewidth=0.8,
@@ -187,7 +187,7 @@ ax.set_xticks(x)
 ax.set_xticklabels(["4×", "8×", "10×"])
 
 ax.set_xlabel("Image Token Compression")
-ax.set_ylabel("DITTO − Fixed (normalized pts.)")
+ax.set_ylabel("VLVLM − Fixed (normalized pts.)")
 
 ax.legend(
     frameon=False,
@@ -280,7 +280,7 @@ def scaling_gain(method):
 
 
 fixed_gain = scaling_gain("fixed pooling")
-drip_gain  = scaling_gain("DITTO")
+drip_gain  = scaling_gain("VLVLM")
 
 
 # ------------------------------------------------------------
@@ -297,8 +297,8 @@ for level, fixed, drip in zip(
     print(
         f"{level}: "
         f"Fixed={fixed:+.2f}, "
-        f"DITTO={drip:+.2f}, "
-        f"DITTO advantage={drip-fixed:+.2f}"
+        f"VLVLM={drip:+.2f}, "
+        f"VLVLM advantage={drip-fixed:+.2f}"
     )
 
 
@@ -339,7 +339,7 @@ ax.bar(
     x + width / 2,
     drip_gain,
     width,
-    label="DITTO",
+    label="VLVLM",
 )
 
 

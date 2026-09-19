@@ -10,8 +10,8 @@ def get_category(model_name):
         return "Fixed pooling"
     elif model_name.startswith("PruMerge"):
         return "PruMerge"
-    elif model_name.startswith("DITTO"):
-        return "DITTO"
+    elif model_name.startswith("VLVLM"):
+        return "VLVLM"
     elif model_name.startswith("LLaVA"):
         return "LLaVA"
     elif model_name.startswith("PruneSID"):
@@ -24,7 +24,7 @@ def get_category(model_name):
 def pretty_model_name(name):
     if name == "LLaVA-1.5-7B" or name == "LLaVA-Qwen2.5-14B":
         return "LLaVA"
-    if "-" in name and "DITTO" in name:
+    if "-" in name and "VLVLM" in name:
         return name.split("-")[-1]   # "4x", "8x", "10x"
     return ""
 
@@ -78,7 +78,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     #     "Fixed pooling": "#F28E2B",
     #     "PruMerge": "#59A14F",
     #     "PruneSID": "#4E79A7",
-    #     "DITTO": "#E15759",
+    #     "VLVLM": "#E15759",
     #     "Perceiver": "#B07AA1",
     # }
 
@@ -87,7 +87,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         "Fixed pooling": "#E69F00",
         "PruMerge": "#7A9E65",
         "PruneSID": "#6C8EBF",
-        "DITTO": "#D94A4A",
+        "VLVLM": "#D94A4A",
         "Perceiver": "#9B7E9B",
     }
 
@@ -97,7 +97,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         "Fixed pooling": "s",
         "PruMerge": "^",
         "PruneSID": "P",
-        "DITTO": "D",
+        "VLVLM": "D",
         "Perceiver": "X",
     }
 
@@ -129,12 +129,12 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
 
 
     if 'siglip' in CSV_ID.lower():
-        plot_order = ["LLaVA", "Fixed pooling", "Perceiver", "DITTO"]
-        present_plot_order = ["LLaVA", "Fixed pooling", "Perceiver", "DITTO(Ours)"]
+        plot_order = ["LLaVA", "Fixed pooling", "Perceiver", "VLVLM"]
+        present_plot_order = ["LLaVA", "Fixed pooling", "Perceiver", "VLVLM(Ours)"]
     else:
         # Plot category lines
-        plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "Perceiver", "DITTO"]
-        present_plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "Perceiver", "DITTO(Ours)"]
+        plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "Perceiver", "VLVLM"]
+        present_plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "Perceiver", "VLVLM(Ours)"]
 
     # for category in plot_order:
     #     group = df[df["Category"] == category].sort_values("Speedup")
@@ -145,8 +145,8 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     #         group["Speedup"],
     #         group[score_col],
     #         color=colors[category],
-    #         linewidth=2.4 if category == "DITTO" else 1.8,
-    #         alpha=0.95 if category == "DITTO" else 0.75,
+    #         linewidth=2.4 if category == "VLVLM" else 1.8,
+    #         alpha=0.95 if category == "VLVLM" else 0.75,
     #         zorder=2,
     #     )
 
@@ -166,7 +166,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         if len(group) == 0:
             continue
 
-        is_drip = category == "DITTO"
+        is_drip = category == "VLVLM"
         is_llava = category == "LLaVA"
 
         ax.plot(
@@ -213,9 +213,9 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     # label_offsets = {
     #     "LLaVA-1.5-7B": (8, -8),
     #     "LLaVA-Qwen2.5-14B": (8, -8),
-    #     "DITTO-4x": (-16, 10),
-    #     "DITTO-8x": (-16, 10),
-    #     "DITTO-10x": (-16, 10),
+    #     "VLVLM-4x": (-16, 10),
+    #     "VLVLM-8x": (-16, 10),
+    #     "VLVLM-10x": (-16, 10),
     #     "fixed pooling-4x": (-30, -14),
     #     "fixed pooling-8x": (8, -12),
     #     "fixed pooling-10x": (8, -12),
@@ -249,20 +249,20 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         "LLaVA-1.5-7B": (7, -8),
         "LLaVA-Qwen2.5-14B": (7, -8),
 
-        "DITTO-4x": (-15, 11),
-        "DITTO-8x": (-14, 11),
-        "DITTO-10x": (-12, 11),
+        "VLVLM-4x": (-15, 11),
+        "VLVLM-8x": (-14, 11),
+        "VLVLM-10x": (-12, 11),
     }
 
     for _, row in df.iterrows():
         name = row["Model"]
 
-        if row["Category"] not in ["DITTO", "LLaVA"]:
+        if row["Category"] not in ["VLVLM", "LLaVA"]:
             continue
 
         dx, dy = label_offsets.get(name, (6, 6))
 
-        if row["Category"] == "DITTO":
+        if row["Category"] == "VLVLM":
             label = name.split("-")[-1]
             weight = "semibold"
         else:
@@ -299,7 +299,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     )
 
 
-    # drip = df[df["Category"] == "DITTO"].sort_values("Speedup")
+    # drip = df[df["Category"] == "VLVLM"].sort_values("Speedup")
     # x = drip["Speedup"].astype(float).to_numpy()
     # y = drip[score_col].astype(float).to_numpy()
 
@@ -309,7 +309,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     #     x,
     #     y,
     #     lower_bound,
-    #     color=colors["DITTO"],
+    #     color=colors["VLVLM"],
     #     alpha=0.045,
     #     zorder=0,
     # )
