@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=0821_textVQA_NEW_DOWN_10x_to_8x
-#SBATCH --output=0821_textVQA_NEW_DOWN_10x_to_8x.log
+#SBATCH --job-name=0821_textVQA_4x_add_PDrop_2x
+#SBATCH --output=0821_textVQA_4x_add_PDrop_2x.log
 #SBATCH --time=00:55:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=debug-nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -17,12 +17,12 @@ source activate DRIP_flash
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="NEW_DOWN_10x_to_8x"
+VERSION="4x_add_PDrop_2x"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/llava_textvqa_val_v051_ocr.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
