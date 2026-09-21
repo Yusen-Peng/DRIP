@@ -1,0 +1,5 @@
+Model,TextVQA,OCRBench,OCRBenchv2,ChartQAPro
+SFT@65K,81.49,83.9,67.2,27.89
+PruneSID,71.23,49.9,46.7,23.16
+fixed pooling@65K,70.50,51.1,51.3,19.58
+VLVLM@65K,76.20,54.6,51.2,19.08
