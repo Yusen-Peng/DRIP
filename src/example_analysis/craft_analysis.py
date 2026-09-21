@@ -4,6 +4,8 @@ import tempfile
 from pathlib import Path
 import numpy as np
 import pandas as pd
+import math
+import types
 import torch
 from PIL import Image, ImageDraw
 from datasets import load_dataset
@@ -34,7 +36,7 @@ python src/example_analysis/craft_analysis.py
 # OUTPUT_DIR = "/users/PAS2912/yusenpeng/DRIP/src/example_analysis/text_boundary_overlap_subset"
 
 
-BENCHMARK = "OCRBenchv2" # TextVQA, OCRBench, OCRBenchv2, DocVQA, ChartQAPro
+BENCHMARK = "ChartQAPro" # TextVQA, OCRBench, OCRBenchv2, DocVQA, ChartQAPro
 
 
 
@@ -63,8 +65,8 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_full/drip.bin"
 # NOTE: new downsample function version
-# DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full/drip.bin"
-# COMPRESSION_RATE = 0.25
+DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full/drip.bin"
+COMPRESSION_RATE = 0.25
 
 
 # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_finetune_train_full/drip.bin"
@@ -75,12 +77,12 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_finetune_train_full/drip.bin"
 # NOTE: new downsample function version
-DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full/drip.bin"
-COMPRESSION_RATE = 0.1
+# DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full/drip.bin"
+# COMPRESSION_RATE = 0.1
 
 
 
-MERGE_STRATEGY = "DRIP"
+MERGE_STRATEGY = "DRIP" # Fixed, DRIP, PruneSID
 OUTPUT_CSV = os.path.join(OUTPUT_DIR, f"craft_boundary_overlap_{COMPRESSION_RATE}.csv")
 SUMMARY_CSV = os.path.join(OUTPUT_DIR, f"craft_boundary_overlap_summary_{COMPRESSION_RATE}.csv")
 
@@ -91,6 +93,122 @@ VISION_TOWER_NAME = "openai/clip-vit-large-patch14-336"
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".bmp", ".webp")
+
+
+
+
+
+def build_prunesid_vision_tower(
+    vision_tower_name,
+    compression_rate,
+    device,
+):
+    """
+    Build a separate CLIP vision tower and replace its forward()
+    with PruneSID's forward.
+
+    We keep this separate from the DRIP vision tower because
+    monkey-patching the DRIP tower would destroy its normal forward.
+    """
+
+    # Build a normal LLaVA CLIP tower.
+    # We can reuse your existing builder; the DRIP weights don't matter
+    # for PruneSID because PruneSID operates directly on CLIP features.
+    prunesid_model = build_llava_drip_vision_tower(
+        vision_tower_name=vision_tower_name,
+        mm_vision_select_layer=-1,
+        mm_vision_select_feature="patch",
+        compression_rate=compression_rate,
+        drip_weight_path=None,
+        merge_strategy="none",
+        device=device,
+    )
+
+    from src.LLaVA_wrapper.llava_local.model.multimodal_encoder.clip_encoder import (
+        CLIPVisionTower_PruneSID,
+    )
+
+    # Replace this instance's forward with PruneSID forward.
+    prunesid_model.forward = types.MethodType(
+        CLIPVisionTower_PruneSID.forward,
+        prunesid_model,
+    )
+
+    # Same logic as your actual LLaVA PruneSID implementation.
+    num_patches = prunesid_model.num_patches  # 576 for CLIP-L/14@336
+
+    keep_tokens = math.ceil(
+        num_patches * compression_rate
+    )
+
+    prunesid_model.need_token_num = keep_tokens
+
+    print(
+        f"PruneSID: keeping {keep_tokens}/{num_patches} "
+        f"patch tokens ({compression_rate:.4f})"
+    )
+
+    return prunesid_model
+
+
+
+@torch.no_grad()
+def get_prunesid_hard_mask(prunesid_model, img_tensor):
+    """
+    Run PruneSID and convert its retained CLIP token indices
+    into a spatial [grid_h, grid_w] binary mask.
+
+    PruneSID indices:
+        0      = CLS token
+        1..576 = CLIP patch tokens
+
+    Returns:
+        hard_mask: [24, 24] numpy array
+        num_kept_patches: number of retained spatial patches
+    """
+
+    # img_tensor: [3, 336, 336]
+    images = img_tensor.unsqueeze(0).to(
+        device=prunesid_model.device,
+        dtype=prunesid_model.dtype,
+    )
+
+    _, indices = prunesid_model(images)
+
+    # B=1
+    indices = indices[0]
+
+    # Remove CLS token.
+    patch_indices = indices[indices != 0] - 1
+
+    grid_h = prunesid_model.num_patches_per_side
+    grid_w = prunesid_model.num_patches_per_side
+    num_patches = grid_h * grid_w
+
+    # Safety check
+    patch_indices = patch_indices[
+        (patch_indices >= 0) &
+        (patch_indices < num_patches)
+    ]
+
+    hard_mask_flat = torch.zeros(
+        num_patches,
+        dtype=torch.float32,
+        device=patch_indices.device,
+    )
+
+    hard_mask_flat[patch_indices] = 1.0
+
+    hard_mask = (
+        hard_mask_flat
+        .view(grid_h, grid_w)
+        .cpu()
+        .numpy()
+    )
+
+    return hard_mask, int(hard_mask.sum())
+
+
 
 
 
@@ -344,7 +462,7 @@ def make_overlap_visualization(
 
 
 @torch.no_grad()
-def process_image(image_path, vision_model, craft_model, image_is_pil=False):
+def process_image(image_path, vision_model, prunesid_model, craft_model, image_is_pil=False):
     if image_is_pil:
         img_tensor = load_pil_with_processor(image_path, vision_model.image_processor)
     else:
@@ -367,6 +485,19 @@ def process_image(image_path, vision_model, craft_model, image_is_pil=False):
 
     drip_pixel_mask = patch_mask_to_pixel_mask(drip_hard_mask, image_h=image_h, image_w=image_w)
 
+    prunesid_hard_mask, prunesid_num_boundaries = get_prunesid_hard_mask(
+        prunesid_model,
+        img_tensor,
+    )
+
+    prunesid_pixel_mask = patch_mask_to_pixel_mask(
+        prunesid_hard_mask,
+        image_h=image_h,
+        image_w=image_w,
+    )
+
+
+
     fixed_hard_mask = get_fixed_hard_mask(vision_model)
 
     fixed_num_boundaries = int(fixed_hard_mask.sum())
@@ -376,6 +507,8 @@ def process_image(image_path, vision_model, craft_model, image_is_pil=False):
     drip_metrics = compute_overlap_metrics(drip_pixel_mask, text_pixel_mask)
 
     fixed_metrics = compute_overlap_metrics(fixed_pixel_mask, text_pixel_mask)
+
+    prunesid_metrics = compute_overlap_metrics(prunesid_pixel_mask, text_pixel_mask)
 
     return {
         "processed_pil": processed_pil,
@@ -392,13 +525,17 @@ def process_image(image_path, vision_model, craft_model, image_is_pil=False):
         "fixed_pixel_mask": fixed_pixel_mask,
         "fixed_num_boundaries": fixed_num_boundaries,
         "fixed_metrics": fixed_metrics,
+        "prunesid_hard_mask": prunesid_hard_mask,
+        "prunesid_pixel_mask": prunesid_pixel_mask,
+        "prunesid_num_boundaries": prunesid_num_boundaries,
+        "prunesid_metrics": prunesid_metrics,
     }
 
 
 
 def build_summary(df):
     summary_rows = []
-    for method in ["DRIP", "Fixed"]:
+    for method in ["DRIP", "Fixed", "PruneSID"]:
         valid = df[
             (df["method"] == method)
             & (df["num_craft_boxes"] > 0)
@@ -469,6 +606,12 @@ def main():
             merge_strategy=MERGE_STRATEGY,
             device=DEVICE,
         )
+        print("Also loading PruneSID vision tower...")
+        prunesid_model = build_prunesid_vision_tower(
+            vision_tower_name=VISION_TOWER_NAME,
+            compression_rate=COMPRESSION_RATE,
+            device=DEVICE,
+        )
 
     print("Vision processor output size:", vision_model.image_processor.size)
 
@@ -499,7 +642,7 @@ def main():
             desc="CRAFT vs boundaries",
         ):
 
-            result = process_image(image_path=str(image_path), vision_model=vision_model, craft_model=craft_model)
+            result = process_image(image_path=str(image_path), vision_model=vision_model, prunesid_model=prunesid_model, craft_model=craft_model)
 
             # filename = os.path.basename(image_path)
             relative_path = image_path.relative_to(IMAGE_DIR)
@@ -532,6 +675,22 @@ def main():
             fixed_row.update(result["fixed_metrics"])
             rows.append(fixed_row)
 
+            prunesid_row = {
+                "image": filename,
+                "method": "PruneSID",
+                "image_width": result["processed_pil"].width,
+                "image_height": result["processed_pil"].height,
+                "num_craft_boxes": num_boxes,
+                "num_boundary_patches": result["prunesid_num_boundaries"],
+            }
+            prunesid_row.update(
+                result["prunesid_metrics"]
+            )
+            rows.append(prunesid_row)
+
+
+
+
             if SAVE_VISUALIZATIONS:
 
                 stem = Path(filename).stem
@@ -539,6 +698,7 @@ def main():
                 drip_save = os.path.join(OUTPUT_DIR,"visualizations","drip",f"{stem}.png")
 
                 fixed_save = os.path.join(OUTPUT_DIR,"visualizations","fixed",f"{stem}.png")
+                prunesid_save = os.path.join(OUTPUT_DIR,"visualizations","prunesid",f"{stem}.png")
 
                 make_overlap_visualization(
                     processed_pil=result["processed_pil"],
@@ -552,6 +712,12 @@ def main():
                     boundary_mask=result["fixed_pixel_mask"],
                     boxes=result["craft_boxes"],
                     save_path=fixed_save
+                )
+                make_overlap_visualization(
+                    processed_pil=result["processed_pil"],
+                    boundary_mask=result["prunesid_pixel_mask"],
+                    boxes=result["craft_boxes"],
+                    save_path=prunesid_save
                 )
 
     else:
@@ -569,6 +735,7 @@ def main():
                 image_path=pil_image,
                 vision_model=vision_model,
                 craft_model=craft_model,
+                prunesid_model=prunesid_model,
                 image_is_pil=True,
             )
 
@@ -605,6 +772,21 @@ def main():
 
             fixed_row.update(result["fixed_metrics"])
             rows.append(fixed_row)
+
+
+            prunesid_row = {
+                "image": sample_id,
+                "dataset_name": dataset_name,
+                "question_type": question_type,
+                "method": "PruneSID",
+                "image_width": result["processed_pil"].width,
+                "image_height": result["processed_pil"].height,
+                "num_craft_boxes": num_boxes,
+                "num_boundary_patches": result["prunesid_num_boundaries"],
+            }
+
+            prunesid_row.update(result["prunesid_metrics"])
+            rows.append(prunesid_row)
 
 
 

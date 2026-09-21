@@ -44,16 +44,16 @@ python eval_code/model_vqa_chartqapro.py \
   --compression-rate 0.25
 
 
-python eval_code/model_vqa_chartqapro.py \
-  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE_transfer \
-  --model-base Qwen/Qwen3-VL-4B-Instruct \
-  --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/images \
-  --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/chartqapro_test_llava.jsonl \
-  --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/results/${VERSION}.jsonl \
-  --temperature 0 \
-  --conv-mode llava_v1 \
-  --merge-strategy Fixed \
-  --compression-rate 0.25
+# python eval_code/model_vqa_chartqapro.py \
+#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/Qwen3VL_SFT_Fixed_4x_NEW_PIPELINE_transfer \
+#   --model-base Qwen/Qwen3-VL-4B-Instruct \
+#   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/images \
+#   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/chartqapro_test_llava.jsonl \
+#   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/results/${VERSION}.jsonl \
+#   --temperature 0 \
+#   --conv-mode llava_v1 \
+#   --merge-strategy Fixed \
+#   --compression-rate 0.25
 
 
 # python eval_code/model_vqa_chartqapro.py \
