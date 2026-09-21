@@ -42,39 +42,6 @@ def get_mm_adapter_state_maybe_zero_3(named_params, keys_to_match):
     to_return = {k: maybe_zero_3(v, ignore_status=True, name=k).cpu() for k, v in to_return.items()}
     return to_return
 
-# class CompressedQwen3VLVisionPatchMerger(Qwen3VLVisionPatchMerger):
-#     def __init__(self, config: Qwen3VLVisionConfig, use_postshuffle_norm: bool = False,):
-#         super().__init__(config=config, use_postshuffle_norm=use_postshuffle_norm)
-#         self.compressor = None
-
-#     def set_compressor(self, merge_strategy="Fixed", compression_rate=0.25, temperature=0.1, drip_path=None, mlp_ratio=4):
-#         compressor_hidden_size = self.hidden_size
-#         self.compressor = TokenCompressor(
-#             hidden_size=compressor_hidden_size,
-#             intermediate_size=mlp_ratio * compressor_hidden_size,
-#             merge_strategy=merge_strategy,
-#             compression_rate=compression_rate,
-#             temperature=temperature,
-#             drip_path=drip_path,
-#         )
-#         param = next(self.parameters())
-#         self.compressor.to(device=param.device,dtype=param.dtype)
-
-#     def forward(self, x: torch.Tensor, inference: bool = False):
-#         if self.use_postshuffle_norm:
-#             x = self.norm(x.view(-1, self.hidden_size))
-#         else:
-#             x = self.norm(x).view(-1, self.hidden_size)
-#         boundaries = None
-#         boundary_loss = None
-#         if self.compressor is not None:
-#             x = x.unsqueeze(0)
-#             x, boundaries, boundary_loss = self.compressor(x, inference=inference)
-#             x = x.squeeze(0)
-#         # MLP projector
-#         x = self.linear_fc2(self.act_fn(self.linear_fc1(x)))
-#         return x, boundaries, boundary_loss
-
 class CompressedQwen3VLVisionPatchMerger(Qwen3VLVisionPatchMerger):
     def __init__(self, config: Qwen3VLVisionConfig, use_postshuffle_norm: bool = False):
         super().__init__(config=config, use_postshuffle_norm=use_postshuffle_norm)
@@ -111,6 +78,15 @@ class CompressedQwen3VLVisionPatchMerger(Qwen3VLVisionPatchMerger):
             x = self.norm(x)
             patch_features = x
             x = x.view(-1, self.hidden_size)
+
+        # ==== PruneSID ==== 
+        if (self.compressor is not None and self.compressor.merge_strategy == "PruneSID"):
+            x = self.linear_fc2(self.act_fn(self.linear_fc1(x)))
+            boundaries = (self.compressor.get_prunesid_boundaries(x.unsqueeze(0)))
+            x = x.unsqueeze(0)
+            x, boundaries, boundary_loss = self.compressor(x, pooled_boundaries=boundaries)
+            x = x.squeeze(0)
+            return x, boundaries, boundary_loss
 
         if self.compressor is not None:
             patch_features = patch_features.unsqueeze(0)
