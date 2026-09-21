@@ -88,11 +88,11 @@ if len(bad) > 0:
 
 plt.rcParams.update({
     "font.family": "DejaVu Sans",
-    "font.size": 8,
+    "font.size": 14,
     "axes.labelsize": 12,
     "xtick.labelsize": 10,
     "ytick.labelsize": 10,
-    "legend.fontsize": 10,
+    "legend.fontsize": 12,
 })
 
 fig, ax = plt.subplots(figsize=(6.0, 4.2))
@@ -168,14 +168,14 @@ for i, g in enumerate(gain):
         f"+{g:.1f}",
         ha="center",
         va="bottom",
-        fontsize=8.5,
+        fontsize=12,
         color="#E74F4F",
         fontweight="bold"
     )
 
 ax.set_ylabel("Relative performance to LLaVA-1.5-7B (%)")
 ax.set_xticks(x)
-ax.set_xticklabels(benchmarks, rotation=25, ha="right")
+ax.set_xticklabels(benchmarks, ha="center", fontsize=12)
 
 ymin = max(45, np.floor(min(no_train.min(), trained.min(), prumerge.min()) / 5) * 5 - 5)
 ax.set_ylim(ymin, 106)
@@ -200,7 +200,7 @@ ax.text(
     0.94,
     f"Avg. gain from training: +{avg_gain:.1f} pts",
     transform=ax.transAxes,
-    fontsize=8.5,
+    fontsize=12,
     fontweight="bold"
 )
 
