@@ -115,6 +115,8 @@ if __name__ == "__main__":
     IMAGE_ID = "01b54ac75f9e41e9" # pink book furthest to the left (4x) - fails, sensitive to vertical orientation
     IMAGE_ID = "096c5a920933f198" # beer (4x) - fails, sensitive to ambiguious question
 
+    IMAGE_ID = "000037"
+
     MERGE_STRATEGY = "DRIP" # "DRIP" or "DRIP-H"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_finetune_train_lora/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_finetune_train_lora/drip.bin"
@@ -122,10 +124,10 @@ if __name__ == "__main__":
 
     
     
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full/drip.bin"
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain_NEW_DOWN_temp10_train_full/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain_NEW_DOWN_temp10_train_full/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full/drip.bin"
-    COMPRESSION_RATE = 0.25
+    COMPRESSION_RATE = 0.125
 
 
 

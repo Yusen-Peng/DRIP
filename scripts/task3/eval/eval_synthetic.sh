@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=PatchOCR_DRIP_4x
-#SBATCH --output=PatchOCR_DRIP_4x.log
+#SBATCH --job-name=PatchOCR_PruneSID_8x
+#SBATCH --output=PatchOCR_PruneSID_8x.log
 #SBATCH --time=00:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,12 +19,21 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="DRIP_4x"
+VERSION="PruneSID_8x"
 
 DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/synthetic_eval"
 
+# python src/model_vqa_synthetic_runner.py \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain_NEW_DOWN_temp10_train_full \
+#     --question-file ${DATA_ROOT}/annotations.jsonl \
+#     --image-folder ${DATA_ROOT} \
+#     --answers-file ${DATA_ROOT}/answers/${VERSION}.jsonl \
+#     --temperature 0 \
+#     --conv-mode vicuna_v1
+
+
 python src/model_vqa_synthetic_runner.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
     --question-file ${DATA_ROOT}/annotations.jsonl \
     --image-folder ${DATA_ROOT} \
     --answers-file ${DATA_ROOT}/answers/${VERSION}.jsonl \
@@ -33,22 +42,12 @@ python src/model_vqa_synthetic_runner.py \
 
 
 # python src/model_vqa_synthetic_runner.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
+#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_8x_SCALE_train_full/checkpoint-1200 \
 #     --question-file ${DATA_ROOT}/annotations.jsonl \
 #     --image-folder ${DATA_ROOT} \
 #     --answers-file ${DATA_ROOT}/answers/${VERSION}.jsonl \
 #     --temperature 0 \
 #     --conv-mode vicuna_v1
-
-
-# python src/model_vqa_synthetic_runner.py \
-#     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_4x_SCALE_train_full_2epochs/checkpoint-1200 \
-#     --question-file ${DATA_ROOT}/annotations.jsonl \
-#     --image-folder ${DATA_ROOT} \
-#     --answers-file ${DATA_ROOT}/answers/${VERSION}.jsonl \
-#     --temperature 0 \
-#     --conv-mode vicuna_v1
-
 
 
 python src/model_vqa_synthetic_evaluater.py \

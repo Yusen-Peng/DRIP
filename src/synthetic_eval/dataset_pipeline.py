@@ -16,10 +16,8 @@ IMAGE_SIZE = 336
 PATCH_SIZE = 14
 
 # Synthetic checkerboard cell size
-# 56 px = 4 x 4 CLIP patches
-CELL_SIZE = 56
+CELL_SIZE = 28
 
-# 336 / 56 = 6
 GRID_SIZE = IMAGE_SIZE // CELL_SIZE
 
 # One character per quadrant:
@@ -61,19 +59,6 @@ def load_font(font_path=None, font_size=44):
 # ============================================================
 
 def make_checkerboard():
-    """
-    Create a 336x336 checkerboard consisting of 6x6 cells.
-
-    Each cell:
-        56 x 56 pixels
-        4 x 4 CLIP patches
-        16 CLIP visual tokens
-
-    Total:
-        6 x 6 = 36 cells
-        24 x 24 = 576 CLIP patches
-    """
-
     image = Image.new(
         "RGB",
         (IMAGE_SIZE, IMAGE_SIZE),
