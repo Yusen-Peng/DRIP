@@ -88,19 +88,19 @@ def load_data():
     df["OverallScore"] = relative.mean(axis=1)
 
     # --------------------------------------------------------
-    # Keep DRIP generalization experiments
+    # Keep VLVLM generalization experiments
     #
-    # DRIP-4x-8x:
+    # VLVLM-4x-8x:
     #     first number  = training budget
     #     second number = inference budget
     # --------------------------------------------------------
 
     drip = df[
-        df["Model"].str.match(r"^DRIP-\d+x-\d+x$")
+        df["Model"].str.match(r"^VLVLM-\d+x-\d+x$")
     ].copy()
 
     extracted = drip["Model"].str.extract(
-        r"DRIP-(\d+)x-(\d+)x"
+        r"VLVLM-(\d+)x-(\d+)x"
     )
 
     drip["TrainBudget"] = extracted[0].astype(int)
@@ -207,7 +207,7 @@ def plot_matrix(performance, gap):
                 f"{value:.1f}",
                 ha="center",
                 va="center",
-                fontsize=13,
+                fontsize=17,
                 fontweight=weight,
             )
 
@@ -222,8 +222,8 @@ def plot_matrix(performance, gap):
         [f"{x}×" for x in BUDGETS]
     )
 
-    ax.set_xlabel("Inference Compression Ratio")
-    ax.set_ylabel("Training Compression Ratio")
+    ax.set_xlabel("Inference Compression Ratio", fontsize=16)
+    ax.set_ylabel("Training Compression Ratio", fontsize=16)
 
     ax.set_title(
         "Overall Performance",
@@ -285,7 +285,7 @@ def plot_matrix(performance, gap):
                 f"{value:+.2f}",
                 ha="center",
                 va="center",
-                fontsize=13,
+                fontsize=17,
                 fontweight=weight,
                 color=column_text_colors[j],
                 zorder=5,
@@ -343,8 +343,10 @@ def plot_matrix(performance, gap):
         [f"{x}×" for x in BUDGETS]
     )
 
-    ax.set_xlabel("Inference Compression Ratio")
-    ax.set_ylabel("Training Compression Ratio")
+    ax.set_xlabel("Inference Compression Ratio", fontsize=16)
+    ax.set_ylabel("Training Compression Ratio", fontsize=16)
+
+    
 
     ax.set_title(
         "Gap from Matched-Budget Training",
@@ -360,7 +362,8 @@ def plot_matrix(performance, gap):
     )
 
     cbar2.set_label(
-        "Performance Difference (pp)"
+        "Performance Difference (pp)",
+        fontsize=16,
     )
 
     # ========================================================

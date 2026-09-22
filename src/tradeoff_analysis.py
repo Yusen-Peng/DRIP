@@ -49,8 +49,8 @@ def setup_plot_style():
         "font.family": "serif",
         "font.size": 11,
         "axes.titlesize": 14,
-        "axes.labelsize": 12,
-        "legend.fontsize": 10,
+        "axes.labelsize": 16,
+        "legend.fontsize": 14,
         "xtick.labelsize": 10,
         "ytick.labelsize": 10,
 
@@ -129,12 +129,10 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
 
 
     if 'siglip' in CSV_ID.lower():
-        plot_order = ["LLaVA", "Fixed pooling", "Perceiver", "VLVLM"]
-        present_plot_order = ["LLaVA", "Fixed pooling", "Perceiver", "VLVLM(Ours)"]
+        plot_order = ["Fixed pooling", "Perceiver", "VLVLM"]
     else:
         # Plot category lines
-        plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "Perceiver", "VLVLM"]
-        present_plot_order = ["LLaVA", "PruMerge", "PruneSID", "Fixed pooling", "Perceiver", "VLVLM(Ours)"]
+        plot_order = ["PruMerge", "PruneSID", "Fixed pooling", "Perceiver", "VLVLM"]
 
     # for category in plot_order:
     #     group = df[df["Category"] == category].sort_values("Speedup")
@@ -257,7 +255,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     for _, row in df.iterrows():
         name = row["Model"]
 
-        if row["Category"] not in ["VLVLM", "LLaVA"]:
+        if row["Category"] != "VLVLM":
             continue
 
         dx, dy = label_offsets.get(name, (6, 6))
@@ -274,7 +272,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
             xy=(row["Speedup"], row[score_col]),
             xytext=(dx, dy),
             textcoords="offset points",
-            fontsize=9,
+            fontsize=12,
             fontweight=weight,
             color="#333333",
             ha="left",
@@ -287,7 +285,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         1.002,
         "uncompressed",
         transform=ax.get_yaxis_transform(),
-        fontsize=8.5,
+        fontsize=12,
         color="#777777",
         ha="right",
         va="bottom",
@@ -318,14 +316,18 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
     ax.set_ylabel(ylabel)
 
     if 'qwen' in CSV_ID:
-        ax.set_xlim(0.85, 5.95)
+        ax.set_xlim(2.6, 4.55)
         ax.set_ylim(0.50, 1.015)
     elif 'SigLIP2' in CSV_ID:
-        ax.set_xlim(0.85, 4.75)
+        ax.set_xlim(2.6, 4.55)
         ax.set_ylim(0.80, 1.015)
     else:
-        ax.set_xlim(0.85, 4.75)
+        ax.set_xlim(2.6, 4.55)
         ax.set_ylim(0.72, 1.015)
+
+    ax.set_xticks([3.0, 3.5, 4.0, 4.5])
+
+    
 
     # Cleaner legend
     handles = [
@@ -403,7 +405,7 @@ if __name__ == "__main__":
     fig, axes = plt.subplots(
         1,
         2,
-        figsize=(10.5, 5.2),
+        figsize=(8.5, 5.2),
         sharey=True,
     )
 
@@ -442,7 +444,7 @@ if __name__ == "__main__":
     fig.supxlabel(
         xlabel,
         y=0.07,
-        fontsize=12,
+        fontsize=16,
     )
     plt.tight_layout(rect=[0, 0.12, 1, 1])
 

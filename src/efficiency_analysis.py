@@ -38,12 +38,12 @@ for ax, (title, ylabel, values) in zip(axes, metrics):
             xytext=(0, 8),
             textcoords="offset points",
             ha="center",
-            fontsize=9,
+            fontsize=10,
         )
 
-    ax.set_title(title, fontsize=12, fontweight="bold")
-    ax.set_xlabel("Compression Ratio", fontsize=10)
-    ax.set_ylabel(ylabel, fontsize=10)
+    ax.set_title(title, fontsize=16, fontweight="bold")
+    ax.set_xlabel("Compression Ratio", fontsize=15)
+    ax.set_ylabel(ylabel, fontsize=15)
 
     ax.grid(
         axis="y",
@@ -52,7 +52,7 @@ for ax, (title, ylabel, values) in zip(axes, metrics):
         alpha=0.4,
     )
 
-    ax.tick_params(axis="both", labelsize=9)
+    ax.tick_params(axis="both", labelsize=13)
 
 # Give annotation text a little breathing room
 axes[0].set_ylim(0, 10)
