@@ -143,17 +143,17 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
             else:
                 print("🎲🎲🎲 We are using LLaMA models.")
                 tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
-                # model = LlavaLlamaForCausalLM.from_pretrained(
-                #     model_path,
-                #     low_cpu_mem_usage=True,
-                #     **kwargs
-                # )
-                print("⛳️ ⛳️ ⛳️ combining PDrop method here with additional 2x compression")
-                model = LlavaLlamaForCausalLM_PDrop.from_pretrained(
+                model = LlavaLlamaForCausalLM.from_pretrained(
                     model_path,
                     low_cpu_mem_usage=True,
                     **kwargs
                 )
+                # print("⛳️ ⛳️ ⛳️ combining PDrop method here with additional 2x compression")
+                # model = LlavaLlamaForCausalLM_PDrop.from_pretrained(
+                #     model_path,
+                #     low_cpu_mem_usage=True,
+                #     **kwargs
+                # )
     else:
         # Load language model
         if model_base is not None:
