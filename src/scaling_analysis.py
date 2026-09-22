@@ -57,7 +57,7 @@ OCR_BENCHMARKS = [
 def setup_plot_style():
     mpl.rcParams.update({
         "font.family": "serif",
-        "font.size": 12,
+        "font.size": 15,
 
         "axes.titlesize": 15,
         "axes.labelsize": 13,
@@ -125,7 +125,7 @@ def add_data_efficiency_annotation(
         arrowprops=dict(
             arrowstyle="<->",
             color="#0BE5B6",
-            linewidth=1.0,
+            linewidth=2.0,
             linestyle="--",   # dashed
         ),
         zorder=5,
@@ -141,13 +141,13 @@ def add_data_efficiency_annotation(
     fixed_k = fixed_x
 
     ax.annotate(
-        f"VLVLM @ {drip_k:.1f}K >= Fixed @ {fixed_k:.0f}K",
+        f"VLVLM@{drip_k:.1f}K >= Fixed@{fixed_k:.0f}K",
         xy=(midpoint, y),
-        xytext=(-15, -15),
+        xytext=(-15, 3),
         textcoords="offset points",
         ha="center",
         va="bottom",
-        fontsize=7,
+        fontsize=13,
         fontweight="bold",
         color="#333333",
     )
@@ -354,19 +354,19 @@ def plot_single_panel(
 
         if label == "LLaVA":
 
-            linewidth = 2.0
+            linewidth = 3.0
             markersize = 6.5
             alpha = 0.85
 
         elif label == "VLVLM":
 
-            linewidth = 2.4
+            linewidth = 4.0
             markersize = 7.0
             alpha = 0.95
 
         else:
 
-            linewidth = 1.9
+            linewidth = 3.0
             markersize = 6.5
             alpha = 0.80
 
@@ -465,8 +465,9 @@ def plot_single_panel(
 
 
 # ============================================================
-# 2 x 3 combined figure
+# 1 x 3 combined figure
 # ============================================================
+
 
 def plot_scaling_grid(df):
 
@@ -478,52 +479,22 @@ def plot_scaling_grid(df):
         "10x",
     ]
 
+    # Bigger individual panels, but only one row
     fig, axes = plt.subplots(
-        2,
+        1,
         3,
-        figsize=(14.5, 8.2),
+        figsize=(16.5, 5.2),
         sharex=True,
-        sharey="row",
+        sharey=True,
     )
 
     # ========================================================
-    # Top row: Overall
+    # OCR panels
     # ========================================================
 
-    for col_idx, compression in enumerate(
-        compression_ratios
-    ):
+    for col_idx, compression in enumerate(compression_ratios):
 
-        ax = axes[
-            0,
-            col_idx,
-        ]
-
-        plot_single_panel(
-            ax=ax,
-            df=df,
-            compression=compression,
-            score_col="OverallScore",
-        )
-
-        ax.set_title(
-            f"{compression} Compression",
-            fontweight="bold",
-            pad=10,
-        )
-
-    # ========================================================
-    # Bottom row: OCR
-    # ========================================================
-
-    for col_idx, compression in enumerate(
-        compression_ratios
-    ):
-
-        ax = axes[
-            1,
-            col_idx,
-        ]
+        ax = axes[col_idx]
 
         plot_single_panel(
             ax=ax,
@@ -532,116 +503,55 @@ def plot_scaling_grid(df):
             score_col="OCRScore",
         )
 
-    # ========================================================
-    # Y-axis ranges
-    # ========================================================
-
-    for ax in axes[0]:
-
-        ax.set_ylim(
-            0.84,
-            1.015,
+        ax.set_title(
+            f"{compression} Compression",
+            fontsize=20,
+            fontweight="bold",
+            pad=12,
         )
 
-    for ax in axes[1]:
+        ax.set_xlabel(
+            "SFT Data Size",
+            fontsize=17,
+            labelpad=8,
+        )
 
+        # Bigger ticks
+        ax.tick_params(
+            axis="both",
+            labelsize=14,
+        )
+
+    # ========================================================
+    # Y axis
+    # ========================================================
+
+    axes[0].set_ylabel(
+        "OCR Relative Performance",
+        fontsize=17,
+        labelpad=10,
+    )
+
+    for ax in axes:
         ax.set_ylim(
             0.74,
             1.015,
         )
 
     # ========================================================
-    # Row labels
-    # ========================================================
-
-    axes[
-        0,
-        0,
-    ].set_ylabel(
-        "Overall Relative Performance"
-    )
-
-    axes[
-        1,
-        0,
-    ].set_ylabel(
-        "OCR Relative Performance"
-    )
-
-    # ========================================================
-    # X labels
-    # ========================================================
-
-    for ax in axes[1]:
-
-        ax.set_xlabel(
-            "SFT Data Size"
-        )
-
-    # ========================================================
-    # Row titles on left side
-    # Optional but nice for paper figure
-    # ========================================================
-
-    fig.text(
-        0.012,
-        0.72,
-        "Overall",
-        rotation=90,
-        va="center",
-        ha="center",
-        fontsize=15,
-        fontweight="bold",
-    )
-
-    fig.text(
-        0.012,
-        0.30,
-        "OCR",
-        rotation=90,
-        va="center",
-        ha="center",
-        fontsize=15,
-        fontweight="bold",
-    )
-
-
-    # ========================================================
-    # Data-efficiency annotations
+    # Data-efficiency annotation
     # ========================================================
 
     for col_idx, compression in enumerate(compression_ratios):
 
-        # ----------------------------------------------------
-        # Overall:
-        # VLVLM @ 50% data (~332.5K)
-        # vs Fixed @ 100% data (665K)
-        # ----------------------------------------------------
-
         add_data_efficiency_annotation(
-            ax=axes[0, col_idx],
-            df=df,
-            compression=compression,
-            score_col="OverallScore",
-            drip_scale=0.50,
-            fixed_scale=1.00,
-        )
-
-        # ----------------------------------------------------
-        # OCR:
-        # VLVLM @ 25% data (~166.2K)
-        # vs Fixed @ 100% data (665K)
-        # ----------------------------------------------------
-
-        add_data_efficiency_annotation(
-            ax=axes[1, col_idx],
+            ax=axes[col_idx],
             df=df,
             compression=compression,
             score_col="OCRScore",
             drip_scale=0.25,
             fixed_scale=1.00,
         )
-
 
     # ========================================================
     # Shared legend
@@ -653,8 +563,8 @@ def plot_scaling_grid(df):
             [0],
             color="#6E6E6E",
             marker="o",
-            linewidth=2.0,
-            markersize=7,
+            linewidth=2.5,
+            markersize=9,
             markeredgecolor="white",
             label="Uncompressed LLaVA",
         ),
@@ -664,8 +574,8 @@ def plot_scaling_grid(df):
             [0],
             color="#F28E2B",
             marker="o",
-            linewidth=2.0,
-            markersize=7,
+            linewidth=2.5,
+            markersize=9,
             markeredgecolor="white",
             label="Fixed Pooling",
         ),
@@ -675,8 +585,8 @@ def plot_scaling_grid(df):
             [0],
             color="#E15759",
             marker="o",
-            linewidth=2.4,
-            markersize=7,
+            linewidth=3.0,
+            markersize=9,
             markeredgecolor="white",
             label="VLVLM",
         ),
@@ -684,23 +594,14 @@ def plot_scaling_grid(df):
 
     fig.legend(
         handles=legend_handles,
-
         loc="lower center",
-
         ncol=3,
-
+        fontsize=15,
         frameon=True,
-
         fancybox=True,
-
         framealpha=0.95,
-
         edgecolor="#DDDDDD",
-
-        bbox_to_anchor=(
-            0.5,
-            -0.005,
-        ),
+        bbox_to_anchor=(0.5, 0.0),
     )
 
     # ========================================================
@@ -709,14 +610,12 @@ def plot_scaling_grid(df):
 
     plt.tight_layout(
         rect=[
-            0.035,
-            0.07,
+            0.0,
+            0.11,
             1.0,
             1.0,
         ],
-
-        w_pad=2.0,
-        h_pad=2.2,
+        w_pad=2.5,
     )
 
     return fig, axes
