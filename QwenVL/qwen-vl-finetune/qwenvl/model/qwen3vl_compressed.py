@@ -472,6 +472,7 @@ class CompressedQwen3VLModel(Qwen3VLModel):
 
 class CompressedQwen3VLCausalLMOutput(Qwen3VLCausalLMOutputWithPast):
     boundary_loss: Optional[torch.Tensor] = None
+    keep_mask: Optional[torch.Tensor] = None
 
 
 class CompressedQwen3VLForConditionalGeneration(Qwen3VLForConditionalGeneration):
@@ -552,6 +553,7 @@ class CompressedQwen3VLForConditionalGeneration(Qwen3VLForConditionalGeneration)
             past_key_values=outputs.past_key_values,
             rope_deltas=outputs.rope_deltas,
             boundary_loss=outputs.boundary_loss,
+            keep_mask=outputs.keep_mask
         )
 
 class CompressedTrainer(Trainer):
