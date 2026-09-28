@@ -17,10 +17,10 @@ delta = drip - hnet
 # ---------------------------------------------------------
 mpl.rcParams.update({
     "font.family": "serif",
-    "font.size": 8.5,
-    "axes.labelsize": 8.5,
-    "xtick.labelsize": 8,
-    "ytick.labelsize": 8,
+    "font.size": 12,
+    "axes.labelsize": 12,
+    "xtick.labelsize": 10.7,
+    "ytick.labelsize": 11,
     "axes.linewidth": 0.7,
     "xtick.major.width": 0.7,
     "ytick.major.width": 0.7,
@@ -109,7 +109,7 @@ for bar, d in zip(bars, delta):
         f"{d:+.2f}",
         ha="center",
         va=va,
-        fontsize=8,
+        fontsize=10,
     )
 
 # ---------------------------------------------------------

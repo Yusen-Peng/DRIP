@@ -62,7 +62,7 @@ def setup_plot_style():
         "axes.titlesize": 15,
         "axes.labelsize": 13,
 
-        "legend.fontsize": 11,
+        "legend.fontsize": 14,
 
         "xtick.labelsize": 10,
         "ytick.labelsize": 10,
@@ -143,11 +143,11 @@ def add_data_efficiency_annotation(
     ax.annotate(
         f"VLVLM@{drip_k:.1f}K >= Fixed@{fixed_k:.0f}K",
         xy=(midpoint, y),
-        xytext=(-15, 3),
+        xytext=(-15, 2),
         textcoords="offset points",
         ha="center",
         va="bottom",
-        fontsize=13,
+        fontsize=14,
         fontweight="bold",
         color="#333333",
     )
@@ -505,21 +505,21 @@ def plot_scaling_grid(df):
 
         ax.set_title(
             f"{compression} Compression",
-            fontsize=20,
+            fontsize=22,
             fontweight="bold",
             pad=12,
         )
 
         ax.set_xlabel(
             "SFT Data Size",
-            fontsize=17,
+            fontsize=22,
             labelpad=8,
         )
 
         # Bigger ticks
         ax.tick_params(
             axis="both",
-            labelsize=14,
+            labelsize=16,
         )
 
     # ========================================================
@@ -528,7 +528,7 @@ def plot_scaling_grid(df):
 
     axes[0].set_ylabel(
         "OCR Relative Performance",
-        fontsize=17,
+        fontsize=20,
         labelpad=10,
     )
 
@@ -596,7 +596,7 @@ def plot_scaling_grid(df):
         handles=legend_handles,
         loc="lower center",
         ncol=3,
-        fontsize=15,
+        fontsize=18,
         frameon=True,
         fancybox=True,
         framealpha=0.95,
