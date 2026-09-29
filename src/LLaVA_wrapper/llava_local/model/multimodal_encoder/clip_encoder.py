@@ -236,10 +236,83 @@ class CLIPVisionTower(nn.Module):
             else:
                 print("🐴🐴🐴 [INFO] No Perceiver weights provided, initializing Perceiver from scratch.")
 
+        elif self.merge_strategy == "Fixed2D":
+            assert self.compression_rate is not None, "compression_rate must be provided for Fixed2D merge strategy."
+            pooling_factor = max(1, int(round(1.0 / self.compression_rate)))
+            print(
+                f"🧊🧊🧊 [INFO] Using Fixed 2D pooling with compression rate "
+                f"{self.compression_rate}. Each output token merges "
+                f"{pooling_factor} spatial patches."
+            )
 
         else:
             # no additional modules needed for plain ViT
             print(f"🩵🩵🩵 [INFO] Using original ViT features without merging. This will keep all tokens ({self.num_patches} tokens).")
+
+
+    def _get_2d_pool_shape(self):
+        """Convert compression rate into a 2D pooling window."""
+        factor = max(1, int(round(1.0 / self.compression_rate)))
+
+        # Find factor pair closest to square
+        pool_h = int(math.sqrt(factor))
+
+        while factor % pool_h != 0:
+            pool_h -= 1
+
+        pool_w = factor // pool_h
+
+        return pool_h, pool_w
+
+    def _fixed_2d_pool(self, patch_tokens: torch.Tensor):
+        """
+        Spatially pool ViT patch tokens.
+
+        Args:
+            patch_tokens: [B, L, D]
+
+        Returns:
+            pooled_tokens: [B, L', D]
+        """
+        B, L, D = patch_tokens.shape
+
+        H = self.num_patches_per_side
+        W = self.num_patches_per_side
+
+        assert H * W == L, (
+            f"Token count mismatch: got L={L}, "
+            f"but spatial grid is {H}x{W}={H * W}"
+        )
+
+        pool_h, pool_w = self._get_2d_pool_shape()
+
+        assert H % pool_h == 0, (
+            f"Grid height {H} is not divisible by pool_h={pool_h}"
+        )
+        assert W % pool_w == 0, (
+            f"Grid width {W} is not divisible by pool_w={pool_w}"
+        )
+
+        # [B, L, D] -> [B, H, W, D]
+        x = patch_tokens.reshape(B, H, W, D)
+
+        # [B, H, W, D] -> [B, D, H, W]
+        x = x.permute(0, 3, 1, 2)
+
+        # Spatial average pooling
+        x = F.avg_pool2d(
+            x,
+            kernel_size=(pool_h, pool_w),
+            stride=(pool_h, pool_w),
+        )
+
+        # [B, D, H', W'] -> [B, H', W', D]
+        x = x.permute(0, 2, 3, 1)
+
+        # -> [B, L', D]
+        pooled_tokens = x.reshape(B, -1, D)
+        return pooled_tokens
+
 
     def _merge_patch_tokens(self, patch_tokens: torch.Tensor, inference=False):
         B, L, D = patch_tokens.shape
@@ -458,6 +531,12 @@ class CLIPVisionTower(nn.Module):
                         return image_features, boundary_loss
                     else:
                         image_features = self._merge_patch_tokens(image_features, inference=True)
+
+                elif self.merge_strategy == "Fixed2D":
+                    image_features = self._fixed_2d_pool(image_features)
+                    if not inference:
+                        boundary_loss = image_features.new_zeros(())
+                        return image_features, boundary_loss
                 
                 elif self.merge_strategy == "Perceiver":
                     self.perceiver_resampler.to(device=image_features.device, dtype=image_features.dtype)
