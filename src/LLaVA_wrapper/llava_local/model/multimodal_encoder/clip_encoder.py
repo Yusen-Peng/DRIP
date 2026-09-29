@@ -7,6 +7,7 @@ import sys
 import numpy as np
 import math
 from transformers import CLIPVisionModel, CLIPImageProcessor, CLIPVisionConfig
+from transformers import CLIPTokenizerFast, CLIPTextModelWithProjection, CLIPVisionModelWithProjection
 from types import SimpleNamespace
 import timm
 from timm.data import resolve_model_data_config, create_transform
@@ -245,10 +246,25 @@ class CLIPVisionTower(nn.Module):
                 f"{pooling_factor} spatial patches."
             )
 
+        elif self.merge_strategy == "CDPruner":
+            assert self.compression_rate is not None, "compression_rate must be provided for CDPruner merge strategy."
+            print(f"💿💿💿 [INFO] Using CDPruner with compression rate {self.compression_rate}.")
+            self.load_text_tower(device_map=device_map)
+            print(f"🧩🧩🧩 [INFO] Loaded text tower for CDPruner.")
+
         else:
             # no additional modules needed for plain ViT
             print(f"🩵🩵🩵 [INFO] Using original ViT features without merging. This will keep all tokens ({self.num_patches} tokens).")
 
+    # [CDPruner] Load text tower for CLIP model
+    def load_text_tower(self, device_map=None):
+        CLIPVisionModelWithProjection._no_split_modules = ['CLIPEncoderLayer']
+        vision_tower_with_projection = CLIPVisionModelWithProjection.from_pretrained(self.vision_tower_name, device_map=device_map)
+        self.vision_tower.visual_projection = vision_tower_with_projection.visual_projection
+        self.text_tokenizer = CLIPTokenizerFast.from_pretrained(self.vision_tower_name)
+        self.text_tower = CLIPTextModelWithProjection.from_pretrained(self.vision_tower_name, device_map=device_map)
+        self.text_tower.requires_grad_(False)
+        self.max_position_embeddings = self.text_tower.config.max_position_embeddings
 
     def _get_2d_pool_shape(self):
         """Convert compression rate into a 2D pooling window."""
@@ -488,7 +504,7 @@ class CLIPVisionTower(nn.Module):
         return image_features
 
 
-    def forward(self, images, inference=False):
+    def forward(self, images, texts=None, inference=False):
         if isinstance(images, list):
             image_features = []
             boundary_losses = []
@@ -521,6 +537,35 @@ class CLIPVisionTower(nn.Module):
                 image_features = self.token_prune_merge_advanced(images, reduction_ratio=self.compression_rate)
                 # NOTE: we need to hardcode the precision/data type after PruMerge
                 image_features = image_features.to(dtype=torch.float16)
+        
+            elif self.merge_strategy == "CDPruner":
+                # [CDPruner] Get text embeds
+                image_stream = torch.cuda.Stream()
+                text_stream = torch.cuda.Stream()
+                
+                with torch.cuda.stream(image_stream):
+                    image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), output_hidden_states=True)
+                    image_outputs = self.feature_select(image_forward_outs)
+                    image_features = image_outputs.to(images.dtype)
+                
+                if texts is not None:
+                    with torch.cuda.stream(text_stream):
+                        text_inputs = self.text_tokenizer(text=texts, return_tensors="pt")
+                        text_segment = (text_inputs.input_ids.shape[1] - 1) // self.max_position_embeddings + 1
+                        text_padding = self.max_position_embeddings * text_segment - text_inputs.input_ids.shape[1]
+                        text_inputs = {
+                            k: torch.cat([v, v.new_zeros((v.shape[0], text_padding))], 
+                                        dim=1).reshape(-1, self.max_position_embeddings).to(device=self.device)
+                            for k, v in text_inputs.items()
+                        }
+                        text_embeds = self.text_tower(**text_inputs).text_embeds
+                
+                torch.cuda.synchronize()
+                if texts is not None:
+                    image_embeds = self.vision_tower.vision_model.post_layernorm(image_outputs)
+                    image_embeds = self.vision_tower.visual_projection(image_embeds.float())
+                    image_features = (image_features, image_embeds, text_embeds)
+            
             else:
                 image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), output_hidden_states=True)
                 image_features = self.feature_select(image_forward_outs).to(images.dtype)
