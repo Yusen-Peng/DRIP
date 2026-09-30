@@ -31,12 +31,12 @@ if TYPE_CHECKING:
 import math
 from typing import List, Optional, Tuple, Union
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from transformers import AutoConfig, AutoModelForCausalLM, \
-                         LlamaConfig, LlamaModel, LlamaForCausalLM,LlamaPreTrainedModel,Cache,DynamicCache
+from transformers import LlamaConfig, LlamaModel, LlamaForCausalLM,Cache,DynamicCache
 from transformers.models.llama.modeling_llama import LlamaDecoderLayer,LlamaSdpaAttention,\
                         LlamaAttention,LlamaFlashAttention2,apply_rotary_pos_emb,repeat_kv,\
-                        _prepare_4d_causal_attention_mask,_prepare_4d_causal_attention_mask_for_sdpa,LlamaRMSNorm,\
+                        LlamaRMSNorm,\
                         LlamaMLP
+from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask, _prepare_4d_causal_attention_mask_for_sdpa
 import warnings
 from transformers.modeling_outputs import BaseModelOutputWithPast,CausalLMOutputWithPast
 from transformers.generation.utils import GenerateOutput
@@ -114,6 +114,7 @@ class LlamaDynamicvitModel(LlamaModel):
         token_length_list = [],
         pre_prompt_length_list = [],
         logger = [],
+        cache_position: Optional[torch.LongTensor] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -628,7 +629,6 @@ class LlamaDynamicvitSdpaAttention(LlamaSdpaAttention):
         use_cache: bool = False,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         if output_attentions:
-            # TODO: Improve this warning with e.g. `model.config.attn_implementation = "manual"` once this is implemented.
             return super().forward(
                 hidden_states=hidden_states,
                 attention_mask=attention_mask,
@@ -820,6 +820,7 @@ class LlamaDynamicvitForCausalLM(LlamaForCausalLM):
         token_length_list = [],
         pre_prompt_length_list = [],
         logger = [],
+        cache_position: Optional[torch.LongTensor] = None
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -841,7 +842,8 @@ class LlamaDynamicvitForCausalLM(LlamaForCausalLM):
             image_shape=image_shape,
             token_length_list=token_length_list,
             pre_prompt_length_list=pre_prompt_length_list,
-            logger=logger
+            logger=logger,
+            cache_position=cache_position
         )
 
         prev_decision = outputs[0]
@@ -1033,7 +1035,8 @@ class LlamaDynamicvitForCausalLM(LlamaForCausalLM):
         self._validate_generated_length(generation_config, input_ids_length, has_default_max_length)
 
         # 7. determine generation mode
-        generation_mode = self._get_generation_mode(generation_config, assistant_model)
+        # generation_mode = self._get_generation_mode(generation_config, assistant_model)
+        generation_mode = generation_config.get_generation_mode(assistant_model)
 
         if streamer is not None and (generation_config.num_beams > 1):
             raise ValueError(

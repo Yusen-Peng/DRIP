@@ -61,6 +61,7 @@ class LlavaLlamaDynamicForCausalLM(LlamaDynamicvitForCausalLM, LlavaMetaForCausa
         token_length_list = [],
         pre_prompt_length_list = [],
         logger = [],
+        cache_position: Optional[torch.LongTensor] = None,  # ADD THIS
     ) -> Union[Tuple, CausalLMOutputWithPast]:
 
         if inputs_embeds is None:
@@ -98,7 +99,8 @@ class LlavaLlamaDynamicForCausalLM(LlamaDynamicvitForCausalLM, LlavaMetaForCausa
             image_shape = image_shape,
             token_length_list = token_length_list,
             pre_prompt_length_list = pre_prompt_length_list,
-            logger=logger
+            logger=logger,
+            cache_position=cache_position,  # ADD THIS
         )
 
     @torch.no_grad()

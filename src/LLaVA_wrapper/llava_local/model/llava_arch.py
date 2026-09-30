@@ -220,7 +220,6 @@ class LlavaMetaForCausalLM(ABC):
             else:
                 raise ValueError(f"Unexpected mm_patch_merge_type: {self.config.mm_patch_merge_type}")
         else:
-            #image_features = self.encode_images(images, inference=inference)
             image_features, boundary_loss = self.encode_images(images, inference=inference)
         
 
@@ -409,7 +408,7 @@ class LlavaMetaForCausalLM(ABC):
             if type(images) is list:
                 images = [x.unsqueeze(0) if x.ndim == 3 else x for x in images]
             concat_images = torch.cat([image for image in images], dim=0)
-            image_features = self.encode_images(concat_images)
+            image_features, _ = self.encode_images(concat_images, inference=inference)
             split_sizes = [image.shape[0] for image in images]
             image_features = torch.split(image_features, split_sizes, dim=0)
             mm_patch_merge_type = getattr(self.config, 'mm_patch_merge_type', 'flat')
@@ -454,7 +453,7 @@ class LlavaMetaForCausalLM(ABC):
             else:
                 raise ValueError(f"Unexpected mm_patch_merge_type: {self.config.mm_patch_merge_type}")
         else:
-            image_features = self.encode_images(images) # 从[1, 3, 336, 336]变成([1, 576, 4096])
+            image_features, _ = self.encode_images(images, inference=inference) # 从[1, 3, 336, 336]变成([1, 576, 4096])
 
         # TODO: image start / end is not implemented here to support pretraining.
         if getattr(self.config, 'tune_mm_mlp_adapter', False) and getattr(self.config, 'mm_use_im_start_end', False):
@@ -666,7 +665,6 @@ def prepare_inputs_labels_for_multimodal_prunesid(
             images = [x.unsqueeze(0) if x.ndim == 3 else x for x in images]
         concat_images = torch.cat([image for image in images], dim=0)
         image_features, keep_idxs = self.encode_images_prunesid_multi(concat_images)
-        # image_features = self.encode_images(concat_images)
         split_sizes = [image.shape[0] for image in images]
         image_features = torch.split(image_features, split_sizes, dim=0)
 
