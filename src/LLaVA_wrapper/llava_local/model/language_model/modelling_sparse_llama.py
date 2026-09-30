@@ -67,7 +67,7 @@ class GenerationMode(ExplicitEnum):
 
 
 class LlamaDynamicvitModel(LlamaModel):
-    def __init__(self, config: LlamaConfig, pruning_loc=[2, 6, 15]):
+    def __init__(self, config: LlamaConfig, pruning_loc=[2]): # prune at 2nd layer only for fair comparison
         super(LlamaModel,self).__init__(config)
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
@@ -367,9 +367,6 @@ class LlamaDynamicvitModel(LlamaModel):
             self.total_cuda_time += total_cuda_time_ms
             self.num_forward += 1
             self.num_token_pool += (sum(num_token) / self.num_layers)
-            FLOPs_avg_sample = (self.all_FLOPs / self.num_forward) * 1e-12
-
-            loggerinfo.info(f"{prefix} Equal Tokens: {int(self.num_token_pool / self.num_forward)}, Prefill Time (ms): {self.total_cuda_time:.2f}, TFLOPs:{FLOPs_avg_sample:.2f}")
     
         hidden_states = self.norm(hidden_states)
 
@@ -446,7 +443,9 @@ class LlamaDynamicvitAttention(LlamaAttention):
                     "with a layer index."
                 )
             kv_seq_len += past_key_value.get_usable_length(kv_seq_len, self.layer_idx)
-        cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
+        # cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
+        cos, sin = self.rotary_emb(value_states, position_ids)
+
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
 
         if past_key_value is not None:
@@ -553,7 +552,8 @@ class LlamaDynamicvitFlashAttention2(LlamaFlashAttention2):
             position_ids = torch.tensor([[past_key_value.get_usable_length(kv_seq_len, self.layer_idx)]], dtype=torch.int64).cuda()
         if past_key_value is not None:
             kv_seq_len += past_key_value.get_usable_length(kv_seq_len, self.layer_idx)
-        cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
+        # cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
+        cos, sin = self.rotary_emb(value_states, position_ids)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
 
         if past_key_value is not None :
@@ -659,7 +659,8 @@ class LlamaDynamicvitSdpaAttention(LlamaSdpaAttention):
         if V2_0:
             cos, sin = self.rotary_emb(value_states, seq_len=position_ids.max().item() + 1) # idea1: Keep Position ID
         else:
-            cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
+            # cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
+            cos, sin = self.rotary_emb(value_states, position_ids)
 
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
 
@@ -1604,7 +1605,6 @@ class LlamaDynamicvitForCausalLM(LlamaForCausalLM):
 
         causal_inference_cuda_time_ms = causal_inference_start_event.elapsed_time(causal_inference_end_event)
         self.model.causal_inference_cuda_time += causal_inference_cuda_time_ms
-        loggerinfo.info(f"{pad} Total Time (ms): {self.model.causal_inference_cuda_time:.2f}")
 
         if streamer is not None:
             streamer.end()

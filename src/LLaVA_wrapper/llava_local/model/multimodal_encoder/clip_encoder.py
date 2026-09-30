@@ -252,6 +252,10 @@ class CLIPVisionTower(nn.Module):
             self.load_text_tower(device_map=device_map)
             print(f"🧩🧩🧩 [INFO] Loaded text tower for CDPruner.")
 
+        elif self.merge_strategy == "SparseVLM":
+            print(f"🧸🧸🧸 [INFO] Using SparseVLM merge strategy.")
+            print("An important note:")
+            print("the compression rate (i.e. RETAIN_TOKN) is set in src/LLaVA_wrapper/llava_local/model/language_model/score.py.")
         else:
             # no additional modules needed for plain ViT
             print(f"🩵🩵🩵 [INFO] Using original ViT features without merging. This will keep all tokens ({self.num_patches} tokens).")

@@ -1,23 +1,20 @@
 import torch
 import os
 
-VERSION = os.getenv("USE_VERSION", "1_0")
-V2_0 = VERSION == "2_0"
+VERSION = "1_0"
+V2_0 = False
 
-RETAIN_TOKN = int(os.getenv("RETAIN_TOKN", "192"))
+RETAIN_TOKN = 58
 
-layer_dict = {2:0,6:1,15:2}
-
-sparse_token_list_192 = [300, 200, 110] if not V2_0 else [300, 200, 118]       # 2*576  4*300 10*200  16*110
-sparse_token_list_128 = [303, 110, 36] if not V2_0 else [238, 108, 60]
-sparse_token_list_96 = [238, 48, 26] if not V2_0 else [246, 54, 28]
-sparse_token_list_64 = [66, 30, 17] if not V2_0 else [66, 34, 20]
+layer_dict = {2: 0}
+sparse_token_list_4x = [144]
+sparse_token_list_8x = [72]
+sparse_token_list_10x = [58]
 
 sparse_token_dict = {
-    192: sparse_token_list_192,
-    128: sparse_token_list_128,
-    96 : sparse_token_list_96,
-    64 : sparse_token_list_64
+    144: sparse_token_list_4x,
+    72: sparse_token_list_8x,
+    58: sparse_token_list_10x,
 }
 
 def attn_postprocess_topk(self_attn_weights, v_token_start, v_token_num, text_token_start, t_token_idx, layer_idx):
@@ -32,7 +29,7 @@ def attn_postprocess_topk(self_attn_weights, v_token_start, v_token_num, text_to
     relation_vis_text = relation_vis_text.mean(1) # B, L1
 
     relation_vis = relation_vis_text
-    s_flag = True       # s_flag controls whether token merge is needed.
+    s_flag = False # NOTE: disable token supplement for fair comparison
 
     sparse_token_list = sparse_token_dict[RETAIN_TOKN]
 
