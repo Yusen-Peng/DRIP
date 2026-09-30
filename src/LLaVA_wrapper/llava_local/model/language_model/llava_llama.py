@@ -174,6 +174,7 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
                     images,
                     image_sizes=image_sizes,
                     texts=texts,
+                    inference=True # during generate(), we do inference mode
                 )
             else:
                 (

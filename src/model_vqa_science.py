@@ -77,16 +77,33 @@ def eval_model(args):
 
         input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).cuda()
 
-        with torch.inference_mode():
-            output_ids = model.generate(
-                input_ids,
-                images=images,
-                image_sizes=image_sizes,
-                do_sample=True if args.temperature > 0 else False,
-                temperature=args.temperature,
-                max_new_tokens=1024,
-                use_cache=True,
-            )
+
+        if model.get_vision_tower().merge_strategy == "CDPruner":
+            question = prompt
+            question = question.replace("\nAnswer the question using a single word or phrase.", "")
+
+            with torch.inference_mode():
+                output_ids = model.generate(
+                    input_ids,
+                    images=images,
+                    image_sizes=image_sizes,
+                    texts=question,
+                    do_sample=True if args.temperature > 0 else False,
+                    temperature=args.temperature,
+                    max_new_tokens=1024,
+                    use_cache=True,
+                )
+        else:
+            with torch.inference_mode():
+                output_ids = model.generate(
+                    input_ids,
+                    images=images,
+                    image_sizes=image_sizes,
+                    do_sample=True if args.temperature > 0 else False,
+                    temperature=args.temperature,
+                    max_new_tokens=1024,
+                    use_cache=True,
+                )
 
         outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
 

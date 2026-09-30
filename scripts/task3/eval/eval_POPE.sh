@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=0821_POPE_NEW_DOWN_10x_to_8x
-#SBATCH --output=0821_POPE_NEW_DOWN_10x_to_8x.log
+#SBATCH --job-name=0929_POPE_LLaVA_CDPruner_4x
+#SBATCH --output=0929_POPE_LLaVA_CDPruner_4x.log
 #SBATCH --time=00:50:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=debug-nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -17,7 +17,7 @@ source activate DRIP_flash
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="NEW_DOWN_10x_to_8x"
+VERSION="LLaVA_CDPruner_4x"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers
@@ -25,7 +25,7 @@ touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/${VERSION}.j
 
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/llava_pope_test.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/val2014 \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/POPE/answers/${VERSION}.jsonl \

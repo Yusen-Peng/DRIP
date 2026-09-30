@@ -217,6 +217,11 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
             keep_tokens = math.ceil(num_patches * model.model.vision_tower.compression_rate)
             model.model.vision_tower.need_token_num = keep_tokens
 
+        elif vision_tower.merge_strategy == "CDPruner":
+            from src.LLaVA_wrapper.llava_local.model.llava_arch import LlavaMetaForCausalLM, prepare_inputs_labels_for_multimodal_cdpruner, encode_images_cdpruner
+            LlavaMetaForCausalLM.prepare_inputs_labels_for_multimodal = prepare_inputs_labels_for_multimodal_cdpruner
+            LlavaMetaForCausalLM.encode_images_cdpruner = encode_images_cdpruner
+
     if hasattr(model.config, "max_sequence_length"):
         context_len = model.config.max_sequence_length
     else:

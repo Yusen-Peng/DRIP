@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=0821_GQA_NEW_DOWN_10x_to_8x
-#SBATCH --output=0821_GQA_NEW_DOWN_10x_to_8x.log
+#SBATCH --job-name=0929_GQA_LLaVA_CDPruner_4x
+#SBATCH --output=0929_GQA_LLaVA_CDPruner_4x.log
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=debug-nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -24,12 +24,12 @@ GQADIR="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data"
 OUTPUT_DIR=/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/answers/llava_gqa_testdev_balanced
 mkdir -p $OUTPUT_DIR
 
-OUTPUT_FILE=$OUTPUT_DIR/NEW_DOWN_10x_to_8x.jsonl
+OUTPUT_FILE=$OUTPUT_DIR/LLaVA_CDPruner_4x.jsonl
 
 
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/llava_gqa_testdev_balanced.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/GQA/data/images \
     --answers-file $OUTPUT_FILE \

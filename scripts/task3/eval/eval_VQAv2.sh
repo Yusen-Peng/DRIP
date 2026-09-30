@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0821_VQAv2_NEW_DOWN_10x_to_8x
-#SBATCH --output=0821_VQAv2_NEW_DOWN_10x_to_8x.log
+#SBATCH --job-name=0929_VQAv2_LLaVA_CDPruner_4x
+#SBATCH --output=0929_VQAv2_LLaVA_CDPruner_4x.log
 #SBATCH --time=05:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,12 +17,12 @@ source activate DRIP_flash
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="NEW_DOWN_10x_to_8x"
+VERSION="LLaVA_CDPruner_4x"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
 python src/model_vqa_loader.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/llava_vqav2_mscoco_test-dev2015.jsonl \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/test2015 \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/VQAv2/answers/${VERSION}.jsonl \

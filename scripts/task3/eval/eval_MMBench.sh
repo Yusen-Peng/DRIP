@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0821_MMBench_NEW_DOWN_10x_to_8x
-#SBATCH --output=0821_MMBench_NEW_DOWN_10x_to_8x.log
+#SBATCH --job-name=0929_MMBench_LLaVA_CDPruner_4x
+#SBATCH --output=0929_MMBench_LLaVA_CDPruner_4x.log
 #SBATCH --time=00:50:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,14 +19,14 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="NEW_DOWN_10x_to_8x"
+VERSION="LLaVA_CDPruner_4x"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl
 
 python src/model_vqa_mmbench.py \
-    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full \
+    --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
     --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/mmbench_dev_20230712.tsv \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712/${VERSION}.jsonl \
     --single-pred-prompt \

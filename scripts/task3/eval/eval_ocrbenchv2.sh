@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0821_OCRBenchV2_4x_add_PDrop_2x
-#SBATCH --output=0821_OCRBenchV2_4x_add_PDrop_2x.log
+#SBATCH --job-name=0929_OCRBenchV2_LLaVA_CDPruner_4x
+#SBATCH --output=0929_OCRBenchV2_LLaVA_CDPruner_4x.log
 #SBATCH --time=5:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,11 +20,11 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="4x_add_PDrop_2x"
+VERSION="LLaVA_CDPruner_4x"
 
 
 python src/model_vqa_ocrbenchv2.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
     --dataset_path lmms-lab/OCRBench-v2 \
     --dataset_split test \
     --cache_dir /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbenchv2 \

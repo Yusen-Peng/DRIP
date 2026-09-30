@@ -161,21 +161,41 @@ def eval_worker(args, data, eval_id, output_queue):
                 else conv_templates[conv_mode].sep2
             )
 
-            with torch.inference_mode():
-                output_ids = model.generate(
-                    input_ids,
-                    images=image_tensor.to(
-                        dtype=torch.float16,
-                        device=device,
-                        non_blocking=True,
-                    ),
-                    do_sample=args.temperature > 0,
-                    temperature=args.temperature,
-                    top_p=args.top_p,
-                    num_beams=args.num_beams,
-                    max_new_tokens=args.max_new_tokens,
-                    use_cache=True,
-                )
+            if model.get_vision_tower().merge_strategy == "CDPruner":
+                question = prompt
+                question = question.replace("\nAnswer the question using a single word or phrase.", "")
+                with torch.inference_mode():
+                    output_ids = model.generate(
+                        input_ids,
+                        images=image_tensor.to(
+                            dtype=torch.float16,
+                            device=device,
+                            non_blocking=True,
+                        ),
+                        texts=question,
+                        do_sample=args.temperature > 0,
+                        temperature=args.temperature,
+                        top_p=args.top_p,
+                        num_beams=args.num_beams,
+                        max_new_tokens=args.max_new_tokens,
+                        use_cache=True,
+                    )
+            else:
+                with torch.inference_mode():
+                    output_ids = model.generate(
+                        input_ids,
+                        images=image_tensor.to(
+                            dtype=torch.float16,
+                            device=device,
+                            non_blocking=True,
+                        ),
+                        do_sample=args.temperature > 0,
+                        temperature=args.temperature,
+                        top_p=args.top_p,
+                        num_beams=args.num_beams,
+                        max_new_tokens=args.max_new_tokens,
+                        use_cache=True,
+                    )
 
             input_token_len = input_ids.shape[1]
 
@@ -332,35 +352,41 @@ if __name__ == "__main__":
 
         )
 
-        with torch.inference_mode():
-
-            output_ids = model.generate(
-
-                input_ids,
-
-                images=image_tensor.to(
-
-                    dtype=torch.float16,
-
-                    device=device,
-
-                    non_blocking=True,
-
-                ),
-
-                do_sample=args.temperature > 0,
-
-                temperature=args.temperature,
-
-                top_p=args.top_p,
-
-                num_beams=args.num_beams,
-
-                max_new_tokens=args.max_new_tokens,
-
-                use_cache=True,
-
-            )
+        if model.get_vision_tower().merge_strategy == "CDPruner":
+            question = prompt
+            question = question.replace("\nAnswer the question using a single word or phrase.", "")
+            with torch.inference_mode():
+                output_ids = model.generate(
+                    input_ids,
+                    images=image_tensor.to(
+                        dtype=torch.float16,
+                        device=device,
+                        non_blocking=True,
+                    ),
+                    texts=question,
+                    do_sample=args.temperature > 0,
+                    temperature=args.temperature,
+                    top_p=args.top_p,
+                    num_beams=args.num_beams,
+                    max_new_tokens=args.max_new_tokens,
+                    use_cache=True,
+                )
+        else:
+            with torch.inference_mode():
+                output_ids = model.generate(
+                    input_ids,
+                    images=image_tensor.to(
+                        dtype=torch.float16,
+                        device=device,
+                        non_blocking=True,
+                    ),
+                    do_sample=args.temperature > 0,
+                    temperature=args.temperature,
+                    top_p=args.top_p,
+                    num_beams=args.num_beams,
+                    max_new_tokens=args.max_new_tokens,
+                    use_cache=True,
+                )
 
         input_token_len = input_ids.shape[1]
 

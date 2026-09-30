@@ -90,16 +90,33 @@ def eval_worker(args, data, eval_id, output_queue):
         
             stop_str = conv_templates[args.conv_mode].sep if conv_templates[args.conv_mode].sep_style != SeparatorStyle.TWO else conv_templates[args.conv_mode].sep2
             input_ids = input_ids.to(device=device, non_blocking=True)
-            with torch.inference_mode():
-                output_ids = model.generate(
-                    input_ids,
-                    images=image_tensor.to(dtype=torch.float16, device=device, non_blocking=True),
-                    do_sample=True if args.temperature > 0 else False,
-                    temperature=args.temperature,
-                    top_p=args.top_p,
-                    num_beams=args.num_beams,
-                    max_new_tokens=128,
-                    use_cache=True)
+
+
+            if model.get_vision_tower().merge_strategy == "CDPruner":
+                question = prompt
+                question = question.replace("\nAnswer the question using a single word or phrase.", "")
+                with torch.inference_mode():
+                    output_ids = model.generate(
+                        input_ids,
+                        images=image_tensor.to(dtype=torch.float16, device=device, non_blocking=True),
+                        texts=question,
+                        do_sample=True if args.temperature > 0 else False,
+                        temperature=args.temperature,
+                        top_p=args.top_p,
+                        num_beams=args.num_beams,
+                        max_new_tokens=128,
+                        use_cache=True)
+            else:
+                with torch.inference_mode():
+                    output_ids = model.generate(
+                        input_ids,
+                        images=image_tensor.to(dtype=torch.float16, device=device, non_blocking=True),
+                        do_sample=True if args.temperature > 0 else False,
+                        temperature=args.temperature,
+                        top_p=args.top_p,
+                        num_beams=args.num_beams,
+                        max_new_tokens=128,
+                        use_cache=True)
             
             input_token_len = input_ids.shape[1]
             

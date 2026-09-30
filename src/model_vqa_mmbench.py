@@ -109,18 +109,35 @@ def eval_model(args):
 
             image_tensor = process_images([image], image_processor, model.config)[0]
 
-            with torch.inference_mode():
-                output_ids = model.generate(
-                    input_ids,
-                    images=image_tensor.unsqueeze(0).half().cuda(),
-                    image_sizes=[image.size],
-                    do_sample=True if args.temperature > 0 else False,
-                    temperature=args.temperature,
-                    top_p=args.top_p,
-                    num_beams=args.num_beams,
-                    # no_repeat_ngram_size=3,
-                    max_new_tokens=1024,
-                    use_cache=True)
+            if model.get_vision_tower().merge_strategy == "CDPruner":
+                question = cur_prompt
+                question = question.replace("\nAnswer the question using a single word or phrase.", "")
+                with torch.inference_mode():
+                    output_ids = model.generate(
+                        input_ids,
+                        images=image_tensor.unsqueeze(0).half().cuda(),
+                        image_sizes=[image.size],
+                        texts=question,
+                        do_sample=True if args.temperature > 0 else False,
+                        temperature=args.temperature,
+                        top_p=args.top_p,
+                        num_beams=args.num_beams,
+                        # no_repeat_ngram_size=3,
+                        max_new_tokens=1024,
+                        use_cache=True)
+            else:
+                with torch.inference_mode():
+                    output_ids = model.generate(
+                        input_ids,
+                        images=image_tensor.unsqueeze(0).half().cuda(),
+                        image_sizes=[image.size],
+                        do_sample=True if args.temperature > 0 else False,
+                        temperature=args.temperature,
+                        top_p=args.top_p,
+                        num_beams=args.num_beams,
+                        # no_repeat_ngram_size=3,
+                        max_new_tokens=1024,
+                        use_cache=True)
 
             outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
 

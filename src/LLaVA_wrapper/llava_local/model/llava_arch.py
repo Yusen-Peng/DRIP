@@ -707,7 +707,7 @@ def encode_images_cdpruner(self, images, texts=None):
 # [CDPruner] Prune visual tokens according to index masks
 def prepare_inputs_labels_for_multimodal_cdpruner(
     self, input_ids, position_ids, attention_mask, past_key_values, labels,
-    images, image_sizes=None, texts=None
+    images, image_sizes=None, texts=None, inference: bool = False
 ):
     vision_tower = self.get_vision_tower()
     if vision_tower is None or images is None or input_ids.shape[1] == 1:

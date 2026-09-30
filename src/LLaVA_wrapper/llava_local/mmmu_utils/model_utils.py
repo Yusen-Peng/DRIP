@@ -43,15 +43,31 @@ def call_llava_engine_df(args, sample, model, tokenizer=None, processor=None):
     input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).cuda()
     image = sample['image']
     if image is not None:
-        output_ids = model.generate(
-            input_ids,
-            images=image.unsqueeze(0).half().cuda(),
-            do_sample=True,
-            temperature=1,
-            top_p=None,
-            num_beams=5,
-            max_new_tokens=128,
-            use_cache=True)
+
+        if model.get_vision_tower().merge_strategy == "CDPruner":
+            question = prompt
+            question = question.replace("\nAnswer the question using a single word or phrase.", "")
+            output_ids = model.generate(
+                input_ids,
+                images=image.unsqueeze(0).half().cuda(),
+                image_sizes=[image.size],
+                texts=question,
+                do_sample=True,
+                temperature=1,
+                top_p=None,
+                num_beams=5,
+                max_new_tokens=128,
+                use_cache=True)
+        else:
+            output_ids = model.generate(
+                input_ids,
+                images=image.unsqueeze(0).half().cuda(),
+                do_sample=True,
+                temperature=1,
+                top_p=None,
+                num_beams=5,
+                max_new_tokens=128,
+                use_cache=True)
 
         input_token_len = input_ids.shape[1]
         # n_diff_input_output = (input_ids != output_ids[:, :input_token_len]).sum().item()
