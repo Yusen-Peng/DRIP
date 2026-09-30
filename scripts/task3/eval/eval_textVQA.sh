@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=0929_textVQA_LLaVA_CDPruner_4x
-#SBATCH --output=0929_textVQA_LLaVA_CDPruner_4x.log
+#SBATCH --job-name=0929_textVQA_LLaVA_CDPruner_10x
+#SBATCH --output=0929_textVQA_LLaVA_CDPruner_10x.log
 #SBATCH --time=00:55:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=debug-nextgen
+#SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -17,7 +17,7 @@ source activate DRIP_flash
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_CDPruner_4x"
+VERSION="LLaVA_CDPruner_10x"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 

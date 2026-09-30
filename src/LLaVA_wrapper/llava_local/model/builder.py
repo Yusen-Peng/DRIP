@@ -26,6 +26,8 @@ FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(FILE_DIR, "../../../.."))
 sys.path.insert(0, PROJECT_ROOT)
 from src.LLaVA_wrapper.llava_local.model import *
+from src.LLaVA_wrapper.llava_local.model.language_model.modelling_sparse_llama import LlamaDynamicvitFlashAttention2
+from src.LLaVA_wrapper.llava_local.model.language_model.sparse_llava_llama import LlavaLlamaDynamicForCausalLM
 from src.LLaVA_wrapper.llava_local.constants import DEFAULT_IMAGE_PATCH_TOKEN, DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN
 
 
@@ -143,17 +145,38 @@ def load_pretrained_model(model_path, model_base, model_name, load_8bit=False, l
             else:
                 print("🎲🎲🎲 We are using LLaMA models.")
                 tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
-                model = LlavaLlamaForCausalLM.from_pretrained(
-                    model_path,
-                    low_cpu_mem_usage=True,
-                    **kwargs
-                )
+                # model = LlavaLlamaForCausalLM.from_pretrained(
+                #     model_path,
+                #     low_cpu_mem_usage=True,
+                #     **kwargs
+                # )
+
+                """
+                    Paper's discussion: Combining with LLM-Stage Compression
+                """
                 # print("⛳️ ⛳️ ⛳️ combining PDrop method here with additional 2x compression")
                 # model = LlavaLlamaForCausalLM_PDrop.from_pretrained(
                 #     model_path,
                 #     low_cpu_mem_usage=True,
                 #     **kwargs
                 # )
+
+                """SparseVLM baseline."""
+                model = LlavaLlamaDynamicForCausalLM.from_pretrained(
+                    model_path,
+                    low_cpu_mem_usage=True,
+                    **kwargs
+                )
+                model.config._attn_implementation == "sdpa"
+                # for i in range(32):
+                #     flash_attn = LlamaDynamicvitFlashAttention2(config=model.config, layer_idx=i).half().to(device)
+                #     model.model.layers[i].add_module("flash_attn",flash_attn)
+                #     state_dict = model.model.layers[i].flash_attn.state_dict()
+                #     for key in model.model.layers[i].self_attn.state_dict().keys():
+                #         if key in state_dict.keys():
+                #             state_dict[key] = model.model.layers[i].self_attn.state_dict()[key]
+                #     model.model.layers[i].flash_attn.load_state_dict(state_dict)
+
     else:
         # Load language model
         if model_base is not None:

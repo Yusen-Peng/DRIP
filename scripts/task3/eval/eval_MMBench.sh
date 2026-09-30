@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0929_MMBench_LLaVA_CDPruner_4x
-#SBATCH --output=0929_MMBench_LLaVA_CDPruner_4x.log
+#SBATCH --job-name=0929_MMBench_LLaVA_CDPruner_10x
+#SBATCH --output=0929_MMBench_LLaVA_CDPruner_10x.log
 #SBATCH --time=00:50:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_CDPruner_4x"
+VERSION="LLaVA_CDPruner_10x"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMBench/answers/mmbench_dev_20230712

@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=0929_DocVQA_LLaVA_CDPruner_4x
-#SBATCH --output=0929_DocVQA_LLaVA_CDPruner_4x.log
+#SBATCH --job-name=0929_DocVQA_LLaVA_CDPruner_10x
+#SBATCH --output=0929_DocVQA_LLaVA_CDPruner_10x.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=debug-nextgen
+#SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -19,7 +19,7 @@ export TOKENIZERS_PARALLELISM=false
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP
 
-VERSION="LLaVA_CDPruner_4x"
+VERSION="LLaVA_CDPruner_10x"
 echo "Running LLaVA inference..."
 
 

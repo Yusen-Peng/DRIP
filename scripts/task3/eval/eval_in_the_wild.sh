@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=0929_wild_LLaVA_CDPruner_4x
-#SBATCH --output=0929_wild_LLaVA_CDPruner_4x.log
+#SBATCH --job-name=0929_wild_LLaVA_CDPruner_10x
+#SBATCH --output=0929_wild_LLaVA_CDPruner_10x.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=debug-nextgen
+#SBATCH --partition=nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -24,7 +24,7 @@ set -a
 source /users/PAS2912/yusenpeng/DRIP/.env
 set +a
 
-VERSION="LLaVA_CDPruner_4x"
+VERSION="LLaVA_CDPruner_10x"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl

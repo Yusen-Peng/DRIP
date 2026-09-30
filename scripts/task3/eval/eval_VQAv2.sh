@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0929_VQAv2_LLaVA_CDPruner_4x
-#SBATCH --output=0929_VQAv2_LLaVA_CDPruner_4x.log
+#SBATCH --job-name=0929_VQAv2_LLaVA_CDPruner_10x
+#SBATCH --output=0929_VQAv2_LLaVA_CDPruner_10x.log
 #SBATCH --time=05:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,7 +17,7 @@ source activate DRIP_flash
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_CDPruner_4x"
+VERSION="LLaVA_CDPruner_10x"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 

@@ -15,16 +15,17 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             "Perceiver": Perceiver (ICML 2021)
             "Fixed2D": fixed 2D pooling
             "CDPruner": CDPruner (NeurIPS 2025)
+            "SparseVLM": SparseVLM (ICML 2025)
     """
     # NOTE: This is irrelevant for CLIP-based models,
     # but important for evaluating timm models.
     INFERENCE_MODE = True
 
 
-    MERGE_STRATEGY = "CDPruner"
+    MERGE_STRATEGY = "SparseVLM"
     # main result: 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
     # limit test: 20x - 0.05, 100x - 0.01, 500x - 0.002
-    COMPRESSION_RATE = 0.25
+    COMPRESSION_RATE = 0.1
 
     # NOTE: temperature tuning
     # TEMPERATURE = 0.1
