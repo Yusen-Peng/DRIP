@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0929_MMMU_LLaVA_CDPruner_10x
-#SBATCH --output=0929_MMMU_LLaVA_CDPruner_10x.log
+#SBATCH --job-name=0929_MMMU_LLaVA_SparseVLM_4x
+#SBATCH --output=0929_MMMU_LLaVA_SparseVLM_4x.log
 #SBATCH --time=00:45:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_CDPruner_10x"
+VERSION="LLaVA_SparseVLM_4x"
 
 python src/model_vqa_mmmu.py \
     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \

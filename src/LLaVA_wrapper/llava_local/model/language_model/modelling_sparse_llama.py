@@ -1231,20 +1231,30 @@ class LlamaDynamicvitForCausalLM(LlamaForCausalLM):
             )
 
             # 14. run beam sample
-            return self.beam_sample(
+            return self._beam_sample(
                 input_ids,
                 beam_scorer,
                 logits_processor=prepared_logits_processor,
-                logits_warper=logits_warper,
                 stopping_criteria=prepared_stopping_criteria,
-                pad_token_id=generation_config.pad_token_id,
-                eos_token_id=generation_config.eos_token_id,
-                output_scores=generation_config.output_scores,
-                return_dict_in_generate=generation_config.return_dict_in_generate,
+                logits_warper=logits_warper,
+                generation_config=generation_config,
                 synced_gpus=synced_gpus,
                 **model_kwargs,
             )
 
+            # return self.beam_sample(
+            #     input_ids,
+            #     beam_scorer,
+            #     logits_processor=prepared_logits_processor,
+            #     logits_warper=logits_warper,
+            #     stopping_criteria=prepared_stopping_criteria,
+            #     pad_token_id=generation_config.pad_token_id,
+            #     eos_token_id=generation_config.eos_token_id,
+            #     output_scores=generation_config.output_scores,
+            #     return_dict_in_generate=generation_config.return_dict_in_generate,
+            #     synced_gpus=synced_gpus,
+            #     **model_kwargs,
+            # )
         elif generation_mode == GenerationMode.GROUP_BEAM_SEARCH:
             # 11. prepare beam search scorer
             beam_scorer = BeamSearchScorer(

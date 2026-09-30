@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0929_SQA_LLaVA_CDPruner_10x
-#SBATCH --output=0929_SQA_LLaVA_CDPruner_10x.log
+#SBATCH --job-name=0929_SQA_LLaVA_SparseVLM_4x
+#SBATCH --output=0929_SQA_LLaVA_SparseVLM_4x.log
 #SBATCH --time=0:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,7 +18,7 @@ export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 
-VERSION="LLaVA_CDPruner_10x"
+VERSION="LLaVA_SparseVLM_4x"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 

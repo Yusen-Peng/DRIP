@@ -1,12 +1,14 @@
 import torch
 import os
 
+# NOTE: this is where we control the compression rate for SparseVLM
+RETAIN_TOKN = 144
+print(f"🏖🏖🏖 RETAIN_TOKN: {RETAIN_TOKN}", flush=True)
+
 VERSION = "1_0"
 V2_0 = False
 
-RETAIN_TOKN = 58
-
-layer_dict = {2: 0}
+layer_dict = {2: 0} # only prune at #2 layer for fair comparison
 sparse_token_list_4x = [144]
 sparse_token_list_8x = [72]
 sparse_token_list_10x = [58]

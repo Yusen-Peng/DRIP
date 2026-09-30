@@ -58,6 +58,16 @@ def call_llava_engine_df(args, sample, model, tokenizer=None, processor=None):
                 num_beams=5,
                 max_new_tokens=128,
                 use_cache=True)
+        elif model.get_vision_tower().merge_strategy == "SparseVLM": # greedy decoding for SparseVLM since it does not support beam search
+            output_ids = model.generate(
+                input_ids,
+                images=image.unsqueeze(0).half().cuda(),
+                do_sample=False,
+                num_beams=1,
+                max_new_tokens=128,
+                use_cache=True,
+            ) 
+        
         else:
             output_ids = model.generate(
                 input_ids,
