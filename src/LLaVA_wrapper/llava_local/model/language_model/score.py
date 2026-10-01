@@ -2,7 +2,7 @@ import torch
 import os
 
 # NOTE: this is where we control the compression rate for SparseVLM
-RETAIN_TOKN = 144
+RETAIN_TOKN = 58
 print(f"🏖🏖🏖 RETAIN_TOKN: {RETAIN_TOKN}", flush=True)
 
 VERSION = "1_0"

@@ -18,6 +18,8 @@ def get_category(model_name):
         return "PruneSID"
     elif model_name.startswith("Perceiver"):
         return "Perceiver"
+    elif model_name.startswith("SparseVLM"):
+        return "SparseVLM"
     return "Other"
 
 
@@ -89,6 +91,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         "PruneSID": "#6C8EBF",
         "VLVLM": "#D94A4A",
         "Perceiver": "#9B7E9B",
+        "SparseVLM": "#56B4E9",
     }
 
 
@@ -99,6 +102,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         "PruneSID": "P",
         "VLVLM": "D",
         "Perceiver": "X",
+        "SparseVLM": "v",
     }
 
     df = df.copy()
@@ -132,7 +136,7 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         plot_order = ["Fixed pooling", "Perceiver", "VLVLM"]
     else:
         # Plot category lines
-        plot_order = ["PruMerge", "PruneSID", "Fixed pooling", "Perceiver", "VLVLM"]
+        plot_order = ["PruMerge", "PruneSID", "SparseVLM", "Fixed pooling", "Perceiver", "VLVLM"]
 
     # for category in plot_order:
     #     group = df[df["Category"] == category].sort_values("Speedup")
@@ -322,8 +326,8 @@ def plot_tradeoff(ax, df, score_col, ylabel, title):
         ax.set_xlim(2.6, 4.55)
         ax.set_ylim(0.80, 1.015)
     else:
-        ax.set_xlim(2.6, 4.55)
-        ax.set_ylim(0.72, 1.015)
+        ax.set_xlim(2.2, 4.55)
+        ax.set_ylim(0.69, 1.015)
 
     ax.set_xticks([3.0, 3.5, 4.0, 4.5])
 
@@ -427,9 +431,9 @@ if __name__ == "__main__":
     fig.legend(
         handles=handles,
         loc="lower center",
-        ncol=len(handles),
+        ncol=len(handles)//2,
         frameon=False,
-        bbox_to_anchor=(0.5, 0.125),
+        bbox_to_anchor=(0.5, 0.0875),
         columnspacing=1.5,
         handletextpad=0.5,
     )

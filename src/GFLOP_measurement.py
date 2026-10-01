@@ -311,6 +311,7 @@ def main(args):
             for evt in prof.key_averages()
         )
         tflops = flops / 1e12
+        print(f"==== TFLOPs: {tflops} ====")
 
         """
             prefill latency in milliseconds.
