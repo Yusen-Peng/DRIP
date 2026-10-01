@@ -52,9 +52,3 @@ def select_attn_head_by_sum(self_attn_weights, t_token_idx, v_token_start, text_
     select_attn_head_idx = sum_attn_per_head.topk(14)[1]
 
     return self_attn_weights[:,select_attn_head_idx,:,:][:,:,:]
-
-if __name__ == "__main__":
-
-    self_attn_weights, v_token_start, v_token_num, text_token_start = torch.rand(4, 16, 1084, 1084), 36, 576, 700
-    mask = attn_postprocess_topk(self_attn_weights, v_token_start, v_token_num, text_token_start)
-    print(mask.shape)

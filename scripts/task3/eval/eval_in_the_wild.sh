@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0929_wild_LLaVA_SparseVLM_4x
-#SBATCH --output=0929_wild_LLaVA_SparseVLM_4x.log
+#SBATCH --job-name=0929_wild_LLaVA_SparseVLM_10x
+#SBATCH --output=0929_wild_LLaVA_SparseVLM_10x.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -24,7 +24,7 @@ set -a
 source /users/PAS2912/yusenpeng/DRIP/.env
 set +a
 
-VERSION="LLaVA_SparseVLM_4x"
+VERSION="LLaVA_SparseVLM_10x"
 
 mkdir -p /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers
 touch /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/llava_bench_in_the_wild/answers/${VERSION}.jsonl

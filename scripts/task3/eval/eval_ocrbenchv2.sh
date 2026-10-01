@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0929_OCRBenchV2_LLaVA_SparseVLM_4x
-#SBATCH --output=0929_OCRBenchV2_LLaVA_SparseVLM_4x.log
+#SBATCH --job-name=0929_OCRBenchV2_LLaVA_SparseVLM_10x
+#SBATCH --output=0929_OCRBenchV2_LLaVA_SparseVLM_10x.log
 #SBATCH --time=5:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,7 +20,7 @@ export TOKENIZERS_PARALLELISM=false
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_SparseVLM_4x"
+VERSION="LLaVA_SparseVLM_10x"
 
 
 python src/model_vqa_ocrbenchv2.py \
