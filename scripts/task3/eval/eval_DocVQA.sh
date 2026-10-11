@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0929_DocVQA_LLaVA_7B_Fixed2D_4x_train_lora
-#SBATCH --output=0929_DocVQA_LLaVA_7B_Fixed2D_4x_train_lora.log
+#SBATCH --job-name=0929_DocVQA_LLaVA_7B_Fixed2D_8x_train_lora
+#SBATCH --output=0929_DocVQA_LLaVA_7B_Fixed2D_8x_train_lora.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export TOKENIZERS_PARALLELISM=false
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP
 
-VERSION="LLaVA_7B_Fixed2D_4x_train_lora"
+VERSION="LLaVA_7B_Fixed2D_8x_train_lora"
 echo "Running LLaVA inference..."
 
 
@@ -49,7 +49,7 @@ echo "Running LLaVA inference..."
 
 
 python src/model_vqa_loader.py \
-  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed2D_4x_train_lora \
+  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed2D_8x_train_lora \
   --model-base lmsys/vicuna-7b-v1.5 \
   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/images \
   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/docvqa/docvqa_validation_llava.jsonl \

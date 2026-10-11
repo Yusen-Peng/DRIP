@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0929_OCRBench_LLaVA_7B_Fixed2D_4x_train_lora
-#SBATCH --output=0929_OCRBench_LLaVA_7B_Fixed2D_4x_train_lora.log
+#SBATCH --job-name=0929_OCRBench_LLaVA_7B_Fixed2D_8x_train_lora
+#SBATCH --output=0929_OCRBench_LLaVA_7B_Fixed2D_8x_train_lora.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_Fixed2D_4x_train_lora"
+VERSION="LLaVA_7B_Fixed2D_8x_train_lora"
 
 # python src/model_vqa_ocrbench.py \
 #     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
@@ -52,7 +52,7 @@ VERSION="LLaVA_7B_Fixed2D_4x_train_lora"
 #     --num_workers 1
 
 python src/model_vqa_ocrbench.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed2D_4x_train_lora \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed2D_8x_train_lora \
     --model_base lmsys/vicuna-7b-v1.5 \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
