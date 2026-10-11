@@ -449,7 +449,7 @@ if __name__ == "__main__":
     fig.legend(
         handles=handles,
         loc="lower center",
-        ncol=len(handles)//2,
+        ncol=(len(handles)//2) + 1,
         frameon=False,
         bbox_to_anchor=(0.5, 0.0875),
         columnspacing=1.5,
