@@ -108,7 +108,6 @@ class CustomDataset(Dataset):
 
         image_file = line["image"]
         qs = line["text"]
-
         if self.model_config.mm_use_im_start_end:
             qs = (
                 DEFAULT_IM_START_TOKEN
@@ -146,6 +145,7 @@ class CustomDataset(Dataset):
         return {
             "question_id": line["question_id"],
             "image_file": image_file,
+            "question": line["text"],
             "prompt_len": input_ids.shape[0],
             "input_ids": input_ids,
             "image_tensor": image_tensor,
@@ -164,6 +164,7 @@ def collate_fn(batch):
     return {
         "question_id": item["question_id"],
         "image_file": item["image_file"],
+        "question": item["question"],
         "prompt_len": item["prompt_len"],
         "input_ids": item["input_ids"].unsqueeze(0),
         "image_tensor": item["image_tensor"].unsqueeze(0),
@@ -197,14 +198,28 @@ def create_data_loader(
         pin_memory=True,
     )
 
-
-def run_prefill_once(model, input_ids, images, image_sizes):
-    return model(
-        input_ids=input_ids,
-        images=images,
-        image_sizes=image_sizes,
-        use_cache=True,
-    )
+def run_prefill_once(
+    model,
+    input_ids,
+    images,
+    image_sizes,
+    texts=None,
+):
+    if model.get_vision_tower().merge_strategy == "CDPruner":
+        return model(
+            input_ids=input_ids,
+            images=images,
+            image_sizes=image_sizes,
+            texts=texts,
+            use_cache=True,
+        )
+    else:
+        return model(
+            input_ids=input_ids,
+            images=images,
+            image_sizes=image_sizes,
+            use_cache=True,
+        )
 
 
 def main(args):
@@ -254,11 +269,17 @@ def main(args):
 
     for _ in range(args.warmup_iters):
         with torch.inference_mode():
-            _ = run_prefill_once(
+            question = warmup_batch["question"]
+            question = question.replace(
+                "\nAnswer the question using a single word or phrase.",
+                ""
+            )
+            outputs = run_prefill_once(
                 model,
                 warmup_input_ids,
                 warmup_images,
                 warmup_batch["image_sizes"],
+                texts=question,
             )
 
     torch.cuda.synchronize()
@@ -297,12 +318,19 @@ def main(args):
             with_flops=True,
         ) as prof:
             with torch.inference_mode():
+                question = batch["question"]
+                question = question.replace(
+                    "\nAnswer the question using a single word or phrase.",
+                    ""
+                )
+
                 starter.record()
                 outputs = run_prefill_once(
                     model,
                     input_ids,
                     images,
                     batch["image_sizes"],
+                    texts=question
                 )
                 ender.record()
         torch.cuda.synchronize()
@@ -323,11 +351,17 @@ def main(args):
         ender = torch.cuda.Event(enable_timing=True)
         starter.record()
         with torch.inference_mode():
+            question = batch["question"]
+            question = question.replace(
+                "\nAnswer the question using a single word or phrase.",
+                ""
+            )
             outputs = run_prefill_once(
                 model,
                 input_ids,
                 images,
                 batch["image_sizes"],
+                texts=question
             )
         ender.record()
         torch.cuda.synchronize()

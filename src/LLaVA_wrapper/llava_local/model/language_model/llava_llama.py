@@ -68,44 +68,59 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
         images: Optional[torch.FloatTensor] = None,
         image_sizes: Optional[List[List[int]]] = None,
         return_dict: Optional[bool] = None,
-        cache_position: Optional[torch.LongTensor] = None
+        cache_position: Optional[torch.LongTensor] = None,
+        texts=None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         
         boundary_loss = None
 
         if inputs_embeds is None:
-            (
-                input_ids,
-                position_ids,
-                attention_mask,
-                past_key_values,
-                inputs_embeds,
-                labels,
-                boundary_loss,
-            ) = self.prepare_inputs_labels_for_multimodal(
-                input_ids,
-                position_ids,
-                attention_mask,
-                past_key_values,
-                labels,
-                images,
-                image_sizes,
-                inference=False # during forward(), we do training mode
-            )
+            vision_tower = self.get_vision_tower()
 
-        # return super().forward(
-        #     input_ids=input_ids,
-        #     attention_mask=attention_mask,
-        #     position_ids=position_ids,
-        #     past_key_values=past_key_values,
-        #     inputs_embeds=inputs_embeds,
-        #     labels=labels,
-        #     use_cache=use_cache,
-        #     output_attentions=output_attentions,
-        #     output_hidden_states=output_hidden_states,
-        #     return_dict=return_dict,
-        #     cache_position=cache_position
-        # )
+            if (
+                vision_tower is not None
+                and vision_tower.merge_strategy == "CDPruner"
+            ):
+                (
+                    input_ids,
+                    position_ids,
+                    attention_mask,
+                    past_key_values,
+                    inputs_embeds,
+                    labels,
+                    boundary_loss,
+                ) = self.prepare_inputs_labels_for_multimodal(
+                    input_ids,
+                    position_ids,
+                    attention_mask,
+                    past_key_values,
+                    labels,
+                    images,
+                    image_sizes,
+                    texts=texts,
+                    inference=False,
+                )
+
+            else:
+                (
+                    input_ids,
+                    position_ids,
+                    attention_mask,
+                    past_key_values,
+                    inputs_embeds,
+                    labels,
+                    boundary_loss,
+                ) = self.prepare_inputs_labels_for_multimodal(
+                    input_ids,
+                    position_ids,
+                    attention_mask,
+                    past_key_values,
+                    labels,
+                    images,
+                    image_sizes,
+                    inference=False,
+                )
+
         outputs = super().forward(
             input_ids=input_ids,
             attention_mask=attention_mask,

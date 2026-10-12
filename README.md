@@ -124,7 +124,7 @@ salloc --nodes=1 --ntasks-per-node=1 --gpus-per-node=1 -A PAS2836 --partition de
 module load miniconda3/24.1.2-py310
 conda activate DRIP_flash
 # for full finetuned models
-python src/GFLOP_measurement.py --model-path /path/to/LLaVA_7B_FLASH_finetune_ALL_ONCE_full
+python src/GFLOP_measurement.py --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full
 # for LoRA finetuned models
 python src/GFLOP_measurement.py --model-path /path/to/LLaVA_7B_FLASH_finetune_ALL_ONCE_lora \
     --model-base lmsys/vicuna-7b-v1.5
