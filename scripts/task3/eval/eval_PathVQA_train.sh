@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=PathVQA_infer_llava_original
-#SBATCH --output=PathVQA_infer_llava_original.log
+#SBATCH --job-name=PathVQA_infer_llava_original_train
+#SBATCH --output=PathVQA_infer_llava_original_train.log
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -28,16 +28,16 @@ DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/PathVQA"
 ANSWER_ROOT="${DATA_ROOT}/answers"
 mkdir -p "${ANSWER_ROOT}"
 echo "========================================"
-echo "Running PathVQA validation"
+echo "Running PathVQA training"
 echo "========================================"
 python src/model_vqa_loader_pathvqa.py \
     --model-path "${MODEL_PATH}" \
-    --question-file "${DATA_ROOT}/validation.json" \
-    --image-folder "${DATA_ROOT}/images/validation" \
-    --answers-file "${ANSWER_ROOT}/validation_${VERSION}.jsonl" \
+    --question-file "${DATA_ROOT}/train.json" \
+    --image-folder "${DATA_ROOT}/images/train" \
+    --answers-file "${ANSWER_ROOT}/train_${VERSION}.jsonl" \
     --temperature 0 \
     --max_new_tokens 32
 
 python src/eval_pathvqa.py \
-    --ground-truth /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/PathVQA/validation.json \
-    --predictions "/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/PathVQA/answers/validation_${VERSION}.jsonl"
+    --ground-truth /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/PathVQA/train.json \
+    --predictions "/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/PathVQA/answers/train_${VERSION}.jsonl"
