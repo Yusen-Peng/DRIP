@@ -128,6 +128,7 @@ def evaluate(gt_path, pred_path):
     print("=" * 55)
 
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 

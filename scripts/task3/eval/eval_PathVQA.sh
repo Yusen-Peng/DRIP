@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=PathVQA_infer_llava_original
 #SBATCH --output=PathVQA_infer_llava_original.log
-#SBATCH --time=02:00:00
+#SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=quad
+#SBATCH --partition=debug-nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -37,3 +37,7 @@ python src/model_vqa_loader_pathvqa.py \
     --answers-file "${ANSWER_ROOT}/validation_${VERSION}.jsonl" \
     --temperature 0 \
     --max_new_tokens 32
+
+python src/eval_pathvqa.py \
+    --ground-truth /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/PathVQA/validation.json \
+    --predictions "/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/PathVQA/answers/validation_${VERSION}.jsonl"
