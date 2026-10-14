@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=PathVQA_infer_LLaVA_7B_PruMerge_10x_val
-#SBATCH --output=PathVQA_infer_LLaVA_7B_PruMerge_10x_val.log
-#SBATCH --time=01:00:00
+#SBATCH --job-name=PathVQA_infer_LLaVA_7B_DRIP_4x_val
+#SBATCH --output=PathVQA_infer_LLaVA_7B_DRIP_4x_val.log
+#SBATCH --time=00:25:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --partition=debug-nextgen
@@ -20,9 +20,11 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP
 
 
-VERSION="LLaVA_7B_PruMerge_10x"
+VERSION="LLaVA_7B_DRIP_4x"
 
-MODEL_PATH="/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full"
+# MODEL_PATH="/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full"
+# MODEL_PATH="/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed_4x_SCALE_train_full_2epochs/checkpoint-1200"
+MODEL_PATH="/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full"
 
 DATA_ROOT="/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/PathVQA"
 ANSWER_ROOT="${DATA_ROOT}/answers"
