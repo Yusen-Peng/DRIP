@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=PathVQA_infer_llava_original_train
-#SBATCH --output=PathVQA_infer_llava_original_train.log
+#SBATCH --job-name=PathVQA_infer_LLaVA_7B_PruMerge_10x_train
+#SBATCH --output=PathVQA_infer_LLaVA_7B_PruMerge_10x_train.log
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -20,7 +20,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP
 
 
-VERSION="LLaVA_7B_FLASH_finetune_ALL_ONCE_full"
+VERSION="LLaVA_7B_PruMerge_10x"
 
 MODEL_PATH="/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full"
 

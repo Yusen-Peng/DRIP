@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=SLAKE_infer_llava_original_test
-#SBATCH --output=SLAKE_infer_llava_original_test.log
+#SBATCH --job-name=SLAKE_infer_LLaVA_7B_PruMerge_10x_test
+#SBATCH --output=SLAKE_infer_LLaVA_7B_PruMerge_10x_test.log
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -21,7 +21,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP
 
 
-VERSION="LLaVA_7B_FLASH_finetune_ALL_ONCE_full"
+VERSION="LLaVA_7B_PruMerge_10x"
 
 MODEL_PATH="/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full"
 
