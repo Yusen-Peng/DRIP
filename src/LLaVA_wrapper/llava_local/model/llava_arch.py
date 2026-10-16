@@ -857,10 +857,6 @@ def encode_images_cdpruner(self, images, texts=None):
     relevance = (relevance - relevance.min() + 1e-6) / (relevance.max() - relevance.min()) # (B, N)
 
     # [CDPruner] Construct kernel matrix
-    # You can use an additional hyperparameter theta to control the influence of the relevance score.
-    # theta = 0.5
-    # alpha = theta / (2 * (1 - theta))
-    # relevance = torch.exp(alpha * relevance) # (B, N)
     kernel = relevance.unsqueeze(2) * similarity * relevance.unsqueeze(1) # (B, N, N)
 
     # [CDPruner] Fast MAP inference of conditional DPP

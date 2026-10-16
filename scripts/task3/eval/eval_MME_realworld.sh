@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=MMERealWorld_LLaVA_7B_original
-#SBATCH --output=MMERealWorld_LLaVA_7B_original.log
+#SBATCH --job-name=MMERealWorld_LLaVA_7B_ORIGINAL
+#SBATCH --output=MMERealWorld_LLaVA_7B_ORIGINAL.log
 #SBATCH --time=01:20:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_original"
+VERSION="LLaVA_7B_ORIGINAL"
 
 python src/model_vqa_mme_real_world.py \
     --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
