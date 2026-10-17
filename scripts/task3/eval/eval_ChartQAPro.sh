@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=1016_ChartQAPro_LLaVA_7B_CDPruner_10x_Qwen25
-#SBATCH --output=1016_ChartQAPro_LLaVA_7B_CDPruner_10x_Qwen25.log
+#SBATCH --job-name=1016_ChartQAPro_LLaVA_7B_CDPruner_10x_Siglip2
+#SBATCH --output=1016_ChartQAPro_LLaVA_7B_CDPruner_10x_Siglip2.log
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -19,7 +19,7 @@ export TOKENIZERS_PARALLELISM=false
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd /users/PAS2912/yusenpeng/DRIP
 
-VERSION="LLaVA_7B_CDPruner_10x_Qwen25"
+VERSION="LLaVA_7B_CDPruner_10x_Siglip2"
 echo "Running LLaVA inference..."
 
 
@@ -31,21 +31,21 @@ echo "Running LLaVA inference..."
 #   --temperature 0 \
 #   --conv-mode llava_v1
 
-# python src/model_vqa_chartqapro.py \
-#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full \
-#   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/images \
-#   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/chartqapro_test_llava.jsonl \
-#   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/results/${VERSION}.jsonl \
-#   --temperature 0 \
-#   --conv-mode llava_v1
-
-python src/model_vqa_chartqapro_qwen.py \
-  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full \
+python src/model_vqa_chartqapro.py \
+  --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_SigLIP_HF_v2_DRIP_4x_temp001_new_downsample_train_full \
   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/images \
   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/chartqapro_test_llava.jsonl \
   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/results/${VERSION}.jsonl \
   --temperature 0 \
-  --conv-mode qwen_v2
+  --conv-mode llava_v1
+
+# python src/model_vqa_chartqapro_qwen.py \
+#   --model-path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full \
+#   --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/images \
+#   --question-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/chartqapro_test_llava.jsonl \
+#   --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/chartvqapro/results/${VERSION}.jsonl \
+#   --temperature 0 \
+#   --conv-mode qwen_v2
 
 
 # python src/model_vqa_chartqapro.py \

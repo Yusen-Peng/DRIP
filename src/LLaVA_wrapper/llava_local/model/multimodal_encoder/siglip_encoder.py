@@ -124,7 +124,8 @@ class SiglipVisionTower(nn.Module):
 
     def load_text_tower(self, device_map=None):
         print("[CDPruner] Loading SigLIP text tower")
-        self.text_tokenizer = AutoTokenizer.from_pretrained(self.vision_tower_name)
+        print(f"[CDPruner] Vision tower name: {self.vision_tower_name}")
+        self.text_tokenizer = AutoTokenizer.from_pretrained(self.vision_tower_name, use_fast=False)
         self.text_tower = SiglipTextModel.from_pretrained(self.vision_tower_name, device_map=device_map)
         self.text_tower.requires_grad_(False)
         self.text_tower.eval()
@@ -205,6 +206,7 @@ class SiglipVisionTower(nn.Module):
 
         elif self.merge_strategy == "CDPruner":
             assert self.compression_rate is not None, "compression_rate must be provided for CDPruner merge strategy."
+            print(f"🐰🐰🐰 [INFO] Using CDPruner strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens.")
             self.load_text_tower(device_map=device_map)
 
         elif self.merge_strategy == "Perceiver":
@@ -312,7 +314,7 @@ class SiglipVisionTower(nn.Module):
             return image_features, image_attentions
         return image_features
 
-    def forward(self, images, inference=False, output_attentions=False):
+    def forward(self, images, texts=None, inference=False, output_attentions=False):
         if type(images) is list:
             image_features = []
             boundary_losses = []
@@ -343,6 +345,40 @@ class SiglipVisionTower(nn.Module):
                 raise NotImplementedError("PruMerge is not implemented in SiglipVisionTower due to the absence of CLS token.")
             elif self.merge_strategy == "PruneSID":
                 raise NotImplementedError("PruneSID is not implemented in SiglipVisionTower due to the absence of CLS token.")
+            elif self.merge_strategy == "CDPruner":
+                image_stream = torch.cuda.Stream()
+                text_stream = torch.cuda.Stream()
+                with torch.cuda.stream(image_stream):
+                    image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), output_hidden_states=True)
+                    image_outputs = self.feature_select(image_forward_outs)
+
+                    # Features passed to LLaVA's mm_projector
+                    image_features = image_outputs.to(images.dtype)
+
+                    # Patch-level embeddings for CDPruner
+                    image_embeds = self.vision_tower.vision_model.post_layernorm(image_forward_outs.last_hidden_state)
+
+                if texts is not None:
+                    with torch.cuda.stream(text_stream):
+                        text_inputs = self.text_tokenizer(
+                            texts,
+                            padding=True,
+                            truncation=True,
+                            max_length=self.max_position_embeddings,
+                            return_tensors="pt",
+                        ).to(self.device)
+                        text_forward_outs = self.text_tower(**text_inputs)
+                        text_embeds = text_forward_outs.pooler_output
+                torch.cuda.synchronize(self.device)
+
+                if texts is not None:
+                    assert image_embeds.shape[-1] == text_embeds.shape[-1], (
+                        f"Dimension mismatch: "
+                        f"image={image_embeds.shape[-1]}, "
+                        f"text={text_embeds.shape[-1]}"
+                    )
+                    return image_features, image_embeds, text_embeds
+                return image_features
             else:
                 image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), 
                                                     output_hidden_states=True, output_attentions=output_attentions)
