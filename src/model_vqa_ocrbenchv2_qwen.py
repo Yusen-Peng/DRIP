@@ -226,19 +226,38 @@ if __name__ == "__main__":
             ]
             # stop_ids += newline_ids
             stop_ids = [x for x in stop_ids if x is not None and x != tokenizer.unk_token_id]
-            output_ids = model.generate(
-                input_ids,
-                attention_mask=attention_mask,
-                images=image_tensor.to(dtype=torch.float16, device='cuda', non_blocking=True),
-                do_sample=args.temperature > 0,
-                temperature=args.temperature,
-                top_p=args.top_p,
-                num_beams=args.num_beams,
-                max_new_tokens=args.max_new_tokens,
-                eos_token_id=stop_ids,
-                pad_token_id=tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id,
-                use_cache=True
-            )
+               
+            if model.get_vision_tower().merge_strategy == "CDPruner":
+                question = prompt
+                question = question.replace("\nAnswer the question using a single word or phrase.", "")
+                output_ids = model.generate(
+                    input_ids,
+                    attention_mask=attention_mask,
+                    texts=question,
+                    images=image_tensor.to(dtype=torch.float16, device='cuda', non_blocking=True),
+                    do_sample=args.temperature > 0,
+                    temperature=args.temperature,
+                    top_p=args.top_p,
+                    num_beams=args.num_beams,
+                    max_new_tokens=args.max_new_tokens,
+                    eos_token_id=stop_ids,
+                    pad_token_id=tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id,
+                    use_cache=True                    
+                )
+            else:
+                output_ids = model.generate(
+                    input_ids,
+                    attention_mask=attention_mask,
+                    images=image_tensor.to(dtype=torch.float16, device='cuda', non_blocking=True),
+                    do_sample=args.temperature > 0,
+                    temperature=args.temperature,
+                    top_p=args.top_p,
+                    num_beams=args.num_beams,
+                    max_new_tokens=args.max_new_tokens,
+                    eos_token_id=stop_ids,
+                    pad_token_id=tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id,
+                    use_cache=True
+                )
 
         input_token_len = input_ids.shape[1]
 

@@ -115,19 +115,38 @@ def eval_model(args):
         # stop_ids += newline_ids
         stop_ids = [x for x in stop_ids if x is not None and x != tokenizer.unk_token_id]
 
-        with torch.inference_mode():
-            output_ids = model.generate(
-                input_ids,
-                attention_mask=attention_mask,
-                images=image_tensor.to(dtype=torch.float16, device='cuda', non_blocking=True),
-                image_sizes=image_sizes,
-                do_sample=True if args.temperature > 0 else False,
-                temperature=args.temperature,
-                max_new_tokens=args.max_new_tokens,
-                eos_token_id=stop_ids,
-                pad_token_id=tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id,
-                use_cache=True
-            )
+        if model.get_vision_tower().merge_strategy == "CDPruner":
+            question = cur_prompt
+            question = question.replace("\nAnswer the question using a single word or phrase.", "")
+            with torch.inference_mode():
+                output_ids = model.generate(
+                    input_ids,
+                    images=image_tensor.to(dtype=torch.float16, device='cuda', non_blocking=True),
+                    image_sizes=image_sizes,
+                    texts=question,
+                    do_sample=True if args.temperature > 0 else False,
+                    temperature=args.temperature,
+                    top_p=args.top_p,
+                    num_beams=args.num_beams,
+                    max_new_tokens=args.max_new_tokens,
+                    eos_token_id=stop_ids,
+                    pad_token_id=tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id,
+                    use_cache=True
+                )
+        else:
+            with torch.inference_mode():
+                output_ids = model.generate(
+                    input_ids,
+                    attention_mask=attention_mask,
+                    images=image_tensor.to(dtype=torch.float16, device='cuda', non_blocking=True),
+                    image_sizes=image_sizes,
+                    do_sample=True if args.temperature > 0 else False,
+                    temperature=args.temperature,
+                    max_new_tokens=args.max_new_tokens,
+                    eos_token_id=stop_ids,
+                    pad_token_id=tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id,
+                    use_cache=True
+                )
 
         outputs = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
 

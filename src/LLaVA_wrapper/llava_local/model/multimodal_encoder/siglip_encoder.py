@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 
 from transformers import SiglipVisionModel, SiglipVisionConfig, SiglipImageProcessor
+from transformers import SiglipTextModel, AutoTokenizer
 
 from .perceiver_utils import PerceiverResampler
 
@@ -121,6 +122,14 @@ class SiglipVisionTower(nn.Module):
             print(f"⚠️ [INFO] Unexpected Perceiver keys: {unexpected}")
         return missing, unexpected
 
+    def load_text_tower(self, device_map=None):
+        print("[CDPruner] Loading SigLIP text tower")
+        self.text_tokenizer = AutoTokenizer.from_pretrained(self.vision_tower_name)
+        self.text_tower = SiglipTextModel.from_pretrained(self.vision_tower_name, device_map=device_map)
+        self.text_tower.requires_grad_(False)
+        self.text_tower.eval()
+        self.max_position_embeddings = (self.text_tower.config.max_position_embeddings)
+
 
     def load_model(self, device_map=None):
         if self.is_loaded:
@@ -193,6 +202,10 @@ class SiglipVisionTower(nn.Module):
             assert self.compression_rate is not None, "compression_rate must be provided for PruneSID merge strategy."
             print(f"🐰🐰🐰 [INFO] Using PruneSID strategy with compression rate {self.compression_rate}. This will on average keep {max(1, int(1/self.compression_rate))} tokens")
             print("🟢🟢🟢NOTE: PruneSID is implemented in src/LLaVA_wrapper/llava_local/model/builder.py (`load_pretrained_model` function)")
+
+        elif self.merge_strategy == "CDPruner":
+            assert self.compression_rate is not None, "compression_rate must be provided for CDPruner merge strategy."
+            self.load_text_tower(device_map=device_map)
 
         elif self.merge_strategy == "Perceiver":
             assert self.compression_rate is not None, "compression_rate must be provided for Perceiver merge strategy."

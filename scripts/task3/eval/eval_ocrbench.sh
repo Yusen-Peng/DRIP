@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=0929_OCRBench_LLaVA_7B_Fixed2D_8x_train_lora
-#SBATCH --output=0929_OCRBench_LLaVA_7B_Fixed2D_8x_train_lora.log
+#SBATCH --job-name=0929_OCRBench_LLaVA_7B_CDPruner_8x_Qwen25
+#SBATCH --output=0929_OCRBench_LLaVA_7B_CDPruner_8x_Qwen25.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --partition=nextgen
+#SBATCH --partition=debug-nextgen
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
@@ -19,7 +19,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
-VERSION="LLaVA_7B_Fixed2D_8x_train_lora"
+VERSION="LLaVA_7B_CDPruner_8x_Qwen25"
 
 # python src/model_vqa_ocrbench.py \
 #     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_FLASH_finetune_ALL_ONCE_full \
@@ -41,26 +41,26 @@ VERSION="LLaVA_7B_Fixed2D_8x_train_lora"
 #     --conv_mode vicuna_v1 \
 #     --num_workers 1
 
-# python src/model_vqa_ocrbench_qwen.py \
-#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full \
-#     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
-#     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
-#     --save_name ${VERSION} \
-#     --OCRBench_file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench.json \
-#     --temperature 0 \
-#     --conv_mode qwen_v2 \
-#     --num_workers 1
-
-python src/model_vqa_ocrbench.py \
-    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed2D_8x_train_lora \
-    --model_base lmsys/vicuna-7b-v1.5 \
+python src/model_vqa_ocrbench_qwen.py \
+    --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_Qwen2.5-14B-Instruct_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full \
     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
     --save_name ${VERSION} \
     --OCRBench_file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench.json \
     --temperature 0 \
-    --conv_mode vicuna_v1 \
+    --conv_mode qwen_v2 \
     --num_workers 1
+
+# python src/model_vqa_ocrbench.py \
+#     --model_path /fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_Fixed2D_8x_train_lora \
+#     --model_base lmsys/vicuna-7b-v1.5 \
+#     --image_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench_Images \
+#     --output_folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/results \
+#     --save_name ${VERSION} \
+#     --OCRBench_file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench.json \
+#     --temperature 0 \
+#     --conv_mode vicuna_v1 \
+#     --num_workers 1
 
 
 conda deactivate
