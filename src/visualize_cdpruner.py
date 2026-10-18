@@ -130,7 +130,7 @@ def visualize_masks(display_image, masks, prompts, output_dir):
         overlay[..., :3] = 0.0
         overlay[..., 3] = (~mask).astype(np.float32) * 0.80
         ax.imshow(overlay, interpolation="nearest", extent=(0, image_w, image_h, 0))
-        ax.set_title(f"{prompt}", fontsize=18, fontweight="bold")
+        ax.set_title(f"{prompt}", fontsize=13, fontweight="bold")
 
         ax.axis("off")
 
