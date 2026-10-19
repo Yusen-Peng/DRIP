@@ -193,8 +193,20 @@ for item in tqdm(benchmarks):
             images = img_paths[:pics_number]
         q = q.replace("<ImageHere>", "<image-placeholder>")
         q = q.lstrip()
-        with torch.amp.autocast("cuda"):
-            response, history = eval_model(query=q, image_files=images, model=model, model_name=model_name, history=history, conv_mode=args.conv_mode, temperature=args.temperature)
+        
+        if model.get_vision_tower().merge_strategy == "PruneSID":
+            response, history = eval_model(
+                query=q, image_files=images, model=model,
+                model_name=model_name, history=history,
+                conv_mode=args.conv_mode, temperature=args.temperature
+            )
+        else:
+            with torch.amp.autocast("cuda"):
+                response, history = eval_model(
+                    query=q, image_files=images, model=model,
+                    model_name=model_name, history=history,
+                    conv_mode=args.conv_mode, temperature=args.temperature
+                )
 
         record_data["conversations"][index*2+1]["value"] = response
     

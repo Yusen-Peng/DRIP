@@ -153,10 +153,10 @@ for benchmark_i in tqdm(range(len(benchmarks))):
         with open(f'{file_get_fold}/{id}.json', 'r', encoding='utf-8') as f:
             Model_answers = json.load(f)
         conv_ai_assistant = Model_answers["conversations"]
-        images = benchmarks[benchmark_i]["image"]
-        # plot_images(images)
-        print(images)
-        
+
+        IMAGE_ROOT = "/fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/MMDU"
+        images = [os.path.join(IMAGE_ROOT, path.lstrip("/")) for path in benchmarks[benchmark_i]["image"]]
+
         questions = []
         reference = []
         ai_assistant = []
@@ -176,11 +176,11 @@ for benchmark_i in tqdm(range(len(benchmarks))):
         for j in range(len(questions)):
             try:
                 promt = meta_prompt + question_begin_prompt + '\n' + questions[j] + '\n\n' + reference_begin_prompt + '\n' + reference[j] + '\n' + reference_end_prompt + '\n\n' + answers_begin_prompt + '\n' + ai_assistant[j] + '\n' + answers_end_prompt
-                print(RED+questions[j]+RESET)
+                # print(RED+questions[j]+RESET)
                 print("Length of Ground Truth:"+ str(len(reference[j])))
                 print("Length of Reference:"+ str(len(ai_assistant[j])))
                 print("Benchmarks:"+str(benchmark_i)+" Question:"+str(j))
-                print(reference[j])
+                # print(reference[j])
                 
                 responese = mllm_openai(promt, images)
                 start_index = responese.find('{')
@@ -191,12 +191,12 @@ for benchmark_i in tqdm(range(len(benchmarks))):
                 # import ast
                 # result_dict = ast.literal_eval(dictionary_str)
 
-                print(responese)
+                # print(responese)
                 # print(GREEN+str(result_dict)+RESET)
                 
                 scores += result_dict["Overall Score"]
                 questions_num += 1
-                print(scores/questions_num)
+                # print(scores/questions_num)
                 all_result_dict.append(result_dict)
             except Exception as e:
                 print({e})
