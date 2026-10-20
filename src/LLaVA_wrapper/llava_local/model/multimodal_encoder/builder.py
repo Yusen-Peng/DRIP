@@ -16,6 +16,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
             "Fixed2D": fixed 2D pooling
             "CDPruner": CDPruner (NeurIPS 2025)
             "SparseVLM": SparseVLM (ICML 2025)
+            "DRIP++": our prompt-aware DRIP method
     """
     # NOTE: This is irrelevant for CLIP-based models,
     # but important for evaluating timm models.
@@ -25,7 +26,7 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     MERGE_STRATEGY = "DRIP"
     # main result: 2x - 0.5, 4x - 0.25, 8x - 0.125, 10x - 0.1
     # limit test: 20x - 0.05, 100x - 0.01, 500x - 0.002
-    COMPRESSION_RATE = 0.125
+    COMPRESSION_RATE = 0.25
     
     # NOTE: temperature tuning
     # TEMPERATURE = 0.1
@@ -36,8 +37,8 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
     PERCEIVER_WEIGHT_PATH = None
 
     # try finetuning with the new downsample function! 
-    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full/drip.bin"
-    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain_NEW_DOWN_temp10_train_full/drip.bin"
+    DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_4x_pretrain_NEW_DOWN_temp001_train_full/drip.bin"
+    # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_8x_pretrain_NEW_DOWN_temp10_train_full/drip.bin"
     # DRIP_WEIGHT_PATH = "/fs/scratch/PAS2836/yusenpeng_checkpoint/LLaVA_7B_DRIP_10x_pretrain_NEW_DOWN_temp10_train_full/drip.bin"
     
     

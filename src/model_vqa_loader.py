@@ -102,7 +102,7 @@ def eval_model(args):
         input_ids = input_ids.to(device='cuda', non_blocking=True)
 
 
-        if model.get_vision_tower().merge_strategy == "CDPruner":
+        if model.get_vision_tower().merge_strategy == "CDPruner" or model.get_vision_tower().merge_strategy == "DRIP++":
             question = cur_prompt
             question = question.replace("\nAnswer the question using a single word or phrase.", "")
             with torch.inference_mode():

@@ -92,7 +92,7 @@ def eval_worker(args, data, eval_id, output_queue):
             input_ids = input_ids.to(device=device, non_blocking=True)
 
 
-            if model.get_vision_tower().merge_strategy == "CDPruner":
+            if model.get_vision_tower().merge_strategy == "CDPruner" or model.get_vision_tower().merge_strategy == "DRIP++":
                 question = prompt
                 question = question.replace("\nAnswer the question using a single word or phrase.", "")
                 with torch.inference_mode():

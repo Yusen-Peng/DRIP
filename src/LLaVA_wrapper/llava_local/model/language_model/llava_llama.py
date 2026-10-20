@@ -171,7 +171,7 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
 
         if images is not None:
             vision_tower = self.get_vision_tower()
-            if vision_tower.merge_strategy == "CDPruner":
+            if vision_tower.merge_strategy == "CDPruner" or vision_tower.merge_strategy == "DRIP++":
                 (
                     inputs,
                     position_ids,

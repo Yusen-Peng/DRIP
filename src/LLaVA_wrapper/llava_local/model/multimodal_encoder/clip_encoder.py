@@ -54,7 +54,11 @@ class CLIPVisionTower(nn.Module):
             drip_weight_path=None,
             perceiver_weight_path=None,
             temperature=None,
-            delay_load=False):
+            delay_load=False,
+            relevance_alpha=0.0,
+            relevance_aggregation="mean"
+            ):
+
         super().__init__()
         self.is_loaded = False
         self.vision_tower_name = vision_tower
@@ -65,6 +69,11 @@ class CLIPVisionTower(nn.Module):
         self.temperature = temperature
         self.select_layer = args.mm_vision_select_layer
         self.select_feature = getattr(args, 'mm_vision_select_feature', 'patch')
+
+        self.relevance_alpha = relevance_alpha
+        self.relevance_aggregation = relevance_aggregation
+        assert 0.0 <= relevance_alpha <= 1.0
+        assert relevance_aggregation in ["mean", "max"]
 
         if not delay_load:
             self.load_model()
@@ -146,6 +155,77 @@ class CLIPVisionTower(nn.Module):
         return missing, unexpected
 
 
+
+    @torch.no_grad()
+    def compute_prompt_relevance(self, image_features: torch.Tensor, texts):
+        """Compute prompt-aware relevance for each visual token."""
+        B, _, _ = image_features.shape
+        assert texts is not None
+        # Support both a single string and a batch of strings.
+        if isinstance(texts, str):
+            texts = [texts]
+        assert len(texts) == B
+
+        text_inputs = self.text_tokenizer(
+            texts,
+            padding=True,
+            truncation=True,
+            max_length=self.max_position_embeddings,
+            return_tensors="pt",
+        )
+
+        text_device = next(self.text_tower.parameters()).device
+        text_inputs = {k: v.to(text_device) for k, v in text_inputs.items()}
+        text_outputs = self.text_tower(**text_inputs)
+
+        text_embeds = text_outputs.text_embeds # [B, C]
+        visual_projection = self.vision_tower.visual_projection
+        projection_device = visual_projection.weight.device
+        projection_dtype = visual_projection.weight.dtype
+        image_embeds = self.vision_tower.vision_model.post_layernorm(image_features.to(device=projection_device, dtype=projection_dtype))
+        image_embeds = visual_projection(image_embeds)
+        image_embeds = F.normalize(image_embeds.float(), p=2, dim=-1) # [B, N, C]
+        text_embeds = F.normalize(text_embeds.to(device=image_embeds.device, dtype=torch.float32), p=2, dim=-1) # [B, C]
+        relevance = torch.einsum("bnc,bc->bn", image_embeds, text_embeds) # [B, N]
+
+        # Min-max normalization
+        r_min = relevance.min(dim=-1, keepdim=True).values
+        r_max = relevance.max(dim=-1, keepdim=True).values
+        relevance = (relevance - r_min) / (r_max - r_min).clamp_min(1e-6)
+        return relevance
+
+    @torch.no_grad()
+    def drip_plus_plus_inference(self, patch_tokens: torch.Tensor, texts):
+        """DRIP++: Prompt-aware boundary selection."""
+        _, L, _ = patch_tokens.shape
+        hidden = patch_tokens.transpose(0, 1) # [L, B, D]
+        soft_boundaries, _ = self.boundary_predictor.inference(hidden)
+
+        relevance = self.compute_prompt_relevance(patch_tokens, texts)
+        relevance = relevance.to(device=soft_boundaries.device, dtype=soft_boundaries.dtype)
+
+        relevance_weight = self.relevance_alpha + (1.0 - self.relevance_alpha) * relevance
+        adjusted_scores = soft_boundaries * relevance_weight
+
+        k = int(round(L * self.compression_rate))
+        k = max(1, min(k, L))
+
+        # Reserve one boundary for the final token
+        hard_boundaries = torch.zeros_like(adjusted_scores)
+
+        if k > 1:
+            topk_idx = torch.topk(adjusted_scores[:, :-1], k=k - 1, dim=-1).indices
+            hard_boundaries.scatter_(dim=-1, index=topk_idx, value=1.0)
+        # Mandatory final boundary
+        hard_boundaries[:, -1] = 1.0
+        return hard_boundaries
+
+
+
+
+
+
+
     def load_model(self, device_map=None):
         if self.is_loaded:
             print('{} is already loaded, `load_model` called again, skipping.'.format(self.vision_tower_name))
@@ -158,7 +238,13 @@ class CLIPVisionTower(nn.Module):
 
         self.is_loaded = True
 
-        if self.merge_strategy == "DRIP" or self.merge_strategy == "DRIP-H":
+        if self.merge_strategy == "DRIP++":
+            self.load_text_tower(device_map=device_map)
+            self.vision_tower.visual_projection.requires_grad_(False)
+            print(f"🔥 [INFO] Prompt-aware DRIP enabled. alpha={self.relevance_alpha}, aggregation={self.relevance_aggregation}")
+
+
+        if self.merge_strategy == "DRIP" or self.merge_strategy == "DRIP-H" or self.merge_strategy == "DRIP++":
             assert self.compression_rate is not None, "Compression rate must be provided for DRIP merge strategy."
             width = self.vision_tower.config.hidden_size
             mlp_ratio = self.vision_tower.config.intermediate_size / self.vision_tower.config.hidden_size
@@ -334,7 +420,7 @@ class CLIPVisionTower(nn.Module):
         return pooled_tokens
 
 
-    def _merge_patch_tokens(self, patch_tokens: torch.Tensor, inference=False):
+    def _merge_patch_tokens(self, patch_tokens: torch.Tensor, inference=False, texts=None):
         B, L, D = patch_tokens.shape
 
         if self.merge_strategy == "Fixed":
@@ -343,7 +429,7 @@ class CLIPVisionTower(nn.Module):
             hard_boundaries = torch.zeros(B, L, device=patch_tokens.device)
             hard_boundaries[:, indices] = 1
 
-        elif self.merge_strategy  == "DRIP" or self.merge_strategy == "DRIP-H":
+        elif self.merge_strategy == "DRIP" or self.merge_strategy == "DRIP-H" or self.merge_strategy == "DRIP++":
             patch_transposed = patch_tokens.transpose(0, 1)  # [L, B, D]
 
             if hasattr(self, "boundary_predictor"):
@@ -353,7 +439,11 @@ class CLIPVisionTower(nn.Module):
                 self.null_token.data = self.null_token.data.to(device=patch_tokens.device, dtype=patch_tokens.dtype)
             
             if inference:
-                _, hard_boundaries = self.boundary_predictor.inference(patch_transposed)
+                if self.merge_strategy == "DRIP++":
+                    assert texts is not None, "DRIP++ requires text prompts during inference."
+                    hard_boundaries = self.drip_plus_plus_inference(patch_tokens, texts)
+                else:
+                    _, hard_boundaries = self.boundary_predictor.inference(patch_transposed)
             else:
                 _, hard_boundaries = self.boundary_predictor(patch_transposed)
             
@@ -369,14 +459,7 @@ class CLIPVisionTower(nn.Module):
 
         hidden = patch_tokens.transpose(0, 1)              # [L, B, D]
 
-        if self.merge_strategy  == "DRIP":
-            # shortened_hidden = downsample(
-            #     boundaries=hard_boundaries,
-            #     hidden=hidden,
-            #     null_group=self.null_token
-            # )                                            # [S, B, D]
-
-            # FIXME: let's try this!           
+        if self.merge_strategy  == "DRIP" or self.merge_strategy == "DRIP-H" or self.merge_strategy == "DRIP++":
             shortened_hidden = new_downsample(
                 boundaries=hard_boundaries,
                 hidden=hidden,
@@ -517,12 +600,12 @@ class CLIPVisionTower(nn.Module):
                 image_forward_out = self.vision_tower(image.to(device=self.device, dtype=self.dtype).unsqueeze(0), output_hidden_states=True)
                 image_feature = self.feature_select(image_forward_out).to(image.dtype)
 
-                if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+                if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H", "DRIP++"]:
                     if not inference:
-                        image_feature, boundary_loss, _, _ = self._merge_patch_tokens(image_feature, inference=False)
+                        image_feature, boundary_loss, _, _ = self._merge_patch_tokens(image_feature, inference=False, texts=texts)
                         boundary_losses.append(boundary_loss)
                     else:
-                        image_feature = self._merge_patch_tokens(image_feature, inference=True)
+                        image_feature = self._merge_patch_tokens(image_feature, inference=True, texts=texts)
                 
                 elif self.merge_strategy == "Perceiver":
                     self.perceiver_resampler.to(device=image_features.device, dtype=image_features.dtype)
@@ -530,7 +613,7 @@ class CLIPVisionTower(nn.Module):
 
                 image_features.append(image_feature)
 
-            if not inference and self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+            if not inference and self.merge_strategy in ["DRIP", "Fixed", "DRIP-H", "DRIP++"]:
                 boundary_loss = torch.stack(boundary_losses).mean()
                 return image_features, boundary_loss
 
@@ -574,12 +657,12 @@ class CLIPVisionTower(nn.Module):
                 image_forward_outs = self.vision_tower(images.to(device=self.device, dtype=self.dtype), output_hidden_states=True)
                 image_features = self.feature_select(image_forward_outs).to(images.dtype)
 
-                if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+                if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H", "DRIP++"]:
                     if not inference:
-                        image_features, boundary_loss, _, _ = self._merge_patch_tokens(image_features, inference=False)
+                        image_features, boundary_loss, _, _ = self._merge_patch_tokens(image_features, inference=False, texts=texts)
                         return image_features, boundary_loss
                     else:
-                        image_features = self._merge_patch_tokens(image_features, inference=True)
+                        image_features = self._merge_patch_tokens(image_features, inference=True, texts=texts)
 
                 elif self.merge_strategy == "Fixed2D":
                     image_features = self._fixed_2d_pool(image_features)
@@ -739,7 +822,7 @@ class TimmVisionTower(CLIPVisionTower):
         print(f"🍑🍑🍑🍑 [INFO] Loaded timm image processor for {self.vision_tower_name} with resolution: {self.image_processor.size}")
 
         self.is_loaded = True
-        if self.merge_strategy == "DRIP" or self.merge_strategy == "DRIP-H":
+        if self.merge_strategy in ["DRIP", "DRIP-H", "DRIP++"]:
             assert self.compression_rate is not None, "Compression rate must be provided for DRIP merge strategy."
             width = self.vision_tower.config.hidden_size
             mlp_ratio = self.vision_tower.config.intermediate_size / self.vision_tower.config.hidden_size
@@ -818,7 +901,7 @@ class TimmVisionTower(CLIPVisionTower):
                 )
                 image_feature = self.feature_select(image_forward_out).to(image.dtype)
 
-                if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+                if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H", "DRIP++"]:
                     if not inference:
                         image_feature, boundary_loss, _, _ = self._merge_patch_tokens(image_feature, inference=False)
                         boundary_losses.append(boundary_loss)
@@ -827,7 +910,7 @@ class TimmVisionTower(CLIPVisionTower):
 
                 image_features.append(image_feature)
 
-            if not inference and self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+            if not inference and self.merge_strategy in ["DRIP", "Fixed", "DRIP-H", "DRIP++"]:
                 boundary_loss = torch.stack(boundary_losses).mean()
                 return image_features, boundary_loss
 
@@ -839,7 +922,7 @@ class TimmVisionTower(CLIPVisionTower):
             )
             image_features = self.feature_select(image_forward_outs).to(images.dtype)
 
-            if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H"]:
+            if self.merge_strategy in ["DRIP", "Fixed", "DRIP-H", "DRIP++"]:
                 if not inference:
                     image_features, boundary_loss, _, _ = self._merge_patch_tokens(image_features, inference=False)
                     return image_features, boundary_loss

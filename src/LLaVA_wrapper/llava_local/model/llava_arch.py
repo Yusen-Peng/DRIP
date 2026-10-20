@@ -143,9 +143,9 @@ class LlavaMetaForCausalLM(ABC):
         return self.get_model().get_vision_tower()
 
 
-    def encode_images(self, images, inference: bool = False):
+    def encode_images(self, images, inference: bool = False, texts=None):
         vision_tower: CLIPVisionTower = self.get_model().get_vision_tower()
-        vt_out = vision_tower.forward(images, inference=inference)
+        vt_out = vision_tower.forward(images, inference=inference, texts=texts)
 
         boundary_loss = None
         if isinstance(vt_out, tuple):
@@ -158,7 +158,7 @@ class LlavaMetaForCausalLM(ABC):
 
     def prepare_inputs_labels_for_multimodal(
         self, input_ids, position_ids, attention_mask, past_key_values, labels,
-        images, image_sizes=None, inference: bool = False
+        images, image_sizes=None, inference: bool = False, texts=None,
     ):
         vision_tower = self.get_vision_tower()
         if vision_tower is None or images is None or input_ids.shape[1] == 1:
@@ -170,7 +170,7 @@ class LlavaMetaForCausalLM(ABC):
                 images = [x.unsqueeze(0) if x.ndim == 3 else x for x in images]
             concat_images = torch.cat([image for image in images], dim=0)
             
-            image_features, boundary_loss = self.encode_images(concat_images, inference=inference)
+            image_features, boundary_loss = self.encode_images(concat_images, inference=inference, texts=texts)
 
             split_sizes = [image.shape[0] for image in images]
             image_features = torch.split(image_features, split_sizes, dim=0)
@@ -220,7 +220,7 @@ class LlavaMetaForCausalLM(ABC):
             else:
                 raise ValueError(f"Unexpected mm_patch_merge_type: {self.config.mm_patch_merge_type}")
         else:
-            image_features, boundary_loss = self.encode_images(images, inference=inference)
+            image_features, boundary_loss = self.encode_images(images, inference=inference, texts=texts)
         
 
         # TODO: image start / end is not implemented here to support pretraining.
