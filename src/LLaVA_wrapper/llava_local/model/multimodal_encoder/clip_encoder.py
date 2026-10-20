@@ -203,9 +203,8 @@ class CLIPVisionTower(nn.Module):
 
         relevance = self.compute_prompt_relevance(patch_tokens, texts)
         relevance = relevance.to(device=soft_boundaries.device, dtype=soft_boundaries.dtype)
+        adjusted_scores = self.relevance_alpha * relevance + (1 - self.relevance_alpha) * soft_boundaries
 
-        relevance_weight = self.relevance_alpha + (1.0 - self.relevance_alpha) * relevance
-        adjusted_scores = soft_boundaries * relevance_weight
 
         k = int(round(L * self.compression_rate))
         k = max(1, min(k, L))

@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0929_textVQA_LLaVA_7B_DRIPpp_4x
-#SBATCH --output=0929_textVQA_LLaVA_7B_DRIPpp_4x.log
+#SBATCH --job-name=0929_textVQA_LLaVA_7B_DRIPpp_4x_alpha01
+#SBATCH --output=0929_textVQA_LLaVA_7B_DRIPpp_4x_alpha01.log
 #SBATCH --time=00:55:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,7 +17,7 @@ source activate DRIP_flash
 export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 
-VERSION="LLaVA_7B_DRIPpp_4x"
+VERSION="LLaVA_7B_DRIPpp_4x_alpha01"
 
 cd /users/PAS2912/yusenpeng/DRIP/
 
