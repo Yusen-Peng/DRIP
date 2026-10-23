@@ -186,13 +186,15 @@ class CLIPVisionTower(nn.Module):
         image_embeds = visual_projection(image_embeds)
         image_embeds = F.normalize(image_embeds.float(), p=2, dim=-1) # [B, N, C]
         text_embeds = F.normalize(text_embeds.to(device=image_embeds.device, dtype=torch.float32), p=2, dim=-1) # [B, C]
-        relevance = torch.einsum("bnc,bc->bn", image_embeds, text_embeds) # [B, N]
+
+        # NOTE: we also follow the negation operation in CDPruner
+        # relevance = torch.einsum("bnc,bc->bn", image_embeds, text_embeds) # [B, N]
+        relevance = -torch.einsum("bnc,bc->bn", image_embeds, text_embeds)
 
         # Min-max normalization
         r_min = relevance.min(dim=-1, keepdim=True).values
         r_max = relevance.max(dim=-1, keepdim=True).values
         relevance = (relevance - r_min) / (r_max - r_min).clamp_min(1e-6)
-        # TODO: maybe we can also follow the negation operation in CDPruner?
         return relevance
 
     @torch.no_grad()
