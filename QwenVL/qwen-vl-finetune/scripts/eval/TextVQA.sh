@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0826_textVQA_Qwen3VL_SFT_PruneSID_4x_NEW_PIPELINE_transfer
-#SBATCH --output=0826_textVQA_Qwen3VL_SFT_PruneSID_4x_NEW_PIPELINE_transfer.log
+#SBATCH --job-name=0826_textVQA_Qwen3VL_SFT_CDPruner_4x_NEW_PIPELINE_transfer
+#SBATCH --output=0826_textVQA_Qwen3VL_SFT_CDPruner_4x_NEW_PIPELINE_transfer.log
 #SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -17,7 +17,7 @@ export OMP_NUM_THREADS=16
 export MASTER_PORT=$((12000 + RANDOM % 20000))
 export CUDA_LAUNCH_BLOCKING=1
 
-VERSION="Qwen3VL_SFT_PruneSID_4x_NEW_PIPELINE_transfer"
+VERSION="Qwen3VL_SFT_CDPruner_4x_NEW_PIPELINE_transfer"
 
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
@@ -44,7 +44,7 @@ python eval_code/model_vqa_loader.py \
     --image-folder /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/train_images \
     --answers-file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/textVQA/answers/${VERSION}.jsonl \
     --temperature 0 \
-    --merge-strategy PruneSID \
+    --merge-strategy CDPruner \
     --compression-rate 0.25
 
 # python eval_code/model_vqa_loader.py \

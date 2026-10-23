@@ -178,6 +178,18 @@ def load_model(args):
             model.model.set_compressor(merge_strategy=args.merge_strategy, compression_rate=args.compression_rate, temperature=args.sampling_temperature)
 
 
+        elif args.merge_strategy == "CDPruner":
+            print(f"🌊 Loading compressed Qwen3VL: CDPruner, rate={args.compression_rate}")
+
+            model = CompressedQwen3VLForConditionalGeneration.from_pretrained(
+                model_base,
+                attn_implementation="flash_attention_2",
+                dtype=torch.bfloat16,
+                device_map="auto",
+            )
+
+            model.model.set_compressor(merge_strategy="CDPruner", compression_rate=args.compression_rate)
+
 
         else:
             model = Qwen3VLForConditionalGeneration.from_pretrained(
@@ -298,6 +310,9 @@ def eval_model(args):
 
         else:
             generation_kwargs["do_sample"] = False
+
+        if args.merge_strategy == "CDPruner":
+            generation_kwargs["texts"] = [cur_prompt]
 
         with torch.inference_mode():
             generated_ids = model.generate(

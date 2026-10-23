@@ -100,6 +100,8 @@ class TokenCompressor(nn.Module):
             self.boundary_predictor = None
         elif merge_strategy == "PruneSID":
             self.boundary_predictor = None
+        elif merge_strategy == "CDPruner":
+            self.boundary_predictor = None
         else:
             raise ValueError(f"Unknown strategy: {merge_strategy}")
 
@@ -524,8 +526,102 @@ class TokenCompressor(nn.Module):
         pooled_boundaries[:, -1] = 1
         return pooled_boundaries
 
+    @torch.no_grad()
+    def get_cdpruner_boundaries(self, mega_features: torch.Tensor, image_embeds: torch.Tensor, text_embeds: torch.Tensor):
+        B, N, D = mega_features.shape
+        num_tokens = max(1, int(N * self.compression_rate))
+
+        if num_tokens >= N:
+            return mega_features.new_ones(B, N)
+
+        image_normalized = F.normalize(mega_features.float(), dim=-1)
+        similarity = torch.matmul(image_normalized, image_normalized.transpose(1, 2))
+        image_embeds = F.normalize(image_embeds.float(), dim=-1)
+        text_embeds = F.normalize(text_embeds.float(), dim=-1)
+        relevance = torch.matmul(image_embeds, text_embeds.T)
+
+        # Preserve the LLaVA implementation.
+        relevance = (-relevance).mean(dim=-1)
+
+        # Pool patch-level relevance to mega-token-level relevance
+        merge_area = image_embeds.shape[1] // N
+        assert merge_area == 4
+        assert image_embeds.shape[1] == N * merge_area
+        # [B, N_mega]
+        relevance = relevance.reshape(B, N, merge_area).mean(dim=-1)
+
+        relevance_min = relevance.amin(dim=-1, keepdim=True)
+        relevance_max = relevance.amax(dim=-1, keepdim=True)
+        relevance = (relevance - relevance_min + 1e-6) / (relevance_max - relevance_min + 1e-6)
+
+        kernel = relevance.unsqueeze(-1) * similarity * relevance.unsqueeze(-2)
+        # Greedy MAP inference
+        cis = torch.zeros(
+            num_tokens,
+            B,
+            N,
+            device=kernel.device,
+            dtype=kernel.dtype,
+        )
+
+        di2s = torch.diagonal(
+            kernel,
+            dim1=1,
+            dim2=2,
+        ).clone()
+
+        select_idx = torch.empty(
+            num_tokens,
+            B,
+            device=kernel.device,
+            dtype=torch.long,
+        )
+
+        batch_idx = torch.arange(
+            B,
+            device=kernel.device,
+        )
+
+        for i in range(num_tokens):
+
+            j = torch.argmax(di2s, dim=-1)
+
+            select_idx[i] = j
+
+            numerator = (
+                kernel[batch_idx, j]
+                - torch.einsum(
+                    "tb,tbn->bn",
+                    cis[:i, batch_idx, j],
+                    cis[:i],
+                )
+            )
+
+            denominator = torch.sqrt(
+                di2s[batch_idx, j].clamp_min(1e-12)
+            ).unsqueeze(-1)
+
+            eis = numerator / denominator
+
+            cis[i] = eis
+
+            di2s -= eis.square()
+
+            di2s[batch_idx, j] = -float("inf")
+
+        select_idx = select_idx.T.sort(dim=-1).values
+
+        boundaries = mega_features.new_zeros(B, N)
+
+        boundaries.scatter_(
+            dim=1,
+            index=select_idx,
+            value=1.0,
+        )
+        return boundaries
+
     def apply_boundaries(self, x, pooled_boundaries):
-        if self.merge_strategy == "PruneSID":
+        if self.merge_strategy in ["PruneSID", "CDPruner"]:
             if x.shape[0] != 1:
                 raise NotImplementedError("PruneSID pruning currently supports batch_size=1.")
             keep = pooled_boundaries[0].bool()

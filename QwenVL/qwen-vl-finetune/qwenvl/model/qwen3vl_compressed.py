@@ -24,6 +24,9 @@ from .compression import TokenCompressor
 
 logger = logging.get_logger(__name__)
 
+from transformers import AutoTokenizer, SiglipTextModel
+SIGLIP2_MODEL = "google/siglip2-large-patch16-384"
+
 def maybe_zero_3(param, ignore_status=False, name=None):
     from deepspeed import zero
     from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
@@ -67,7 +70,7 @@ class CompressedQwen3VLVisionPatchMerger(Qwen3VLVisionPatchMerger):
         self.compressor.to(device=param.device,dtype=param.dtype)
 
 
-    def forward(self, x: torch.Tensor, inference: bool = False):
+    def forward(self, x: torch.Tensor, inference: bool = False, image_embeds: torch.Tensor = None, text_embeds: torch.Tensor = None):
         boundaries = None
         boundary_loss = None
         if self.use_postshuffle_norm:
@@ -87,6 +90,28 @@ class CompressedQwen3VLVisionPatchMerger(Qwen3VLVisionPatchMerger):
             x, boundaries, boundary_loss = self.compressor(x, pooled_boundaries=boundaries)
             x = x.squeeze(0)
             return x, boundaries, boundary_loss
+
+
+        # ==== CDPruner ====
+        if (self.compressor is not None and self.compressor.merge_strategy == "CDPruner"):
+            if image_embeds is None or text_embeds is None:
+                raise ValueError("CDPruner requires image_embeds and text_embeds.")
+            # apply the 2x2 merger first
+            x = self.linear_fc2(self.act_fn(self.linear_fc1(x)))
+
+            # [1, N_mega, D_llm]
+            mega_features = x.unsqueeze(0)
+            # [1, N_patches, D_vision]
+            image_embeds = image_embeds.unsqueeze(0)
+
+            boundaries = self.compressor.get_cdpruner_boundaries(
+                mega_features=mega_features,
+                image_embeds=image_embeds,
+                text_embeds=text_embeds
+            )
+
+            x, boundaries, boundary_loss = self.compressor(mega_features, pooled_boundaries=boundaries)
+            return x.squeeze(0), boundaries, boundary_loss
 
         if self.compressor is not None:
             patch_features = patch_features.unsqueeze(0)
@@ -128,7 +153,18 @@ class CompressedQwen3VLVisionModel(Qwen3VLVisionModel):
             mlp_ratio=mlp_ratio
         )
 
-    def forward(self, hidden_states: torch.Tensor, grid_thw: torch.Tensor, **kwargs) -> torch.Tensor:
+
+        if merge_strategy == "CDPruner":
+            print("🌊 Loading SigLIP2 text encoder for CDPruner")
+            model_name = "google/siglip2-large-patch16-384"
+            self.text_tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False)
+            self.text_tower = SiglipTextModel.from_pretrained(model_name)
+            self.text_tower.requires_grad_(False)
+            self.text_tower.eval()
+            self.max_position_embeddings = self.text_tower.config.max_position_embeddings
+
+
+    def forward(self, hidden_states: torch.Tensor, grid_thw: torch.Tensor, texts=None, **kwargs) -> torch.Tensor:
         """
         Args:
             hidden_states (`torch.Tensor` of shape `(seq_len, hidden_size)`):
@@ -179,7 +215,35 @@ class CompressedQwen3VLVisionModel(Qwen3VLVisionModel):
 
         # hidden_states = self.merger(hidden_states)
         # return hidden_states, deepstack_feature_lists
-        hidden_states, boundaries, boundary_loss = self.merger(hidden_states, inference=not self.training)
+        
+        if (self.merger.compressor is not None and self.merger.compressor.merge_strategy == "CDPruner"):
+            if texts is None:
+                raise ValueError("CDPruner requires input texts.")
+
+            # 1. Obtain text embeddings from SigLIP2 text tower
+            text_device = next(self.text_tower.parameters()).device
+            text_inputs = self.text_tokenizer(
+                texts,
+                padding=True,
+                truncation=True,
+                max_length=self.max_position_embeddings,
+                return_tensors="pt",
+            ).to(text_device)
+            with torch.no_grad():
+                text_embeds = self.text_tower(**text_inputs).pooler_output
+
+            text_embeds = text_embeds.to(device=hidden_states.device, dtype=hidden_states.dtype)
+            
+            # Patch-level Qwen3-VL vision features
+            image_embeds = hidden_states
+            hidden_states, boundaries, boundary_loss = self.merger(
+                hidden_states,
+                inference=not self.training,
+                image_embeds=image_embeds,
+                text_embeds=text_embeds
+            )
+        else:
+            hidden_states, boundaries, boundary_loss = self.merger(hidden_states, inference=not self.training)
         return hidden_states, deepstack_feature_lists, boundaries, boundary_loss
 
 @dataclass
@@ -210,7 +274,7 @@ class CompressedQwen3VLModel(Qwen3VLModel):
             mlp_ratio=mlp_ratio
         )
 
-    def get_image_features(self, pixel_values: torch.FloatTensor, image_grid_thw: Optional[torch.LongTensor] = None):
+    def get_image_features(self, pixel_values: torch.FloatTensor, image_grid_thw: Optional[torch.LongTensor] = None, texts=None):
         pixel_values = pixel_values.type(self.visual.dtype)
         # we need to unpack boundaries and boundary loss
         (
@@ -218,7 +282,7 @@ class CompressedQwen3VLModel(Qwen3VLModel):
             deepstack_image_embeds,
             boundaries,
             boundary_loss,
-        ) = self.visual(pixel_values, grid_thw=image_grid_thw)
+        ) = self.visual(pixel_values, grid_thw=image_grid_thw, texts=texts)
         if image_grid_thw.shape[0] != 1:
             raise NotImplementedError("Initial compressed implementation supports exactly one image.")
         image_embeds = (image_embeds,)
@@ -285,6 +349,7 @@ class CompressedQwen3VLModel(Qwen3VLModel):
         image_grid_thw: Optional[torch.LongTensor] = None,
         video_grid_thw: Optional[torch.LongTensor] = None,
         cache_position: Optional[torch.LongTensor] = None,
+        texts=None,
         **kwargs: Unpack[TransformersKwargs],
     ) -> Union[tuple, CompressedQwen3VLModelOutput]:
         r"""
@@ -307,7 +372,7 @@ class CompressedQwen3VLModel(Qwen3VLModel):
                 deepstack_image_embeds,
                 boundaries,
                 boundary_loss,
-            ) = self.get_image_features(pixel_values, image_grid_thw)
+            ) = self.get_image_features(pixel_values, image_grid_thw, texts=texts)
             compressed_image_embeds = image_embeds[0]
             if input_ids is None:
                 raise NotImplementedError("Compressed image path currently requires input_ids.")
@@ -500,6 +565,7 @@ class CompressedQwen3VLForConditionalGeneration(Qwen3VLForConditionalGeneration)
         video_grid_thw: Optional[torch.LongTensor] = None,
         cache_position: Optional[torch.LongTensor] = None,
         logits_to_keep: Union[int, torch.Tensor] = 0,
+        texts=None,
         **kwargs: Unpack[TransformersKwargs],
     ) -> Union[tuple, Qwen3VLCausalLMOutputWithPast]:
         r"""
@@ -520,6 +586,7 @@ class CompressedQwen3VLForConditionalGeneration(Qwen3VLForConditionalGeneration)
             pixel_values=pixel_values,
             pixel_values_videos=pixel_values_videos,
             image_grid_thw=image_grid_thw,
+            texts=texts,
             video_grid_thw=video_grid_thw,
             position_ids=position_ids,
             attention_mask=attention_mask,
@@ -829,3 +896,14 @@ class CompressedTrainer(Trainer):
         #     )
 
         return self.optimizer
+
+    def prepare_inputs_for_generation(self, *args, texts=None, **kwargs):
+        model_inputs = super().prepare_inputs_for_generation(
+            *args,
+            **kwargs,
+        )
+        if texts is not None:
+            model_inputs["texts"] = texts
+
+        return model_inputs
+

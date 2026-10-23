@@ -192,6 +192,7 @@ class CLIPVisionTower(nn.Module):
         r_min = relevance.min(dim=-1, keepdim=True).values
         r_max = relevance.max(dim=-1, keepdim=True).values
         relevance = (relevance - r_min) / (r_max - r_min).clamp_min(1e-6)
+        # TODO: maybe we can also follow the negation operation in CDPruner?
         return relevance
 
     @torch.no_grad()

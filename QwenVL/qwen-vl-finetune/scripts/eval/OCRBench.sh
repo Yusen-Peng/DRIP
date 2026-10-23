@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=0826_OCRBench_Qwen3VL_SFT_PruneSID_4x_NEW_PIPELINE_transfer
-#SBATCH --output=0826_OCRBench_Qwen3VL_SFT_PruneSID_4x_NEW_PIPELINE_transfer.log
+#SBATCH --job-name=0826_OCRBench_Qwen3VL_SFT_CDPruner_4x_NEW_PIPELINE_transfer
+#SBATCH --output=0826_OCRBench_Qwen3VL_SFT_CDPruner_4x_NEW_PIPELINE_transfer.log
 #SBATCH --time=00:40:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -18,7 +18,7 @@ export MASTER_PORT=$((12000 + RANDOM % 20000))
 
 cd /users/PAS2912/yusenpeng/DRIP/QwenVL/qwen-vl-finetune/qwenvl
 
-VERSION="Qwen3VL_SFT_PruneSID_4x_NEW_PIPELINE_transfer"
+VERSION="Qwen3VL_SFT_CDPruner_4x_NEW_PIPELINE_transfer"
 
 # python eval_code/model_vqa_ocrbench.py \
 #     --model_path Qwen/Qwen3-VL-4B-Instruct \
@@ -49,7 +49,7 @@ python eval_code/model_vqa_ocrbench.py \
     --OCRBench_file /fs/scratch/PAS2836/yusenpeng_dataset/LLaVA_eval/ocrbench/OCRBench.json \
     --temperature 0 \
     --num_workers 1 \
-    --merge-strategy PruneSID \
+    --merge-strategy CDPruner \
     --compression-rate 0.25
 
 
