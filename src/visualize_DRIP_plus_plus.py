@@ -178,10 +178,27 @@ def run_drip_plus_plus(model, image_tensor, prompts, alpha):
                 .cpu()
                 .numpy(),
 
+            "removed_mask": (original_mask[0] & ~adjusted_mask[0])
+                .reshape(H, W)
+                .cpu()
+                .numpy(),
+
+            "added_mask": (adjusted_mask[0] & ~original_mask[0])
+                .reshape(H, W)
+                .cpu()
+                .numpy(),
+
+            "unchanged_mask": (original_mask[0] & adjusted_mask[0])
+                .reshape(H, W)
+                .cpu()
+                .numpy(),
+
             "overlap": overlap_ratio,
         })
 
     return results
+
+
 
 
 def visualize_maps(display_image, results, alpha, output_dir):
@@ -189,8 +206,8 @@ def visualize_maps(display_image, results, alpha, output_dir):
 
     fig, axes = plt.subplots(
         num_prompts,
-        3,
-        figsize=(15, 5 * num_prompts),
+        4,
+        figsize=(20, 5 * num_prompts),
         squeeze=False,
     )
 
@@ -198,6 +215,7 @@ def visualize_maps(display_image, results, alpha, output_dir):
         "Original DRIP Boundary",
         "CLIP Prompt Relevance",
         f"Adjusted Boundary (alpha={alpha})",
+        "Boundary Changes",
     ]
 
     image_h, image_w = display_image.shape[:2]
@@ -215,12 +233,13 @@ def visualize_maps(display_image, results, alpha, output_dir):
             result["adjusted_mask"],
         ]
 
+        # First three subplots
         for col, (score_map, mask) in enumerate(zip(maps, masks)):
             ax = axes[row, col]
 
             ax.imshow(display_image)
 
-            heatmap = ax.imshow(
+            ax.imshow(
                 score_map,
                 cmap="jet",
                 alpha=0.65,
@@ -230,7 +249,6 @@ def visualize_maps(display_image, results, alpha, output_dir):
                 extent=(0, image_w, image_h, 0),
             )
 
-            # Show selected boundaries as white dots.
             if mask is not None:
                 ys, xs = np.where(mask)
 
@@ -254,9 +272,57 @@ def visualize_maps(display_image, results, alpha, output_dir):
             )
 
             ax.axis("off")
+        
+        # ---------------------------------------
+        # Fourth subplot: Boundary Changes
+        # ---------------------------------------
+        ax = axes[row, 3]
 
-        axes[row, 0].set_ylabel(
-            result["prompt"],
+        # Original image without heatmap or dots
+        ax.imshow(display_image)
+
+        removed_mask = result["removed_mask"]
+        added_mask = result["added_mask"]
+
+        H, W = removed_mask.shape
+
+        # RGBA overlay: [H, W, 4]
+        overlay = np.zeros((H, W, 4), dtype=np.float32)
+
+        # Removed boundaries: Pink
+        overlay[removed_mask] = [1.0, 0.2, 0.6, 0.75]
+
+        # Newly added boundaries: Dark green
+        overlay[added_mask] = [0.0, 0.45, 0.0, 0.75]
+
+        # Display patch-level overlay
+        ax.imshow(
+            overlay,
+            interpolation="nearest",
+            extent=(0, image_w, image_h, 0),
+        )
+
+        ax.set_title(
+            "Boundary Changes",
+            fontsize=15,
+            fontweight="bold",
+        )
+
+        ax.axis("off")
+
+        # ---------------------------------------
+        # Statistics
+        # ---------------------------------------
+        num_removed = int(removed_mask.sum())
+        num_added = int(added_mask.sum())
+
+        ax.text(
+            0.5,
+            -0.04,
+            f"Removed: {num_removed} | Added: {num_added}",
+            transform=ax.transAxes,
+            ha="center",
+            va="top",
             fontsize=12,
         )
 
@@ -272,8 +338,17 @@ def visualize_maps(display_image, results, alpha, output_dir):
 
     plt.tight_layout()
 
-    output_path = os.path.join(output_dir, "drip_plus_plus_analysis.png")
-    plt.savefig(output_path, dpi=200, bbox_inches="tight")
+    output_path = os.path.join(
+        output_dir,
+        "drip_plus_plus_analysis.png",
+    )
+
+    plt.savefig(
+        output_path,
+        dpi=200,
+        bbox_inches="tight",
+    )
+
     plt.close()
 
 def main(args):
